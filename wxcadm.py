@@ -18,7 +18,6 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-
 def main():
     main_menu_title = "  Main Menu\n"
     main_menu_items = ["People", "Webex Calling", "Locations", "Quit"]
