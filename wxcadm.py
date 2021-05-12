@@ -4,7 +4,8 @@ from simple_term_menu import TerminalMenu
 import requests
 import time
 import globals
-import phonenumbers
+import phonenumbers     # Needed for the Call Forwarding report
+import api_calls
 
 # Some colors for a pretty terminal output
 class bcolors:
@@ -20,6 +21,7 @@ class bcolors:
 
 
 def main():
+    # Main Menu
     main_menu_title = "  Main Menu\n"
     main_menu_items = ["People", "Webex Calling", "Locations", "Quit"]
     main_menu_exit = False
@@ -29,6 +31,7 @@ def main():
             clear_screen = True
     )
 
+    # People Menu
     people_menu_title = "  People\n";
     people_menu_items = ["Back to Main Menu", "View List of People"]
     people_menu_back = False
@@ -38,6 +41,7 @@ def main():
             clear_screen = True
     )
 
+    # Locations Menu
     locations_menu_title = "  Locations\n"
     locations_menu_items = ["Back to Main Menu", "List Locations", "Add a Location"]
     locations_menu_back = False
@@ -47,6 +51,7 @@ def main():
             clear_screen = True
     )
 
+    # Webex Calling Menu
     wxc_menu_title = "  Webex Calling\n"
     wxc_menu_items = ['Back to Main Menu', 'VM Email Domain Report', 'Call Forwarding Destination Audit', 'Call Recording Report']
     wxc_menu_back = False
@@ -56,13 +61,13 @@ def main():
             clear_screen = True
     )
 
-    while not main_menu_exit:
+    while not main_menu_exit:   # As long as we haven't exited the main menu, we have work to do
         main_sel = main_menu.show()
 
+        # The main menu loop, deciding which menu to show when
         if main_sel == 0:
             while not people_menu_back:
                 people_sel = people_menu.show()
-
                 if people_sel == 0:
                     people_menu_back = True
                 elif people_sel == 1:
@@ -98,9 +103,10 @@ def main():
 
 def showVmDomainReport():
     print("Running report...\n")
-    domain_report = {}
-    r = requests.get(globals.url_base + 'v1/people', headers=globals.headers)
-    people_list = r.json()
+    domain_report = {}      # Dict for report data
+
+    # Get all of the people in the org into people_list
+    people_list = api_calls.all_people()
 
     for person in people_list['items']:
         r = requests.get(globals.url_base + 'v1/people/' + person['id'] + '/features/voicemail', headers=globals.headers)
@@ -133,8 +139,7 @@ def showVmDomainReport():
 def showCallForwardingDestinationReport():
     print("Running report...\n")
     cf_report = {}
-    r = requests.get(globals.url_base + 'v1/people', headers=globals.headers)
-    people_list = r.json()
+    people_list = api_calls.all_people()
     country_codes = getCountryCodes()
 
     for person in people_list['items']:
@@ -157,8 +162,7 @@ def showCallForwardingDestinationReport():
 
 def showRecordingReport():
     print("Running report...\n")
-    r = requests.get(globals.url_base + 'v1/people', headers=globals.headers)
-    people_list = r.json()
+    people_list = api_calls.all_people()
     for person in people_list['items']:
         r = requests.get(globals.url_base + 'v1/people/' + person['id'] + '/features/callRecording', headers=globals.headers)
         recording = r.json()
@@ -174,8 +178,7 @@ def showRecordingReport():
 
 
 def showPeopleListMenu():
-    r = requests.get(globals.url_base + 'v1/people', headers=globals.headers)
-    people_list = r.json()
+    people_list = api_calls.all_people()
     people_list_items = ['Back to Main Menu']
     for person in people_list['items']:
         people_list_items.append(person['emails'][0])

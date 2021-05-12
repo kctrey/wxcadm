@@ -15,3 +15,8 @@ Eventually, it would be nice to use the built-in curses package...
   - VM Email Domain Report - Retrieves a list of all domains that Webex Calling users are forwarding copies of their VMs to and allows selection of a domain to get the list of users
   - Call Forwarding Destination Audit - Runs a report showing Business Continuity Forwarding destination countries only. **Will be enhanced soon**
   - Call Recording Report - Show all Webex Calling users with recording enabled, along with the external identifiers needed for the Dubber platform
+
+# Caveats
+First, there is still no good exception handling on the API calls. And the Webex APIs occasionally don't return data, so that will need to be added soon.
+
+Second, this assumes that the Access Key or Token that the user provides is only able to administer a single Webex Org. Eventually this probably needs to be enhanced to detect those conditions and prompt the user to specify which org they are working on.
