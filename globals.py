@@ -1,3 +1,5 @@
+import json
+
 def initialize():
     global url_base
     url_base = 'https://webexapis.com/'
@@ -9,4 +11,8 @@ def initialize():
 
     global headers
     headers = {'Authorization': bearer_token}
+
+    global config
+    with open("config.json", "r") as fp:
+        config = json.load(fp)
 

@@ -6,6 +6,9 @@ import time
 import globals
 import phonenumbers     # Needed for the Call Forwarding report
 import api_calls
+import json
+
+debug = False
 
 # Some colors for a pretty terminal output
 class bcolors:
@@ -23,7 +26,7 @@ class bcolors:
 def main():
     # Main Menu
     main_menu_title = "  Main Menu\n"
-    main_menu_items = ["People", "Webex Calling", "Locations", "Quit"]
+    main_menu_items = ["People", "Webex Calling", "Locations", "Tool Config", "Quit"]
     main_menu_exit = False
     main_menu = TerminalMenu(
             menu_entries = main_menu_items,
@@ -61,6 +64,16 @@ def main():
             clear_screen = True
     )
 
+    # Config Menu
+    config_menu_title = "  wxcadm Tool Config\n"
+    config_menu_items = ['Back to Main Menu', 'Set Call Forwarding Audit Mode', 'Set Call Forwarding Audit Countries', 'Show Call Forwarding Audit Config']
+    config_menu_back = False
+    config_menu = TerminalMenu(
+            menu_entries = config_menu_items,
+            title = config_menu_title,
+            clear_screen = True
+    )
+
     while not main_menu_exit:   # As long as we haven't exited the main menu, we have work to do
         main_sel = main_menu.show()
 
@@ -81,7 +94,7 @@ def main():
                 elif wxc_sel == 1:
                     showVmDomainReport()
                 elif wxc_sel == 2:
-                    showCallForwardingDestinationReport()
+                    showCallForwardingDestinationAudit()
                 elif wxc_sel == 3:
                     showRecordingReport()
             wxc_menu_back = False
@@ -98,8 +111,90 @@ def main():
                     input("Press Enter to continue...")
             locations_menu_back = False
         elif main_sel == 3:
+            while not config_menu_back:
+                config_sel = config_menu.show()
+                if config_sel == 0:
+                    config_menu_back = True
+                elif config_sel == 1:
+                    setCallForwardingAuditMode()
+                elif config_sel == 2:
+                    print("This will reset your currently selected cuntries")
+                    go = input("Type \'yes\' to continue. Anything else to cancel. ")
+                    if go.lower() == 'yes':
+                        showCountrySelectMenu()
+                elif config_sel == 3:
+                    showCallForwardingAuditConfig()
+                    input("Press Enter to continue...")
+            config_menu_back = False
+        elif main_sel == 4:
             main_menu_exit = True
             print("Quitting...")
+
+def showCallForwardingAuditConfig():
+    print("Audit Mode:", globals.config['forwarding_audit']['mode'])
+    print("Countries:")
+    print("\t", end='')
+    print(*globals.config['forwarding_audit']['countries'], sep = "\n\t")
+
+
+def setCallForwardingAuditMode():
+    print("Set the Audit Mode for the Call Forwarding Audit\n")
+    print("Set to 'allow' to only allow the defined countries as Forwarding destinations and report non-compliance on all others")
+    print("Set to 'deny' to allow all countries other than the defined countries as Forwarding destinations")
+    print("\n")
+    print("Current Audit Mode:", globals.config['forwarding_audit']['mode'])
+    print("\n")
+    new_audit_mode = input("Enter the new Audit Mode (A)llow / (D)eny: ")
+
+    if new_audit_mode[0].lower() == 'a':
+        globals.config['forwarding_audit']['mode'] = 'allow'
+    elif new_audit_mode[0].lower() == 'd':
+        globals.config['forwarding_audit']['mode'] = 'deny'
+    else:
+        print("Invalid or no value. No changes.")
+
+    with open("config.json", "w") as cf:
+        json.dump(globals.config, cf)
+
+def showCountrySelectMenu():
+    # First we set up the menu with some base config
+    country_menu_title = "  Select Countries for Call Forwarding Audit (Search with /)"
+    country_menu_back = False
+    country_menu_items = ['Back to Tool Config Menu \(No changes to current config\)']
+
+    # Now read the contents of the country code file and get them added to the menu
+    with open('country_codes.json', 'r') as ccf:
+        countries = json.load(ccf)
+
+    for country in countries:
+        country_menu_items.append(country['name'])
+
+    country_menu = TerminalMenu(
+            menu_entries = country_menu_items,
+            title = country_menu_title,
+            clear_screen = True,
+            multi_select = True,
+    )
+
+    while not country_menu_back:
+        country_sel = country_menu.show()
+
+        if country_sel[0] == 0:
+            country_menu_back = True
+        else:
+            # Clear the existing selections
+            #TODO Could probably improve this flow to allow them to add/delete countries from the existing list
+            globals.config['forwarding_audit']['countries'].clear()
+            globals.config['forwarding_audit']['countries'] = list(country_menu.chosen_menu_entries)
+
+            with open("config.json", "w") as cf:
+                json.dump(globals.config, cf)
+            
+            print("Saved Call Forwarding Audit config...\n")
+            showCallForwardingAuditConfig()
+            input("\nPress Enter to continue...")
+            country_menu_back = True
+
 
 def showVmDomainReport():
     print("Running report...\n")
@@ -109,8 +204,7 @@ def showVmDomainReport():
     people_list = api_calls.all_people()
 
     for person in people_list['items']:
-        r = requests.get(globals.url_base + 'v1/people/' + person['id'] + '/features/voicemail', headers=globals.headers)
-        person_vm = r.json()
+        person_vm = api_calls.voicemail_config(person['id'])
         domain = person_vm['emailCopyOfMessage']['emailId'].split('@')[1]
         if domain not in domain_report:
             domain_report[person_vm['emailCopyOfMessage']['emailId'].split('@')[1]] = []
@@ -136,29 +230,70 @@ def showVmDomainReport():
             input("\nPress Enter to continue...")
     domain_menu_back = False
 
-def showCallForwardingDestinationReport():
+def showCallForwardingDestinationAudit():
     print("Running report...\n")
+
+    # Set up a dict to store all of the audit info
     cf_report = {}
+    cf_report['always'] = {}
+    cf_report['always']['none'] = []
+    cf_report['always']['compliant'] = []
+    cf_report['always']['noncompliant'] = []
+    cf_report['busy'] = {}
+    cf_report['busy']['none'] = []
+    cf_report['busy']['compliant'] = []
+    cf_report['busy']['noncompliant'] = []
+    cf_report['noAnswer'] = {}
+    cf_report['noAnswer']['none'] = []
+    cf_report['noAnswer']['compliant'] = []
+    cf_report['noAnswer']['noncompliant'] = []
+
     people_list = api_calls.all_people()
     country_codes = getCountryCodes()
 
     for person in people_list['items']:
-        print(person['displayName']+ ": ", end='', flush=True)
-        r = requests.get(globals.url_base + 'v1/people/' + person['id'] + '/features/callForwarding', headers=globals.headers)
-        person_cf = r.json()
-        if "destination" in person_cf['businessContinuity']:
-            x = person_cf['businessContinuity']['destination']
-            user_cc = str(phonenumbers.parse(x, "US")).split()[2]
-            if country_codes[user_cc] == 'Chile':
-                print(bcolors.WARNING + "Forwarded to", country_codes[user_cc], bcolors.ENDC, flush=True)
-            elif country_codes[user_cc] == 'China':
-                print(bcolors.FAIL + "Forwarded to", country_codes[user_cc], bcolors.ENDC, flush=True)
-            else:
-                print(bcolors.OKGREEN + "Forwarded to", country_codes[user_cc], bcolors.ENDC, flush=True)
-        else:
-            print("Not forwarded", flush=True)
+        if debug: print("User:", person['displayName'])
 
-    input("Press Enter to continue...")
+        # There are three different kinds of forwarding, so let's do each
+        for mode in ['always', 'busy', 'noAnswer']:
+            if debug: print("Mode", mode)
+            r = requests.get(globals.url_base + 'v1/people/' + person['id'] + '/features/callForwarding', headers=globals.headers)
+            person_cf = r.json()
+            if "destination" in person_cf['callForwarding'][mode]:
+                if debug: print("Destination found: ", end='')
+                cfdest = person_cf['callForwarding'][mode]['destination']
+                user_cc = str(phonenumbers.parse(cfdest, "US")).split()[2]
+                if debug: print(user_cc, country_codes[user_cc])
+                # Handle Audit Mode = block first
+                if globals.config['forwarding_audit']['mode'] == 'deny':
+                    if country_codes[user_cc] in globals.config['forwarding_audit']['countries']:
+                        if debug: print("Adding noncomplient")
+                        cf_report[mode]['noncompliant'].append(person['emails'][0])
+                    else:
+                        if debug: print("Adding compliant")
+                        cf_report[mode]['compliant'].append(person['emails'][0])
+                elif globals.config['forwarding_audit']['mode'] == 'allow':
+                    if country_codes[user_cc] in globals.config['forwarding_audit']['countries']:
+                        if debug: print("Adding compliant")
+                        cf_report[mode]['compliant'].append(person['emails'][0])
+                    else:
+                        if debug: print("Adding noncomplient")
+                        cf_report[mode]['noncompliant'].append(person['emails'][0])
+            else:
+                cf_report[mode]['none'].append(person['emails'][0])
+    print("Call Forwarding Destination Audit")
+    print("Audit Mode:", globals.config['forwarding_audit']['mode'])
+    print("Country List:", globals.config['forwarding_audit']['countries'])
+    print()
+    for mode in cf_report:
+        print("Forwarding Mode:", mode)
+        print("\tNo Forwarding:", len(cf_report[mode]['none']))
+        print("\tCompliant:", len(cf_report[mode]['compliant']))
+        print("\tNoncompliant:", len(cf_report[mode]['noncompliant']))
+        if len(cf_report[mode]['noncompliant']) > 0:
+            print("\t\tUsers: ", end='')
+            print(*cf_report[mode]['noncompliant'], sep = ", ")
+    input("\nPress Enter to continue...")
 
 def showRecordingReport():
     print("Running report...\n")
