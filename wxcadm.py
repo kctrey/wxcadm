@@ -204,7 +204,7 @@ def showVmDomainReport():
     people_list = api_calls.all_people()
 
     for person in people_list['items']:
-        person_vm = api_calls.voicemail_config(person['id'])
+        person_vm = api_calls.Person.voicemail_config(person['id'])
         domain = person_vm['emailCopyOfMessage']['emailId'].split('@')[1]
         if domain not in domain_report:
             domain_report[person_vm['emailCopyOfMessage']['emailId'].split('@')[1]] = []
@@ -256,9 +256,7 @@ def showCallForwardingDestinationAudit():
 
         # There are three different kinds of forwarding, so let's do each
         for mode in ['always', 'busy', 'noAnswer']:
-            if debug: print("Mode", mode)
-            r = requests.get(globals.url_base + 'v1/people/' + person['id'] + '/features/callForwarding', headers=globals.headers)
-            person_cf = r.json()
+            person_cf = api_calls.Person.call_forwarding(person['id'])
             if "destination" in person_cf['callForwarding'][mode]:
                 if debug: print("Destination found: ", end='')
                 cfdest = person_cf['callForwarding'][mode]['destination']
@@ -299,8 +297,7 @@ def showRecordingReport():
     print("Running report...\n")
     people_list = api_calls.all_people()
     for person in people_list['items']:
-        r = requests.get(globals.url_base + 'v1/people/' + person['id'] + '/features/callRecording', headers=globals.headers)
-        recording = r.json()
+        recording = api_calls.Person.call_recording(person['id'])
         if recording['enabled']:
             print(person['displayName'])
             print(f"\tRecord: {recording['record']}")
@@ -363,28 +360,17 @@ def showPeopleChangeMenu(user_list):
 def enableVmToEmail(user_list):
     for user in user_list:
         print("Changing " + user + "...", end = '', flush=True)
-        user_id = getIdByEmail(user)
-        #print(user_id + "...", end='', flush=True)
-        payload = {'emailCopyOfMessage': {'enabled': 'true', 'emailId': user}}
-        r_change_vm = requests.put(globals.url_base + 'v1/people/' + user_id + '/features/voicemail', headers=globals.headers, json=payload)
+        user_id = api_calls.Person.id_by_email(user)
+        api_calls.Person.Voicemail.set_email_copy(user_id, user, 'enabled')
         print("done", flush=True)
 
 
 def disableVmToEmail(user_list):
     for user in user_list:
         print("Changing " + user + "...", end = '', flush=True)
-        user_id = getIdByEmail(user)
-        payload = {'emailCopyOfMessage': {'enabled': 'false', 'emailId': user}}
-        r_change_vm = requests.put(globals.url_base + 'v1/people/' + user_id + '/features/voicemail', headers=globals.headers, json=payload)
+        user_id = api_calls.Person.id_by_email(user)
+        api_calls.Person.Voicemail.set_email_copy(user_id, user, 'disabled')
         print("done", flush=True)
-
-
-def getIdByEmail(email):
-    payload = {'email': email}
-    r = requests.get(globals.url_base + 'v1/people', params=payload, headers=globals.headers)
-    user_response = r.json()
-    user_id = user_response['items'][0]['id']
-    return user_id
 
 
 def getCountryCodes():
@@ -401,8 +387,7 @@ def getCountryCodes():
     return country_codes
 
 def printLocations():
-    r = requests.get(globals.url_base + 'v1/locations', headers=globals.headers)
-    location_list = r.json()
+    location_list = api_calls.all_locations()
     for location in location_list['items']:
         print("Location Name: " + location['name'] + " (" + location['address']['country'] + ")")
         print("Address:")
