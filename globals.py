@@ -20,7 +20,12 @@ def initialize():
     # The user may admin more than one org, so we need to check for
     # that and see which org they are wanting to work with
     my_orgs = api_calls.my_orgs()
-    num_orgs = len(my_orgs['items'])
+    try:
+        num_orgs = len(my_orgs['items'])
+    except KeyError:
+        print("You don't have access to manage any Webex orgs")
+        print("or your API Access Key is invalid. Exiting...")
+        quit()
     global org_id
     if num_orgs == 1:
         org_id = my_orgs['items'][0]['id']

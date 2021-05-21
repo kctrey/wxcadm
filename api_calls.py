@@ -3,9 +3,53 @@ import requests
 
 def all_people():   # Return a dict of all people in the org
     # https://developer.webex.com/docs/api/v1/people/list-people
-    r = requests.get(globals.url_base + 'v1/people', headers=globals.headers, params=globals.params)
+    foo = {'max': '1000'}
+    params = {**foo, **globals.params}
+    r = requests.get(globals.url_base + 'v1/people', headers=globals.headers, params=params)
     people_list = r.json()
+
+    if 'next' in r.links:
+        print("Getting people. For large organizations, this may take a while", end='', flush=True)
+        # Tome to deal with pagination
+        keep_going = True
+        next_url = r.links['next']['url']
+        while keep_going == True:
+            print(".", end='', flush=True)
+            r2 = requests.get(next_url, headers=globals.headers)
+            new_people = r2.json()
+            if 'items' not in new_people:
+                continue
+            people_list['items'].extend(new_people['items'])
+            if 'next' not in r2.links:
+                keep_going = False
+                print()
+            else:
+                next_url = r2.links['next']['url']
     return(people_list)
+
+def wxc_people():
+    wxc_people = {}
+    wxc_people['items'] = []
+
+    wxc_license = None
+    r = requests.get(globals.url_base + 'v1/licenses', headers=globals.headers, params=globals.params)
+    license_list = r.json()
+    for license in license_list['items']:
+        if license['name'] == 'Webex Calling - Standard Enterprise' or license['name'] == 'Webex Calling SP - Standard Enterprise':
+            wxc_license = license['id']
+
+    if not wxc_license:
+        print("Something is wrong. There are no Webex Calling - Standard Enterprise licenses in your organization.")
+        input("\nPress Enter to continue...")
+
+    people_list = all_people()
+    for person in people_list['items']:
+        if wxc_license in person['licenses']:
+            person_copy = person.copy()
+            wxc_people['items'].append(person_copy)
+
+    return(wxc_people)
+
 
 def all_locations():    # Return a dict of all locations within the org
     # https://developer.webex.com/docs/api/v1/locations/list-locations

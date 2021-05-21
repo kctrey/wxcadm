@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from simple_term_menu import TerminalMenu
-import requests
 import time
 import globals
 import phonenumbers     # Needed for the Call Forwarding report
@@ -56,7 +55,7 @@ def main():
 
     # Webex Calling Menu
     wxc_menu_title = "  Webex Calling\n"
-    wxc_menu_items = ['Back to Main Menu', 'VM Email Domain Report', 'Call Forwarding Destination Audit', 'Call Recording Report']
+    wxc_menu_items = ['Back to Main Menu', 'VM Email Domain Report', 'Call Forwarding Destination Audit', 'Call Recording Report', 'Enable VM to E-Mail for All Users', 'Show All Webex Calling Users']
     wxc_menu_back = False
     wxc_menu = TerminalMenu(
             menu_entries = wxc_menu_items,
@@ -97,6 +96,10 @@ def main():
                     showCallForwardingDestinationAudit()
                 elif wxc_sel == 3:
                     showRecordingReport()
+                elif wxc_sel == 4:
+                    setVmToEmailAll()
+                elif wxc_sel == 5:
+                    showWebexCallingUsers()
             wxc_menu_back = False
         elif main_sel == 2:
             while not locations_menu_back:
@@ -129,6 +132,20 @@ def main():
         elif main_sel == 4:
             main_menu_exit = True
             print("Quitting...")
+
+def showWebexCallingUsers():
+    people_list = api_calls.wxc_people()
+    for person in people_list['items']:
+        print(person['displayName'], person['emails'][0])
+    input("\nPress Enter to continue...")
+
+def setVmToEmailAll():
+    people_list = api_calls.wxc_people()
+    for person in people_list['items']:
+        print("Changing " + person['emails'][0] + "...", end = '', flush=True)
+        api_calls.Person.Voicemail.set_email_copy(person['id'], person['emails'][0], 'enabled')
+        print("done", flush=True)
+
 
 def showCallForwardingAuditConfig():
     print("Audit Mode:", globals.config['forwarding_audit']['mode'])
