@@ -1,8 +1,20 @@
 import globals
+import json
 import requests
+import os.path
 
 def all_people():   # Return a dict of all people in the org
     # https://developer.webex.com/docs/api/v1/people/list-people
+
+    # First check to see if we are allowed to cache the people in this session
+    # and grab the cached valus if we have them
+    if globals.cache_session:
+        # Check for cache file
+        if os.path.isfile('session_cache/' + str(globals.session_id) + '.people'):
+            with open('session_cache/' + str(globals.session_id) + '.people', 'r') as scf:
+                people_list = json.load(scf)
+                return(people_list)
+    
     foo = {'max': '1000'}
     params = {**foo, **globals.params}
     r = requests.get(globals.url_base + 'v1/people', headers=globals.headers, params=params)
@@ -25,6 +37,12 @@ def all_people():   # Return a dict of all people in the org
                 print()
             else:
                 next_url = r2.links['next']['url']
+
+    # Save the people_list to cache if configured that way
+    if globals.cache_session:
+        with open('session_cache/' + str(globals.session_id) + '.people', 'w') as scf:
+            json.dump(people_list, scf)
+
     return(people_list)
 
 def wxc_people():

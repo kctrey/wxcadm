@@ -1,7 +1,15 @@
 import json
 import api_calls
+import uuid
 
 def initialize():
+    # Allow cache for People data. Really speeds things up if you have a large enterprise
+    global cache_session
+    cache_session = True
+    if cache_session:
+        global session_id
+        session_id = uuid.uuid4()
+    
     global url_base
     url_base = 'https://webexapis.com/'
 
