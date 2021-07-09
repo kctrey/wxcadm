@@ -136,7 +136,7 @@ def main():
 def showWebexCallingUsers():
     people_list = api_calls.wxc_people()
     for person in people_list['items']:
-        print(person['displayName'], person['emails'][0])
+        print(f"{person['displayName']} ({person['emails'][0]})")
     input("\nPress Enter to continue...")
 
 def setVmToEmailAll():

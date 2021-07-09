@@ -53,7 +53,7 @@ def wxc_people():
     r = requests.get(globals.url_base + 'v1/licenses', headers=globals.headers, params=globals.params)
     license_list = r.json()
     for license in license_list['items']:
-        if license['name'] == 'Webex Calling - Standard Enterprise' or license['name'] == 'Webex Calling SP - Standard Enterprise':
+        if license['name'] == 'Webex Calling - Standard Enterprise' or license['name'] == 'Webex Calling SP - Standard Enterprise' or license['name'] == 'Webex Calling - Basic' or license['name'] == 'Webex Calling - Professional':
             wxc_license = license['id']
 
     if not wxc_license:
@@ -112,6 +112,19 @@ class Person:
         r = requests.get(globals.url_base + 'v1/people/' + person_id + '/features/callRecording', headers=globals.headers, params=globals.params)
         call_recording = r.json()
         return(call_recording)
+
+    def set_barge_in(person_id, enabled='enabled', tone='disabled'):
+        if enabled == 'enabled':
+            payload = {'enabled': 'true'}
+            if tone == 'enabled':
+                payload['toneEnabled'] = 'true'
+            elif tone == 'disabled':
+                payload['toneEnabled'] = 'false'
+        elif enabled == 'diasabled':
+            payload = {'enabled': 'false'}
+
+        r = requests.put(globals.url_base + 'v1/people/' + person_id + '/features/bargeIn', headers=globals.headers, params=globals.params, json=payload)
+        return(True)
 
     class Voicemail:
         # https://developer.webex.com/docs/api/v1/webex-calling-person-settings/read-voicemail-settings-for-a-person
