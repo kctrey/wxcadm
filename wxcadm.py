@@ -6,6 +6,7 @@ import globals
 import phonenumbers     # Needed for the Call Forwarding report
 import api_calls
 import json
+import logging
 
 debug = False
 
@@ -24,7 +25,7 @@ class bcolors:
 
 def main():
     # Main Menu
-    main_menu_title = "  Main Menu\n"
+    main_menu_title = f"  Main Menu - {globals.org_name}\n"
     main_menu_items = ["People", "Webex Calling", "Locations", "Tool Config", "Quit"]
     main_menu_exit = False
     main_menu = TerminalMenu(
@@ -34,7 +35,7 @@ def main():
     )
 
     # People Menu
-    people_menu_title = "  People\n";
+    people_menu_title = f"  People - {globals.org_name}\n";
     people_menu_items = ["Back to Main Menu", "View List of People"]
     people_menu_back = False
     people_menu = TerminalMenu(
@@ -44,7 +45,7 @@ def main():
     )
 
     # Locations Menu
-    locations_menu_title = "  Locations\n"
+    locations_menu_title = f"  Locations - {globals.org_name}\n"
     locations_menu_items = ["Back to Main Menu", "List Locations", "Add a Location"]
     locations_menu_back = False
     locations_menu = TerminalMenu(
@@ -54,7 +55,7 @@ def main():
     )
 
     # Webex Calling Menu
-    wxc_menu_title = "  Webex Calling\n"
+    wxc_menu_title = f"  Webex Calling - {globals.org_name}\n"
     wxc_menu_items = ['Back to Main Menu', 'VM Email Domain Report', 'Call Forwarding Destination Audit', 'Call Recording Report', 'Enable VM to E-Mail for All Users', 'Show All Webex Calling Users']
     wxc_menu_back = False
     wxc_menu = TerminalMenu(
@@ -98,6 +99,7 @@ def main():
                     showRecordingReport()
                 elif wxc_sel == 4:
                     setVmToEmailAll()
+                    input("Press Enter to continue...")
                 elif wxc_sel == 5:
                     showWebexCallingUsers()
             wxc_menu_back = False
@@ -134,17 +136,33 @@ def main():
             print("Quitting...")
 
 def showWebexCallingUsers():
+    logging.info("Collecting Webex Calling users")
     people_list = api_calls.wxc_people()
     for person in people_list['items']:
         print(f"{person['displayName']} ({person['emails'][0]})")
     input("\nPress Enter to continue...")
 
 def setVmToEmailAll():
+    logging.info("Collecting Webex Calling users")
     people_list = api_calls.wxc_people()
+    failed_users = []
+    i = 0
+    
     for person in people_list['items']:
-        print("Changing " + person['emails'][0] + "...", end = '', flush=True)
-        api_calls.Person.Voicemail.set_email_copy(person['id'], person['emails'][0], 'enabled')
-        print("done", flush=True)
+        i += 1
+        print(f"[{i}] Changing {person['emails'][0]}...", end = '', flush=True)
+        vm_config = api_calls.Person.voicemail_config(person['id'])
+        if 'emailCopyOfMessage' in vm_config:
+            if 'emailId' in vm_config['emailCopyOfMessage']:
+                vm_email = vm_config['emailCopyOfMessage']['emailId']
+            else:
+                vm_email = person['emails'][0]
+            vm_changed = api_calls.Person.Voicemail.set_email_copy(person['id'], vm_email, 'enabled')
+            if vm_changed:
+                print("Success", flush=True)
+            else:
+                print("Failed", flush=True)
+                failed_users.append(person['emails'][0])
 
 
 def showCallForwardingAuditConfig():
@@ -218,14 +236,15 @@ def showVmDomainReport():
     domain_report = {}      # Dict for report data
 
     # Get all of the people in the org into people_list
-    people_list = api_calls.all_people()
+    people_list = api_calls.wxc_people()
 
     for person in people_list['items']:
         person_vm = api_calls.Person.voicemail_config(person['id'])
         domain = person_vm['emailCopyOfMessage']['emailId'].split('@')[1]
         if domain not in domain_report:
             domain_report[person_vm['emailCopyOfMessage']['emailId'].split('@')[1]] = []
-        domain_report[person_vm['emailCopyOfMessage']['emailId'].split('@')[1]].append(person['displayName'])
+        name = person.get('displayName', 'Unknown Name')
+        domain_report[person_vm['emailCopyOfMessage']['emailId'].split('@')[1]].append(name)
 
     domain_menu_title = "  Email Domains - Select a Domain to View Details\n"
     domain_menu_items = list(domain_report)
@@ -265,7 +284,7 @@ def showCallForwardingDestinationAudit():
     cf_report['noAnswer']['compliant'] = []
     cf_report['noAnswer']['noncompliant'] = []
 
-    people_list = api_calls.all_people()
+    people_list = api_calls.wxc_people()
     country_codes = getCountryCodes()
 
     for person in people_list['items']:
@@ -312,7 +331,7 @@ def showCallForwardingDestinationAudit():
 
 def showRecordingReport():
     print("Running report...\n")
-    people_list = api_calls.all_people()
+    people_list = api_calls.wxc_people()
     for person in people_list['items']:
         recording = api_calls.Person.call_recording(person['id'])
         if recording['enabled']:
@@ -327,7 +346,7 @@ def showRecordingReport():
 
 
 def showPeopleListMenu():
-    people_list = api_calls.all_people()
+    people_list = api_calls.wxc_people()
     people_list_items = ['Back to Main Menu']
     for person in people_list['items']:
         people_list_items.append(person['emails'][0])
@@ -415,5 +434,7 @@ def printLocations():
         print("--------------------------------------------------------------")
 
 if __name__ == "__main__":
+    print("This tool is in development and may be unstable. Use at your own risk.")
+    print("For any questions, contact Trey Hilyard (thilyard)\n")
     globals.initialize()
     main()

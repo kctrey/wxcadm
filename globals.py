@@ -1,8 +1,11 @@
 import json
 import api_calls
 import uuid
+import logging
 
 def initialize():
+    # Set up logging
+    logging.basicConfig(level=logging.INFO, filename='logfile.log', format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
     # Allow cache for People data. Really speeds things up if you have a large enterprise
     global cache_session
     cache_session = True
@@ -35,8 +38,10 @@ def initialize():
         print("or your API Access Key is invalid. Exiting...")
         quit()
     global org_id
+    global org_name
     if num_orgs == 1:
         org_id = my_orgs['items'][0]['id']
+        org_name = my_orgs['items'][0]['displayName']
     else:
         print("You have the ability to manage more than one Webex Orgnaization.")
         print("Enter the number of the Organization that you wish to manage in this session.")
@@ -54,6 +59,7 @@ def initialize():
         go = input("Continute? ")
         if go.lower() == 'yes':
             org_id = my_orgs['items'][int(sel_org)-1]['id']
+            org_name = my_orgs['items'][int(sel_org)-1]['displayName']
         else:
             quit()
 
