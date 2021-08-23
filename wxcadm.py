@@ -56,7 +56,7 @@ def main():
 
     # Webex Calling Menu
     wxc_menu_title = f"  Webex Calling - {globals.org_name}\n"
-    wxc_menu_items = ['Back to Main Menu', 'VM Email Domain Report', 'Call Forwarding Destination Audit', 'Call Recording Report', 'Enable VM to E-Mail for All Users', 'Show All Webex Calling Users']
+    wxc_menu_items = ['Back to Main Menu', 'VM Email Domain Report', 'Call Forwarding Destination Audit', 'Call Recording Report', 'ENABLE VM to E-Mail for All Users', 'DISABLE VM to E-Mail for All Users', 'Show All Webex Calling Users']
     wxc_menu_back = False
     wxc_menu = TerminalMenu(
             menu_entries = wxc_menu_items,
@@ -98,9 +98,12 @@ def main():
                 elif wxc_sel == 3:
                     showRecordingReport()
                 elif wxc_sel == 4:
-                    setVmToEmailAll()
+                    setVmToEmailAll('enabled')
                     input("Press Enter to continue...")
                 elif wxc_sel == 5:
+                    setVmToEmailAll('disabled')
+                    input("Press Enter to continue...")
+                elif wxc_sel == 6:
                     showWebexCallingUsers()
             wxc_menu_back = False
         elif main_sel == 2:
@@ -142,7 +145,7 @@ def showWebexCallingUsers():
         print(f"{person['displayName']} ({person['emails'][0]})")
     input("\nPress Enter to continue...")
 
-def setVmToEmailAll():
+def setVmToEmailAll(state):
     logging.info("Collecting Webex Calling users")
     people_list = api_calls.wxc_people()
     failed_users = []
@@ -157,7 +160,7 @@ def setVmToEmailAll():
                 vm_email = vm_config['emailCopyOfMessage']['emailId']
             else:
                 vm_email = person['emails'][0]
-            vm_changed = api_calls.Person.Voicemail.set_email_copy(person['id'], vm_email, 'enabled')
+            vm_changed = api_calls.Person.Voicemail.set_email_copy(person['id'], vm_email, state)
             if vm_changed:
                 print("Success", flush=True)
             else:
