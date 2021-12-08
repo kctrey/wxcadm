@@ -1,40 +1,33 @@
 # wxcadm
-Python Command-Line Toolbox for Webex Calling Administrators
+Python Library for Webex Calling Administration
 
-# Prerequisites
-This script uses the [simple\_term\_menu](https://pypi.org/project/simple-term-menu/) package in Python 3. You will need to install it before running, because the wxcadm.py will fail without it. I am also using the [phonenumbers](https://pypi.org/project/phonenumbers/) library to parse Call Forward numbers. Hopefully this is only temporary until the API returns everything in a Global E.164 format.
+# Purpose
+wxcadm is a Python 3 library to simplify the API calls to Webex in order to manage and report on users of Webex Calling
 
-## Installation
-The script was designed, and only runs, with Python 3. To install the prerequisite packages, do the following:
+# Status
+This library was originally developed as a CLI utility with built-in functionalty. As more users began to use the command-line tool, it became clear that the real need was a library that could be used to develop various front-end tools.
 
+If you are reading this now, you will find that there is a mix of old and new within the main branch. The existing wxcadm.py still works, using the "old" api calls functions.
+
+The plan is to move everything to a common wxcadm.py library and recreate the CLI tool to show what is possible with the library. For now, WXC.py is the name of the new library, but that will change eventually.
+
+# Quickstart
+If you want to play around with the library as-is, it is full featred, but still a little disjointed. You will need both WXC.py and globals.py in order to do anything useful.
+
+``` python
+import globals
+from WXC import Org
+
+globals.initialize()
 ```
-sudo pip3 install simple_term_menu
-sudo pip3 install phonenumbers
+
+When the initialize is called, it will prompt for an API Token, which can be obtained from developer.webex.com
+
+You will need that in order to do anything with the library. The WXC library looks in globals.headers for that.
+
+``` python
+org = Org()
 ```
 
-# Menu Structure
-- People
-  - Back to Main Menu
-  - View List of People - Retrieves all of the People in the org in a multi-select list so that you can perform bulk actions on them
-    - User Selection List
-      - Back to People List
-      - Enable VM to E-Mail - Change all selected user to enable sending a copy of all VMs to the e-mail address of the user
-      - Disable VM to E-Mail - Change all selected users to disable sending a copy of all VMs to their e-mail
-- Webex Calling
-  - Back to Main Menu
-  - VM Email Domain Report - Retrieves a list of all domains that Webex Calling users are forwarding copies of their VMs to and allows selection of a domain to get the list of users
-  - Call Forwarding Destination Audit - Runs a report that audits all user Call Forwarding against a list of allowed or denied destination countries
-  - Call Recording Report - Show all Webex Calling users with recording enabled, along with the external identifiers needed for the Dubber platform
-- Locations
-  - Back to Main Menu
-  - List All Locations - Show a list of all locations and their address
-  - Add a Location - Not supported yet
-- Tool Config
-  - Back to Main Menu
-  - Set Call Forwarding Audit Mode - Set the mode (allow or deny) to be used to audit Call Forwarding destinations in the Webex Calling menu
-  - Set Call Forwarding Audit Countries - Select the countires that are allowed or denied, based on Audit Mode, in the Call Forwarding Destination Audit
-  - Show Call Forwarding Audit Config - Show the current Call Forwarding Destination Audit Mode and Countries
-- Quit
+At that point you have an Org object with all of the users in the organiztion. You can look at the public methods in WXC to see some useful things you can do.
 
-# Caveats
-There is still no good exception handling on the API calls. And the Webex APIs occasionally don't return data, so that will need to be added soon.
