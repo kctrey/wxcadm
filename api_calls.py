@@ -100,6 +100,26 @@ def my_orgs():  # Return a dict of all of the orgs this user can manage, or is a
     my_orgs = r.json()
     return(my_orgs)
 
+class XSI:
+    def actions_endpoint():
+        params = {"callingData": "true"}
+        r = requests.get(globals.url_base + 'v1/organizations/' + globals.org_id, headers=globals.headers, params=params)
+        response = r.json()
+        actions_endpoint = response['xsiActionsEndpoint']
+        return(actions_endpoint)
+    def events_endpoint():
+        params = {"callingData": "true"}
+        r = requests.get(globals.url_base + 'v1/organizations/' + globals.org_id, headers=globals.headers, params=params)
+        response = r.json()
+        events_endpoint = response['xsiEventsEndpoint']
+        return(events_endpoint)
+    def events_channel_endpoint():
+        params = {"callingData": "true"}
+        r = requests.get(globals.url_base + 'v1/organizations/' + globals.org_id, headers=globals.headers, params=params)
+        response = r.json()
+        events_channel_endpoint = response['xsiEventsChannelEndpoint']
+        return(events_channel_endpoint)
+
 class Person:
     def id_by_email(email): # Return the person_id of the user with the provided email
         # https://developer.webex.com/docs/api/v1/people/list-people
