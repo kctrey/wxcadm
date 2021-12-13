@@ -1,47 +1,55 @@
 import requests
 import logging
 
-#import globals
-#TODO: Eventually I would like to use dataclasses, but it will be a heavy lift
+# TODO: Eventually I would like to use dataclasses, but it will be a heavy lift
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, filename="wxcadm.log", format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
+logging.basicConfig(level=logging.INFO,
+                    filename="wxcadm.log",
+                    format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
+# Some functions available to all classes and instances (optionally)
+# TODO Lots of stuff probably could be moved here since there are common functions in most classes
+_url_base = "https://webexapis.com/"
+
 
 class Webex:
     # TODO List
     #    Add token management
-    # Provide direct access to the children's methods
+    #    Provide direct access to the children's methods
 
     def __init__(self, access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False):
         logging.info("Webex instance initialized")
-        self.access_token = access_token
-        self.url_base = "https://webexapis.com/"
-        self.headers = {"Authorization": "Bearer " + self.access_token}
-        r = requests.get(self.url_base + "v1/organizations", headers=self.headers)
+        self._access_token = access_token
+        self._headers = {"Authorization": "Bearer " + access_token}
+        r = requests.get(_url_base + "v1/organizations", headers=self._headers)
         response = r.json()
-        if create_org == False:
+        if not create_org:
             self.orgs = response['items']
             return
         else:
             logging.info("Collecting orgs")
-            orgs = []
+            self.orgs = []
             for org in response['items']:
                 # This builds an Org instance for every Org, so be careful
                 # if the user manages multiple orgs
-                org = Org(org['displayName'], org['id'], people=get_people, locations=get_locations, xsi=get_xsi, _parent=self)
-                orgs.append(org)
-            self.orgs = orgs
+                org = Org(org['displayName'], org['id'],
+                          people=get_people, locations=get_locations, xsi=get_xsi, _parent=self)
+                self.orgs.append(org)
+            # Most users have only one org, so to make that easier for them to work with
+            # we are also going to put the orgs[0] instance in the org attr
+            # That way both .org and .orgs[0] are the same
+            if len(self.orgs) == 1:
+                self.org = self.orgs[0]
+
 
 class Org:
-    def __init__(self, name, id, people=True, locations=True, xsi=False, _parent=None, access_token=None, url_base=None):
+    def __init__(self, name, id, people=True, locations=True, xsi=False, _parent=None):
         # Set the Authorization header based on how the instance was built
-        if _parent == None:     # Instance wasn't created by another instance
-            #TODO Need some code here to throw an error if there is no access_token and url_base
-            self._headers = {"Authorization": "Bearer " + access_token}
-            self._url_base = url_base
-        else:                   # Instance was created by a parent
-            self._headers = _parent.headers
-            self._url_base = _parent.url_base
+        if _parent is None:  # Instance wasn't created by another instance
+            # TODO Need some code here to throw an error if there is no access_token and url_base
+            pass
+        else:
+            self._headers = _parent._headers
 
         self.name = name
         self.id = id
@@ -51,21 +59,22 @@ class Org:
         self._params = {"orgId": self.id}
         self.licenses = self.__get_licenses()
         # Get all of the people if we aren't told not to
-        if people == True:
+        if people:
             self.get_people()
         # Get all of the locations if we aren't asked not to
-        if locations == True:
+        if locations:
             self.get_locations()
-        if xsi == True:
+        if xsi:
             self.get_xsi_endpoints()
 
+    @property
     def __str__(self):
-        return(f"{self.name},{self.org_id}")
+        return f"{self.name},{self.id}"
 
     def __get_licenses(self):
         logging.info("__get_licenses() started for org")
         license_list = []
-        r = requests.get(self._url_base + "v1/licenses", headers=self._headers, params=self._params)
+        r = requests.get(_url_base + "v1/licenses", headers=self._headers, params=self._params)
         response = r.json()
         for item in response['items']:
             if "Webex Calling" in item['name']:
@@ -80,7 +89,7 @@ class Org:
         logging.info("__get_wxc_licenses started")
         license_list = []
         for license in self.licenses:
-            if license['wxc_license'] == True:
+            if license['wxc_license']:
                 license_list.append(license['id'])
         return license_list
 
@@ -94,7 +103,7 @@ class Org:
     def get_xsi_endpoints(self):
         self.xsi = {}
         params = {"callingData": "true", **self._params}
-        r = requests.get(self._url_base + "v1/organizations/" + self.id, headers=self._headers, params=params)
+        r = requests.get(_url_base + "v1/organizations/" + self.id, headers=self._headers, params=params)
         response = r.json()
         self.xsi['actions_endpoint'] = response['xsiActionsEndpoint']
         self.xsi['events_endpoint'] = response['xsiEventsEndpoint']
@@ -105,7 +114,7 @@ class Org:
     def get_locations(self):
         logging.info("get_locations() started")
         self.locations = []
-        r = requests.get(self._url_base + "v1/locations", headers=self._headers, params=self._params)
+        r = requests.get(_url_base + "v1/locations", headers=self._headers, params=self._params)
         response = r.json()
         # I am aware that this doesn't support pagination, so there will be a limit on number of Locations returned
         for location in response['items']:
@@ -114,17 +123,54 @@ class Org:
 
         return self.locations
 
+    def get_pickup_groups(self):
+        logging.info("get_pickup_groups() started")
+        self.pickup_groups = []
+        # First we need to know if we already have locations, because they are needed
+        # for the pickup groups call
+        if not self.locations:
+            self.get_locations()
+        # Loop through all of the locations and get their pickup groups
+        # We will create a new instance of the PickupGroup class when we find one
+        for location in self.locations:
+            r = requests.get(_url_base + "v1/telephony/config/locations/" + location.id + "/callPickups",
+                             headers=self._headers)
+            response = r.json()
+            for item in response['callPickups']:
+                pg = PickupGroup(self, location.id, item['id'], item['name'])
+                self.pickup_groups.append(pg)
+        return self.pickup_groups
+
+    def get_call_queues(self):
+        logging.info("get_call_queues() started")
+        self.call_queues = []
+        if not self.locations:
+            self.get_locations()
+        r = requests.get(_url_base + "v1/telephony/config/queues", headers=self._headers, params=self._params)
+        response = r.json()
+        for queue in response['queues']:
+            id = queue.get("id")
+            name = queue.get("name", None)
+            location_id = queue.get("locationId")
+            phone_number = queue.get("phoneNumber", None)
+            extension = queue.get("extension", None)
+            enabled = queue.get("enabled")
+
+            queue = CallQueue(self, id, name, location_id, phone_number, extension, enabled, get_config=True)
+            self.call_queues.append(queue)
+        return self.call_queues
+
     def get_people(self):
         logging.info("get_people() started")
         self.people = []
         params = {"max": "1000", **self._params}
-        r = requests.get(self._url_base + "v1/people", headers=self._headers, params=params)
+        r = requests.get(_url_base + "v1/people", headers=self._headers, params=params)
         people_list = r.json()
 
         if "next" in r.links:
             keep_going = True
             next_url = r.links['next']['url']
-            while keep_going == True:
+            while keep_going:
                 r = requests.get(next_url, headers=self._headers)
                 new_people = r.json()
                 if "items" not in new_people:
@@ -137,7 +183,8 @@ class Org:
 
         wxc_licenses = self.__get_wxc_licenses()
         for person in people_list['items']:
-            this_person = Person(person['id'], person['emails'][0], first_name=person['firstName'], last_name=person['lastName'], display_name=person['displayName'], _parent=self)
+            this_person = Person(person['id'], person['emails'][0], first_name=person['firstName'],
+                                 last_name=person['lastName'], display_name=person['displayName'], _parent=self)
             this_person.licenses = person['licenses']
             for license in person['licenses']:
                 if license in wxc_licenses:
@@ -145,37 +192,43 @@ class Org:
             self.people.append(this_person)
         return self.people
 
+
 class Location:
-    def __init__(self, location_id, name, address={}, **kwargs):
+    def __init__(self, location_id, name, address=None, **kwargs):
+        if address is None:
+            address = {}
         self.id = location_id
         self.name = name
         self.address = address
 
+    @property
     def __str__(self):
-        return(f"{self.name},{self.idea}")
+        return f"{self.name},{self.id}"
+
 
 class Person:
     # TODO List
     #    Add methods to get and return XSI identifiers
 
     def __init__(self, user_id,
-                user_email,
-                first_name=None,
-                last_name=None,
-                display_name=None,
-                licenses=[],
-                _parent=None,
-                access_token=None,
-                url_base=None,
-                **kwargs):
+                 user_email,
+                 first_name=None,
+                 last_name=None,
+                 display_name=None,
+                 licenses=None,
+                 _parent=None,
+                 access_token=None,
+                 url_base=None,
+                 **kwargs):
         # Set the Authorization header based on how the instance was built
-        if _parent == None:     # Instance wasn't created by another instance
-            #TODO Need some code here to throw an error if there is no access_token and url_base
+        if licenses is None:
+            licenses = []
+        if _parent is None:  # Instance wasn't created by another instance
+            # TODO Need some code here to throw an error if there is no access_token and url_base
             self._headers = {"Authorization": "Bearer " + access_token}
             self._url_base = url_base
-        else:                   # Instance was created by a parent
+        else:  # Instance was created by a parent
             self._headers = _parent._headers
-            self._url_base = _parent._url_base
 
         self._params = {"orgId": _parent.id}
         self.id = user_id
@@ -186,13 +239,21 @@ class Person:
         self.licenses = licenses
 
     def __str__(self):
-        return(f"{self.email},{self.display_name}")
+        return f"{self.email},{self.display_name}"
 
     # The following is to simplify the API call. Eventually I may open this as a public method to allow arbitrary API calls
-    def __get_webex_data(self, endpoint, params={}):
+    def __get_webex_data(self, endpoint, params=None):
+        """
+
+        :param endpoint: The endpoint of the API call (e.g. 'v1/locations')
+        :param params: A dict of param values for the API call. Will be passed as URL params
+        :return: Returns a dict of the JSON response from the API
+        """
+        if params is None:
+            params = {}
         logging.info(f"__get_webex_data started for using {endpoint}")
         myparams = {**params, **self._params}
-        r = requests.get(self._url_base + endpoint, headers=self._headers, params=params)
+        r = requests.get(_url_base + endpoint, headers=self._headers, params=params)
         response = r.json()
         return response
 
@@ -221,6 +282,11 @@ class Person:
         self.vm_config = self.__get_webex_data(f"v1/people/{self.id}/features/voicemail")
         return self.vm_config
 
+    def push_vm_config(self):
+        # In progress
+        logging.info(f"Pushing VM Config for {self.email}")
+
+
     def get_intercept(self):
         logging.info("get_intercept() started")
         self.intercept = self.__get_webex_data(f"v1/people/{self.id}/features/intercept")
@@ -246,5 +312,53 @@ class Person:
         self.calling_behavior = self.__get_webex_data(f"v1/people/{self.id}/features/callingBehavior")
         return self.calling_behavior
 
+
 class PickupGroup:
-    def __init__(_parent, location, 
+    def __init__(self, _parent, location, id, name, agents=None):
+        self.location_id = location
+        self.id = id
+        self.name = name
+        # If no agents were passed, we need to go get the configuration of the PickupGroup
+        if agents == None:
+            self.agents = []
+            r = requests.get(_url_base + f"v1/telephony/config/locations/{self.location_id}/callPickups/{self.id}",
+                             headers=_parent._headers
+                             )
+            response = r.json()
+            print(r.text)
+            # TODO It doesn't make sense to create a new Person instance for the below.
+            #      Once we have an API and a class for Workspaces, it would make sense to tie
+            #      the agents to the Person or Workspace instance
+            # For now, we just write the values that we get back and the user can find the people with the
+            # Person-specific methods
+            for agent in response['agents']:
+                self.agents.append(agent)
+
+
+class CallQueue:
+    def __init__(self, _parent, id, name, location, phone_number, extension, enabled, get_config=True):
+        self._parent = _parent
+        self.id = id
+        self.name = name
+        self.location_id = location
+        self.phone_number = phone_number
+        self.extension = extension
+        self.enabled = enabled
+        if get_config:
+            self.get_queue_config()
+
+    def get_queue_config(self):
+        r = requests.get(_url_base + "v1/telephony/config/locations/" + self.location_id + "/queues/" + self.id,
+                         headers=self._parent._headers)
+        response = r.json()
+        self.config = response
+
+    def push(self):
+        logging.info(f"Pushing Call Queue config to Webex for {self.name}")
+        url = _url_base + "v1/telephony/config/locations/" + self.location_id + "/queues/" + self.id
+        print(url)
+        r = requests.put(url,
+                         headers=self._parent._headers, json=self.config)
+        response = r.status_code
+        self.get_queue_config()
+        return self.config
