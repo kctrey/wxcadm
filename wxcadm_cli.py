@@ -26,7 +26,7 @@ class bcolors:
 
 def main():
     # Main Menu
-    main_menu_title = f"  Main Menu - {globals.org_name}\n"
+    main_menu_title = f"  Main Menu - {webex.org.name}\n"
     main_menu_items = ["People", "Webex Calling", "Locations", "Tool Config", "Quit"]
     main_menu_exit = False
     main_menu = TerminalMenu(
@@ -36,7 +36,7 @@ def main():
     )
 
     # People Menu
-    people_menu_title = f"  People - {globals.org_name}\n";
+    people_menu_title = f"  People - {webex.org.name}\n";
     people_menu_items = ["Back to Main Menu", "View List of People"]
     people_menu_back = False
     people_menu = TerminalMenu(
@@ -46,7 +46,7 @@ def main():
     )
 
     # Locations Menu
-    locations_menu_title = f"  Locations - {globals.org_name}\n"
+    locations_menu_title = f"  Locations - {webex.org.name}\n"
     locations_menu_items = ["Back to Main Menu", "List Locations", "Add a Location"]
     locations_menu_back = False
     locations_menu = TerminalMenu(
@@ -56,7 +56,7 @@ def main():
     )
 
     # Webex Calling Menu
-    wxc_menu_title = f"  Webex Calling - {globals.org_name}\n"
+    wxc_menu_title = f"  Webex Calling - {webex.org.name}\n"
     wxc_menu_items = ['Back to Main Menu', 'VM Email Domain Report', 'Call Forwarding Destination Audit', 'Call Recording Report', 'ENABLE VM to E-Mail for All Users', 'DISABLE VM to E-Mail for All Users', 'Show All Webex Calling Users']
     wxc_menu_back = False
     wxc_menu = TerminalMenu(
@@ -231,10 +231,13 @@ def showVmDomainReport():
 
     # Loop through all of the wxc people with get_wxc_people
     for person in webex.org.get_wxc_people():
-        domain = person.vm_config['emailCopyOfMessage']['emailId'].split('@')[1]
-        if domain not in domain_report:
-            domain_report[domain] = {}
-        domain_report[domain].append(person.display_name)
+        if not person.vm_config:
+            person.get_vm_config()
+        if person.vm_config['emailCopyOfMessage']['enabled']:
+            domain = person.vm_config['emailCopyOfMessage']['emailId'].split('@')[1]
+            if domain not in domain_report:
+                domain_report[domain] = []
+            domain_report[domain].append(person.display_name)
 
     domain_menu_title = "  Email Domains - Select a Domain to View Details\n"
     domain_menu_items = list(domain_report)
@@ -426,3 +429,4 @@ if __name__ == "__main__":
     print("For any questions, contact Trey Hilyard (thilyard)\n")
     access_token = input("Enter your access token: ")
     webex = Webex(access_token)
+    main()
