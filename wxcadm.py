@@ -240,6 +240,16 @@ class Person:
                  **kwargs):
         # Default values for other attrs
         self.wxc = False
+        self.vm_config = None
+        self.recording = None
+        self.barge_in = None
+        self.call_forwarding = None
+        self.caller_id = None
+        self.intercept = None
+        self.dnd = None
+        self.calling_behavior = None
+
+
         # Set the Authorization header based on how the instance was built
         if licenses is None:
             licenses = []
