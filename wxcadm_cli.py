@@ -419,10 +419,6 @@ def getCountryCodes():
 def printLocations():
     for location in webex.org.locations:
         print(f"Location Name: {location.name} ({location.address['country']})")
-        print("Address:")
-    for location in location_list['items']:
-        print("Location Name: " + location['name'] + " (" + location['address']['country'] + ")")
-        print("--------------------------------------------------------------")
 
 if __name__ == "__main__":
     print("This tool is in development and may be unstable. Use at your own risk.")
