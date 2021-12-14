@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 from simple_term_menu import TerminalMenu
-import time
+from wxcadm import Webex
+#import time
 import globals
 import phonenumbers     # Needed for the Call Forwarding report
-import api_calls
 import json
 import logging
+
 
 debug = False
 
@@ -140,33 +141,23 @@ def main():
 
 def showWebexCallingUsers():
     logging.info("Collecting Webex Calling users")
-    people_list = api_calls.wxc_people()
-    for person in people_list['items']:
-        print(f"{person['displayName']} ({person['emails'][0]})")
+    for person in webex.org.people:
+        if person.wxc:
+            print(f"{person.email} - {person.display_name}")
     input("\nPress Enter to continue...")
 
 def setVmToEmailAll(state):
     logging.info("Collecting Webex Calling users")
-    people_list = api_calls.wxc_people()
-    failed_users = []
     i = 0
-    
-    for person in people_list['items']:
-        i += 1
-        print(f"[{i}] Changing {person['emails'][0]}...", end = '', flush=True)
-        vm_config = api_calls.Person.voicemail_config(person['id'])
-        if 'emailCopyOfMessage' in vm_config:
-            if 'emailId' in vm_config['emailCopyOfMessage']:
-                vm_email = vm_config['emailCopyOfMessage']['emailId']
-            else:
-                vm_email = person['emails'][0]
-            vm_changed = api_calls.Person.Voicemail.set_email_copy(person['id'], vm_email, state)
-            if vm_changed:
-                print("Success", flush=True)
-            else:
-                print("Failed", flush=True)
-                failed_users.append(person['emails'][0])
-
+    for person in webex.org.people:
+        if person.wxc:
+            i += 1
+            print(f"{i} Changing {person.email}...", end="", flush=True)
+            if state == "enabled":
+                person.enable_vm_to_email(push=True)
+            elif state == "disabled":
+                person.disable_vm_to_email(push=True)
+            print("Success", flush=True)
 
 def showCallForwardingAuditConfig():
     print("Audit Mode:", globals.config['forwarding_audit']['mode'])
@@ -238,16 +229,12 @@ def showVmDomainReport():
     print("Running report...\n")
     domain_report = {}      # Dict for report data
 
-    # Get all of the people in the org into people_list
-    people_list = api_calls.wxc_people()
-
-    for person in people_list['items']:
-        person_vm = api_calls.Person.voicemail_config(person['id'])
-        domain = person_vm['emailCopyOfMessage']['emailId'].split('@')[1]
+    # Loop through all of the wxc people with get_wxc_people
+    for person in webex.org.get_wxc_people():
+        domain = person.vm_config['emailCopyOfMessage']['emailId'].split('@')[1]
         if domain not in domain_report:
-            domain_report[person_vm['emailCopyOfMessage']['emailId'].split('@')[1]] = []
-        name = person.get('displayName', 'Unknown Name')
-        domain_report[person_vm['emailCopyOfMessage']['emailId'].split('@')[1]].append(name)
+            domain_report[domain] = {}
+        domain_report[domain].append(person.display_name)
 
     domain_menu_title = "  Email Domains - Select a Domain to View Details\n"
     domain_menu_items = list(domain_report)
@@ -287,15 +274,16 @@ def showCallForwardingDestinationAudit():
     cf_report['noAnswer']['compliant'] = []
     cf_report['noAnswer']['noncompliant'] = []
 
-    people_list = api_calls.wxc_people()
     country_codes = getCountryCodes()
 
-    for person in people_list['items']:
-        if debug: print("User:", person['displayName'])
+    for person in webex.org.get_wxc_people():
+        if debug: print("User:", person.display_name)
+        if not person.call_forwarding:
+            person.get_call_forwarding()
 
         # There are three different kinds of forwarding, so let's do each
         for mode in ['always', 'busy', 'noAnswer']:
-            person_cf = api_calls.Person.call_forwarding(person['id'])
+            person_cf = person.call_forwarding
             if "destination" in person_cf['callForwarding'][mode]:
                 if debug: print("Destination found: ", end='')
                 cfdest = person_cf['callForwarding'][mode]['destination']
@@ -305,19 +293,19 @@ def showCallForwardingDestinationAudit():
                 if globals.config['forwarding_audit']['mode'] == 'deny':
                     if country_codes[user_cc] in globals.config['forwarding_audit']['countries']:
                         if debug: print("Adding noncomplient")
-                        cf_report[mode]['noncompliant'].append(person['emails'][0])
+                        cf_report[mode]['noncompliant'].append(person.email)
                     else:
                         if debug: print("Adding compliant")
-                        cf_report[mode]['compliant'].append(person['emails'][0])
+                        cf_report[mode]['compliant'].append(person.email)
                 elif globals.config['forwarding_audit']['mode'] == 'allow':
                     if country_codes[user_cc] in globals.config['forwarding_audit']['countries']:
                         if debug: print("Adding compliant")
-                        cf_report[mode]['compliant'].append(person['emails'][0])
+                        cf_report[mode]['compliant'].append(person.email)
                     else:
                         if debug: print("Adding noncomplient")
-                        cf_report[mode]['noncompliant'].append(person['emails'][0])
+                        cf_report[mode]['noncompliant'].append(person.email)
             else:
-                cf_report[mode]['none'].append(person['emails'][0])
+                cf_report[mode]['none'].append(person.email)
     print("Call Forwarding Destination Audit")
     print("Audit Mode:", globals.config['forwarding_audit']['mode'])
     print("Country List:", globals.config['forwarding_audit']['countries'])
@@ -334,11 +322,12 @@ def showCallForwardingDestinationAudit():
 
 def showRecordingReport():
     print("Running report...\n")
-    people_list = api_calls.wxc_people()
-    for person in people_list['items']:
-        recording = api_calls.Person.call_recording(person['id'])
+    for person in webex.org.get_wxc_people():
+        if not person.recording:
+            person.get_call_recording()
+        recording = person.recording
         if recording['enabled']:
-            print(person['displayName'])
+            print(person.display_name)
             print(f"\tRecord: {recording['record']}")
             print(f"\tService Provider: {recording['serviceProvider']}")
             print(f"\tExternal Group: {recording['externalGroup']}")
@@ -349,10 +338,9 @@ def showRecordingReport():
 
 
 def showPeopleListMenu():
-    people_list = api_calls.wxc_people()
     people_list_items = ['Back to Main Menu']
-    for person in people_list['items']:
-        people_list_items.append(person['emails'][0])
+    for person in webex.org.get_wxc_people():
+        people_list_items.append(person.email)
     people_list_title = "  User List - Select to Change\n"
     people_list_back = False
     people_list_menu = TerminalMenu(
@@ -399,16 +387,16 @@ def showPeopleChangeMenu(user_list):
 def enableVmToEmail(user_list):
     for user in user_list:
         print("Changing " + user + "...", end = '', flush=True)
-        user_id = api_calls.Person.id_by_email(user)
-        api_calls.Person.Voicemail.set_email_copy(user_id, user, 'enabled')
+        person = webex.org.get_person_by_email(user)
+        person.enable_vm_to_email(push=True)
         print("done", flush=True)
 
 
 def disableVmToEmail(user_list):
     for user in user_list:
         print("Changing " + user + "...", end = '', flush=True)
-        user_id = api_calls.Person.id_by_email(user)
-        api_calls.Person.Voicemail.set_email_copy(user_id, user, 'disabled')
+        person = webex.org.get_person_by_email(user)
+        person.disable_vm_to_email(push=True)
         print("done", flush=True)
 
 
@@ -426,18 +414,15 @@ def getCountryCodes():
     return country_codes
 
 def printLocations():
-    location_list = api_calls.all_locations()
+    for location in webex.org.locations:
+        print(f"Location Name: {location.name} ({location.address['country']})")
+        print("Address:")
     for location in location_list['items']:
         print("Location Name: " + location['name'] + " (" + location['address']['country'] + ")")
-        print("Address:")
-        print("\t" + location['address']['address1'])
-        if location['address']['address2']:
-            print("\t" + location['address']['address2'])
-        print("\t" + location['address']['city'] + ", " + location['address']['state'] + " " + location['address']['postalCode'])
         print("--------------------------------------------------------------")
 
 if __name__ == "__main__":
     print("This tool is in development and may be unstable. Use at your own risk.")
     print("For any questions, contact Trey Hilyard (thilyard)\n")
-    globals.initialize()
-    main()
+    access_token = input("Enter your access token: ")
+    webex = Webex(access_token)

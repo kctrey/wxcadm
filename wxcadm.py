@@ -3,6 +3,12 @@ import logging
 
 # TODO: Eventually I would like to use dataclasses, but it will be a heavy lift
 
+# TODO: There is a package-wide problem where we have Webex-native data and instance attributes that we write
+#       to make the instances easier to work with. I have kept the native data because it is easier to push back
+#       to Webex and safer in case the API changes. Ideally, we should store all attributes in ways that a user
+#       would want them and pack them back into JSON as needed. In the meantime, like in the CallQueues object
+#       I end up with the same values in multiple attributes, which is a bad idea.
+
 # Set up logging
 logging.basicConfig(level=logging.INFO,
                     filename="wxcadm.log",
@@ -124,6 +130,10 @@ class Org:
         return self.locations
 
     def get_pickup_groups(self):
+        """
+        Get all of the Call Pickup Groups for an Organization
+        :return: List of Call Pickup Groups as an array of dictionaries
+        """
         logging.info("get_pickup_groups() started")
         self.pickup_groups = []
         # First we need to know if we already have locations, because they are needed
@@ -192,6 +202,14 @@ class Org:
             self.people.append(this_person)
         return self.people
 
+    def get_wxc_people(self):
+        if not self.people:
+            self.get_people()
+        wxc_people = []
+        for person in self.people:
+            if person.wxc:
+                wxc_people.append(person)
+        return wxc_people
 
 class Location:
     def __init__(self, location_id, name, address=None, **kwargs):
@@ -220,6 +238,8 @@ class Person:
                  access_token=None,
                  url_base=None,
                  **kwargs):
+        # Default values for other attrs
+        self.wxc = False
         # Set the Authorization header based on how the instance was built
         if licenses is None:
             licenses = []
@@ -253,19 +273,32 @@ class Person:
             params = {}
         logging.info(f"__get_webex_data started for using {endpoint}")
         myparams = {**params, **self._params}
-        r = requests.get(_url_base + endpoint, headers=self._headers, params=params)
+        r = requests.get(_url_base + endpoint, headers=self._headers, params=myparams)
         response = r.json()
         return response
 
+    def __push_webex_data(self, endpoint, payload, params=None):
+        if params is None:
+            params = {}
+        logging.info(f"__push_webex_data started using {endpoint}")
+        myparams = {**params, **self._params}
+        r = requests.put(_url_base + endpoint, headers=self._headers, params=myparams, json=payload)
+        response_code = r.status_code
+        if response_code == 200 or response_code == 204:
+            return True
+        else:
+            return False
+
     def get_full_config(self):
-        self.get_call_forwarding()
-        self.get_vm_config()
-        self.get_intercept()
-        self.get_call_recording()
-        self.get_caller_id()
-        self.get_dnd()
-        self.get_calling_behavior()
-        self.get_barge_in()
+        if self.wxc:
+            self.get_call_forwarding()
+            self.get_vm_config()
+            self.get_intercept()
+            self.get_call_recording()
+            self.get_caller_id()
+            self.get_dnd()
+            self.get_calling_behavior()
+            self.get_barge_in()
 
     def get_call_forwarding(self):
         logging.info("get_call_forwarding() started")
@@ -285,7 +318,26 @@ class Person:
     def push_vm_config(self):
         # In progress
         logging.info(f"Pushing VM Config for {self.email}")
+        success = self.__push_webex_data(f"v1/people/{self.id}/features/voicemail", self.vm_config)
+        self.get_vm_config()
+        return self.vm_config
 
+    def enable_vm_to_email(self, email=None, push=True):
+        if not email:
+            email = self.email
+        self.vm_config['emailCopyOfMessage']['enabled'] = True
+        self.vm_config['emailCopyOfMessage']['emailId'] = email
+        if push:
+            return self.push_vm_config()
+        else:
+            return self.vm_config
+
+    def disable_vm_to_email(self, push=True):
+        self.vm_config['emailCopyOfMessage']['enabled'] = False
+        if push:
+            return self.push_vm_config()
+        else:
+            return self.vm_config
 
     def get_intercept(self):
         logging.info("get_intercept() started")
