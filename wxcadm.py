@@ -25,10 +25,16 @@ class Webex:
 
     def __init__(self, access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False):
         logging.info("Webex instance initialized")
+        # The access token is the only thing that we need to get started
         self._access_token = access_token
+        # The Authorization header is going to be used by every API call in the package.
+        # Might want to make it something global so we don't have to inherit it across all of the children
         self._headers = {"Authorization": "Bearer " + access_token}
+        # Get the orgs that this token can manage
         r = requests.get(_url_base + "v1/organizations", headers=self._headers)
         response = r.json()
+        # If a token can manage a lot of orgs, you might not want to create them all, because
+        # it can take some time to do all of the API calls and get the data back
         if not create_org:
             self.orgs = response['items']
             return
@@ -55,6 +61,9 @@ class Org:
             # TODO Need some code here to throw an error if there is no access_token and url_base
             pass
         else:
+            # Since we need the headers for API calls, might as well just store it in a protected attr
+            # Should this be a class attr instead of instance? Probably, but since I hope to allow Org creation
+            # without a Webex parent, I am leaving it like this.
             self._headers = _parent._headers
 
         self.name = name
@@ -100,6 +109,11 @@ class Org:
         return license_list
 
     def get_person_by_email(self, email):
+        """
+        Get the Person instance from an email address
+        :param email: The email of the Person to return
+        :return: Person instance object. None in returned when no Person is found
+        """
         logging.info("get_person_by_email() started")
         for person in self.people:
             if person.email == email:
@@ -107,6 +121,10 @@ class Org:
         return None
 
     def get_xsi_endpoints(self):
+        """
+        Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.
+        :return: Org.xsi attribute dictionary with each endpoint as a tuple
+        """
         self.xsi = {}
         params = {"callingData": "true", **self._params}
         r = requests.get(_url_base + "v1/organizations/" + self.id, headers=self._headers, params=params)
@@ -118,6 +136,10 @@ class Org:
         return self.xsi
 
     def get_locations(self):
+        """
+        Get the Locations for the Organization. Also stores them in the Org.locations attribute.
+        :return: List of Location instance objects. See the Locations class for attributes.
+        """
         logging.info("get_locations() started")
         self.locations = []
         r = requests.get(_url_base + "v1/locations", headers=self._headers, params=self._params)
@@ -131,8 +153,8 @@ class Org:
 
     def get_pickup_groups(self):
         """
-        Get all of the Call Pickup Groups for an Organization
-        :return: List of Call Pickup Groups as an array of dictionaries
+        Get all of the Call Pickup Groups for an Organization. Also stores them in the Org.pickup_groups attribute.
+        :return: List of Call Pickup Groups as a list of dictionaries. See the PickupGroup class for attributes.
         """
         logging.info("get_pickup_groups() started")
         self.pickup_groups = []
