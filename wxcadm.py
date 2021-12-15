@@ -1,5 +1,6 @@
 import requests
 import logging
+import base64
 
 # TODO: Eventually I would like to use dataclasses, but it will be a heavy lift
 
@@ -71,6 +72,7 @@ class Org:
         self.actions_uri = None
         self.events_uri = None
         self.events_channel_uri = None
+        self.xsi = None
         self._params = {"orgId": self.id}
         self.licenses = self.__get_licenses()
         # Get all of the people if we aren't told not to
@@ -270,6 +272,8 @@ class Person:
         self.intercept = None
         self.dnd = None
         self.calling_behavior = None
+        self.xsi = None
+        self._parent = _parent
 
 
         # Set the Authorization header based on how the instance was built
@@ -320,6 +324,9 @@ class Person:
             return True
         else:
             return False
+
+    def start_xsi(self):
+        self.xsi = XSI(self)
 
     def get_full_config(self):
         if self.wxc:
@@ -430,14 +437,36 @@ class CallQueue:
         self.enabled = enabled
         if get_config:
             self.get_queue_config()
+            self.get_queue_forwarding()
 
     def get_queue_config(self):
         r = requests.get(_url_base + "v1/telephony/config/locations/" + self.location_id + "/queues/" + self.id,
                          headers=self._parent._headers)
         response = r.json()
         self.config = response
+        return self.config
+
+    def get_queue_forwarding(self):
+        """
+        Get the Call Forwarding settings for this Call Queue instance
+        :return: call_forwarding attribute of the instance, which is a disctionary of values
+        """
+        # TODO: The rules within Call Forwarding are weird. The rules come back in this call, but they are
+        #       different than the /selectiveRules response. It makes sense to aggregate them, but that probably
+        #       requires the object->JSON mapping that we need to do for all classes
+        r = requests.get(_url_base + "v1/telephony/config/locations/" + self.location_id +
+                         "/queues/" + self.id + "/callForwarding",
+                         headers=self._parent._headers)
+        response = r.json()
+        self.call_forwarding = response
+        return self.call_forwarding
 
     def push(self):
+        """
+        Push the contents of the CallQueue.config back to Webex
+        :return: The updated CallQueue.config attribute pulled from Webex after pushing the change
+        """
+        # TODO: Right now this only pushes .config. It should also push .call_forwarding and .forwarding_rules
         logging.info(f"Pushing Call Queue config to Webex for {self.name}")
         url = _url_base + "v1/telephony/config/locations/" + self.location_id + "/queues/" + self.id
         print(url)
@@ -446,3 +475,79 @@ class CallQueue:
         response = r.status_code
         self.get_queue_config()
         return self.config
+
+
+class XSI:
+    def __init__(self, _parent, get_profile=False):
+        """
+        The XSI class holds all of the relevant XSI data for a Person
+        :param _parent: The Person instance that created the XSI
+        :param get_profile: Boolean value to force the XSI to get the user profile when initialized
+        """
+        logging.info(f"Initializing XSI instance for {_parent.email}")
+        # First we need to get the XSI User ID for the Webex person we are working with
+        logging.info("Getting XSI identifiers")
+        user_id_bytes = base64.b64decode(_parent.id + "===")
+        user_id_decoded = user_id_bytes.decode("utf-8")
+        user_id_bwks = user_id_decoded.split("/")[-1]
+        self.id = user_id_bwks
+
+        # Inherited attrinutes
+        self.xsi_endpoints = _parent._parent.xsi
+
+        # API attributes
+        self._headers = {"Content-Type": "application/json",
+                         "Accept": "application/json",
+                         "X-BroadWorks-Protocol-Version": "25.0",
+                         **_parent._headers}
+        self._params = {"format": "json"}
+
+        # Attribute definitions
+        self.profile = {}
+        self.registrations = None
+        self.fac = None
+
+        # Get the profile if we have been asked to
+        if get_profile:
+            self.get_profile()
+
+
+    def get_profile(self):
+        r = requests.get(self.xsi_endpoints['actions_endpoint'] + "/v2.0/user/" + self.id + "/profile",
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        # The following is a mapping of the raw XSI format to the profile attribute
+        self.profile['registrations_url'] = response['Profile']['registrations']['$']
+        self.profile['schedule_url'] = response['Profile']['scheduleList']['$']
+        self.profile['fac_url'] = response['Profile']['fac']['$']
+        self.profile['country_code'] = response['Profile']['countryCode']['$']
+        self.profile['user_id'] = response['Profile']['details']['userId']['$']
+        self.profile['group_id'] = response['Profile']['details']['groupId']['$']
+        self.profile['service_provider'] = response['Profile']['details']['serviceProvider']['$']
+        # Not everyone has a number and/or extension, so we need to check to see if there are there
+        if "number" in response['Profile']['details']:
+            self.profile['number'] = response['Profile']['details']['number']['$']
+        if "extension" in response['Profile']['details']:
+            self.profile['extension'] = response['Profile']['details']['extension']['$']
+
+        return self.profile
+
+    def get_registrations(self):
+        # If we don't have a registations URL, because we don't have the profile, go get it
+        if "registrations_url" not in self.profile:
+            self.get_profile()
+        r = requests.get(self.xsi_endpoints['actions_endpoint'] + self.profile['registrations_url'],
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        self.registrations = response
+        return self.registrations
+
+    def get_fac(self):
+        # If we don't have a FAC URL, go get it
+        if "fac_url" not in self.profile:
+            self.get_profile()
+        r = requests.get(self.xsi_endpoints['actions_endpoint'] + self.profile['fac_url'],
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        self.fac = response
+        return self.fac
