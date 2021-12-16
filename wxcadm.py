@@ -1,3 +1,5 @@
+import json.decoder
+
 import requests
 import logging
 import base64
@@ -27,10 +29,14 @@ class Webex:
     def __init__(self, access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False):
         logging.info("Webex instance initialized")
         # The access token is the only thing that we need to get started
-        self._access_token = access_token
+        self._access_token: str = access_token
         # The Authorization header is going to be used by every API call in the package.
         # Might want to make it something global so we don't have to inherit it across all of the children
-        self._headers = {"Authorization": "Bearer " + access_token}
+        self._headers: dict = {"Authorization": "Bearer " + access_token}
+
+        # Instance attrs
+        self.orgs: list[Org] = []
+        '''A list of the Org instances that this Webex instance can manage'''
         # Get the orgs that this token can manage
         r = requests.get(_url_base + "v1/organizations", headers=self._headers)
         response = r.json()
@@ -41,7 +47,6 @@ class Webex:
             return
         else:
             logging.info("Collecting orgs")
-            self.orgs = []
             for org in response['items']:
                 # This builds an Org instance for every Org, so be careful
                 # if the user manages multiple orgs
@@ -56,7 +61,40 @@ class Webex:
 
 
 class Org:
-    def __init__(self, name, id, people=True, locations=True, xsi=False, _parent=None):
+    def __init__(self, name: str, id: str, people: bool = True,
+                 locations: bool = True, xsi: bool = False, _parent: Webex = None):
+        """
+        Initialize an Org instance
+
+        Args:
+            name (str): The Organization name
+            id (str): The Webex ID of the Organization
+            people (bool, optional): Whether to automatically get all people for the Org
+            locations (bool, optional): Whether to automatically get all of the locations for the Org
+            xsi (bool, optional): Whether to automatically get the XSI Endpoints for the Org
+            _parent (Webex, optional): The parent Webex instance that owns this Org. Usually `_parent=self`
+
+        Returns:
+            Org: This instance of the Org class
+        """
+
+        # Instance attrs
+        self.call_queues: list[CallQueue] = []
+        self.pickup_groups: list[PickupGroup] = []
+        'A list of the PickupGroup instances for this Org'
+        self.locations: list[Location] = []
+        'A list of the Location instances for this Org'
+        self.name: str = name
+        'The name of the Organization'
+        self.id:  str = id
+        '''The Webex ID of the Organization'''
+        self.xsi: dict = {}
+        self._params: dict = {"orgId": self.id}
+        self.licenses: list[dict] = []
+        '''A list of all of the licenses for the Organization as a dictionary of names and IDs'''
+        self.people: list[Person] = []
+        '''A list of all of the Person stances for the Organization'''
+
         # Set the Authorization header based on how the instance was built
         if _parent is None:  # Instance wasn't created by another instance
             # TODO Need some code here to throw an error if there is no access_token and url_base
@@ -66,15 +104,8 @@ class Org:
             # Should this be a class attr instead of instance? Probably, but since I hope to allow Org creation
             # without a Webex parent, I am leaving it like this.
             self._headers = _parent._headers
-
-        self.name = name
-        self.id = id
-        self.actions_uri = None
-        self.events_uri = None
-        self.events_channel_uri = None
-        self.xsi = None
-        self._params = {"orgId": self.id}
         self.licenses = self.__get_licenses()
+
         # Get all of the people if we aren't told not to
         if people:
             self.get_people()
@@ -89,6 +120,12 @@ class Org:
         return f"{self.name},{self.id}"
 
     def __get_licenses(self):
+        """
+        Gets all of the licenses for the Organization
+
+        :return:
+            list: List of dictionaries containing the license name and ID
+        """
         logging.info("__get_licenses() started for org")
         license_list = []
         r = requests.get(_url_base + "v1/licenses", headers=self._headers, params=self._params)
@@ -103,6 +140,12 @@ class Org:
         return license_list
 
     def __get_wxc_licenses(self):
+        """
+        Get only the Webex Calling licenses from the Org.licenses attribute
+
+        Returns:
+            list[str]:
+        """
         logging.info("__get_wxc_licenses started")
         license_list = []
         for license in self.licenses:
@@ -113,8 +156,10 @@ class Org:
     def get_person_by_email(self, email):
         """
         Get the Person instance from an email address
-        :param email: The email of the Person to return
-        :return: Person instance object. None in returned when no Person is found
+        Args:
+            email (str): The email of the Person to return
+        Returns:
+            Person: Person instance object. None in returned when no Person is found
         """
         logging.info("get_person_by_email() started")
         for person in self.people:
@@ -125,9 +170,9 @@ class Org:
     def get_xsi_endpoints(self):
         """
         Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.
-        :return: Org.xsi attribute dictionary with each endpoint as a tuple
+        Returns:
+            dict: Org.xsi attribute dictionary with each endpoint as an entry
         """
-        self.xsi = {}
         params = {"callingData": "true", **self._params}
         r = requests.get(_url_base + "v1/organizations/" + self.id, headers=self._headers, params=params)
         response = r.json()
@@ -140,10 +185,10 @@ class Org:
     def get_locations(self):
         """
         Get the Locations for the Organization. Also stores them in the Org.locations attribute.
-        :return: List of Location instance objects. See the Locations class for attributes.
+        Returns:
+            list[Location]: List of Location instance objects. See the Locations class for attributes.
         """
         logging.info("get_locations() started")
-        self.locations = []
         r = requests.get(_url_base + "v1/locations", headers=self._headers, params=self._params)
         response = r.json()
         # I am aware that this doesn't support pagination, so there will be a limit on number of Locations returned
@@ -156,10 +201,11 @@ class Org:
     def get_pickup_groups(self):
         """
         Get all of the Call Pickup Groups for an Organization. Also stores them in the Org.pickup_groups attribute.
-        :return: List of Call Pickup Groups as a list of dictionaries. See the PickupGroup class for attributes.
+        Returns:
+            list[PickupGroup]: List of Call Pickup Groups as a list of dictionaries.
+                See the PickupGroup class for attributes.
         """
         logging.info("get_pickup_groups() started")
-        self.pickup_groups = []
         # First we need to know if we already have locations, because they are needed
         # for the pickup groups call
         if not self.locations:
@@ -176,8 +222,12 @@ class Org:
         return self.pickup_groups
 
     def get_call_queues(self):
+        """
+        Get the Call Queues for an Organization. Also stores them in the Org.call_queues attribute.
+        Returns:
+            list[CallQueue]: List of CallQueue instances for the Organization
+        """
         logging.info("get_call_queues() started")
-        self.call_queues = []
         if not self.locations:
             self.get_locations()
         r = requests.get(_url_base + "v1/telephony/config/queues", headers=self._headers, params=self._params)
@@ -195,8 +245,13 @@ class Org:
         return self.call_queues
 
     def get_people(self):
+        """
+        Get all of the people within the Organization. Also creates a Person instance and stores it in the
+            Org.people attributes
+        Returns:
+            list[Person]: List of Person instances
+        """
         logging.info("get_people() started")
-        self.people = []
         params = {"max": "1000", **self._params}
         r = requests.get(_url_base + "v1/people", headers=self._headers, params=params)
         people_list = r.json()
@@ -227,6 +282,11 @@ class Org:
         return self.people
 
     def get_wxc_people(self):
+        """
+        Get all of the people within the Organization **who have Webex Calling**
+        Returns:
+            list[Person]: List of Person instances of people who have a Webex Calling license
+        """
         if not self.people:
             self.get_people()
         wxc_people = []
@@ -260,14 +320,16 @@ class Person:
                  licenses=None,
                  _parent=None,
                  access_token=None,
-                 url_base=None,
-                 **kwargs):
+                 url_base=None):
         # Default values for other attrs
-        self.wxc = False
-        self.vm_config = None
+        self.wxc: bool = False
+        '''True if this is a Webex Calling User'''
+        self.vm_config: dict = {}
+        '''Dictionary of the VM config as returned by Webex API'''
         self.recording = None
         self.barge_in = None
-        self.call_forwarding = None
+        self.call_forwarding: dict = {}
+        '''Dictionary of the Call Forwarding config as returned by Webex API'''
         self.caller_id = None
         self.intercept = None
         self.dnd = None
@@ -308,8 +370,8 @@ class Person:
         if params is None:
             params = {}
         logging.info(f"__get_webex_data started for using {endpoint}")
-        myparams = {**params, **self._params}
-        r = requests.get(_url_base + endpoint, headers=self._headers, params=myparams)
+        my_params = {**params, **self._params}
+        r = requests.get(_url_base + endpoint, headers=self._headers, params=my_params)
         response = r.json()
         return response
 
@@ -317,8 +379,8 @@ class Person:
         if params is None:
             params = {}
         logging.info(f"__push_webex_data started using {endpoint}")
-        myparams = {**params, **self._params}
-        r = requests.put(_url_base + endpoint, headers=self._headers, params=myparams, json=payload)
+        my_params = {**params, **self._params}
+        r = requests.put(_url_base + endpoint, headers=self._headers, params=my_params, json=payload)
         response_code = r.status_code
         if response_code == 200 or response_code == 204:
             return True
@@ -449,7 +511,9 @@ class CallQueue:
     def get_queue_forwarding(self):
         """
         Get the Call Forwarding settings for this Call Queue instance
-        :return: call_forwarding attribute of the instance, which is a disctionary of values
+
+        Returns:
+            CallQueue.call_forwarding: The Call Forwarding settings for the Person
         """
         # TODO: The rules within Call Forwarding are weird. The rules come back in this call, but they are
         #       different than the /selectiveRules response. It makes sense to aggregate them, but that probably
@@ -492,7 +556,7 @@ class XSI:
         user_id_bwks = user_id_decoded.split("/")[-1]
         self.id = user_id_bwks
 
-        # Inherited attrinutes
+        # Inherited attributes
         self.xsi_endpoints = _parent._parent.xsi
 
         # API attributes
@@ -506,6 +570,7 @@ class XSI:
         self.profile = {}
         self.registrations = None
         self.fac = None
+        self.services = {}
 
         # Get the profile if we have been asked to
         if get_profile:
@@ -533,7 +598,7 @@ class XSI:
         return self.profile
 
     def get_registrations(self):
-        # If we don't have a registations URL, because we don't have the profile, go get it
+        # If we don't have a registrations URL, because we don't have the profile, go get it
         if "registrations_url" not in self.profile:
             self.get_profile()
         r = requests.get(self.xsi_endpoints['actions_endpoint'] + self.profile['registrations_url'],
@@ -551,3 +616,31 @@ class XSI:
         response = r.json()
         self.fac = response
         return self.fac
+
+    def get_services(self):
+        # TODO There are still some services that we should collect more data for. For example, BroadWorks
+        #       Anywhere has Locations that aren't pulled without a separate call.
+
+        r = requests.get(self.xsi_endpoints['actions_endpoint'] + "/v2.0/user/" + self.id + "/services",
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        self.services['list'] = response['Services']['service']
+        # Now that we have all of the services, pulling the data is pretty easy since the URL
+        # is present in the response. Loop through the services and collect the data
+        # Some services have no config so there is no URI and we'll just populate them as True
+        for service in self.services['list']:
+            if "uri" in service:
+                r = requests.get(self.xsi_endpoints['actions_endpoint'] + service['uri']['$'],
+                                 headers=self._headers, params=self._params)
+                # Getting well-formatted JSON doesn't always work. If we can decode the JSON, use it
+                # If not, just store the raw text. At some point, it would make sense to parse the text
+                # and build the dict directly
+                try:
+                    response = r.json()
+                except json.decoder.JSONDecodeError:
+                    response = r.text
+                self.services[service['name']['$']] = response
+            else:
+                self.services[service['name']['$']] = True
+        return self.services
+
