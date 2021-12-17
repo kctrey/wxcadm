@@ -33,23 +33,27 @@ class Webex:
         # The Authorization header is going to be used by every API call in the package.
         # Might want to make it something global so we don't have to inherit it across all of the children
         self._headers: dict = {"Authorization": "Bearer " + access_token}
+        logging.debug(f"Setting Org._headers to {self._headers}")
 
         # Instance attrs
         self.orgs: list[Org] = []
         '''A list of the Org instances that this Webex instance can manage'''
         # Get the orgs that this token can manage
+        logging.debug(f"Making API call to v1/organizations")
         r = requests.get(_url_base + "v1/organizations", headers=self._headers)
         response = r.json()
         # If a token can manage a lot of orgs, you might not want to create them all, because
         # it can take some time to do all of the API calls and get the data back
         if not create_org:
+            logging.info("Org initialization not requested. Storing orgs.")
             self.orgs = response['items']
             return
         else:
-            logging.info("Collecting orgs")
+            logging.info("Org initialization requested. Collecting orgs")
             for org in response['items']:
                 # This builds an Org instance for every Org, so be careful
                 # if the user manages multiple orgs
+                logging.debug(f"Processing org: {org['displayName']}")
                 org = Org(org['displayName'], org['id'],
                           people=get_people, locations=get_locations, xsi=get_xsi, _parent=self)
                 self.orgs.append(org)
@@ -57,6 +61,7 @@ class Webex:
             # we are also going to put the orgs[0] instance in the org attr
             # That way both .org and .orgs[0] are the same
             if len(self.orgs) == 1:
+                logging.debug(f"Only one org found. Storing as Webex.org")
                 self.org = self.orgs[0]
 
 
@@ -80,6 +85,9 @@ class Org:
 
         # Instance attrs
         self.call_queues: list[CallQueue] = []
+        """The Call Queues for this Org"""
+        self.hunt_groups: list[HuntGroup] = []
+        """The Hunt Groups for this Org"""
         self.pickup_groups: list[PickupGroup] = []
         'A list of the PickupGroup instances for this Org'
         self.locations: list[Location] = []
@@ -243,6 +251,23 @@ class Org:
             queue = CallQueue(self, id, name, location_id, phone_number, extension, enabled, get_config=True)
             self.call_queues.append(queue)
         return self.call_queues
+
+    def get_hunt_groups(self):
+        """
+        Get the Hunt Groups for an Organization. Also stores them in the Org.hunt_groups attribute.
+        Returns:
+            list[HuntGroup]: List of HuntGroup instances for the Organization
+        """
+        logging.info("get_hunt_groups() started")
+        if not self.locations:
+            self.get_locations()
+        r = requests.get(_url_base + "v1/telephony/config/huntGroups", headers=self._headers, params=self._params)
+        response = r.json()
+        for hg in response['huntGroups']:
+            hunt_group = HuntGroup(self, hg['id'], hg['name'], hg['locationId'], hg['enabled'],
+                                   hg.get("phoneNumber", ""), hg.get("extension", ""))
+            self.hunt_groups.append(hunt_group)
+        return self.hunt_groups
 
     def get_people(self):
         """
@@ -472,7 +497,7 @@ class PickupGroup:
         self.id = id
         self.name = name
         # If no agents were passed, we need to go get the configuration of the PickupGroup
-        if agents == None:
+        if agents is None:
             self.agents = []
             r = requests.get(_url_base + f"v1/telephony/config/locations/{self.location_id}/callPickups/{self.id}",
                              headers=_parent._headers
@@ -644,3 +669,85 @@ class XSI:
                 self.services[service['name']['$']] = True
         return self.services
 
+
+class HuntGroup:
+    def __init__(self, parent: object,
+                 id: str,
+                 name: str,
+                 location: str,
+                 enabled: bool,
+                 phone_number: str = None,
+                 extension: str = None,
+                 config:bool = True
+                 ):
+        """
+        Inititalize a HuntGroup instance
+        Args:
+            parent (Org): The Org instance to which the Hunt Group belongs
+            id (str): The Webex ID for the Hunt Group
+            name (str): The name of the Hunt Group
+            location (str): The Location ID associated with the Hunt Group
+            enabled (bool): Boolean indicating whether the Hunt Group is enabled
+            phone_number (str, optional): The DID for the Hunt Group
+            extension (str, optional): The extension of the Hunt Group
+        Returns:
+            HuntGroup: The HuntGroup instance
+        """
+
+        # Instance attrs
+        self._parent: object = parent
+        self.id: str = id
+        """The Webex ID of the Hunt Group"""
+        self.name: str = name
+        """The name of the Hunt Group"""
+        self.location: str = location
+        """The Location ID associated with the Hunt Group"""
+        self.enabled: bool = enabled
+        """Whether the Hunt Group is enabled or not"""
+        self.phone_number: str = phone_number
+        """The DID for the Hunt Group"""
+        self.extension: str = extension
+        """The extension of the Hunt Group"""
+        self.agents: list = []
+        """List of agents/users assigned to this Hunt Group"""
+        self.distinctive_ring: bool = False
+        """Whether or not the Hunt Group has Distinctive Ring enabled"""
+        self.alternate_numbers_settings: dict = {}
+        """List of alternate numbers for this Hunt Group"""
+        self.language: str = ""
+        """The language name for the Hunt Group"""
+        self.language_code: str = ""
+        """The short name for the language of the Hunt Group"""
+        self.first_name: str = ""
+        """The Caller ID first name for the Hunt Group"""
+        self.last_name: str = ""
+        """The Caller ID last name for the Hunt Group"""
+        self.time_zone: str = ""
+        """The time zone for the Hunt Group"""
+        self.call_policy: dict = {}
+        """The Call Policy for the Hunt Group"""
+        self.agents: list = []
+        """List of users assigned to this Hunt Group"""
+        self.raw_config: dict = {}
+        """The raw JSON-to-Python config from Webex"""
+
+        # Get the config unless we are asked not to
+        if config:
+            logging.info(f"Getting config for Hunt Group {self.id} in Location {self.location}")
+            self.get_config()
+
+    def get_config(self):
+        """Get the Hunt Group config, including agents"""
+        r = requests.get(_url_base + f"v1/telephony/config/locations/{self.location}/huntGroups/{self.id}",
+                         headers=self._parent._headers)
+        response = r.json()
+        self.raw_config = response
+        self.agents = response['agents']
+        self.distinctive_ring = response.get("distinctiveRing", False)
+        self.alternate_numbers_settings = response['alternateNumberSettings']
+        self.language = response['language']
+        self.language_code = response['languageCode']
+        self.first_name = response['firstName']
+        self.last_name = response['lastName']
+        self.time_zone = response['timeZone']
+        self.call_policy = response['callPolicies']

@@ -78,3 +78,17 @@ for email in email_list:
 ## Logging
 By default, the module logs to ```wxcadm.log```. At the moment, the logs just show the various methods that are invoked
 for API calls to the Webex API.
+
+## Data Structure Note
+At the moment, the module works in two ways. In one way, it populates attributes based on the data from Webex. In
+another, it stores the JSON representation directly from Webex. The latter is very handy for pushing data back to
+Webex, but it requires some knowledge of the API structure, and doesn't abstract it well. Not to mention that the
+Webex API doesn't do anything in a standard way.
+
+The purpose of this module is to simplify that so the user doesn't have to have detailed knowledge of the Webex API, so
+we are faced with a decision: keep the flexibility provided by the raw data or simplify it, at the cost of compatibility
+when the Webex API is changed.
+
+My goal is to find a happy medium, where the attributes get populated dynamically, but I feel that it is going to be a
+heavy lift, changing the structure of all of the classes and building a lot of "helper" functions to convert between
+the two. Stay tuned...
