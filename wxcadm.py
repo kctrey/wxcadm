@@ -21,10 +21,32 @@ logging.basicConfig(level=logging.INFO,
 _url_base = "https://webexapis.com/"
 
 
+class OrgError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class APIError(Exception):
+    def __init__(self, message):
+        """The base class for any exceptions dealing with the API"""
+        super().__init__(message)
+
+
+class TokenError(APIError):
+    def __init__(self, message):
+        """Exceptions dealing with the Access Token itself"""
+        super().__init__(message)
+
+
+class PutError(APIError):
+    def __init__(self, message):
+        """Exception class for problems putting values back into Webex"""
+        super().__init__(message)
+
+
 class Webex:
     # TODO List
-    #    Add token management
-    #    Provide direct access to the children's methods
+    #    Add token refresh, just for completeness
 
     def __init__(self, access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False):
         logging.info("Webex instance initialized")
@@ -41,7 +63,13 @@ class Webex:
         # Get the orgs that this token can manage
         logging.debug(f"Making API call to v1/organizations")
         r = requests.get(_url_base + "v1/organizations", headers=self._headers)
+        # Handle an invalid access token
+        if r.status_code != 200:
+            raise TokenError("The Access Token was not accepted by Webex")
         response = r.json()
+        # Handle when no Orgs are returned. This is pretty rare
+        if len(response['items']) == 0:
+            raise OrgError
         # If a token can manage a lot of orgs, you might not want to create them all, because
         # it can take some time to do all of the API calls and get the data back
         if not create_org:
@@ -55,7 +83,7 @@ class Webex:
                 # if the user manages multiple orgs
                 logging.debug(f"Processing org: {org['displayName']}")
                 org = Org(org['displayName'], org['id'],
-                          people=get_people, locations=get_locations, xsi=get_xsi, _parent=self)
+                          people=get_people, locations=get_locations, xsi=get_xsi, parent=self)
                 self.orgs.append(org)
             # Most users have only one org, so to make that easier for them to work with
             # we are also going to put the orgs[0] instance in the org attr
@@ -64,10 +92,14 @@ class Webex:
                 logging.debug(f"Only one org found. Storing as Webex.org")
                 self.org = self.orgs[0]
 
+    @property
+    def headers(self):
+        return self._headers
+
 
 class Org:
     def __init__(self, name: str, id: str, people: bool = True,
-                 locations: bool = True, xsi: bool = False, _parent: Webex = None):
+                 locations: bool = True, xsi: bool = False, parent: Webex = None):
         """
         Initialize an Org instance
 
@@ -77,7 +109,7 @@ class Org:
             people (bool, optional): Whether to automatically get all people for the Org
             locations (bool, optional): Whether to automatically get all of the locations for the Org
             xsi (bool, optional): Whether to automatically get the XSI Endpoints for the Org
-            _parent (Webex, optional): The parent Webex instance that owns this Org. Usually `_parent=self`
+            parent (Webex, optional): The parent Webex instance that owns this Org. Usually `_parent=self`
 
         Returns:
             Org: This instance of the Org class
@@ -104,14 +136,7 @@ class Org:
         '''A list of all of the Person stances for the Organization'''
 
         # Set the Authorization header based on how the instance was built
-        if _parent is None:  # Instance wasn't created by another instance
-            # TODO Need some code here to throw an error if there is no access_token and url_base
-            pass
-        else:
-            # Since we need the headers for API calls, might as well just store it in a protected attr
-            # Should this be a class attr instead of instance? Probably, but since I hope to allow Org creation
-            # without a Webex parent, I am leaving it like this.
-            self._headers = _parent._headers
+        self._headers = parent.headers
         self.licenses = self.__get_licenses()
 
         # Get all of the people if we aren't told not to
@@ -298,7 +323,7 @@ class Org:
         wxc_licenses = self.__get_wxc_licenses()
         for person in people_list['items']:
             this_person = Person(person['id'], person['emails'][0], first_name=person['firstName'],
-                                 last_name=person['lastName'], display_name=person['displayName'], _parent=self)
+                                 last_name=person['lastName'], display_name=person['displayName'], parent=self)
             this_person.licenses = person['licenses']
             for license in person['licenses']:
                 if license in wxc_licenses:
@@ -320,13 +345,23 @@ class Org:
                 wxc_people.append(person)
         return wxc_people
 
+
 class Location:
-    def __init__(self, location_id, name, address=None, **kwargs):
+    def __init__(self, location_id, name, address=None):
+        """
+        Initialize a Location instance
+        Args:
+            location_id (str): The Webex ID of the Location
+            name (str): The name of the Location
+            address (dict): The address information for the Location
+        Returns:
+             Location (object): The Location instance
+        """
         if address is None:
             address = {}
-        self.id = location_id
-        self.name = name
-        self.address = address
+        self.id: str = location_id
+        self.name: str = name
+        self.address: dict = address
 
     @property
     def __str__(self):
@@ -343,7 +378,7 @@ class Person:
                  last_name=None,
                  display_name=None,
                  licenses=None,
-                 _parent=None,
+                 parent=None,
                  access_token=None,
                  url_base=None):
         # Default values for other attrs
@@ -360,20 +395,19 @@ class Person:
         self.dnd = None
         self.calling_behavior = None
         self.xsi = None
-        self._parent = _parent
-
+        self._parent = parent
 
         # Set the Authorization header based on how the instance was built
         if licenses is None:
             licenses = []
-        if _parent is None:  # Instance wasn't created by another instance
+        if parent is None:  # Instance wasn't created by another instance
             # TODO Need some code here to throw an error if there is no access_token and url_base
             self._headers = {"Authorization": "Bearer " + access_token}
             self._url_base = url_base
         else:  # Instance was created by a parent
-            self._headers = _parent._headers
+            self._headers = parent._headers
 
-        self._params = {"orgId": _parent.id}
+        self._params = {"orgId": parent.id}
         self.id = user_id
         self.email = user_email
         self.first_name = first_name
@@ -384,7 +418,8 @@ class Person:
     def __str__(self):
         return f"{self.email},{self.display_name}"
 
-    # The following is to simplify the API call. Eventually I may open this as a public method to allow arbitrary API calls
+    # The following is to simplify the API call. Eventually I may open this as a public method to
+    # allow arbitrary API calls
     def __get_webex_data(self, endpoint, params=None):
         """
 
@@ -410,7 +445,7 @@ class Person:
         if response_code == 200 or response_code == 204:
             return True
         else:
-            return False
+            raise PutError(r.text)
 
     def start_xsi(self):
         self.xsi = XSI(self)
@@ -492,41 +527,70 @@ class Person:
 
 
 class PickupGroup:
-    def __init__(self, _parent, location, id, name, agents=None):
-        self.location_id = location
-        self.id = id
-        self.name = name
+    def __init__(self, parent, location, id, name, users=None):
+        self._parent: object = parent
+        self.location_id: str = location
+        """The Webex ID of the Location associated with this Pickup Group"""
+        self.id: str = id
+        """The Webex ID of the Pickup Group"""
+        self.name: str = name
+        """The name of the Pickup Group"""
+        self.users: list = []
+        """All of the users (agents) assigned to this Pickup Group"""
         # If no agents were passed, we need to go get the configuration of the PickupGroup
-        if agents is None:
-            self.agents = []
+        if users is None:
             r = requests.get(_url_base + f"v1/telephony/config/locations/{self.location_id}/callPickups/{self.id}",
-                             headers=_parent._headers
+                             headers=self._parent._headers
                              )
             response = r.json()
-            print(r.text)
             # TODO It doesn't make sense to create a new Person instance for the below.
             #      Once we have an API and a class for Workspaces, it would make sense to tie
             #      the agents to the Person or Workspace instance
             # For now, we just write the values that we get back and the user can find the people with the
             # Person-specific methods
             for agent in response['agents']:
-                self.agents.append(agent)
+                self.users.append(agent)
+
+    def get_config(self):
+        """Gets the configuration of the Pickup Group from Webex
+        Returns:
+            dict: The configuration of the Pickup Group
+        """
+        config = {**self}
+        return config
 
 
 class CallQueue:
-    def __init__(self, _parent, id, name, location, phone_number, extension, enabled, get_config=True):
-        self._parent = _parent
-        self.id = id
-        self.name = name
-        self.location_id = location
-        self.phone_number = phone_number
-        self.extension = extension
-        self.enabled = enabled
+    def __init__(self, parent, id, name, location, phone_number, extension, enabled, get_config=True):
+        self._parent: Org = parent
+        """The parent org of this Call Queue"""
+        self.id: str = id
+        """The Webex ID of the Call Queue"""
+        self.name: str = name
+        """The name of the Call Queue"""
+        self.location_id: str = location
+        """The Webex ID of the Location associated with this Call Queue"""
+        self.phone_number: str = phone_number
+        """The DID of the Call Queue"""
+        self.extension: str = extension
+        """The extension of the Call Queue"""
+        self.enabled: bool = enabled
+        """True if the Call Queue is enabled. False if disabled"""
+        self.call_forwarding: dict = {}
+        """The Call Forwarding config for the Call Queue"""
+        self.config: dict = {}
+        """The configuration dictionary for the Call Queue"""
+
         if get_config:
             self.get_queue_config()
             self.get_queue_forwarding()
 
     def get_queue_config(self):
+        """
+        Get the configuration of this Call Queue instance
+        Returns:
+            CallQueue.config: The config dictionary of this Call Queue
+        """
         r = requests.get(_url_base + "v1/telephony/config/locations/" + self.location_id + "/queues/" + self.id,
                          headers=self._parent._headers)
         response = r.json()
@@ -553,7 +617,8 @@ class CallQueue:
     def push(self):
         """
         Push the contents of the CallQueue.config back to Webex
-        :return: The updated CallQueue.config attribute pulled from Webex after pushing the change
+        Returns:
+            CallQueue.config: The updated config attribute pulled from Webex after pushing the change
         """
         # TODO: Right now this only pushes .config. It should also push .call_forwarding and .forwarding_rules
         logging.info(f"Pushing Call Queue config to Webex for {self.name}")
@@ -600,7 +665,6 @@ class XSI:
         # Get the profile if we have been asked to
         if get_profile:
             self.get_profile()
-
 
     def get_profile(self):
         r = requests.get(self.xsi_endpoints['actions_endpoint'] + "/v2.0/user/" + self.id + "/profile",
@@ -678,10 +742,10 @@ class HuntGroup:
                  enabled: bool,
                  phone_number: str = None,
                  extension: str = None,
-                 config:bool = True
+                 config: bool = True
                  ):
         """
-        Inititalize a HuntGroup instance
+        Initialize a HuntGroup instance
         Args:
             parent (Org): The Org instance to which the Hunt Group belongs
             id (str): The Webex ID for the Hunt Group
@@ -695,7 +759,7 @@ class HuntGroup:
         """
 
         # Instance attrs
-        self._parent: object = parent
+        self.parent: object = parent
         self.id: str = id
         """The Webex ID of the Hunt Group"""
         self.name: str = name
@@ -739,7 +803,7 @@ class HuntGroup:
     def get_config(self):
         """Get the Hunt Group config, including agents"""
         r = requests.get(_url_base + f"v1/telephony/config/locations/{self.location}/huntGroups/{self.id}",
-                         headers=self._parent._headers)
+                         headers=self.parent._headers)
         response = r.json()
         self.raw_config = response
         self.agents = response['agents']
@@ -751,3 +815,13 @@ class HuntGroup:
         self.last_name = response['lastName']
         self.time_zone = response['timeZone']
         self.call_policy = response['callPolicies']
+
+        return self.raw_config
+
+
+
+
+
+
+
+

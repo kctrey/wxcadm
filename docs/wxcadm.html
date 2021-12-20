@@ -1,0 +1,2953 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>wxcadm API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>wxcadm</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import json.decoder
+
+import requests
+import logging
+import base64
+
+# TODO: Eventually I would like to use dataclasses, but it will be a heavy lift
+
+# TODO: There is a package-wide problem where we have Webex-native data and instance attributes that we write
+#       to make the instances easier to work with. I have kept the native data because it is easier to push back
+#       to Webex and safer in case the API changes. Ideally, we should store all attributes in ways that a user
+#       would want them and pack them back into JSON as needed. In the meantime, like in the CallQueues object
+#       I end up with the same values in multiple attributes, which is a bad idea.
+
+# Set up logging
+logging.basicConfig(level=logging.INFO,
+                    filename=&#34;wxcadm.log&#34;,
+                    format=&#39;%(asctime)s %(module)s:%(levelname)s:%(message)s&#39;)
+# Some functions available to all classes and instances (optionally)
+# TODO Lots of stuff probably could be moved here since there are common functions in most classes
+_url_base = &#34;https://webexapis.com/&#34;
+
+
+class OrgError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class APIError(Exception):
+    def __init__(self, message):
+        &#34;&#34;&#34;The base class for any exceptions dealing with the API&#34;&#34;&#34;
+        super().__init__(message)
+
+
+class TokenError(APIError):
+    def __init__(self, message):
+        &#34;&#34;&#34;Exceptions dealing with the Access Token itself&#34;&#34;&#34;
+        super().__init__(message)
+
+
+class PutError(APIError):
+    def __init__(self, message):
+        &#34;&#34;&#34;Exception class for problems putting values back into Webex&#34;&#34;&#34;
+        super().__init__(message)
+
+
+class Webex:
+    # TODO List
+    #    Add token refresh, just for completeness
+
+    def __init__(self, access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False):
+        logging.info(&#34;Webex instance initialized&#34;)
+        # The access token is the only thing that we need to get started
+        self._access_token: str = access_token
+        # The Authorization header is going to be used by every API call in the package.
+        # Might want to make it something global so we don&#39;t have to inherit it across all of the children
+        self._headers: dict = {&#34;Authorization&#34;: &#34;Bearer &#34; + access_token}
+        logging.debug(f&#34;Setting Org._headers to {self._headers}&#34;)
+
+        # Instance attrs
+        self.orgs: list[Org] = []
+        &#39;&#39;&#39;A list of the Org instances that this Webex instance can manage&#39;&#39;&#39;
+        # Get the orgs that this token can manage
+        logging.debug(f&#34;Making API call to v1/organizations&#34;)
+        r = requests.get(_url_base + &#34;v1/organizations&#34;, headers=self._headers)
+        # Handle an invalid access token
+        if r.status_code != 200:
+            raise TokenError(&#34;The Access Token was not accepted by Webex&#34;)
+        response = r.json()
+        # Handle when no Orgs are returned. This is pretty rare
+        if len(response[&#39;items&#39;]) == 0:
+            raise OrgError
+        # If a token can manage a lot of orgs, you might not want to create them all, because
+        # it can take some time to do all of the API calls and get the data back
+        if not create_org:
+            logging.info(&#34;Org initialization not requested. Storing orgs.&#34;)
+            self.orgs = response[&#39;items&#39;]
+            return
+        else:
+            logging.info(&#34;Org initialization requested. Collecting orgs&#34;)
+            for org in response[&#39;items&#39;]:
+                # This builds an Org instance for every Org, so be careful
+                # if the user manages multiple orgs
+                logging.debug(f&#34;Processing org: {org[&#39;displayName&#39;]}&#34;)
+                org = Org(org[&#39;displayName&#39;], org[&#39;id&#39;],
+                          people=get_people, locations=get_locations, xsi=get_xsi, parent=self)
+                self.orgs.append(org)
+            # Most users have only one org, so to make that easier for them to work with
+            # we are also going to put the orgs[0] instance in the org attr
+            # That way both .org and .orgs[0] are the same
+            if len(self.orgs) == 1:
+                logging.debug(f&#34;Only one org found. Storing as Webex.org&#34;)
+                self.org = self.orgs[0]
+
+    @property
+    def headers(self):
+        return self._headers
+
+
+class Org:
+    def __init__(self, name: str, id: str, people: bool = True,
+                 locations: bool = True, xsi: bool = False, parent: Webex = None):
+        &#34;&#34;&#34;
+        Initialize an Org instance
+
+        Args:
+            name (str): The Organization name
+            id (str): The Webex ID of the Organization
+            people (bool, optional): Whether to automatically get all people for the Org
+            locations (bool, optional): Whether to automatically get all of the locations for the Org
+            xsi (bool, optional): Whether to automatically get the XSI Endpoints for the Org
+            parent (Webex, optional): The parent Webex instance that owns this Org. Usually `_parent=self`
+
+        Returns:
+            Org: This instance of the Org class
+        &#34;&#34;&#34;
+
+        # Instance attrs
+        self.call_queues: list[CallQueue] = []
+        &#34;&#34;&#34;The Call Queues for this Org&#34;&#34;&#34;
+        self.hunt_groups: list[HuntGroup] = []
+        &#34;&#34;&#34;The Hunt Groups for this Org&#34;&#34;&#34;
+        self.pickup_groups: list[PickupGroup] = []
+        &#39;A list of the PickupGroup instances for this Org&#39;
+        self.locations: list[Location] = []
+        &#39;A list of the Location instances for this Org&#39;
+        self.name: str = name
+        &#39;The name of the Organization&#39;
+        self.id:  str = id
+        &#39;&#39;&#39;The Webex ID of the Organization&#39;&#39;&#39;
+        self.xsi: dict = {}
+        self._params: dict = {&#34;orgId&#34;: self.id}
+        self.licenses: list[dict] = []
+        &#39;&#39;&#39;A list of all of the licenses for the Organization as a dictionary of names and IDs&#39;&#39;&#39;
+        self.people: list[Person] = []
+        &#39;&#39;&#39;A list of all of the Person stances for the Organization&#39;&#39;&#39;
+
+        # Set the Authorization header based on how the instance was built
+        self._headers = parent.headers
+        self.licenses = self.__get_licenses()
+
+        # Get all of the people if we aren&#39;t told not to
+        if people:
+            self.get_people()
+        # Get all of the locations if we aren&#39;t asked not to
+        if locations:
+            self.get_locations()
+        if xsi:
+            self.get_xsi_endpoints()
+
+    @property
+    def __str__(self):
+        return f&#34;{self.name},{self.id}&#34;
+
+    def __get_licenses(self):
+        &#34;&#34;&#34;
+        Gets all of the licenses for the Organization
+
+        :return:
+            list: List of dictionaries containing the license name and ID
+        &#34;&#34;&#34;
+        logging.info(&#34;__get_licenses() started for org&#34;)
+        license_list = []
+        r = requests.get(_url_base + &#34;v1/licenses&#34;, headers=self._headers, params=self._params)
+        response = r.json()
+        for item in response[&#39;items&#39;]:
+            if &#34;Webex Calling&#34; in item[&#39;name&#39;]:
+                wxc_license = True
+            else:
+                wxc_license = False
+            lic = {&#34;name&#34;: item[&#39;name&#39;], &#34;id&#34;: item[&#39;id&#39;], &#34;wxc_license&#34;: wxc_license}
+            license_list.append(lic)
+        return license_list
+
+    def __get_wxc_licenses(self):
+        &#34;&#34;&#34;
+        Get only the Webex Calling licenses from the Org.licenses attribute
+
+        Returns:
+            list[str]:
+        &#34;&#34;&#34;
+        logging.info(&#34;__get_wxc_licenses started&#34;)
+        license_list = []
+        for license in self.licenses:
+            if license[&#39;wxc_license&#39;]:
+                license_list.append(license[&#39;id&#39;])
+        return license_list
+
+    def get_person_by_email(self, email):
+        &#34;&#34;&#34;
+        Get the Person instance from an email address
+        Args:
+            email (str): The email of the Person to return
+        Returns:
+            Person: Person instance object. None in returned when no Person is found
+        &#34;&#34;&#34;
+        logging.info(&#34;get_person_by_email() started&#34;)
+        for person in self.people:
+            if person.email == email:
+                return person
+        return None
+
+    def get_xsi_endpoints(self):
+        &#34;&#34;&#34;
+        Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.
+        Returns:
+            dict: Org.xsi attribute dictionary with each endpoint as an entry
+        &#34;&#34;&#34;
+        params = {&#34;callingData&#34;: &#34;true&#34;, **self._params}
+        r = requests.get(_url_base + &#34;v1/organizations/&#34; + self.id, headers=self._headers, params=params)
+        response = r.json()
+        self.xsi[&#39;actions_endpoint&#39;] = response[&#39;xsiActionsEndpoint&#39;]
+        self.xsi[&#39;events_endpoint&#39;] = response[&#39;xsiEventsEndpoint&#39;]
+        self.xsi[&#39;events_channel_endpoint&#39;] = response[&#39;xsiEventsChannelEndpoint&#39;]
+
+        return self.xsi
+
+    def get_locations(self):
+        &#34;&#34;&#34;
+        Get the Locations for the Organization. Also stores them in the Org.locations attribute.
+        Returns:
+            list[Location]: List of Location instance objects. See the Locations class for attributes.
+        &#34;&#34;&#34;
+        logging.info(&#34;get_locations() started&#34;)
+        r = requests.get(_url_base + &#34;v1/locations&#34;, headers=self._headers, params=self._params)
+        response = r.json()
+        # I am aware that this doesn&#39;t support pagination, so there will be a limit on number of Locations returned
+        for location in response[&#39;items&#39;]:
+            this_location = Location(location[&#39;id&#39;], location[&#39;name&#39;], address=location[&#39;address&#39;])
+            self.locations.append(this_location)
+
+        return self.locations
+
+    def get_pickup_groups(self):
+        &#34;&#34;&#34;
+        Get all of the Call Pickup Groups for an Organization. Also stores them in the Org.pickup_groups attribute.
+        Returns:
+            list[PickupGroup]: List of Call Pickup Groups as a list of dictionaries.
+                See the PickupGroup class for attributes.
+        &#34;&#34;&#34;
+        logging.info(&#34;get_pickup_groups() started&#34;)
+        # First we need to know if we already have locations, because they are needed
+        # for the pickup groups call
+        if not self.locations:
+            self.get_locations()
+        # Loop through all of the locations and get their pickup groups
+        # We will create a new instance of the PickupGroup class when we find one
+        for location in self.locations:
+            r = requests.get(_url_base + &#34;v1/telephony/config/locations/&#34; + location.id + &#34;/callPickups&#34;,
+                             headers=self._headers)
+            response = r.json()
+            for item in response[&#39;callPickups&#39;]:
+                pg = PickupGroup(self, location.id, item[&#39;id&#39;], item[&#39;name&#39;])
+                self.pickup_groups.append(pg)
+        return self.pickup_groups
+
+    def get_call_queues(self):
+        &#34;&#34;&#34;
+        Get the Call Queues for an Organization. Also stores them in the Org.call_queues attribute.
+        Returns:
+            list[CallQueue]: List of CallQueue instances for the Organization
+        &#34;&#34;&#34;
+        logging.info(&#34;get_call_queues() started&#34;)
+        if not self.locations:
+            self.get_locations()
+        r = requests.get(_url_base + &#34;v1/telephony/config/queues&#34;, headers=self._headers, params=self._params)
+        response = r.json()
+        for queue in response[&#39;queues&#39;]:
+            id = queue.get(&#34;id&#34;)
+            name = queue.get(&#34;name&#34;, None)
+            location_id = queue.get(&#34;locationId&#34;)
+            phone_number = queue.get(&#34;phoneNumber&#34;, None)
+            extension = queue.get(&#34;extension&#34;, None)
+            enabled = queue.get(&#34;enabled&#34;)
+
+            queue = CallQueue(self, id, name, location_id, phone_number, extension, enabled, get_config=True)
+            self.call_queues.append(queue)
+        return self.call_queues
+
+    def get_hunt_groups(self):
+        &#34;&#34;&#34;
+        Get the Hunt Groups for an Organization. Also stores them in the Org.hunt_groups attribute.
+        Returns:
+            list[HuntGroup]: List of HuntGroup instances for the Organization
+        &#34;&#34;&#34;
+        logging.info(&#34;get_hunt_groups() started&#34;)
+        if not self.locations:
+            self.get_locations()
+        r = requests.get(_url_base + &#34;v1/telephony/config/huntGroups&#34;, headers=self._headers, params=self._params)
+        response = r.json()
+        for hg in response[&#39;huntGroups&#39;]:
+            hunt_group = HuntGroup(self, hg[&#39;id&#39;], hg[&#39;name&#39;], hg[&#39;locationId&#39;], hg[&#39;enabled&#39;],
+                                   hg.get(&#34;phoneNumber&#34;, &#34;&#34;), hg.get(&#34;extension&#34;, &#34;&#34;))
+            self.hunt_groups.append(hunt_group)
+        return self.hunt_groups
+
+    def get_people(self):
+        &#34;&#34;&#34;
+        Get all of the people within the Organization. Also creates a Person instance and stores it in the
+            Org.people attributes
+        Returns:
+            list[Person]: List of Person instances
+        &#34;&#34;&#34;
+        logging.info(&#34;get_people() started&#34;)
+        params = {&#34;max&#34;: &#34;1000&#34;, **self._params}
+        r = requests.get(_url_base + &#34;v1/people&#34;, headers=self._headers, params=params)
+        people_list = r.json()
+
+        if &#34;next&#34; in r.links:
+            keep_going = True
+            next_url = r.links[&#39;next&#39;][&#39;url&#39;]
+            while keep_going:
+                r = requests.get(next_url, headers=self._headers)
+                new_people = r.json()
+                if &#34;items&#34; not in new_people:
+                    continue
+                people_list[&#39;items&#39;].extend(new_people[&#39;items&#39;])
+                if &#34;next&#34; not in r.links:
+                    keep_going = False
+                else:
+                    next_url = r.links[&#39;next&#39;][&#39;url&#39;]
+
+        wxc_licenses = self.__get_wxc_licenses()
+        for person in people_list[&#39;items&#39;]:
+            this_person = Person(person[&#39;id&#39;], person[&#39;emails&#39;][0], first_name=person[&#39;firstName&#39;],
+                                 last_name=person[&#39;lastName&#39;], display_name=person[&#39;displayName&#39;], parent=self)
+            this_person.licenses = person[&#39;licenses&#39;]
+            for license in person[&#39;licenses&#39;]:
+                if license in wxc_licenses:
+                    this_person.wxc = True
+            self.people.append(this_person)
+        return self.people
+
+    def get_wxc_people(self):
+        &#34;&#34;&#34;
+        Get all of the people within the Organization **who have Webex Calling**
+        Returns:
+            list[Person]: List of Person instances of people who have a Webex Calling license
+        &#34;&#34;&#34;
+        if not self.people:
+            self.get_people()
+        wxc_people = []
+        for person in self.people:
+            if person.wxc:
+                wxc_people.append(person)
+        return wxc_people
+
+
+class Location:
+    def __init__(self, location_id, name, address=None):
+        &#34;&#34;&#34;
+        Initialize a Location instance
+        Args:
+            location_id (str): The Webex ID of the Location
+            name (str): The name of the Location
+            address (dict): The address information for the Location
+        Returns:
+             Location (object): The Location instance
+        &#34;&#34;&#34;
+        if address is None:
+            address = {}
+        self.id: str = location_id
+        self.name: str = name
+        self.address: dict = address
+
+    @property
+    def __str__(self):
+        return f&#34;{self.name},{self.id}&#34;
+
+
+class Person:
+    # TODO List
+    #    Add methods to get and return XSI identifiers
+
+    def __init__(self, user_id,
+                 user_email,
+                 first_name=None,
+                 last_name=None,
+                 display_name=None,
+                 licenses=None,
+                 parent=None,
+                 access_token=None,
+                 url_base=None):
+        # Default values for other attrs
+        self.wxc: bool = False
+        &#39;&#39;&#39;True if this is a Webex Calling User&#39;&#39;&#39;
+        self.vm_config: dict = {}
+        &#39;&#39;&#39;Dictionary of the VM config as returned by Webex API&#39;&#39;&#39;
+        self.recording = None
+        self.barge_in = None
+        self.call_forwarding: dict = {}
+        &#39;&#39;&#39;Dictionary of the Call Forwarding config as returned by Webex API&#39;&#39;&#39;
+        self.caller_id = None
+        self.intercept = None
+        self.dnd = None
+        self.calling_behavior = None
+        self.xsi = None
+        self._parent = parent
+
+        # Set the Authorization header based on how the instance was built
+        if licenses is None:
+            licenses = []
+        if parent is None:  # Instance wasn&#39;t created by another instance
+            # TODO Need some code here to throw an error if there is no access_token and url_base
+            self._headers = {&#34;Authorization&#34;: &#34;Bearer &#34; + access_token}
+            self._url_base = url_base
+        else:  # Instance was created by a parent
+            self._headers = parent._headers
+
+        self._params = {&#34;orgId&#34;: parent.id}
+        self.id = user_id
+        self.email = user_email
+        self.first_name = first_name
+        self.last_name = last_name
+        self.display_name = display_name
+        self.licenses = licenses
+
+    def __str__(self):
+        return f&#34;{self.email},{self.display_name}&#34;
+
+    # The following is to simplify the API call. Eventually I may open this as a public method to
+    # allow arbitrary API calls
+    def __get_webex_data(self, endpoint, params=None):
+        &#34;&#34;&#34;
+
+        :param endpoint: The endpoint of the API call (e.g. &#39;v1/locations&#39;)
+        :param params: A dict of param values for the API call. Will be passed as URL params
+        :return: Returns a dict of the JSON response from the API
+        &#34;&#34;&#34;
+        if params is None:
+            params = {}
+        logging.info(f&#34;__get_webex_data started for using {endpoint}&#34;)
+        my_params = {**params, **self._params}
+        r = requests.get(_url_base + endpoint, headers=self._headers, params=my_params)
+        response = r.json()
+        return response
+
+    def __push_webex_data(self, endpoint, payload, params=None):
+        if params is None:
+            params = {}
+        logging.info(f&#34;__push_webex_data started using {endpoint}&#34;)
+        my_params = {**params, **self._params}
+        r = requests.put(_url_base + endpoint, headers=self._headers, params=my_params, json=payload)
+        response_code = r.status_code
+        if response_code == 200 or response_code == 204:
+            return True
+        else:
+            raise PutError(r.text)
+
+    def start_xsi(self):
+        self.xsi = XSI(self)
+
+    def get_full_config(self):
+        if self.wxc:
+            self.get_call_forwarding()
+            self.get_vm_config()
+            self.get_intercept()
+            self.get_call_recording()
+            self.get_caller_id()
+            self.get_dnd()
+            self.get_calling_behavior()
+            self.get_barge_in()
+
+    def get_call_forwarding(self):
+        logging.info(&#34;get_call_forwarding() started&#34;)
+        self.call_forwarding = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callForwarding&#34;)
+        return self.call_forwarding
+
+    def get_barge_in(self):
+        logging.info(&#34;get_barge_in() started&#34;)
+        self.barge_in = self.__get_webex_data(f&#34;v1/people/{self.id}/features/bargeIn&#34;)
+        return self.barge_in
+
+    def get_vm_config(self):
+        logging.info(&#34;get_vm_config() started&#34;)
+        self.vm_config = self.__get_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;)
+        return self.vm_config
+
+    def push_vm_config(self):
+        # In progress
+        logging.info(f&#34;Pushing VM Config for {self.email}&#34;)
+        success = self.__push_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;, self.vm_config)
+        self.get_vm_config()
+        return self.vm_config
+
+    def enable_vm_to_email(self, email=None, push=True):
+        if not email:
+            email = self.email
+        self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;enabled&#39;] = True
+        self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;emailId&#39;] = email
+        if push:
+            return self.push_vm_config()
+        else:
+            return self.vm_config
+
+    def disable_vm_to_email(self, push=True):
+        self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;enabled&#39;] = False
+        if push:
+            return self.push_vm_config()
+        else:
+            return self.vm_config
+
+    def get_intercept(self):
+        logging.info(&#34;get_intercept() started&#34;)
+        self.intercept = self.__get_webex_data(f&#34;v1/people/{self.id}/features/intercept&#34;)
+        return self.intercept
+
+    def get_call_recording(self):
+        logging.info(&#34;get_call_recording() started&#34;)
+        self.recording = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callRecording&#34;)
+        return self.recording
+
+    def get_caller_id(self):
+        logging.info(&#34;get_caller_id() started&#34;)
+        self.caller_id = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callerId&#34;)
+        return self.caller_id
+
+    def get_dnd(self):
+        logging.info(&#34;get_dnd() started&#34;)
+        self.dnd = self.__get_webex_data(f&#34;v1/people/{self.id}/features/doNotDisturb&#34;)
+        return self.dnd
+
+    def get_calling_behavior(self):
+        logging.info(&#34;get_calling_behavior() started&#34;)
+        self.calling_behavior = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callingBehavior&#34;)
+        return self.calling_behavior
+
+
+class PickupGroup:
+    def __init__(self, parent, location, id, name, users=None):
+        self._parent: object = parent
+        self.location_id: str = location
+        &#34;&#34;&#34;The Webex ID of the Location associated with this Pickup Group&#34;&#34;&#34;
+        self.id: str = id
+        &#34;&#34;&#34;The Webex ID of the Pickup Group&#34;&#34;&#34;
+        self.name: str = name
+        &#34;&#34;&#34;The name of the Pickup Group&#34;&#34;&#34;
+        self.users: list = []
+        &#34;&#34;&#34;All of the users (agents) assigned to this Pickup Group&#34;&#34;&#34;
+        # If no agents were passed, we need to go get the configuration of the PickupGroup
+        if users is None:
+            r = requests.get(_url_base + f&#34;v1/telephony/config/locations/{self.location_id}/callPickups/{self.id}&#34;,
+                             headers=self._parent._headers
+                             )
+            response = r.json()
+            # TODO It doesn&#39;t make sense to create a new Person instance for the below.
+            #      Once we have an API and a class for Workspaces, it would make sense to tie
+            #      the agents to the Person or Workspace instance
+            # For now, we just write the values that we get back and the user can find the people with the
+            # Person-specific methods
+            for agent in response[&#39;agents&#39;]:
+                self.users.append(agent)
+
+    def get_config(self):
+        &#34;&#34;&#34;Gets the configuration of the Pickup Group from Webex
+        Returns:
+            dict: The configuration of the Pickup Group
+        &#34;&#34;&#34;
+        config = {**self}
+        return config
+
+
+class CallQueue:
+    def __init__(self, parent, id, name, location, phone_number, extension, enabled, get_config=True):
+        self._parent: Org = parent
+        &#34;&#34;&#34;The parent org of this Call Queue&#34;&#34;&#34;
+        self.id: str = id
+        &#34;&#34;&#34;The Webex ID of the Call Queue&#34;&#34;&#34;
+        self.name: str = name
+        &#34;&#34;&#34;The name of the Call Queue&#34;&#34;&#34;
+        self.location_id: str = location
+        &#34;&#34;&#34;The Webex ID of the Location associated with this Call Queue&#34;&#34;&#34;
+        self.phone_number: str = phone_number
+        &#34;&#34;&#34;The DID of the Call Queue&#34;&#34;&#34;
+        self.extension: str = extension
+        &#34;&#34;&#34;The extension of the Call Queue&#34;&#34;&#34;
+        self.enabled: bool = enabled
+        &#34;&#34;&#34;True if the Call Queue is enabled. False if disabled&#34;&#34;&#34;
+        self.call_forwarding: dict = {}
+        &#34;&#34;&#34;The Call Forwarding config for the Call Queue&#34;&#34;&#34;
+        self.config: dict = {}
+        &#34;&#34;&#34;The configuration dictionary for the Call Queue&#34;&#34;&#34;
+
+        if get_config:
+            self.get_queue_config()
+            self.get_queue_forwarding()
+
+    def get_queue_config(self):
+        &#34;&#34;&#34;
+        Get the configuration of this Call Queue instance
+        Returns:
+            CallQueue.config: The config dictionary of this Call Queue
+        &#34;&#34;&#34;
+        r = requests.get(_url_base + &#34;v1/telephony/config/locations/&#34; + self.location_id + &#34;/queues/&#34; + self.id,
+                         headers=self._parent._headers)
+        response = r.json()
+        self.config = response
+        return self.config
+
+    def get_queue_forwarding(self):
+        &#34;&#34;&#34;
+        Get the Call Forwarding settings for this Call Queue instance
+
+        Returns:
+            CallQueue.call_forwarding: The Call Forwarding settings for the Person
+        &#34;&#34;&#34;
+        # TODO: The rules within Call Forwarding are weird. The rules come back in this call, but they are
+        #       different than the /selectiveRules response. It makes sense to aggregate them, but that probably
+        #       requires the object-&gt;JSON mapping that we need to do for all classes
+        r = requests.get(_url_base + &#34;v1/telephony/config/locations/&#34; + self.location_id +
+                         &#34;/queues/&#34; + self.id + &#34;/callForwarding&#34;,
+                         headers=self._parent._headers)
+        response = r.json()
+        self.call_forwarding = response
+        return self.call_forwarding
+
+    def push(self):
+        &#34;&#34;&#34;
+        Push the contents of the CallQueue.config back to Webex
+        Returns:
+            CallQueue.config: The updated config attribute pulled from Webex after pushing the change
+        &#34;&#34;&#34;
+        # TODO: Right now this only pushes .config. It should also push .call_forwarding and .forwarding_rules
+        logging.info(f&#34;Pushing Call Queue config to Webex for {self.name}&#34;)
+        url = _url_base + &#34;v1/telephony/config/locations/&#34; + self.location_id + &#34;/queues/&#34; + self.id
+        print(url)
+        r = requests.put(url,
+                         headers=self._parent._headers, json=self.config)
+        response = r.status_code
+        self.get_queue_config()
+        return self.config
+
+
+class XSI:
+    def __init__(self, _parent, get_profile=False):
+        &#34;&#34;&#34;
+        The XSI class holds all of the relevant XSI data for a Person
+        :param _parent: The Person instance that created the XSI
+        :param get_profile: Boolean value to force the XSI to get the user profile when initialized
+        &#34;&#34;&#34;
+        logging.info(f&#34;Initializing XSI instance for {_parent.email}&#34;)
+        # First we need to get the XSI User ID for the Webex person we are working with
+        logging.info(&#34;Getting XSI identifiers&#34;)
+        user_id_bytes = base64.b64decode(_parent.id + &#34;===&#34;)
+        user_id_decoded = user_id_bytes.decode(&#34;utf-8&#34;)
+        user_id_bwks = user_id_decoded.split(&#34;/&#34;)[-1]
+        self.id = user_id_bwks
+
+        # Inherited attributes
+        self.xsi_endpoints = _parent._parent.xsi
+
+        # API attributes
+        self._headers = {&#34;Content-Type&#34;: &#34;application/json&#34;,
+                         &#34;Accept&#34;: &#34;application/json&#34;,
+                         &#34;X-BroadWorks-Protocol-Version&#34;: &#34;25.0&#34;,
+                         **_parent._headers}
+        self._params = {&#34;format&#34;: &#34;json&#34;}
+
+        # Attribute definitions
+        self.profile = {}
+        self.registrations = None
+        self.fac = None
+        self.services = {}
+
+        # Get the profile if we have been asked to
+        if get_profile:
+            self.get_profile()
+
+    def get_profile(self):
+        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + &#34;/v2.0/user/&#34; + self.id + &#34;/profile&#34;,
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        # The following is a mapping of the raw XSI format to the profile attribute
+        self.profile[&#39;registrations_url&#39;] = response[&#39;Profile&#39;][&#39;registrations&#39;][&#39;$&#39;]
+        self.profile[&#39;schedule_url&#39;] = response[&#39;Profile&#39;][&#39;scheduleList&#39;][&#39;$&#39;]
+        self.profile[&#39;fac_url&#39;] = response[&#39;Profile&#39;][&#39;fac&#39;][&#39;$&#39;]
+        self.profile[&#39;country_code&#39;] = response[&#39;Profile&#39;][&#39;countryCode&#39;][&#39;$&#39;]
+        self.profile[&#39;user_id&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;userId&#39;][&#39;$&#39;]
+        self.profile[&#39;group_id&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;groupId&#39;][&#39;$&#39;]
+        self.profile[&#39;service_provider&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;serviceProvider&#39;][&#39;$&#39;]
+        # Not everyone has a number and/or extension, so we need to check to see if there are there
+        if &#34;number&#34; in response[&#39;Profile&#39;][&#39;details&#39;]:
+            self.profile[&#39;number&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;number&#39;][&#39;$&#39;]
+        if &#34;extension&#34; in response[&#39;Profile&#39;][&#39;details&#39;]:
+            self.profile[&#39;extension&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;extension&#39;][&#39;$&#39;]
+
+        return self.profile
+
+    def get_registrations(self):
+        # If we don&#39;t have a registrations URL, because we don&#39;t have the profile, go get it
+        if &#34;registrations_url&#34; not in self.profile:
+            self.get_profile()
+        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self.profile[&#39;registrations_url&#39;],
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        self.registrations = response
+        return self.registrations
+
+    def get_fac(self):
+        # If we don&#39;t have a FAC URL, go get it
+        if &#34;fac_url&#34; not in self.profile:
+            self.get_profile()
+        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self.profile[&#39;fac_url&#39;],
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        self.fac = response
+        return self.fac
+
+    def get_services(self):
+        # TODO There are still some services that we should collect more data for. For example, BroadWorks
+        #       Anywhere has Locations that aren&#39;t pulled without a separate call.
+
+        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + &#34;/v2.0/user/&#34; + self.id + &#34;/services&#34;,
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        self.services[&#39;list&#39;] = response[&#39;Services&#39;][&#39;service&#39;]
+        # Now that we have all of the services, pulling the data is pretty easy since the URL
+        # is present in the response. Loop through the services and collect the data
+        # Some services have no config so there is no URI and we&#39;ll just populate them as True
+        for service in self.services[&#39;list&#39;]:
+            if &#34;uri&#34; in service:
+                r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + service[&#39;uri&#39;][&#39;$&#39;],
+                                 headers=self._headers, params=self._params)
+                # Getting well-formatted JSON doesn&#39;t always work. If we can decode the JSON, use it
+                # If not, just store the raw text. At some point, it would make sense to parse the text
+                # and build the dict directly
+                try:
+                    response = r.json()
+                except json.decoder.JSONDecodeError:
+                    response = r.text
+                self.services[service[&#39;name&#39;][&#39;$&#39;]] = response
+            else:
+                self.services[service[&#39;name&#39;][&#39;$&#39;]] = True
+        return self.services
+
+
+class HuntGroup:
+    def __init__(self, parent: object,
+                 id: str,
+                 name: str,
+                 location: str,
+                 enabled: bool,
+                 phone_number: str = None,
+                 extension: str = None,
+                 config: bool = True
+                 ):
+        &#34;&#34;&#34;
+        Initialize a HuntGroup instance
+        Args:
+            parent (Org): The Org instance to which the Hunt Group belongs
+            id (str): The Webex ID for the Hunt Group
+            name (str): The name of the Hunt Group
+            location (str): The Location ID associated with the Hunt Group
+            enabled (bool): Boolean indicating whether the Hunt Group is enabled
+            phone_number (str, optional): The DID for the Hunt Group
+            extension (str, optional): The extension of the Hunt Group
+        Returns:
+            HuntGroup: The HuntGroup instance
+        &#34;&#34;&#34;
+
+        # Instance attrs
+        self.parent: object = parent
+        self.id: str = id
+        &#34;&#34;&#34;The Webex ID of the Hunt Group&#34;&#34;&#34;
+        self.name: str = name
+        &#34;&#34;&#34;The name of the Hunt Group&#34;&#34;&#34;
+        self.location: str = location
+        &#34;&#34;&#34;The Location ID associated with the Hunt Group&#34;&#34;&#34;
+        self.enabled: bool = enabled
+        &#34;&#34;&#34;Whether the Hunt Group is enabled or not&#34;&#34;&#34;
+        self.phone_number: str = phone_number
+        &#34;&#34;&#34;The DID for the Hunt Group&#34;&#34;&#34;
+        self.extension: str = extension
+        &#34;&#34;&#34;The extension of the Hunt Group&#34;&#34;&#34;
+        self.agents: list = []
+        &#34;&#34;&#34;List of agents/users assigned to this Hunt Group&#34;&#34;&#34;
+        self.distinctive_ring: bool = False
+        &#34;&#34;&#34;Whether or not the Hunt Group has Distinctive Ring enabled&#34;&#34;&#34;
+        self.alternate_numbers_settings: dict = {}
+        &#34;&#34;&#34;List of alternate numbers for this Hunt Group&#34;&#34;&#34;
+        self.language: str = &#34;&#34;
+        &#34;&#34;&#34;The language name for the Hunt Group&#34;&#34;&#34;
+        self.language_code: str = &#34;&#34;
+        &#34;&#34;&#34;The short name for the language of the Hunt Group&#34;&#34;&#34;
+        self.first_name: str = &#34;&#34;
+        &#34;&#34;&#34;The Caller ID first name for the Hunt Group&#34;&#34;&#34;
+        self.last_name: str = &#34;&#34;
+        &#34;&#34;&#34;The Caller ID last name for the Hunt Group&#34;&#34;&#34;
+        self.time_zone: str = &#34;&#34;
+        &#34;&#34;&#34;The time zone for the Hunt Group&#34;&#34;&#34;
+        self.call_policy: dict = {}
+        &#34;&#34;&#34;The Call Policy for the Hunt Group&#34;&#34;&#34;
+        self.agents: list = []
+        &#34;&#34;&#34;List of users assigned to this Hunt Group&#34;&#34;&#34;
+        self.raw_config: dict = {}
+        &#34;&#34;&#34;The raw JSON-to-Python config from Webex&#34;&#34;&#34;
+
+        # Get the config unless we are asked not to
+        if config:
+            logging.info(f&#34;Getting config for Hunt Group {self.id} in Location {self.location}&#34;)
+            self.get_config()
+
+    def get_config(self):
+        &#34;&#34;&#34;Get the Hunt Group config, including agents&#34;&#34;&#34;
+        r = requests.get(_url_base + f&#34;v1/telephony/config/locations/{self.location}/huntGroups/{self.id}&#34;,
+                         headers=self.parent._headers)
+        response = r.json()
+        self.raw_config = response
+        self.agents = response[&#39;agents&#39;]
+        self.distinctive_ring = response.get(&#34;distinctiveRing&#34;, False)
+        self.alternate_numbers_settings = response[&#39;alternateNumberSettings&#39;]
+        self.language = response[&#39;language&#39;]
+        self.language_code = response[&#39;languageCode&#39;]
+        self.first_name = response[&#39;firstName&#39;]
+        self.last_name = response[&#39;lastName&#39;]
+        self.time_zone = response[&#39;timeZone&#39;]
+        self.call_policy = response[&#39;callPolicies&#39;]
+
+        return self.raw_config</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="wxcadm.APIError"><code class="flex name class">
+<span>class <span class="ident">APIError</span></span>
+<span>(</span><span>message)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Common base class for all non-exit exceptions.</p>
+<p>The base class for any exceptions dealing with the API</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class APIError(Exception):
+    def __init__(self, message):
+        &#34;&#34;&#34;The base class for any exceptions dealing with the API&#34;&#34;&#34;
+        super().__init__(message)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>builtins.Exception</li>
+<li>builtins.BaseException</li>
+</ul>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="wxcadm.PutError" href="#wxcadm.PutError">PutError</a></li>
+<li><a title="wxcadm.TokenError" href="#wxcadm.TokenError">TokenError</a></li>
+</ul>
+</dd>
+<dt id="wxcadm.CallQueue"><code class="flex name class">
+<span>class <span class="ident">CallQueue</span></span>
+<span>(</span><span>parent, id, name, location, phone_number, extension, enabled, get_config=True)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class CallQueue:
+    def __init__(self, parent, id, name, location, phone_number, extension, enabled, get_config=True):
+        self._parent: Org = parent
+        &#34;&#34;&#34;The parent org of this Call Queue&#34;&#34;&#34;
+        self.id: str = id
+        &#34;&#34;&#34;The Webex ID of the Call Queue&#34;&#34;&#34;
+        self.name: str = name
+        &#34;&#34;&#34;The name of the Call Queue&#34;&#34;&#34;
+        self.location_id: str = location
+        &#34;&#34;&#34;The Webex ID of the Location associated with this Call Queue&#34;&#34;&#34;
+        self.phone_number: str = phone_number
+        &#34;&#34;&#34;The DID of the Call Queue&#34;&#34;&#34;
+        self.extension: str = extension
+        &#34;&#34;&#34;The extension of the Call Queue&#34;&#34;&#34;
+        self.enabled: bool = enabled
+        &#34;&#34;&#34;True if the Call Queue is enabled. False if disabled&#34;&#34;&#34;
+        self.call_forwarding: dict = {}
+        &#34;&#34;&#34;The Call Forwarding config for the Call Queue&#34;&#34;&#34;
+        self.config: dict = {}
+        &#34;&#34;&#34;The configuration dictionary for the Call Queue&#34;&#34;&#34;
+
+        if get_config:
+            self.get_queue_config()
+            self.get_queue_forwarding()
+
+    def get_queue_config(self):
+        &#34;&#34;&#34;
+        Get the configuration of this Call Queue instance
+        Returns:
+            CallQueue.config: The config dictionary of this Call Queue
+        &#34;&#34;&#34;
+        r = requests.get(_url_base + &#34;v1/telephony/config/locations/&#34; + self.location_id + &#34;/queues/&#34; + self.id,
+                         headers=self._parent._headers)
+        response = r.json()
+        self.config = response
+        return self.config
+
+    def get_queue_forwarding(self):
+        &#34;&#34;&#34;
+        Get the Call Forwarding settings for this Call Queue instance
+
+        Returns:
+            CallQueue.call_forwarding: The Call Forwarding settings for the Person
+        &#34;&#34;&#34;
+        # TODO: The rules within Call Forwarding are weird. The rules come back in this call, but they are
+        #       different than the /selectiveRules response. It makes sense to aggregate them, but that probably
+        #       requires the object-&gt;JSON mapping that we need to do for all classes
+        r = requests.get(_url_base + &#34;v1/telephony/config/locations/&#34; + self.location_id +
+                         &#34;/queues/&#34; + self.id + &#34;/callForwarding&#34;,
+                         headers=self._parent._headers)
+        response = r.json()
+        self.call_forwarding = response
+        return self.call_forwarding
+
+    def push(self):
+        &#34;&#34;&#34;
+        Push the contents of the CallQueue.config back to Webex
+        Returns:
+            CallQueue.config: The updated config attribute pulled from Webex after pushing the change
+        &#34;&#34;&#34;
+        # TODO: Right now this only pushes .config. It should also push .call_forwarding and .forwarding_rules
+        logging.info(f&#34;Pushing Call Queue config to Webex for {self.name}&#34;)
+        url = _url_base + &#34;v1/telephony/config/locations/&#34; + self.location_id + &#34;/queues/&#34; + self.id
+        print(url)
+        r = requests.put(url,
+                         headers=self._parent._headers, json=self.config)
+        response = r.status_code
+        self.get_queue_config()
+        return self.config</code></pre>
+</details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="wxcadm.CallQueue.call_forwarding"><code class="name">var <span class="ident">call_forwarding</span></code></dt>
+<dd>
+<div class="desc"><p>The Call Forwarding config for the Call Queue</p></div>
+</dd>
+<dt id="wxcadm.CallQueue.config"><code class="name">var <span class="ident">config</span></code></dt>
+<dd>
+<div class="desc"><p>The configuration dictionary for the Call Queue</p></div>
+</dd>
+<dt id="wxcadm.CallQueue.enabled"><code class="name">var <span class="ident">enabled</span></code></dt>
+<dd>
+<div class="desc"><p>True if the Call Queue is enabled. False if disabled</p></div>
+</dd>
+<dt id="wxcadm.CallQueue.extension"><code class="name">var <span class="ident">extension</span></code></dt>
+<dd>
+<div class="desc"><p>The extension of the Call Queue</p></div>
+</dd>
+<dt id="wxcadm.CallQueue.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<div class="desc"><p>The Webex ID of the Call Queue</p></div>
+</dd>
+<dt id="wxcadm.CallQueue.location_id"><code class="name">var <span class="ident">location_id</span></code></dt>
+<dd>
+<div class="desc"><p>The Webex ID of the Location associated with this Call Queue</p></div>
+</dd>
+<dt id="wxcadm.CallQueue.name"><code class="name">var <span class="ident">name</span></code></dt>
+<dd>
+<div class="desc"><p>The name of the Call Queue</p></div>
+</dd>
+<dt id="wxcadm.CallQueue.phone_number"><code class="name">var <span class="ident">phone_number</span></code></dt>
+<dd>
+<div class="desc"><p>The DID of the Call Queue</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="wxcadm.CallQueue.get_queue_config"><code class="name flex">
+<span>def <span class="ident">get_queue_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the configuration of this Call Queue instance</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="wxcadm.CallQueue.config" href="#wxcadm.CallQueue.config">CallQueue.config</a></code></dt>
+<dd>The config dictionary of this Call Queue</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_queue_config(self):
+    &#34;&#34;&#34;
+    Get the configuration of this Call Queue instance
+    Returns:
+        CallQueue.config: The config dictionary of this Call Queue
+    &#34;&#34;&#34;
+    r = requests.get(_url_base + &#34;v1/telephony/config/locations/&#34; + self.location_id + &#34;/queues/&#34; + self.id,
+                     headers=self._parent._headers)
+    response = r.json()
+    self.config = response
+    return self.config</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.CallQueue.get_queue_forwarding"><code class="name flex">
+<span>def <span class="ident">get_queue_forwarding</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the Call Forwarding settings for this Call Queue instance</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="wxcadm.CallQueue.call_forwarding" href="#wxcadm.CallQueue.call_forwarding">CallQueue.call_forwarding</a></code></dt>
+<dd>The Call Forwarding settings for the Person</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_queue_forwarding(self):
+    &#34;&#34;&#34;
+    Get the Call Forwarding settings for this Call Queue instance
+
+    Returns:
+        CallQueue.call_forwarding: The Call Forwarding settings for the Person
+    &#34;&#34;&#34;
+    # TODO: The rules within Call Forwarding are weird. The rules come back in this call, but they are
+    #       different than the /selectiveRules response. It makes sense to aggregate them, but that probably
+    #       requires the object-&gt;JSON mapping that we need to do for all classes
+    r = requests.get(_url_base + &#34;v1/telephony/config/locations/&#34; + self.location_id +
+                     &#34;/queues/&#34; + self.id + &#34;/callForwarding&#34;,
+                     headers=self._parent._headers)
+    response = r.json()
+    self.call_forwarding = response
+    return self.call_forwarding</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.CallQueue.push"><code class="name flex">
+<span>def <span class="ident">push</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Push the contents of the CallQueue.config back to Webex</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="wxcadm.CallQueue.config" href="#wxcadm.CallQueue.config">CallQueue.config</a></code></dt>
+<dd>The updated config attribute pulled from Webex after pushing the change</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def push(self):
+    &#34;&#34;&#34;
+    Push the contents of the CallQueue.config back to Webex
+    Returns:
+        CallQueue.config: The updated config attribute pulled from Webex after pushing the change
+    &#34;&#34;&#34;
+    # TODO: Right now this only pushes .config. It should also push .call_forwarding and .forwarding_rules
+    logging.info(f&#34;Pushing Call Queue config to Webex for {self.name}&#34;)
+    url = _url_base + &#34;v1/telephony/config/locations/&#34; + self.location_id + &#34;/queues/&#34; + self.id
+    print(url)
+    r = requests.put(url,
+                     headers=self._parent._headers, json=self.config)
+    response = r.status_code
+    self.get_queue_config()
+    return self.config</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="wxcadm.HuntGroup"><code class="flex name class">
+<span>class <span class="ident">HuntGroup</span></span>
+<span>(</span><span>parent: object, id: str, name: str, location: str, enabled: bool, phone_number: str = None, extension: str = None, config: bool = True)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Initialize a HuntGroup instance</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>parent</code></strong> :&ensp;<code><a title="wxcadm.Org" href="#wxcadm.Org">Org</a></code></dt>
+<dd>The Org instance to which the Hunt Group belongs</dd>
+<dt><strong><code>id</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Webex ID for the Hunt Group</dd>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>The name of the Hunt Group</dd>
+<dt><strong><code>location</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Location ID associated with the Hunt Group</dd>
+<dt><strong><code>enabled</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Boolean indicating whether the Hunt Group is enabled</dd>
+<dt><strong><code>phone_number</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The DID for the Hunt Group</dd>
+<dt><strong><code>extension</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The extension of the Hunt Group</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="wxcadm.HuntGroup" href="#wxcadm.HuntGroup">HuntGroup</a></code></dt>
+<dd>The HuntGroup instance</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class HuntGroup:
+    def __init__(self, parent: object,
+                 id: str,
+                 name: str,
+                 location: str,
+                 enabled: bool,
+                 phone_number: str = None,
+                 extension: str = None,
+                 config: bool = True
+                 ):
+        &#34;&#34;&#34;
+        Initialize a HuntGroup instance
+        Args:
+            parent (Org): The Org instance to which the Hunt Group belongs
+            id (str): The Webex ID for the Hunt Group
+            name (str): The name of the Hunt Group
+            location (str): The Location ID associated with the Hunt Group
+            enabled (bool): Boolean indicating whether the Hunt Group is enabled
+            phone_number (str, optional): The DID for the Hunt Group
+            extension (str, optional): The extension of the Hunt Group
+        Returns:
+            HuntGroup: The HuntGroup instance
+        &#34;&#34;&#34;
+
+        # Instance attrs
+        self.parent: object = parent
+        self.id: str = id
+        &#34;&#34;&#34;The Webex ID of the Hunt Group&#34;&#34;&#34;
+        self.name: str = name
+        &#34;&#34;&#34;The name of the Hunt Group&#34;&#34;&#34;
+        self.location: str = location
+        &#34;&#34;&#34;The Location ID associated with the Hunt Group&#34;&#34;&#34;
+        self.enabled: bool = enabled
+        &#34;&#34;&#34;Whether the Hunt Group is enabled or not&#34;&#34;&#34;
+        self.phone_number: str = phone_number
+        &#34;&#34;&#34;The DID for the Hunt Group&#34;&#34;&#34;
+        self.extension: str = extension
+        &#34;&#34;&#34;The extension of the Hunt Group&#34;&#34;&#34;
+        self.agents: list = []
+        &#34;&#34;&#34;List of agents/users assigned to this Hunt Group&#34;&#34;&#34;
+        self.distinctive_ring: bool = False
+        &#34;&#34;&#34;Whether or not the Hunt Group has Distinctive Ring enabled&#34;&#34;&#34;
+        self.alternate_numbers_settings: dict = {}
+        &#34;&#34;&#34;List of alternate numbers for this Hunt Group&#34;&#34;&#34;
+        self.language: str = &#34;&#34;
+        &#34;&#34;&#34;The language name for the Hunt Group&#34;&#34;&#34;
+        self.language_code: str = &#34;&#34;
+        &#34;&#34;&#34;The short name for the language of the Hunt Group&#34;&#34;&#34;
+        self.first_name: str = &#34;&#34;
+        &#34;&#34;&#34;The Caller ID first name for the Hunt Group&#34;&#34;&#34;
+        self.last_name: str = &#34;&#34;
+        &#34;&#34;&#34;The Caller ID last name for the Hunt Group&#34;&#34;&#34;
+        self.time_zone: str = &#34;&#34;
+        &#34;&#34;&#34;The time zone for the Hunt Group&#34;&#34;&#34;
+        self.call_policy: dict = {}
+        &#34;&#34;&#34;The Call Policy for the Hunt Group&#34;&#34;&#34;
+        self.agents: list = []
+        &#34;&#34;&#34;List of users assigned to this Hunt Group&#34;&#34;&#34;
+        self.raw_config: dict = {}
+        &#34;&#34;&#34;The raw JSON-to-Python config from Webex&#34;&#34;&#34;
+
+        # Get the config unless we are asked not to
+        if config:
+            logging.info(f&#34;Getting config for Hunt Group {self.id} in Location {self.location}&#34;)
+            self.get_config()
+
+    def get_config(self):
+        &#34;&#34;&#34;Get the Hunt Group config, including agents&#34;&#34;&#34;
+        r = requests.get(_url_base + f&#34;v1/telephony/config/locations/{self.location}/huntGroups/{self.id}&#34;,
+                         headers=self.parent._headers)
+        response = r.json()
+        self.raw_config = response
+        self.agents = response[&#39;agents&#39;]
+        self.distinctive_ring = response.get(&#34;distinctiveRing&#34;, False)
+        self.alternate_numbers_settings = response[&#39;alternateNumberSettings&#39;]
+        self.language = response[&#39;language&#39;]
+        self.language_code = response[&#39;languageCode&#39;]
+        self.first_name = response[&#39;firstName&#39;]
+        self.last_name = response[&#39;lastName&#39;]
+        self.time_zone = response[&#39;timeZone&#39;]
+        self.call_policy = response[&#39;callPolicies&#39;]
+
+        return self.raw_config</code></pre>
+</details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="wxcadm.HuntGroup.agents"><code class="name">var <span class="ident">agents</span></code></dt>
+<dd>
+<div class="desc"><p>List of users assigned to this Hunt Group</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.alternate_numbers_settings"><code class="name">var <span class="ident">alternate_numbers_settings</span></code></dt>
+<dd>
+<div class="desc"><p>List of alternate numbers for this Hunt Group</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.call_policy"><code class="name">var <span class="ident">call_policy</span></code></dt>
+<dd>
+<div class="desc"><p>The Call Policy for the Hunt Group</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.distinctive_ring"><code class="name">var <span class="ident">distinctive_ring</span></code></dt>
+<dd>
+<div class="desc"><p>Whether or not the Hunt Group has Distinctive Ring enabled</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.enabled"><code class="name">var <span class="ident">enabled</span></code></dt>
+<dd>
+<div class="desc"><p>Whether the Hunt Group is enabled or not</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.extension"><code class="name">var <span class="ident">extension</span></code></dt>
+<dd>
+<div class="desc"><p>The extension of the Hunt Group</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.first_name"><code class="name">var <span class="ident">first_name</span></code></dt>
+<dd>
+<div class="desc"><p>The Caller ID first name for the Hunt Group</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<div class="desc"><p>The Webex ID of the Hunt Group</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.language"><code class="name">var <span class="ident">language</span></code></dt>
+<dd>
+<div class="desc"><p>The language name for the Hunt Group</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.language_code"><code class="name">var <span class="ident">language_code</span></code></dt>
+<dd>
+<div class="desc"><p>The short name for the language of the Hunt Group</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.last_name"><code class="name">var <span class="ident">last_name</span></code></dt>
+<dd>
+<div class="desc"><p>The Caller ID last name for the Hunt Group</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.location"><code class="name">var <span class="ident">location</span></code></dt>
+<dd>
+<div class="desc"><p>The Location ID associated with the Hunt Group</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.name"><code class="name">var <span class="ident">name</span></code></dt>
+<dd>
+<div class="desc"><p>The name of the Hunt Group</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.phone_number"><code class="name">var <span class="ident">phone_number</span></code></dt>
+<dd>
+<div class="desc"><p>The DID for the Hunt Group</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.raw_config"><code class="name">var <span class="ident">raw_config</span></code></dt>
+<dd>
+<div class="desc"><p>The raw JSON-to-Python config from Webex</p></div>
+</dd>
+<dt id="wxcadm.HuntGroup.time_zone"><code class="name">var <span class="ident">time_zone</span></code></dt>
+<dd>
+<div class="desc"><p>The time zone for the Hunt Group</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="wxcadm.HuntGroup.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the Hunt Group config, including agents</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    &#34;&#34;&#34;Get the Hunt Group config, including agents&#34;&#34;&#34;
+    r = requests.get(_url_base + f&#34;v1/telephony/config/locations/{self.location}/huntGroups/{self.id}&#34;,
+                     headers=self.parent._headers)
+    response = r.json()
+    self.raw_config = response
+    self.agents = response[&#39;agents&#39;]
+    self.distinctive_ring = response.get(&#34;distinctiveRing&#34;, False)
+    self.alternate_numbers_settings = response[&#39;alternateNumberSettings&#39;]
+    self.language = response[&#39;language&#39;]
+    self.language_code = response[&#39;languageCode&#39;]
+    self.first_name = response[&#39;firstName&#39;]
+    self.last_name = response[&#39;lastName&#39;]
+    self.time_zone = response[&#39;timeZone&#39;]
+    self.call_policy = response[&#39;callPolicies&#39;]
+
+    return self.raw_config</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="wxcadm.Location"><code class="flex name class">
+<span>class <span class="ident">Location</span></span>
+<span>(</span><span>location_id, name, address=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Initialize a Location instance</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>location_id</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Webex ID of the Location</dd>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>The name of the Location</dd>
+<dt><strong><code>address</code></strong> :&ensp;<code>dict</code></dt>
+<dd>The address information for the Location</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>Location (object): The Location instance</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Location:
+    def __init__(self, location_id, name, address=None):
+        &#34;&#34;&#34;
+        Initialize a Location instance
+        Args:
+            location_id (str): The Webex ID of the Location
+            name (str): The name of the Location
+            address (dict): The address information for the Location
+        Returns:
+             Location (object): The Location instance
+        &#34;&#34;&#34;
+        if address is None:
+            address = {}
+        self.id: str = location_id
+        self.name: str = name
+        self.address: dict = address
+
+    @property
+    def __str__(self):
+        return f&#34;{self.name},{self.id}&#34;</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Org"><code class="flex name class">
+<span>class <span class="ident">Org</span></span>
+<span>(</span><span>name: str, id: str, people: bool = True, locations: bool = True, xsi: bool = False, parent: <a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a> = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Initialize an Org instance</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Organization name</dd>
+<dt><strong><code>id</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Webex ID of the Organization</dd>
+<dt><strong><code>people</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to automatically get all people for the Org</dd>
+<dt><strong><code>locations</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to automatically get all of the locations for the Org</dd>
+<dt><strong><code>xsi</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to automatically get the XSI Endpoints for the Org</dd>
+<dt><strong><code>parent</code></strong> :&ensp;<code><a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a></code>, optional</dt>
+<dd>The parent Webex instance that owns this Org. Usually <code>_parent=self</code></dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="wxcadm.Org" href="#wxcadm.Org">Org</a></code></dt>
+<dd>This instance of the Org class</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Org:
+    def __init__(self, name: str, id: str, people: bool = True,
+                 locations: bool = True, xsi: bool = False, parent: Webex = None):
+        &#34;&#34;&#34;
+        Initialize an Org instance
+
+        Args:
+            name (str): The Organization name
+            id (str): The Webex ID of the Organization
+            people (bool, optional): Whether to automatically get all people for the Org
+            locations (bool, optional): Whether to automatically get all of the locations for the Org
+            xsi (bool, optional): Whether to automatically get the XSI Endpoints for the Org
+            parent (Webex, optional): The parent Webex instance that owns this Org. Usually `_parent=self`
+
+        Returns:
+            Org: This instance of the Org class
+        &#34;&#34;&#34;
+
+        # Instance attrs
+        self.call_queues: list[CallQueue] = []
+        &#34;&#34;&#34;The Call Queues for this Org&#34;&#34;&#34;
+        self.hunt_groups: list[HuntGroup] = []
+        &#34;&#34;&#34;The Hunt Groups for this Org&#34;&#34;&#34;
+        self.pickup_groups: list[PickupGroup] = []
+        &#39;A list of the PickupGroup instances for this Org&#39;
+        self.locations: list[Location] = []
+        &#39;A list of the Location instances for this Org&#39;
+        self.name: str = name
+        &#39;The name of the Organization&#39;
+        self.id:  str = id
+        &#39;&#39;&#39;The Webex ID of the Organization&#39;&#39;&#39;
+        self.xsi: dict = {}
+        self._params: dict = {&#34;orgId&#34;: self.id}
+        self.licenses: list[dict] = []
+        &#39;&#39;&#39;A list of all of the licenses for the Organization as a dictionary of names and IDs&#39;&#39;&#39;
+        self.people: list[Person] = []
+        &#39;&#39;&#39;A list of all of the Person stances for the Organization&#39;&#39;&#39;
+
+        # Set the Authorization header based on how the instance was built
+        self._headers = parent.headers
+        self.licenses = self.__get_licenses()
+
+        # Get all of the people if we aren&#39;t told not to
+        if people:
+            self.get_people()
+        # Get all of the locations if we aren&#39;t asked not to
+        if locations:
+            self.get_locations()
+        if xsi:
+            self.get_xsi_endpoints()
+
+    @property
+    def __str__(self):
+        return f&#34;{self.name},{self.id}&#34;
+
+    def __get_licenses(self):
+        &#34;&#34;&#34;
+        Gets all of the licenses for the Organization
+
+        :return:
+            list: List of dictionaries containing the license name and ID
+        &#34;&#34;&#34;
+        logging.info(&#34;__get_licenses() started for org&#34;)
+        license_list = []
+        r = requests.get(_url_base + &#34;v1/licenses&#34;, headers=self._headers, params=self._params)
+        response = r.json()
+        for item in response[&#39;items&#39;]:
+            if &#34;Webex Calling&#34; in item[&#39;name&#39;]:
+                wxc_license = True
+            else:
+                wxc_license = False
+            lic = {&#34;name&#34;: item[&#39;name&#39;], &#34;id&#34;: item[&#39;id&#39;], &#34;wxc_license&#34;: wxc_license}
+            license_list.append(lic)
+        return license_list
+
+    def __get_wxc_licenses(self):
+        &#34;&#34;&#34;
+        Get only the Webex Calling licenses from the Org.licenses attribute
+
+        Returns:
+            list[str]:
+        &#34;&#34;&#34;
+        logging.info(&#34;__get_wxc_licenses started&#34;)
+        license_list = []
+        for license in self.licenses:
+            if license[&#39;wxc_license&#39;]:
+                license_list.append(license[&#39;id&#39;])
+        return license_list
+
+    def get_person_by_email(self, email):
+        &#34;&#34;&#34;
+        Get the Person instance from an email address
+        Args:
+            email (str): The email of the Person to return
+        Returns:
+            Person: Person instance object. None in returned when no Person is found
+        &#34;&#34;&#34;
+        logging.info(&#34;get_person_by_email() started&#34;)
+        for person in self.people:
+            if person.email == email:
+                return person
+        return None
+
+    def get_xsi_endpoints(self):
+        &#34;&#34;&#34;
+        Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.
+        Returns:
+            dict: Org.xsi attribute dictionary with each endpoint as an entry
+        &#34;&#34;&#34;
+        params = {&#34;callingData&#34;: &#34;true&#34;, **self._params}
+        r = requests.get(_url_base + &#34;v1/organizations/&#34; + self.id, headers=self._headers, params=params)
+        response = r.json()
+        self.xsi[&#39;actions_endpoint&#39;] = response[&#39;xsiActionsEndpoint&#39;]
+        self.xsi[&#39;events_endpoint&#39;] = response[&#39;xsiEventsEndpoint&#39;]
+        self.xsi[&#39;events_channel_endpoint&#39;] = response[&#39;xsiEventsChannelEndpoint&#39;]
+
+        return self.xsi
+
+    def get_locations(self):
+        &#34;&#34;&#34;
+        Get the Locations for the Organization. Also stores them in the Org.locations attribute.
+        Returns:
+            list[Location]: List of Location instance objects. See the Locations class for attributes.
+        &#34;&#34;&#34;
+        logging.info(&#34;get_locations() started&#34;)
+        r = requests.get(_url_base + &#34;v1/locations&#34;, headers=self._headers, params=self._params)
+        response = r.json()
+        # I am aware that this doesn&#39;t support pagination, so there will be a limit on number of Locations returned
+        for location in response[&#39;items&#39;]:
+            this_location = Location(location[&#39;id&#39;], location[&#39;name&#39;], address=location[&#39;address&#39;])
+            self.locations.append(this_location)
+
+        return self.locations
+
+    def get_pickup_groups(self):
+        &#34;&#34;&#34;
+        Get all of the Call Pickup Groups for an Organization. Also stores them in the Org.pickup_groups attribute.
+        Returns:
+            list[PickupGroup]: List of Call Pickup Groups as a list of dictionaries.
+                See the PickupGroup class for attributes.
+        &#34;&#34;&#34;
+        logging.info(&#34;get_pickup_groups() started&#34;)
+        # First we need to know if we already have locations, because they are needed
+        # for the pickup groups call
+        if not self.locations:
+            self.get_locations()
+        # Loop through all of the locations and get their pickup groups
+        # We will create a new instance of the PickupGroup class when we find one
+        for location in self.locations:
+            r = requests.get(_url_base + &#34;v1/telephony/config/locations/&#34; + location.id + &#34;/callPickups&#34;,
+                             headers=self._headers)
+            response = r.json()
+            for item in response[&#39;callPickups&#39;]:
+                pg = PickupGroup(self, location.id, item[&#39;id&#39;], item[&#39;name&#39;])
+                self.pickup_groups.append(pg)
+        return self.pickup_groups
+
+    def get_call_queues(self):
+        &#34;&#34;&#34;
+        Get the Call Queues for an Organization. Also stores them in the Org.call_queues attribute.
+        Returns:
+            list[CallQueue]: List of CallQueue instances for the Organization
+        &#34;&#34;&#34;
+        logging.info(&#34;get_call_queues() started&#34;)
+        if not self.locations:
+            self.get_locations()
+        r = requests.get(_url_base + &#34;v1/telephony/config/queues&#34;, headers=self._headers, params=self._params)
+        response = r.json()
+        for queue in response[&#39;queues&#39;]:
+            id = queue.get(&#34;id&#34;)
+            name = queue.get(&#34;name&#34;, None)
+            location_id = queue.get(&#34;locationId&#34;)
+            phone_number = queue.get(&#34;phoneNumber&#34;, None)
+            extension = queue.get(&#34;extension&#34;, None)
+            enabled = queue.get(&#34;enabled&#34;)
+
+            queue = CallQueue(self, id, name, location_id, phone_number, extension, enabled, get_config=True)
+            self.call_queues.append(queue)
+        return self.call_queues
+
+    def get_hunt_groups(self):
+        &#34;&#34;&#34;
+        Get the Hunt Groups for an Organization. Also stores them in the Org.hunt_groups attribute.
+        Returns:
+            list[HuntGroup]: List of HuntGroup instances for the Organization
+        &#34;&#34;&#34;
+        logging.info(&#34;get_hunt_groups() started&#34;)
+        if not self.locations:
+            self.get_locations()
+        r = requests.get(_url_base + &#34;v1/telephony/config/huntGroups&#34;, headers=self._headers, params=self._params)
+        response = r.json()
+        for hg in response[&#39;huntGroups&#39;]:
+            hunt_group = HuntGroup(self, hg[&#39;id&#39;], hg[&#39;name&#39;], hg[&#39;locationId&#39;], hg[&#39;enabled&#39;],
+                                   hg.get(&#34;phoneNumber&#34;, &#34;&#34;), hg.get(&#34;extension&#34;, &#34;&#34;))
+            self.hunt_groups.append(hunt_group)
+        return self.hunt_groups
+
+    def get_people(self):
+        &#34;&#34;&#34;
+        Get all of the people within the Organization. Also creates a Person instance and stores it in the
+            Org.people attributes
+        Returns:
+            list[Person]: List of Person instances
+        &#34;&#34;&#34;
+        logging.info(&#34;get_people() started&#34;)
+        params = {&#34;max&#34;: &#34;1000&#34;, **self._params}
+        r = requests.get(_url_base + &#34;v1/people&#34;, headers=self._headers, params=params)
+        people_list = r.json()
+
+        if &#34;next&#34; in r.links:
+            keep_going = True
+            next_url = r.links[&#39;next&#39;][&#39;url&#39;]
+            while keep_going:
+                r = requests.get(next_url, headers=self._headers)
+                new_people = r.json()
+                if &#34;items&#34; not in new_people:
+                    continue
+                people_list[&#39;items&#39;].extend(new_people[&#39;items&#39;])
+                if &#34;next&#34; not in r.links:
+                    keep_going = False
+                else:
+                    next_url = r.links[&#39;next&#39;][&#39;url&#39;]
+
+        wxc_licenses = self.__get_wxc_licenses()
+        for person in people_list[&#39;items&#39;]:
+            this_person = Person(person[&#39;id&#39;], person[&#39;emails&#39;][0], first_name=person[&#39;firstName&#39;],
+                                 last_name=person[&#39;lastName&#39;], display_name=person[&#39;displayName&#39;], parent=self)
+            this_person.licenses = person[&#39;licenses&#39;]
+            for license in person[&#39;licenses&#39;]:
+                if license in wxc_licenses:
+                    this_person.wxc = True
+            self.people.append(this_person)
+        return self.people
+
+    def get_wxc_people(self):
+        &#34;&#34;&#34;
+        Get all of the people within the Organization **who have Webex Calling**
+        Returns:
+            list[Person]: List of Person instances of people who have a Webex Calling license
+        &#34;&#34;&#34;
+        if not self.people:
+            self.get_people()
+        wxc_people = []
+        for person in self.people:
+            if person.wxc:
+                wxc_people.append(person)
+        return wxc_people</code></pre>
+</details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="wxcadm.Org.call_queues"><code class="name">var <span class="ident">call_queues</span></code></dt>
+<dd>
+<div class="desc"><p>The Call Queues for this Org</p></div>
+</dd>
+<dt id="wxcadm.Org.hunt_groups"><code class="name">var <span class="ident">hunt_groups</span></code></dt>
+<dd>
+<div class="desc"><p>The Hunt Groups for this Org</p></div>
+</dd>
+<dt id="wxcadm.Org.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<div class="desc"><p>The Webex ID of the Organization</p></div>
+</dd>
+<dt id="wxcadm.Org.licenses"><code class="name">var <span class="ident">licenses</span></code></dt>
+<dd>
+<div class="desc"><p>A list of all of the licenses for the Organization as a dictionary of names and IDs</p></div>
+</dd>
+<dt id="wxcadm.Org.locations"><code class="name">var <span class="ident">locations</span></code></dt>
+<dd>
+<div class="desc"><p>A list of the Location instances for this Org</p></div>
+</dd>
+<dt id="wxcadm.Org.name"><code class="name">var <span class="ident">name</span></code></dt>
+<dd>
+<div class="desc"><p>The name of the Organization</p></div>
+</dd>
+<dt id="wxcadm.Org.people"><code class="name">var <span class="ident">people</span></code></dt>
+<dd>
+<div class="desc"><p>A list of all of the Person stances for the Organization</p></div>
+</dd>
+<dt id="wxcadm.Org.pickup_groups"><code class="name">var <span class="ident">pickup_groups</span></code></dt>
+<dd>
+<div class="desc"><p>A list of the PickupGroup instances for this Org</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="wxcadm.Org.get_call_queues"><code class="name flex">
+<span>def <span class="ident">get_call_queues</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the Call Queues for an Organization. Also stores them in the Org.call_queues attribute.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[<a title="wxcadm.CallQueue" href="#wxcadm.CallQueue">CallQueue</a>]</code></dt>
+<dd>List of CallQueue instances for the Organization</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_call_queues(self):
+    &#34;&#34;&#34;
+    Get the Call Queues for an Organization. Also stores them in the Org.call_queues attribute.
+    Returns:
+        list[CallQueue]: List of CallQueue instances for the Organization
+    &#34;&#34;&#34;
+    logging.info(&#34;get_call_queues() started&#34;)
+    if not self.locations:
+        self.get_locations()
+    r = requests.get(_url_base + &#34;v1/telephony/config/queues&#34;, headers=self._headers, params=self._params)
+    response = r.json()
+    for queue in response[&#39;queues&#39;]:
+        id = queue.get(&#34;id&#34;)
+        name = queue.get(&#34;name&#34;, None)
+        location_id = queue.get(&#34;locationId&#34;)
+        phone_number = queue.get(&#34;phoneNumber&#34;, None)
+        extension = queue.get(&#34;extension&#34;, None)
+        enabled = queue.get(&#34;enabled&#34;)
+
+        queue = CallQueue(self, id, name, location_id, phone_number, extension, enabled, get_config=True)
+        self.call_queues.append(queue)
+    return self.call_queues</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Org.get_hunt_groups"><code class="name flex">
+<span>def <span class="ident">get_hunt_groups</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the Hunt Groups for an Organization. Also stores them in the Org.hunt_groups attribute.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[<a title="wxcadm.HuntGroup" href="#wxcadm.HuntGroup">HuntGroup</a>]</code></dt>
+<dd>List of HuntGroup instances for the Organization</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_hunt_groups(self):
+    &#34;&#34;&#34;
+    Get the Hunt Groups for an Organization. Also stores them in the Org.hunt_groups attribute.
+    Returns:
+        list[HuntGroup]: List of HuntGroup instances for the Organization
+    &#34;&#34;&#34;
+    logging.info(&#34;get_hunt_groups() started&#34;)
+    if not self.locations:
+        self.get_locations()
+    r = requests.get(_url_base + &#34;v1/telephony/config/huntGroups&#34;, headers=self._headers, params=self._params)
+    response = r.json()
+    for hg in response[&#39;huntGroups&#39;]:
+        hunt_group = HuntGroup(self, hg[&#39;id&#39;], hg[&#39;name&#39;], hg[&#39;locationId&#39;], hg[&#39;enabled&#39;],
+                               hg.get(&#34;phoneNumber&#34;, &#34;&#34;), hg.get(&#34;extension&#34;, &#34;&#34;))
+        self.hunt_groups.append(hunt_group)
+    return self.hunt_groups</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Org.get_locations"><code class="name flex">
+<span>def <span class="ident">get_locations</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the Locations for the Organization. Also stores them in the Org.locations attribute.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[<a title="wxcadm.Location" href="#wxcadm.Location">Location</a>]</code></dt>
+<dd>List of Location instance objects. See the Locations class for attributes.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_locations(self):
+    &#34;&#34;&#34;
+    Get the Locations for the Organization. Also stores them in the Org.locations attribute.
+    Returns:
+        list[Location]: List of Location instance objects. See the Locations class for attributes.
+    &#34;&#34;&#34;
+    logging.info(&#34;get_locations() started&#34;)
+    r = requests.get(_url_base + &#34;v1/locations&#34;, headers=self._headers, params=self._params)
+    response = r.json()
+    # I am aware that this doesn&#39;t support pagination, so there will be a limit on number of Locations returned
+    for location in response[&#39;items&#39;]:
+        this_location = Location(location[&#39;id&#39;], location[&#39;name&#39;], address=location[&#39;address&#39;])
+        self.locations.append(this_location)
+
+    return self.locations</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Org.get_people"><code class="name flex">
+<span>def <span class="ident">get_people</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get all of the people within the Organization. Also creates a Person instance and stores it in the
+Org.people attributes</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[<a title="wxcadm.Person" href="#wxcadm.Person">Person</a>]</code></dt>
+<dd>List of Person instances</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_people(self):
+    &#34;&#34;&#34;
+    Get all of the people within the Organization. Also creates a Person instance and stores it in the
+        Org.people attributes
+    Returns:
+        list[Person]: List of Person instances
+    &#34;&#34;&#34;
+    logging.info(&#34;get_people() started&#34;)
+    params = {&#34;max&#34;: &#34;1000&#34;, **self._params}
+    r = requests.get(_url_base + &#34;v1/people&#34;, headers=self._headers, params=params)
+    people_list = r.json()
+
+    if &#34;next&#34; in r.links:
+        keep_going = True
+        next_url = r.links[&#39;next&#39;][&#39;url&#39;]
+        while keep_going:
+            r = requests.get(next_url, headers=self._headers)
+            new_people = r.json()
+            if &#34;items&#34; not in new_people:
+                continue
+            people_list[&#39;items&#39;].extend(new_people[&#39;items&#39;])
+            if &#34;next&#34; not in r.links:
+                keep_going = False
+            else:
+                next_url = r.links[&#39;next&#39;][&#39;url&#39;]
+
+    wxc_licenses = self.__get_wxc_licenses()
+    for person in people_list[&#39;items&#39;]:
+        this_person = Person(person[&#39;id&#39;], person[&#39;emails&#39;][0], first_name=person[&#39;firstName&#39;],
+                             last_name=person[&#39;lastName&#39;], display_name=person[&#39;displayName&#39;], parent=self)
+        this_person.licenses = person[&#39;licenses&#39;]
+        for license in person[&#39;licenses&#39;]:
+            if license in wxc_licenses:
+                this_person.wxc = True
+        self.people.append(this_person)
+    return self.people</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Org.get_person_by_email"><code class="name flex">
+<span>def <span class="ident">get_person_by_email</span></span>(<span>self, email)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the Person instance from an email address</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>email</code></strong> :&ensp;<code>str</code></dt>
+<dd>The email of the Person to return</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="wxcadm.Person" href="#wxcadm.Person">Person</a></code></dt>
+<dd>Person instance object. None in returned when no Person is found</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_person_by_email(self, email):
+    &#34;&#34;&#34;
+    Get the Person instance from an email address
+    Args:
+        email (str): The email of the Person to return
+    Returns:
+        Person: Person instance object. None in returned when no Person is found
+    &#34;&#34;&#34;
+    logging.info(&#34;get_person_by_email() started&#34;)
+    for person in self.people:
+        if person.email == email:
+            return person
+    return None</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Org.get_pickup_groups"><code class="name flex">
+<span>def <span class="ident">get_pickup_groups</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get all of the Call Pickup Groups for an Organization. Also stores them in the Org.pickup_groups attribute.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[<a title="wxcadm.PickupGroup" href="#wxcadm.PickupGroup">PickupGroup</a>]</code></dt>
+<dd>List of Call Pickup Groups as a list of dictionaries.
+See the PickupGroup class for attributes.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_pickup_groups(self):
+    &#34;&#34;&#34;
+    Get all of the Call Pickup Groups for an Organization. Also stores them in the Org.pickup_groups attribute.
+    Returns:
+        list[PickupGroup]: List of Call Pickup Groups as a list of dictionaries.
+            See the PickupGroup class for attributes.
+    &#34;&#34;&#34;
+    logging.info(&#34;get_pickup_groups() started&#34;)
+    # First we need to know if we already have locations, because they are needed
+    # for the pickup groups call
+    if not self.locations:
+        self.get_locations()
+    # Loop through all of the locations and get their pickup groups
+    # We will create a new instance of the PickupGroup class when we find one
+    for location in self.locations:
+        r = requests.get(_url_base + &#34;v1/telephony/config/locations/&#34; + location.id + &#34;/callPickups&#34;,
+                         headers=self._headers)
+        response = r.json()
+        for item in response[&#39;callPickups&#39;]:
+            pg = PickupGroup(self, location.id, item[&#39;id&#39;], item[&#39;name&#39;])
+            self.pickup_groups.append(pg)
+    return self.pickup_groups</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Org.get_wxc_people"><code class="name flex">
+<span>def <span class="ident">get_wxc_people</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get all of the people within the Organization <strong>who have Webex Calling</strong></p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[<a title="wxcadm.Person" href="#wxcadm.Person">Person</a>]</code></dt>
+<dd>List of Person instances of people who have a Webex Calling license</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_wxc_people(self):
+    &#34;&#34;&#34;
+    Get all of the people within the Organization **who have Webex Calling**
+    Returns:
+        list[Person]: List of Person instances of people who have a Webex Calling license
+    &#34;&#34;&#34;
+    if not self.people:
+        self.get_people()
+    wxc_people = []
+    for person in self.people:
+        if person.wxc:
+            wxc_people.append(person)
+    return wxc_people</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Org.get_xsi_endpoints"><code class="name flex">
+<span>def <span class="ident">get_xsi_endpoints</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>dict</code></dt>
+<dd>Org.xsi attribute dictionary with each endpoint as an entry</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_xsi_endpoints(self):
+    &#34;&#34;&#34;
+    Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.
+    Returns:
+        dict: Org.xsi attribute dictionary with each endpoint as an entry
+    &#34;&#34;&#34;
+    params = {&#34;callingData&#34;: &#34;true&#34;, **self._params}
+    r = requests.get(_url_base + &#34;v1/organizations/&#34; + self.id, headers=self._headers, params=params)
+    response = r.json()
+    self.xsi[&#39;actions_endpoint&#39;] = response[&#39;xsiActionsEndpoint&#39;]
+    self.xsi[&#39;events_endpoint&#39;] = response[&#39;xsiEventsEndpoint&#39;]
+    self.xsi[&#39;events_channel_endpoint&#39;] = response[&#39;xsiEventsChannelEndpoint&#39;]
+
+    return self.xsi</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="wxcadm.OrgError"><code class="flex name class">
+<span>class <span class="ident">OrgError</span></span>
+<span>(</span><span>message)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Common base class for all non-exit exceptions.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class OrgError(Exception):
+    def __init__(self, message):
+        super().__init__(message)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>builtins.Exception</li>
+<li>builtins.BaseException</li>
+</ul>
+</dd>
+<dt id="wxcadm.Person"><code class="flex name class">
+<span>class <span class="ident">Person</span></span>
+<span>(</span><span>user_id, user_email, first_name=None, last_name=None, display_name=None, licenses=None, parent=None, access_token=None, url_base=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Person:
+    # TODO List
+    #    Add methods to get and return XSI identifiers
+
+    def __init__(self, user_id,
+                 user_email,
+                 first_name=None,
+                 last_name=None,
+                 display_name=None,
+                 licenses=None,
+                 parent=None,
+                 access_token=None,
+                 url_base=None):
+        # Default values for other attrs
+        self.wxc: bool = False
+        &#39;&#39;&#39;True if this is a Webex Calling User&#39;&#39;&#39;
+        self.vm_config: dict = {}
+        &#39;&#39;&#39;Dictionary of the VM config as returned by Webex API&#39;&#39;&#39;
+        self.recording = None
+        self.barge_in = None
+        self.call_forwarding: dict = {}
+        &#39;&#39;&#39;Dictionary of the Call Forwarding config as returned by Webex API&#39;&#39;&#39;
+        self.caller_id = None
+        self.intercept = None
+        self.dnd = None
+        self.calling_behavior = None
+        self.xsi = None
+        self._parent = parent
+
+        # Set the Authorization header based on how the instance was built
+        if licenses is None:
+            licenses = []
+        if parent is None:  # Instance wasn&#39;t created by another instance
+            # TODO Need some code here to throw an error if there is no access_token and url_base
+            self._headers = {&#34;Authorization&#34;: &#34;Bearer &#34; + access_token}
+            self._url_base = url_base
+        else:  # Instance was created by a parent
+            self._headers = parent._headers
+
+        self._params = {&#34;orgId&#34;: parent.id}
+        self.id = user_id
+        self.email = user_email
+        self.first_name = first_name
+        self.last_name = last_name
+        self.display_name = display_name
+        self.licenses = licenses
+
+    def __str__(self):
+        return f&#34;{self.email},{self.display_name}&#34;
+
+    # The following is to simplify the API call. Eventually I may open this as a public method to
+    # allow arbitrary API calls
+    def __get_webex_data(self, endpoint, params=None):
+        &#34;&#34;&#34;
+
+        :param endpoint: The endpoint of the API call (e.g. &#39;v1/locations&#39;)
+        :param params: A dict of param values for the API call. Will be passed as URL params
+        :return: Returns a dict of the JSON response from the API
+        &#34;&#34;&#34;
+        if params is None:
+            params = {}
+        logging.info(f&#34;__get_webex_data started for using {endpoint}&#34;)
+        my_params = {**params, **self._params}
+        r = requests.get(_url_base + endpoint, headers=self._headers, params=my_params)
+        response = r.json()
+        return response
+
+    def __push_webex_data(self, endpoint, payload, params=None):
+        if params is None:
+            params = {}
+        logging.info(f&#34;__push_webex_data started using {endpoint}&#34;)
+        my_params = {**params, **self._params}
+        r = requests.put(_url_base + endpoint, headers=self._headers, params=my_params, json=payload)
+        response_code = r.status_code
+        if response_code == 200 or response_code == 204:
+            return True
+        else:
+            raise PutError(r.text)
+
+    def start_xsi(self):
+        self.xsi = XSI(self)
+
+    def get_full_config(self):
+        if self.wxc:
+            self.get_call_forwarding()
+            self.get_vm_config()
+            self.get_intercept()
+            self.get_call_recording()
+            self.get_caller_id()
+            self.get_dnd()
+            self.get_calling_behavior()
+            self.get_barge_in()
+
+    def get_call_forwarding(self):
+        logging.info(&#34;get_call_forwarding() started&#34;)
+        self.call_forwarding = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callForwarding&#34;)
+        return self.call_forwarding
+
+    def get_barge_in(self):
+        logging.info(&#34;get_barge_in() started&#34;)
+        self.barge_in = self.__get_webex_data(f&#34;v1/people/{self.id}/features/bargeIn&#34;)
+        return self.barge_in
+
+    def get_vm_config(self):
+        logging.info(&#34;get_vm_config() started&#34;)
+        self.vm_config = self.__get_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;)
+        return self.vm_config
+
+    def push_vm_config(self):
+        # In progress
+        logging.info(f&#34;Pushing VM Config for {self.email}&#34;)
+        success = self.__push_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;, self.vm_config)
+        self.get_vm_config()
+        return self.vm_config
+
+    def enable_vm_to_email(self, email=None, push=True):
+        if not email:
+            email = self.email
+        self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;enabled&#39;] = True
+        self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;emailId&#39;] = email
+        if push:
+            return self.push_vm_config()
+        else:
+            return self.vm_config
+
+    def disable_vm_to_email(self, push=True):
+        self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;enabled&#39;] = False
+        if push:
+            return self.push_vm_config()
+        else:
+            return self.vm_config
+
+    def get_intercept(self):
+        logging.info(&#34;get_intercept() started&#34;)
+        self.intercept = self.__get_webex_data(f&#34;v1/people/{self.id}/features/intercept&#34;)
+        return self.intercept
+
+    def get_call_recording(self):
+        logging.info(&#34;get_call_recording() started&#34;)
+        self.recording = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callRecording&#34;)
+        return self.recording
+
+    def get_caller_id(self):
+        logging.info(&#34;get_caller_id() started&#34;)
+        self.caller_id = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callerId&#34;)
+        return self.caller_id
+
+    def get_dnd(self):
+        logging.info(&#34;get_dnd() started&#34;)
+        self.dnd = self.__get_webex_data(f&#34;v1/people/{self.id}/features/doNotDisturb&#34;)
+        return self.dnd
+
+    def get_calling_behavior(self):
+        logging.info(&#34;get_calling_behavior() started&#34;)
+        self.calling_behavior = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callingBehavior&#34;)
+        return self.calling_behavior</code></pre>
+</details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="wxcadm.Person.call_forwarding"><code class="name">var <span class="ident">call_forwarding</span></code></dt>
+<dd>
+<div class="desc"><p>Dictionary of the Call Forwarding config as returned by Webex API</p></div>
+</dd>
+<dt id="wxcadm.Person.vm_config"><code class="name">var <span class="ident">vm_config</span></code></dt>
+<dd>
+<div class="desc"><p>Dictionary of the VM config as returned by Webex API</p></div>
+</dd>
+<dt id="wxcadm.Person.wxc"><code class="name">var <span class="ident">wxc</span></code></dt>
+<dd>
+<div class="desc"><p>True if this is a Webex Calling User</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="wxcadm.Person.disable_vm_to_email"><code class="name flex">
+<span>def <span class="ident">disable_vm_to_email</span></span>(<span>self, push=True)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def disable_vm_to_email(self, push=True):
+    self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;enabled&#39;] = False
+    if push:
+        return self.push_vm_config()
+    else:
+        return self.vm_config</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.enable_vm_to_email"><code class="name flex">
+<span>def <span class="ident">enable_vm_to_email</span></span>(<span>self, email=None, push=True)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def enable_vm_to_email(self, email=None, push=True):
+    if not email:
+        email = self.email
+    self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;enabled&#39;] = True
+    self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;emailId&#39;] = email
+    if push:
+        return self.push_vm_config()
+    else:
+        return self.vm_config</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.get_barge_in"><code class="name flex">
+<span>def <span class="ident">get_barge_in</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_barge_in(self):
+    logging.info(&#34;get_barge_in() started&#34;)
+    self.barge_in = self.__get_webex_data(f&#34;v1/people/{self.id}/features/bargeIn&#34;)
+    return self.barge_in</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.get_call_forwarding"><code class="name flex">
+<span>def <span class="ident">get_call_forwarding</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_call_forwarding(self):
+    logging.info(&#34;get_call_forwarding() started&#34;)
+    self.call_forwarding = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callForwarding&#34;)
+    return self.call_forwarding</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.get_call_recording"><code class="name flex">
+<span>def <span class="ident">get_call_recording</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_call_recording(self):
+    logging.info(&#34;get_call_recording() started&#34;)
+    self.recording = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callRecording&#34;)
+    return self.recording</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.get_caller_id"><code class="name flex">
+<span>def <span class="ident">get_caller_id</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_caller_id(self):
+    logging.info(&#34;get_caller_id() started&#34;)
+    self.caller_id = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callerId&#34;)
+    return self.caller_id</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.get_calling_behavior"><code class="name flex">
+<span>def <span class="ident">get_calling_behavior</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_calling_behavior(self):
+    logging.info(&#34;get_calling_behavior() started&#34;)
+    self.calling_behavior = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callingBehavior&#34;)
+    return self.calling_behavior</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.get_dnd"><code class="name flex">
+<span>def <span class="ident">get_dnd</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_dnd(self):
+    logging.info(&#34;get_dnd() started&#34;)
+    self.dnd = self.__get_webex_data(f&#34;v1/people/{self.id}/features/doNotDisturb&#34;)
+    return self.dnd</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.get_full_config"><code class="name flex">
+<span>def <span class="ident">get_full_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_full_config(self):
+    if self.wxc:
+        self.get_call_forwarding()
+        self.get_vm_config()
+        self.get_intercept()
+        self.get_call_recording()
+        self.get_caller_id()
+        self.get_dnd()
+        self.get_calling_behavior()
+        self.get_barge_in()</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.get_intercept"><code class="name flex">
+<span>def <span class="ident">get_intercept</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_intercept(self):
+    logging.info(&#34;get_intercept() started&#34;)
+    self.intercept = self.__get_webex_data(f&#34;v1/people/{self.id}/features/intercept&#34;)
+    return self.intercept</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.get_vm_config"><code class="name flex">
+<span>def <span class="ident">get_vm_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_vm_config(self):
+    logging.info(&#34;get_vm_config() started&#34;)
+    self.vm_config = self.__get_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;)
+    return self.vm_config</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.push_vm_config"><code class="name flex">
+<span>def <span class="ident">push_vm_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def push_vm_config(self):
+    # In progress
+    logging.info(f&#34;Pushing VM Config for {self.email}&#34;)
+    success = self.__push_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;, self.vm_config)
+    self.get_vm_config()
+    return self.vm_config</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.start_xsi"><code class="name flex">
+<span>def <span class="ident">start_xsi</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def start_xsi(self):
+    self.xsi = XSI(self)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="wxcadm.PickupGroup"><code class="flex name class">
+<span>class <span class="ident">PickupGroup</span></span>
+<span>(</span><span>parent, location, id, name, users=None)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class PickupGroup:
+    def __init__(self, parent, location, id, name, users=None):
+        self._parent: object = parent
+        self.location_id: str = location
+        &#34;&#34;&#34;The Webex ID of the Location associated with this Pickup Group&#34;&#34;&#34;
+        self.id: str = id
+        &#34;&#34;&#34;The Webex ID of the Pickup Group&#34;&#34;&#34;
+        self.name: str = name
+        &#34;&#34;&#34;The name of the Pickup Group&#34;&#34;&#34;
+        self.users: list = []
+        &#34;&#34;&#34;All of the users (agents) assigned to this Pickup Group&#34;&#34;&#34;
+        # If no agents were passed, we need to go get the configuration of the PickupGroup
+        if users is None:
+            r = requests.get(_url_base + f&#34;v1/telephony/config/locations/{self.location_id}/callPickups/{self.id}&#34;,
+                             headers=self._parent._headers
+                             )
+            response = r.json()
+            # TODO It doesn&#39;t make sense to create a new Person instance for the below.
+            #      Once we have an API and a class for Workspaces, it would make sense to tie
+            #      the agents to the Person or Workspace instance
+            # For now, we just write the values that we get back and the user can find the people with the
+            # Person-specific methods
+            for agent in response[&#39;agents&#39;]:
+                self.users.append(agent)
+
+    def get_config(self):
+        &#34;&#34;&#34;Gets the configuration of the Pickup Group from Webex
+        Returns:
+            dict: The configuration of the Pickup Group
+        &#34;&#34;&#34;
+        config = {**self}
+        return config</code></pre>
+</details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="wxcadm.PickupGroup.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<div class="desc"><p>The Webex ID of the Pickup Group</p></div>
+</dd>
+<dt id="wxcadm.PickupGroup.location_id"><code class="name">var <span class="ident">location_id</span></code></dt>
+<dd>
+<div class="desc"><p>The Webex ID of the Location associated with this Pickup Group</p></div>
+</dd>
+<dt id="wxcadm.PickupGroup.name"><code class="name">var <span class="ident">name</span></code></dt>
+<dd>
+<div class="desc"><p>The name of the Pickup Group</p></div>
+</dd>
+<dt id="wxcadm.PickupGroup.users"><code class="name">var <span class="ident">users</span></code></dt>
+<dd>
+<div class="desc"><p>All of the users (agents) assigned to this Pickup Group</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="wxcadm.PickupGroup.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Gets the configuration of the Pickup Group from Webex</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>dict</code></dt>
+<dd>The configuration of the Pickup Group</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    &#34;&#34;&#34;Gets the configuration of the Pickup Group from Webex
+    Returns:
+        dict: The configuration of the Pickup Group
+    &#34;&#34;&#34;
+    config = {**self}
+    return config</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="wxcadm.PutError"><code class="flex name class">
+<span>class <span class="ident">PutError</span></span>
+<span>(</span><span>message)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Common base class for all non-exit exceptions.</p>
+<p>Exception class for problems putting values back into Webex</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class PutError(APIError):
+    def __init__(self, message):
+        &#34;&#34;&#34;Exception class for problems putting values back into Webex&#34;&#34;&#34;
+        super().__init__(message)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="wxcadm.APIError" href="#wxcadm.APIError">APIError</a></li>
+<li>builtins.Exception</li>
+<li>builtins.BaseException</li>
+</ul>
+</dd>
+<dt id="wxcadm.TokenError"><code class="flex name class">
+<span>class <span class="ident">TokenError</span></span>
+<span>(</span><span>message)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Common base class for all non-exit exceptions.</p>
+<p>Exceptions dealing with the Access Token itself</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class TokenError(APIError):
+    def __init__(self, message):
+        &#34;&#34;&#34;Exceptions dealing with the Access Token itself&#34;&#34;&#34;
+        super().__init__(message)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="wxcadm.APIError" href="#wxcadm.APIError">APIError</a></li>
+<li>builtins.Exception</li>
+<li>builtins.BaseException</li>
+</ul>
+</dd>
+<dt id="wxcadm.Webex"><code class="flex name class">
+<span>class <span class="ident">Webex</span></span>
+<span>(</span><span>access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Webex:
+    # TODO List
+    #    Add token refresh, just for completeness
+
+    def __init__(self, access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False):
+        logging.info(&#34;Webex instance initialized&#34;)
+        # The access token is the only thing that we need to get started
+        self._access_token: str = access_token
+        # The Authorization header is going to be used by every API call in the package.
+        # Might want to make it something global so we don&#39;t have to inherit it across all of the children
+        self._headers: dict = {&#34;Authorization&#34;: &#34;Bearer &#34; + access_token}
+        logging.debug(f&#34;Setting Org._headers to {self._headers}&#34;)
+
+        # Instance attrs
+        self.orgs: list[Org] = []
+        &#39;&#39;&#39;A list of the Org instances that this Webex instance can manage&#39;&#39;&#39;
+        # Get the orgs that this token can manage
+        logging.debug(f&#34;Making API call to v1/organizations&#34;)
+        r = requests.get(_url_base + &#34;v1/organizations&#34;, headers=self._headers)
+        # Handle an invalid access token
+        if r.status_code != 200:
+            raise TokenError(&#34;The Access Token was not accepted by Webex&#34;)
+        response = r.json()
+        # Handle when no Orgs are returned. This is pretty rare
+        if len(response[&#39;items&#39;]) == 0:
+            raise OrgError
+        # If a token can manage a lot of orgs, you might not want to create them all, because
+        # it can take some time to do all of the API calls and get the data back
+        if not create_org:
+            logging.info(&#34;Org initialization not requested. Storing orgs.&#34;)
+            self.orgs = response[&#39;items&#39;]
+            return
+        else:
+            logging.info(&#34;Org initialization requested. Collecting orgs&#34;)
+            for org in response[&#39;items&#39;]:
+                # This builds an Org instance for every Org, so be careful
+                # if the user manages multiple orgs
+                logging.debug(f&#34;Processing org: {org[&#39;displayName&#39;]}&#34;)
+                org = Org(org[&#39;displayName&#39;], org[&#39;id&#39;],
+                          people=get_people, locations=get_locations, xsi=get_xsi, parent=self)
+                self.orgs.append(org)
+            # Most users have only one org, so to make that easier for them to work with
+            # we are also going to put the orgs[0] instance in the org attr
+            # That way both .org and .orgs[0] are the same
+            if len(self.orgs) == 1:
+                logging.debug(f&#34;Only one org found. Storing as Webex.org&#34;)
+                self.org = self.orgs[0]
+
+    @property
+    def headers(self):
+        return self._headers</code></pre>
+</details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="wxcadm.Webex.headers"><code class="name">var <span class="ident">headers</span></code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def headers(self):
+    return self._headers</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Webex.orgs"><code class="name">var <span class="ident">orgs</span></code></dt>
+<dd>
+<div class="desc"><p>A list of the Org instances that this Webex instance can manage</p></div>
+</dd>
+</dl>
+</dd>
+<dt id="wxcadm.XSI"><code class="flex name class">
+<span>class <span class="ident">XSI</span></span>
+<span>(</span><span>_parent, get_profile=False)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>The XSI class holds all of the relevant XSI data for a Person
+:param _parent: The Person instance that created the XSI
+:param get_profile: Boolean value to force the XSI to get the user profile when initialized</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class XSI:
+    def __init__(self, _parent, get_profile=False):
+        &#34;&#34;&#34;
+        The XSI class holds all of the relevant XSI data for a Person
+        :param _parent: The Person instance that created the XSI
+        :param get_profile: Boolean value to force the XSI to get the user profile when initialized
+        &#34;&#34;&#34;
+        logging.info(f&#34;Initializing XSI instance for {_parent.email}&#34;)
+        # First we need to get the XSI User ID for the Webex person we are working with
+        logging.info(&#34;Getting XSI identifiers&#34;)
+        user_id_bytes = base64.b64decode(_parent.id + &#34;===&#34;)
+        user_id_decoded = user_id_bytes.decode(&#34;utf-8&#34;)
+        user_id_bwks = user_id_decoded.split(&#34;/&#34;)[-1]
+        self.id = user_id_bwks
+
+        # Inherited attributes
+        self.xsi_endpoints = _parent._parent.xsi
+
+        # API attributes
+        self._headers = {&#34;Content-Type&#34;: &#34;application/json&#34;,
+                         &#34;Accept&#34;: &#34;application/json&#34;,
+                         &#34;X-BroadWorks-Protocol-Version&#34;: &#34;25.0&#34;,
+                         **_parent._headers}
+        self._params = {&#34;format&#34;: &#34;json&#34;}
+
+        # Attribute definitions
+        self.profile = {}
+        self.registrations = None
+        self.fac = None
+        self.services = {}
+
+        # Get the profile if we have been asked to
+        if get_profile:
+            self.get_profile()
+
+    def get_profile(self):
+        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + &#34;/v2.0/user/&#34; + self.id + &#34;/profile&#34;,
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        # The following is a mapping of the raw XSI format to the profile attribute
+        self.profile[&#39;registrations_url&#39;] = response[&#39;Profile&#39;][&#39;registrations&#39;][&#39;$&#39;]
+        self.profile[&#39;schedule_url&#39;] = response[&#39;Profile&#39;][&#39;scheduleList&#39;][&#39;$&#39;]
+        self.profile[&#39;fac_url&#39;] = response[&#39;Profile&#39;][&#39;fac&#39;][&#39;$&#39;]
+        self.profile[&#39;country_code&#39;] = response[&#39;Profile&#39;][&#39;countryCode&#39;][&#39;$&#39;]
+        self.profile[&#39;user_id&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;userId&#39;][&#39;$&#39;]
+        self.profile[&#39;group_id&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;groupId&#39;][&#39;$&#39;]
+        self.profile[&#39;service_provider&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;serviceProvider&#39;][&#39;$&#39;]
+        # Not everyone has a number and/or extension, so we need to check to see if there are there
+        if &#34;number&#34; in response[&#39;Profile&#39;][&#39;details&#39;]:
+            self.profile[&#39;number&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;number&#39;][&#39;$&#39;]
+        if &#34;extension&#34; in response[&#39;Profile&#39;][&#39;details&#39;]:
+            self.profile[&#39;extension&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;extension&#39;][&#39;$&#39;]
+
+        return self.profile
+
+    def get_registrations(self):
+        # If we don&#39;t have a registrations URL, because we don&#39;t have the profile, go get it
+        if &#34;registrations_url&#34; not in self.profile:
+            self.get_profile()
+        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self.profile[&#39;registrations_url&#39;],
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        self.registrations = response
+        return self.registrations
+
+    def get_fac(self):
+        # If we don&#39;t have a FAC URL, go get it
+        if &#34;fac_url&#34; not in self.profile:
+            self.get_profile()
+        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self.profile[&#39;fac_url&#39;],
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        self.fac = response
+        return self.fac
+
+    def get_services(self):
+        # TODO There are still some services that we should collect more data for. For example, BroadWorks
+        #       Anywhere has Locations that aren&#39;t pulled without a separate call.
+
+        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + &#34;/v2.0/user/&#34; + self.id + &#34;/services&#34;,
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        self.services[&#39;list&#39;] = response[&#39;Services&#39;][&#39;service&#39;]
+        # Now that we have all of the services, pulling the data is pretty easy since the URL
+        # is present in the response. Loop through the services and collect the data
+        # Some services have no config so there is no URI and we&#39;ll just populate them as True
+        for service in self.services[&#39;list&#39;]:
+            if &#34;uri&#34; in service:
+                r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + service[&#39;uri&#39;][&#39;$&#39;],
+                                 headers=self._headers, params=self._params)
+                # Getting well-formatted JSON doesn&#39;t always work. If we can decode the JSON, use it
+                # If not, just store the raw text. At some point, it would make sense to parse the text
+                # and build the dict directly
+                try:
+                    response = r.json()
+                except json.decoder.JSONDecodeError:
+                    response = r.text
+                self.services[service[&#39;name&#39;][&#39;$&#39;]] = response
+            else:
+                self.services[service[&#39;name&#39;][&#39;$&#39;]] = True
+        return self.services</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="wxcadm.XSI.get_fac"><code class="name flex">
+<span>def <span class="ident">get_fac</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_fac(self):
+    # If we don&#39;t have a FAC URL, go get it
+    if &#34;fac_url&#34; not in self.profile:
+        self.get_profile()
+    r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self.profile[&#39;fac_url&#39;],
+                     headers=self._headers, params=self._params)
+    response = r.json()
+    self.fac = response
+    return self.fac</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.XSI.get_profile"><code class="name flex">
+<span>def <span class="ident">get_profile</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_profile(self):
+    r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + &#34;/v2.0/user/&#34; + self.id + &#34;/profile&#34;,
+                     headers=self._headers, params=self._params)
+    response = r.json()
+    # The following is a mapping of the raw XSI format to the profile attribute
+    self.profile[&#39;registrations_url&#39;] = response[&#39;Profile&#39;][&#39;registrations&#39;][&#39;$&#39;]
+    self.profile[&#39;schedule_url&#39;] = response[&#39;Profile&#39;][&#39;scheduleList&#39;][&#39;$&#39;]
+    self.profile[&#39;fac_url&#39;] = response[&#39;Profile&#39;][&#39;fac&#39;][&#39;$&#39;]
+    self.profile[&#39;country_code&#39;] = response[&#39;Profile&#39;][&#39;countryCode&#39;][&#39;$&#39;]
+    self.profile[&#39;user_id&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;userId&#39;][&#39;$&#39;]
+    self.profile[&#39;group_id&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;groupId&#39;][&#39;$&#39;]
+    self.profile[&#39;service_provider&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;serviceProvider&#39;][&#39;$&#39;]
+    # Not everyone has a number and/or extension, so we need to check to see if there are there
+    if &#34;number&#34; in response[&#39;Profile&#39;][&#39;details&#39;]:
+        self.profile[&#39;number&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;number&#39;][&#39;$&#39;]
+    if &#34;extension&#34; in response[&#39;Profile&#39;][&#39;details&#39;]:
+        self.profile[&#39;extension&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;extension&#39;][&#39;$&#39;]
+
+    return self.profile</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.XSI.get_registrations"><code class="name flex">
+<span>def <span class="ident">get_registrations</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_registrations(self):
+    # If we don&#39;t have a registrations URL, because we don&#39;t have the profile, go get it
+    if &#34;registrations_url&#34; not in self.profile:
+        self.get_profile()
+    r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self.profile[&#39;registrations_url&#39;],
+                     headers=self._headers, params=self._params)
+    response = r.json()
+    self.registrations = response
+    return self.registrations</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.XSI.get_services"><code class="name flex">
+<span>def <span class="ident">get_services</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_services(self):
+    # TODO There are still some services that we should collect more data for. For example, BroadWorks
+    #       Anywhere has Locations that aren&#39;t pulled without a separate call.
+
+    r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + &#34;/v2.0/user/&#34; + self.id + &#34;/services&#34;,
+                     headers=self._headers, params=self._params)
+    response = r.json()
+    self.services[&#39;list&#39;] = response[&#39;Services&#39;][&#39;service&#39;]
+    # Now that we have all of the services, pulling the data is pretty easy since the URL
+    # is present in the response. Loop through the services and collect the data
+    # Some services have no config so there is no URI and we&#39;ll just populate them as True
+    for service in self.services[&#39;list&#39;]:
+        if &#34;uri&#34; in service:
+            r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + service[&#39;uri&#39;][&#39;$&#39;],
+                             headers=self._headers, params=self._params)
+            # Getting well-formatted JSON doesn&#39;t always work. If we can decode the JSON, use it
+            # If not, just store the raw text. At some point, it would make sense to parse the text
+            # and build the dict directly
+            try:
+                response = r.json()
+            except json.decoder.JSONDecodeError:
+                response = r.text
+            self.services[service[&#39;name&#39;][&#39;$&#39;]] = response
+        else:
+            self.services[service[&#39;name&#39;][&#39;$&#39;]] = True
+    return self.services</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="wxcadm.APIError" href="#wxcadm.APIError">APIError</a></code></h4>
+</li>
+<li>
+<h4><code><a title="wxcadm.CallQueue" href="#wxcadm.CallQueue">CallQueue</a></code></h4>
+<ul class="">
+<li><code><a title="wxcadm.CallQueue.call_forwarding" href="#wxcadm.CallQueue.call_forwarding">call_forwarding</a></code></li>
+<li><code><a title="wxcadm.CallQueue.config" href="#wxcadm.CallQueue.config">config</a></code></li>
+<li><code><a title="wxcadm.CallQueue.enabled" href="#wxcadm.CallQueue.enabled">enabled</a></code></li>
+<li><code><a title="wxcadm.CallQueue.extension" href="#wxcadm.CallQueue.extension">extension</a></code></li>
+<li><code><a title="wxcadm.CallQueue.get_queue_config" href="#wxcadm.CallQueue.get_queue_config">get_queue_config</a></code></li>
+<li><code><a title="wxcadm.CallQueue.get_queue_forwarding" href="#wxcadm.CallQueue.get_queue_forwarding">get_queue_forwarding</a></code></li>
+<li><code><a title="wxcadm.CallQueue.id" href="#wxcadm.CallQueue.id">id</a></code></li>
+<li><code><a title="wxcadm.CallQueue.location_id" href="#wxcadm.CallQueue.location_id">location_id</a></code></li>
+<li><code><a title="wxcadm.CallQueue.name" href="#wxcadm.CallQueue.name">name</a></code></li>
+<li><code><a title="wxcadm.CallQueue.phone_number" href="#wxcadm.CallQueue.phone_number">phone_number</a></code></li>
+<li><code><a title="wxcadm.CallQueue.push" href="#wxcadm.CallQueue.push">push</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="wxcadm.HuntGroup" href="#wxcadm.HuntGroup">HuntGroup</a></code></h4>
+<ul class="">
+<li><code><a title="wxcadm.HuntGroup.agents" href="#wxcadm.HuntGroup.agents">agents</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.alternate_numbers_settings" href="#wxcadm.HuntGroup.alternate_numbers_settings">alternate_numbers_settings</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.call_policy" href="#wxcadm.HuntGroup.call_policy">call_policy</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.distinctive_ring" href="#wxcadm.HuntGroup.distinctive_ring">distinctive_ring</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.enabled" href="#wxcadm.HuntGroup.enabled">enabled</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.extension" href="#wxcadm.HuntGroup.extension">extension</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.first_name" href="#wxcadm.HuntGroup.first_name">first_name</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.get_config" href="#wxcadm.HuntGroup.get_config">get_config</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.id" href="#wxcadm.HuntGroup.id">id</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.language" href="#wxcadm.HuntGroup.language">language</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.language_code" href="#wxcadm.HuntGroup.language_code">language_code</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.last_name" href="#wxcadm.HuntGroup.last_name">last_name</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.location" href="#wxcadm.HuntGroup.location">location</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.name" href="#wxcadm.HuntGroup.name">name</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.phone_number" href="#wxcadm.HuntGroup.phone_number">phone_number</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.raw_config" href="#wxcadm.HuntGroup.raw_config">raw_config</a></code></li>
+<li><code><a title="wxcadm.HuntGroup.time_zone" href="#wxcadm.HuntGroup.time_zone">time_zone</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="wxcadm.Location" href="#wxcadm.Location">Location</a></code></h4>
+</li>
+<li>
+<h4><code><a title="wxcadm.Org" href="#wxcadm.Org">Org</a></code></h4>
+<ul class="two-column">
+<li><code><a title="wxcadm.Org.call_queues" href="#wxcadm.Org.call_queues">call_queues</a></code></li>
+<li><code><a title="wxcadm.Org.get_call_queues" href="#wxcadm.Org.get_call_queues">get_call_queues</a></code></li>
+<li><code><a title="wxcadm.Org.get_hunt_groups" href="#wxcadm.Org.get_hunt_groups">get_hunt_groups</a></code></li>
+<li><code><a title="wxcadm.Org.get_locations" href="#wxcadm.Org.get_locations">get_locations</a></code></li>
+<li><code><a title="wxcadm.Org.get_people" href="#wxcadm.Org.get_people">get_people</a></code></li>
+<li><code><a title="wxcadm.Org.get_person_by_email" href="#wxcadm.Org.get_person_by_email">get_person_by_email</a></code></li>
+<li><code><a title="wxcadm.Org.get_pickup_groups" href="#wxcadm.Org.get_pickup_groups">get_pickup_groups</a></code></li>
+<li><code><a title="wxcadm.Org.get_wxc_people" href="#wxcadm.Org.get_wxc_people">get_wxc_people</a></code></li>
+<li><code><a title="wxcadm.Org.get_xsi_endpoints" href="#wxcadm.Org.get_xsi_endpoints">get_xsi_endpoints</a></code></li>
+<li><code><a title="wxcadm.Org.hunt_groups" href="#wxcadm.Org.hunt_groups">hunt_groups</a></code></li>
+<li><code><a title="wxcadm.Org.id" href="#wxcadm.Org.id">id</a></code></li>
+<li><code><a title="wxcadm.Org.licenses" href="#wxcadm.Org.licenses">licenses</a></code></li>
+<li><code><a title="wxcadm.Org.locations" href="#wxcadm.Org.locations">locations</a></code></li>
+<li><code><a title="wxcadm.Org.name" href="#wxcadm.Org.name">name</a></code></li>
+<li><code><a title="wxcadm.Org.people" href="#wxcadm.Org.people">people</a></code></li>
+<li><code><a title="wxcadm.Org.pickup_groups" href="#wxcadm.Org.pickup_groups">pickup_groups</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="wxcadm.OrgError" href="#wxcadm.OrgError">OrgError</a></code></h4>
+</li>
+<li>
+<h4><code><a title="wxcadm.Person" href="#wxcadm.Person">Person</a></code></h4>
+<ul class="">
+<li><code><a title="wxcadm.Person.call_forwarding" href="#wxcadm.Person.call_forwarding">call_forwarding</a></code></li>
+<li><code><a title="wxcadm.Person.disable_vm_to_email" href="#wxcadm.Person.disable_vm_to_email">disable_vm_to_email</a></code></li>
+<li><code><a title="wxcadm.Person.enable_vm_to_email" href="#wxcadm.Person.enable_vm_to_email">enable_vm_to_email</a></code></li>
+<li><code><a title="wxcadm.Person.get_barge_in" href="#wxcadm.Person.get_barge_in">get_barge_in</a></code></li>
+<li><code><a title="wxcadm.Person.get_call_forwarding" href="#wxcadm.Person.get_call_forwarding">get_call_forwarding</a></code></li>
+<li><code><a title="wxcadm.Person.get_call_recording" href="#wxcadm.Person.get_call_recording">get_call_recording</a></code></li>
+<li><code><a title="wxcadm.Person.get_caller_id" href="#wxcadm.Person.get_caller_id">get_caller_id</a></code></li>
+<li><code><a title="wxcadm.Person.get_calling_behavior" href="#wxcadm.Person.get_calling_behavior">get_calling_behavior</a></code></li>
+<li><code><a title="wxcadm.Person.get_dnd" href="#wxcadm.Person.get_dnd">get_dnd</a></code></li>
+<li><code><a title="wxcadm.Person.get_full_config" href="#wxcadm.Person.get_full_config">get_full_config</a></code></li>
+<li><code><a title="wxcadm.Person.get_intercept" href="#wxcadm.Person.get_intercept">get_intercept</a></code></li>
+<li><code><a title="wxcadm.Person.get_vm_config" href="#wxcadm.Person.get_vm_config">get_vm_config</a></code></li>
+<li><code><a title="wxcadm.Person.push_vm_config" href="#wxcadm.Person.push_vm_config">push_vm_config</a></code></li>
+<li><code><a title="wxcadm.Person.start_xsi" href="#wxcadm.Person.start_xsi">start_xsi</a></code></li>
+<li><code><a title="wxcadm.Person.vm_config" href="#wxcadm.Person.vm_config">vm_config</a></code></li>
+<li><code><a title="wxcadm.Person.wxc" href="#wxcadm.Person.wxc">wxc</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="wxcadm.PickupGroup" href="#wxcadm.PickupGroup">PickupGroup</a></code></h4>
+<ul class="">
+<li><code><a title="wxcadm.PickupGroup.get_config" href="#wxcadm.PickupGroup.get_config">get_config</a></code></li>
+<li><code><a title="wxcadm.PickupGroup.id" href="#wxcadm.PickupGroup.id">id</a></code></li>
+<li><code><a title="wxcadm.PickupGroup.location_id" href="#wxcadm.PickupGroup.location_id">location_id</a></code></li>
+<li><code><a title="wxcadm.PickupGroup.name" href="#wxcadm.PickupGroup.name">name</a></code></li>
+<li><code><a title="wxcadm.PickupGroup.users" href="#wxcadm.PickupGroup.users">users</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="wxcadm.PutError" href="#wxcadm.PutError">PutError</a></code></h4>
+</li>
+<li>
+<h4><code><a title="wxcadm.TokenError" href="#wxcadm.TokenError">TokenError</a></code></h4>
+</li>
+<li>
+<h4><code><a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a></code></h4>
+<ul class="">
+<li><code><a title="wxcadm.Webex.headers" href="#wxcadm.Webex.headers">headers</a></code></li>
+<li><code><a title="wxcadm.Webex.orgs" href="#wxcadm.Webex.orgs">orgs</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="wxcadm.XSI" href="#wxcadm.XSI">XSI</a></code></h4>
+<ul class="">
+<li><code><a title="wxcadm.XSI.get_fac" href="#wxcadm.XSI.get_fac">get_fac</a></code></li>
+<li><code><a title="wxcadm.XSI.get_profile" href="#wxcadm.XSI.get_profile">get_profile</a></code></li>
+<li><code><a title="wxcadm.XSI.get_registrations" href="#wxcadm.XSI.get_registrations">get_registrations</a></code></li>
+<li><code><a title="wxcadm.XSI.get_services" href="#wxcadm.XSI.get_services">get_services</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>
