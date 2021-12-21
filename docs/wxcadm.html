@@ -27,7 +27,7 @@
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">import json.decoder
-
+import time
 import requests
 import logging
 import base64
@@ -77,6 +77,18 @@ class Webex:
     #    Add token refresh, just for completeness
 
     def __init__(self, access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False):
+        &#34;&#34;&#34;
+        Initialize a Webex instance to communicate with Webex and store data
+        Args:
+            access_token (str): The Webex API Access Token to authenticate the API calls
+            create_org (bool, optional): Whether to create an Org instance for all organizations.
+            get_people (bool, optional): Whether to get all of the People and created instances for them
+            get_locations (bool, optional): Whether to get all Locations and create instances for them
+            get_xsi (bool, optional): Whether to get the XSI endpoints for each Org. Defaults to False, since
+                not every Org has XSI capability
+        Returns:
+            Webex: The Webex instance
+        &#34;&#34;&#34;
         logging.info(&#34;Webex instance initialized&#34;)
         # The access token is the only thing that we need to get started
         self._access_token: str = access_token
@@ -122,6 +134,7 @@ class Webex:
 
     @property
     def headers(self):
+        &#34;&#34;&#34;The &#34;universal&#34; HTTP headers with the Authorization header present&#34;&#34;&#34;
         return self._headers
 
 
@@ -375,7 +388,7 @@ class Org:
 
 
 class Location:
-    def __init__(self, location_id, name, address=None):
+    def __init__(self, location_id: str, name: str, address: dict = {}):
         &#34;&#34;&#34;
         Initialize a Location instance
         Args:
@@ -385,8 +398,6 @@ class Location:
         Returns:
              Location (object): The Location instance
         &#34;&#34;&#34;
-        if address is None:
-            address = {}
         self.id: str = location_id
         self.name: str = name
         self.address: dict = address
@@ -660,75 +671,166 @@ class CallQueue:
 
 
 class XSI:
-    def __init__(self, _parent, get_profile=False):
+    def __init__(self, parent, get_profile: bool = False, cache: bool = False ):
         &#34;&#34;&#34;
         The XSI class holds all of the relevant XSI data for a Person
-        :param _parent: The Person instance that created the XSI
-        :param get_profile: Boolean value to force the XSI to get the user profile when initialized
+        Args:
+            parent (Person): The Person who this XSI instance belongs to
+            get_profile (bool): Whether or not to automatically get the XSI Profile
+            cache (bool): Whether to cache the XSI data (True) or pull it &#34;live&#34; every time (**False**)
         &#34;&#34;&#34;
-        logging.info(f&#34;Initializing XSI instance for {_parent.email}&#34;)
+        logging.info(f&#34;Initializing XSI instance for {parent.email}&#34;)
         # First we need to get the XSI User ID for the Webex person we are working with
         logging.info(&#34;Getting XSI identifiers&#34;)
-        user_id_bytes = base64.b64decode(_parent.id + &#34;===&#34;)
+        user_id_bytes = base64.b64decode(parent.id + &#34;===&#34;)
         user_id_decoded = user_id_bytes.decode(&#34;utf-8&#34;)
         user_id_bwks = user_id_decoded.split(&#34;/&#34;)[-1]
         self.id = user_id_bwks
 
         # Inherited attributes
-        self.xsi_endpoints = _parent._parent.xsi
+        self.xsi_endpoints = parent._parent.xsi
+        self._cache = cache
 
         # API attributes
         self._headers = {&#34;Content-Type&#34;: &#34;application/json&#34;,
                          &#34;Accept&#34;: &#34;application/json&#34;,
                          &#34;X-BroadWorks-Protocol-Version&#34;: &#34;25.0&#34;,
-                         **_parent._headers}
+                         **parent._headers}
         self._params = {&#34;format&#34;: &#34;json&#34;}
 
         # Attribute definitions
-        self.profile = {}
-        self.registrations = None
+        self._calls: list = []
+        self._profile: dict = {}
+        &#34;&#34;&#34;The XSI Profile for this Person&#34;&#34;&#34;
+        self._registrations:dict  = {}
+        &#34;&#34;&#34;The Registrations associated with this Person&#34;&#34;&#34;
         self.fac = None
         self.services = {}
+        self._alternate_numbers: dict = {}
+        &#34;&#34;&#34;The Alternate Numbers for the Person&#34;&#34;&#34;
+        self._anonymous_call_rejection: dict = {}
+        &#34;&#34;&#34;The Anonymous Call Rejection settings for this Person&#34;&#34;&#34;
+        self._single_number_reach: dict = {}
+        &#34;&#34;&#34;The SNR (Office Anywhere) settings for this Person&#34;&#34;&#34;
+        self._monitoring: dict = {}
+        &#34;&#34;&#34;The BLF/Monitoring settings for this Person&#34;&#34;&#34;
 
         # Get the profile if we have been asked to
         if get_profile:
             self.get_profile()
 
-    def get_profile(self):
-        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + &#34;/v2.0/user/&#34; + self.id + &#34;/profile&#34;,
-                         headers=self._headers, params=self._params)
-        response = r.json()
-        # The following is a mapping of the raw XSI format to the profile attribute
-        self.profile[&#39;registrations_url&#39;] = response[&#39;Profile&#39;][&#39;registrations&#39;][&#39;$&#39;]
-        self.profile[&#39;schedule_url&#39;] = response[&#39;Profile&#39;][&#39;scheduleList&#39;][&#39;$&#39;]
-        self.profile[&#39;fac_url&#39;] = response[&#39;Profile&#39;][&#39;fac&#39;][&#39;$&#39;]
-        self.profile[&#39;country_code&#39;] = response[&#39;Profile&#39;][&#39;countryCode&#39;][&#39;$&#39;]
-        self.profile[&#39;user_id&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;userId&#39;][&#39;$&#39;]
-        self.profile[&#39;group_id&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;groupId&#39;][&#39;$&#39;]
-        self.profile[&#39;service_provider&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;serviceProvider&#39;][&#39;$&#39;]
-        # Not everyone has a number and/or extension, so we need to check to see if there are there
-        if &#34;number&#34; in response[&#39;Profile&#39;][&#39;details&#39;]:
-            self.profile[&#39;number&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;number&#39;][&#39;$&#39;]
-        if &#34;extension&#34; in response[&#39;Profile&#39;][&#39;details&#39;]:
-            self.profile[&#39;extension&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;extension&#39;][&#39;$&#39;]
+    def new_call(self):
+        &#34;&#34;&#34;Create a new Call instance&#34;&#34;&#34;
+        call = Call(self)
+        self._calls.append(call)
+        return call
 
-        return self.profile
+    @property
+    def calls(self):
+        &#34;&#34;&#34;
+        Get the list of active calls and creates Call instances. Also destroys any Call instances that are no longer
+        valid.
+        Returns:
+            list[Call]: List of Call instances
+        &#34;&#34;&#34;
+        # First wipe out all of the existing instances
+        for call in self._calls:
+            del call
+        self._calls.clear()
+        calls_data: list = self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/calls&#34;)
+        logging.debug(f&#34;Calls Data: {calls_data}&#34;)
+        if &#34;call&#34; not in calls_data[&#39;Calls&#39;]:
+            self._calls = []
+            return self._calls
+        if type(calls_data[&#39;Calls&#39;][&#39;call&#39;]) is dict:
+            this_call = Call(self, id=calls_data[&#39;Calls&#39;][&#39;call&#39;][&#39;callId&#39;][&#39;$&#39;])
+            self._calls.append(this_call)
+        elif type(calls_data[&#39;Calls&#39;][&#39;call&#39;]) is list:
+            for call in calls_data[&#39;Calls&#39;][&#39;call&#39;]:
+                this_call = Call(self, id=call[&#39;callId&#39;][&#39;$&#39;])
+                self._calls.append(this_call)
+        return self._calls
 
-    def get_registrations(self):
-        # If we don&#39;t have a registrations URL, because we don&#39;t have the profile, go get it
-        if &#34;registrations_url&#34; not in self.profile:
-            self.get_profile()
-        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self.profile[&#39;registrations_url&#39;],
-                         headers=self._headers, params=self._params)
-        response = r.json()
-        self.registrations = response
-        return self.registrations
+    def __get_xsi_data(self, url, params: dict = {}):
+        params = {**params, **self._params}
+        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + url, headers=self._headers, params=params)
+        if r.status_code == 200:
+            try:
+                response = r.json()
+            except json.decoder.JSONDecodeError:
+                response = r.text
+            return_data = response
+        elif r.status_code == 404:
+            return_data = False
+        return return_data
+
+    @property
+    def monitoring(self):
+        &#34;&#34;&#34;The Monitoring/BLF settings for this person&#34;&#34;&#34;
+        if not self._monitoring or not self._cache:
+            self._monitoring = self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/services/BusyLampField&#34;)
+        return self._monitoring
+
+    @property
+    def single_number_reach(self):
+        &#34;&#34;&#34;The SNR (Office Anywhere) settings for this Person&#34;&#34;&#34;
+        if not self._single_number_reach or not self._cache:
+            self._single_number_reach = \
+                self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/services/BroadWorksAnywhere&#34;)
+        return self._single_number_reach
+
+    @property
+    def anonymous_call_rejection(self):
+        &#34;&#34;&#34;The Anonymous Call Rejection settings for this Person&#34;&#34;&#34;
+        if not self._anonymous_call_rejection or not self._cache:
+            self._anonymous_call_rejection = \
+                self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/services/AnonymousCallRejection&#34;)
+        return self._anonymous_call_rejection
+
+    @property
+    def alternate_numbers(self):
+        &#34;&#34;&#34;The Alternate Numbers for this Person&#34;&#34;&#34;
+        if not self._alternate_numbers or not self._cache:
+            self._alternate_numbers = \
+                self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/services/AlternateNumbers&#34;)
+        return self._alternate_numbers
+
+    @property
+    def profile(self):
+        &#34;&#34;&#34;The XSI Profile for this Person&#34;&#34;&#34;
+        if not self._profile or not self._cache:
+            profile_data: dict = \
+                self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/profile&#34;)
+            # The following is a mapping of the raw XSI format to the profile attribute
+            self._profile[&#39;registrations_url&#39;] = profile_data[&#39;Profile&#39;][&#39;registrations&#39;][&#39;$&#39;]
+            self._profile[&#39;schedule_url&#39;] = profile_data[&#39;Profile&#39;][&#39;scheduleList&#39;][&#39;$&#39;]
+            self._profile[&#39;fac_url&#39;] = profile_data[&#39;Profile&#39;][&#39;fac&#39;][&#39;$&#39;]
+            self._profile[&#39;country_code&#39;] = profile_data[&#39;Profile&#39;][&#39;countryCode&#39;][&#39;$&#39;]
+            self._profile[&#39;user_id&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;userId&#39;][&#39;$&#39;]
+            self._profile[&#39;group_id&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;groupId&#39;][&#39;$&#39;]
+            self._profile[&#39;service_provider&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;serviceProvider&#39;][&#39;$&#39;]
+            # Not everyone has a number and/or extension, so we need to check to see if there are there
+            if &#34;number&#34; in profile_data[&#39;Profile&#39;][&#39;details&#39;]:
+                self._profile[&#39;number&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;number&#39;][&#39;$&#39;]
+            if &#34;extension&#34; in profile_data[&#39;Profile&#39;][&#39;details&#39;]:
+                self._profile[&#39;extension&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;extension&#39;][&#39;$&#39;]
+        return self._profile
+
+    @property
+    def registrations(self):
+        &#34;&#34;&#34;The device registrations asscociated with this Person&#34;&#34;&#34;
+        if not self._registrations or not self._cache:
+            # If we don&#39;t have a registrations URL, because we don&#39;t have the profile, go get it
+            if &#34;registrations_url&#34; not in self._profile:
+                self.profile
+            self._registrations = self.__get_xsi_data(self._profile[&#39;registrations_url&#39;])
+        return self._registrations
 
     def get_fac(self):
         # If we don&#39;t have a FAC URL, go get it
-        if &#34;fac_url&#34; not in self.profile:
-            self.get_profile()
-        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self.profile[&#39;fac_url&#39;],
+        if &#34;fac_url&#34; not in self._profile:
+            self.profile()
+        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self._profile[&#39;fac_url&#39;],
                          headers=self._headers, params=self._params)
         response = r.json()
         self.fac = response
@@ -844,7 +946,176 @@ class HuntGroup:
         self.time_zone = response[&#39;timeZone&#39;]
         self.call_policy = response[&#39;callPolicies&#39;]
 
-        return self.raw_config</code></pre>
+        return self.raw_config
+
+
+class Call:
+    &#34;&#34;&#34;
+    The Call class represents a call for a person. Since Webex supports calls in the Webex API as well as XSI API,
+    the class supports both styles. When initialized, the parent instance is checked to see if it is a Person
+    instance or an XSI instance. At the moment, the Webex API only supports user-scoped call control, so most of the
+    development focus right now is the XSI API, which is more feature-rich
+    &#34;&#34;&#34;
+    def __init__(self, parent, id: str = &#34;&#34;):
+        &#34;&#34;&#34;
+        Inititalize a Call instance for a Person
+        Args:
+            parent (XSI): The Person or XSI instance that owns this Call
+        Returns:
+            Call: This Call instance
+        &#34;&#34;&#34;
+        self._parent: object = parent
+        &#34;&#34;&#34;The Person or XSI instance that owns this Call&#34;&#34;&#34;
+        self._userid: str = self._parent.id
+        &#34;&#34;&#34;The Person or XSI ID inherited from the parent&#34;&#34;&#34;
+        self._headers = self._parent._headers
+        self._params = self._parent._params
+        self._url: str = &#34;&#34;
+        self.id: str = id
+        &#34;&#34;&#34;The Call ID for this call&#34;&#34;&#34;
+        self._external_tracking_id: str = &#34;&#34;
+        &#34;&#34;&#34;The externalTrackingId used by XSI&#34;&#34;&#34;
+        self._status: dict = {}
+        &#34;&#34;&#34;The status of the call&#34;&#34;&#34;
+
+
+        if type(self._parent) is Person:
+            # This is where we set things based on whether the parent is a Person
+            self._url = _url_base
+            pass
+        elif type(self._parent) is XSI:
+            # The Call parent is XSI
+            self._url = self._parent.xsi_endpoints[&#39;actions_endpoint&#39;] + f&#34;/v2.0/user/{self._userid}/calls&#34;
+
+    def originate(self, address: str, comment: str = &#34;&#34;):
+        &#34;&#34;&#34;
+        Originate a call on behalf of the Person
+        Args:
+            address (str): The address (usually a phone number) to originate the call to
+            comment (str, optional): Text comment to attach to the call
+        Returns:
+            bool: Whether the command was successful
+        &#34;&#34;&#34;
+        logging.info(f&#34;Originating a call to {address} for {self._userid}&#34;)
+        params = {&#34;address&#34;: address, &#34;info&#34;: comment}
+        r = requests.post(self._url + &#34;/new&#34;, headers=self._headers, params=params)
+        response = r.json()
+        self.id = response[&#39;CallStartInfo&#39;][&#39;callId&#39;][&#39;$&#39;]
+        self._external_tracking_id = response[&#39;CallStartInfo&#39;][&#39;externalTrackingId&#39;][&#39;$&#39;]
+        if r.status_code == 201:
+            return True
+        else:
+            return False
+
+    def hangup(self):
+        &#34;&#34;&#34;
+        Hang up the call
+        Returns:
+            bool: Whether the command was successful
+        &#34;&#34;&#34;
+        logging.info(f&#34;Hanging up call ID: {self.id}&#34;)
+        r = requests.delete(self._url + f&#34;/{self.id}&#34;,
+                            headers=self._headers)
+        if r.status_code == 200:
+            return True
+        else:
+            return False
+
+    @property
+    def status(self):
+        &#34;&#34;&#34;
+        The status of the call
+        Returns:
+            dict: {
+                &#39;network_call_id&#39; (str): The unique identifier for the Network side of the call
+                &#39;personality&#39;(str): The user&#39;s personalty (Originator or Terminator)
+                &#39;state&#39; (str): The state of the call
+                &#39;remote_party&#39; (dict): {
+                    &#39;address&#39; (str): The address of the remote party
+                    &#39;call_type&#39; (str): The call type
+                }
+                &#39;endpoint&#39; (dict): {
+                    &#39;type&#39; (str): The type of endpoint in use
+                    &#39;AoR&#39; (str): The Address of Record for the endpoint
+                }
+                &#39;appearance&#39; (str): The Call Appearance number
+                &#39;start_time&#39; (str): The UNIX timestanp of the start of the call
+                &#39;answer_time&#39; (str): The UNIX timestamp when the call was answered
+                &#39;status_time&#39; (str): The UNIX timestamp of the status response
+        &#34;&#34;&#34;
+        logging.info(f&#34;Getting call status&#34;)
+        r = requests.get(self._url + f&#34;/{self.id}&#34;,
+                         headers=self._headers)
+        response = r.json()
+        logging.debug(f&#34;Call Status response: {response}&#34;)
+        if r.status_code == 200:
+            return_data = {
+                &#34;network_call_id&#34;: response[&#39;Call&#39;][&#39;networkCallId&#39;][&#39;$&#39;],
+                &#34;personality&#34;: response[&#39;Call&#39;][&#39;personality&#39;][&#39;$&#39;],
+                &#34;state&#34;: response[&#39;Call&#39;][&#39;state&#39;][&#39;$&#39;],
+                &#34;remote_party&#34;: {
+                    &#34;address&#34;: response[&#39;Call&#39;][&#39;remoteParty&#39;][&#39;address&#39;][&#39;$&#39;],
+                    &#34;call_type&#34;: response[&#39;Call&#39;][&#39;remoteParty&#39;][&#39;callType&#39;][&#39;$&#39;],
+                },
+                &#34;endpoint&#34;: {
+                    &#34;type&#34;: response[&#39;Call&#39;][&#39;endpoint&#39;][&#39;@xsi1:type&#39;],
+                    &#34;AoR&#34;: response[&#39;Call&#39;][&#39;endpoint&#39;][&#39;addressOfRecord&#39;][&#39;$&#39;]
+                },
+                &#34;appearance&#34;: response[&#39;Call&#39;][&#39;appearance&#39;][&#39;$&#39;],
+                &#34;diversion_inhibited&#34;: response[&#39;Call&#39;][&#39;diversionInhibited&#39;],
+                &#34;start_time&#34;: response[&#39;Call&#39;][&#39;startTime&#39;][&#39;$&#39;],
+                &#34;answer_time&#34;: response[&#39;Call&#39;][&#39;answerTime&#39;][&#39;$&#39;],
+                &#34;status_time&#34;: int(time.time())
+            }
+            return return_data
+        else:
+            return False
+
+    def transfer(self, address: str, type: str = &#34;blind&#34;):
+        &#34;&#34;&#34;
+        Transfer the call to the selected address. Type of transfer can be controlled with `type` param.
+        Args:
+            address (str): The address (usually a phone number or extension) to transfer the call to
+            type (str): The type of transfer. Accepted options are &#34;blind&#34; and &#34;attended&#34;
+        Returns:
+            bool: True if successful. False if unsuccessful
+        &#34;&#34;&#34;
+        logging.info(f&#34;Transferring call {self.id} to {address} for {self._userid}&#34;)
+        # Set the address param to be passed to XSI
+        params = {&#34;address&#34;: address}
+        # Handle an attended transfer first. Anything else is assumed to be blind
+        if type.lower() == &#34;attended&#34;:
+            # TODO Attended transfer logic, which requires Hold and a New before transfer
+            pass
+        else:
+            r = requests.put(self._url + f&#34;/{self.id}/BlindTransfer&#34;, headers=self._headers, params=params)
+            if r.status_code in [200, 201, 204]:
+                return True
+            else:
+                return False
+
+    def hold(self):
+        &#34;&#34;&#34;
+        Place the call on hold
+        Returns:
+            bool: Whether the hold command was successful
+        &#34;&#34;&#34;
+        r = request.put(self._url + f&#34;/{self.id}/Hold&#34;, headers=self._headers)
+        if r.status_code in [200, 201, 204]:
+            return True
+        else:
+            return False
+
+    def resume(self):
+        &#34;&#34;&#34;Resume a call that was placed on hold
+        Returns:
+            bool: Whether the command was successful
+        &#34;&#34;&#34;
+        r = requests.put(self._url + f&#34;/{self.id}/Talk&#34;, headers=self._headers)
+        if r.status_code in [200, 201, 204]:
+            return True
+        else:
+            return False</code></pre>
 </details>
 </section>
 <section>
@@ -882,6 +1153,456 @@ class HuntGroup:
 <li><a title="wxcadm.PutError" href="#wxcadm.PutError">PutError</a></li>
 <li><a title="wxcadm.TokenError" href="#wxcadm.TokenError">TokenError</a></li>
 </ul>
+</dd>
+<dt id="wxcadm.Call"><code class="flex name class">
+<span>class <span class="ident">Call</span></span>
+<span>(</span><span>parent, id: str = '')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>The Call class represents a call for a person. Since Webex supports calls in the Webex API as well as XSI API,
+the class supports both styles. When initialized, the parent instance is checked to see if it is a Person
+instance or an XSI instance. At the moment, the Webex API only supports user-scoped call control, so most of the
+development focus right now is the XSI API, which is more feature-rich</p>
+<p>Inititalize a Call instance for a Person</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>parent</code></strong> :&ensp;<code><a title="wxcadm.XSI" href="#wxcadm.XSI">XSI</a></code></dt>
+<dd>The Person or XSI instance that owns this Call</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="wxcadm.Call" href="#wxcadm.Call">Call</a></code></dt>
+<dd>This Call instance</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Call:
+    &#34;&#34;&#34;
+    The Call class represents a call for a person. Since Webex supports calls in the Webex API as well as XSI API,
+    the class supports both styles. When initialized, the parent instance is checked to see if it is a Person
+    instance or an XSI instance. At the moment, the Webex API only supports user-scoped call control, so most of the
+    development focus right now is the XSI API, which is more feature-rich
+    &#34;&#34;&#34;
+    def __init__(self, parent, id: str = &#34;&#34;):
+        &#34;&#34;&#34;
+        Inititalize a Call instance for a Person
+        Args:
+            parent (XSI): The Person or XSI instance that owns this Call
+        Returns:
+            Call: This Call instance
+        &#34;&#34;&#34;
+        self._parent: object = parent
+        &#34;&#34;&#34;The Person or XSI instance that owns this Call&#34;&#34;&#34;
+        self._userid: str = self._parent.id
+        &#34;&#34;&#34;The Person or XSI ID inherited from the parent&#34;&#34;&#34;
+        self._headers = self._parent._headers
+        self._params = self._parent._params
+        self._url: str = &#34;&#34;
+        self.id: str = id
+        &#34;&#34;&#34;The Call ID for this call&#34;&#34;&#34;
+        self._external_tracking_id: str = &#34;&#34;
+        &#34;&#34;&#34;The externalTrackingId used by XSI&#34;&#34;&#34;
+        self._status: dict = {}
+        &#34;&#34;&#34;The status of the call&#34;&#34;&#34;
+
+
+        if type(self._parent) is Person:
+            # This is where we set things based on whether the parent is a Person
+            self._url = _url_base
+            pass
+        elif type(self._parent) is XSI:
+            # The Call parent is XSI
+            self._url = self._parent.xsi_endpoints[&#39;actions_endpoint&#39;] + f&#34;/v2.0/user/{self._userid}/calls&#34;
+
+    def originate(self, address: str, comment: str = &#34;&#34;):
+        &#34;&#34;&#34;
+        Originate a call on behalf of the Person
+        Args:
+            address (str): The address (usually a phone number) to originate the call to
+            comment (str, optional): Text comment to attach to the call
+        Returns:
+            bool: Whether the command was successful
+        &#34;&#34;&#34;
+        logging.info(f&#34;Originating a call to {address} for {self._userid}&#34;)
+        params = {&#34;address&#34;: address, &#34;info&#34;: comment}
+        r = requests.post(self._url + &#34;/new&#34;, headers=self._headers, params=params)
+        response = r.json()
+        self.id = response[&#39;CallStartInfo&#39;][&#39;callId&#39;][&#39;$&#39;]
+        self._external_tracking_id = response[&#39;CallStartInfo&#39;][&#39;externalTrackingId&#39;][&#39;$&#39;]
+        if r.status_code == 201:
+            return True
+        else:
+            return False
+
+    def hangup(self):
+        &#34;&#34;&#34;
+        Hang up the call
+        Returns:
+            bool: Whether the command was successful
+        &#34;&#34;&#34;
+        logging.info(f&#34;Hanging up call ID: {self.id}&#34;)
+        r = requests.delete(self._url + f&#34;/{self.id}&#34;,
+                            headers=self._headers)
+        if r.status_code == 200:
+            return True
+        else:
+            return False
+
+    @property
+    def status(self):
+        &#34;&#34;&#34;
+        The status of the call
+        Returns:
+            dict: {
+                &#39;network_call_id&#39; (str): The unique identifier for the Network side of the call
+                &#39;personality&#39;(str): The user&#39;s personalty (Originator or Terminator)
+                &#39;state&#39; (str): The state of the call
+                &#39;remote_party&#39; (dict): {
+                    &#39;address&#39; (str): The address of the remote party
+                    &#39;call_type&#39; (str): The call type
+                }
+                &#39;endpoint&#39; (dict): {
+                    &#39;type&#39; (str): The type of endpoint in use
+                    &#39;AoR&#39; (str): The Address of Record for the endpoint
+                }
+                &#39;appearance&#39; (str): The Call Appearance number
+                &#39;start_time&#39; (str): The UNIX timestanp of the start of the call
+                &#39;answer_time&#39; (str): The UNIX timestamp when the call was answered
+                &#39;status_time&#39; (str): The UNIX timestamp of the status response
+        &#34;&#34;&#34;
+        logging.info(f&#34;Getting call status&#34;)
+        r = requests.get(self._url + f&#34;/{self.id}&#34;,
+                         headers=self._headers)
+        response = r.json()
+        logging.debug(f&#34;Call Status response: {response}&#34;)
+        if r.status_code == 200:
+            return_data = {
+                &#34;network_call_id&#34;: response[&#39;Call&#39;][&#39;networkCallId&#39;][&#39;$&#39;],
+                &#34;personality&#34;: response[&#39;Call&#39;][&#39;personality&#39;][&#39;$&#39;],
+                &#34;state&#34;: response[&#39;Call&#39;][&#39;state&#39;][&#39;$&#39;],
+                &#34;remote_party&#34;: {
+                    &#34;address&#34;: response[&#39;Call&#39;][&#39;remoteParty&#39;][&#39;address&#39;][&#39;$&#39;],
+                    &#34;call_type&#34;: response[&#39;Call&#39;][&#39;remoteParty&#39;][&#39;callType&#39;][&#39;$&#39;],
+                },
+                &#34;endpoint&#34;: {
+                    &#34;type&#34;: response[&#39;Call&#39;][&#39;endpoint&#39;][&#39;@xsi1:type&#39;],
+                    &#34;AoR&#34;: response[&#39;Call&#39;][&#39;endpoint&#39;][&#39;addressOfRecord&#39;][&#39;$&#39;]
+                },
+                &#34;appearance&#34;: response[&#39;Call&#39;][&#39;appearance&#39;][&#39;$&#39;],
+                &#34;diversion_inhibited&#34;: response[&#39;Call&#39;][&#39;diversionInhibited&#39;],
+                &#34;start_time&#34;: response[&#39;Call&#39;][&#39;startTime&#39;][&#39;$&#39;],
+                &#34;answer_time&#34;: response[&#39;Call&#39;][&#39;answerTime&#39;][&#39;$&#39;],
+                &#34;status_time&#34;: int(time.time())
+            }
+            return return_data
+        else:
+            return False
+
+    def transfer(self, address: str, type: str = &#34;blind&#34;):
+        &#34;&#34;&#34;
+        Transfer the call to the selected address. Type of transfer can be controlled with `type` param.
+        Args:
+            address (str): The address (usually a phone number or extension) to transfer the call to
+            type (str): The type of transfer. Accepted options are &#34;blind&#34; and &#34;attended&#34;
+        Returns:
+            bool: True if successful. False if unsuccessful
+        &#34;&#34;&#34;
+        logging.info(f&#34;Transferring call {self.id} to {address} for {self._userid}&#34;)
+        # Set the address param to be passed to XSI
+        params = {&#34;address&#34;: address}
+        # Handle an attended transfer first. Anything else is assumed to be blind
+        if type.lower() == &#34;attended&#34;:
+            # TODO Attended transfer logic, which requires Hold and a New before transfer
+            pass
+        else:
+            r = requests.put(self._url + f&#34;/{self.id}/BlindTransfer&#34;, headers=self._headers, params=params)
+            if r.status_code in [200, 201, 204]:
+                return True
+            else:
+                return False
+
+    def hold(self):
+        &#34;&#34;&#34;
+        Place the call on hold
+        Returns:
+            bool: Whether the hold command was successful
+        &#34;&#34;&#34;
+        r = request.put(self._url + f&#34;/{self.id}/Hold&#34;, headers=self._headers)
+        if r.status_code in [200, 201, 204]:
+            return True
+        else:
+            return False
+
+    def resume(self):
+        &#34;&#34;&#34;Resume a call that was placed on hold
+        Returns:
+            bool: Whether the command was successful
+        &#34;&#34;&#34;
+        r = requests.put(self._url + f&#34;/{self.id}/Talk&#34;, headers=self._headers)
+        if r.status_code in [200, 201, 204]:
+            return True
+        else:
+            return False</code></pre>
+</details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="wxcadm.Call.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<div class="desc"><p>The Call ID for this call</p></div>
+</dd>
+<dt id="wxcadm.Call.status"><code class="name">var <span class="ident">status</span></code></dt>
+<dd>
+<div class="desc"><p>The status of the call</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>dict</code></dt>
+<dd>{
+'network_call_id' (str): The unique identifier for the Network side of the call
+'personality'(str): The user's personalty (Originator or Terminator)
+'state' (str): The state of the call
+'remote_party' (dict): {
+'address' (str): The address of the remote party
+'call_type' (str): The call type
+}
+'endpoint' (dict): {
+'type' (str): The type of endpoint in use
+'AoR' (str): The Address of Record for the endpoint
+}
+'appearance' (str): The Call Appearance number
+'start_time' (str): The UNIX timestanp of the start of the call
+'answer_time' (str): The UNIX timestamp when the call was answered
+'status_time' (str): The UNIX timestamp of the status response</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def status(self):
+    &#34;&#34;&#34;
+    The status of the call
+    Returns:
+        dict: {
+            &#39;network_call_id&#39; (str): The unique identifier for the Network side of the call
+            &#39;personality&#39;(str): The user&#39;s personalty (Originator or Terminator)
+            &#39;state&#39; (str): The state of the call
+            &#39;remote_party&#39; (dict): {
+                &#39;address&#39; (str): The address of the remote party
+                &#39;call_type&#39; (str): The call type
+            }
+            &#39;endpoint&#39; (dict): {
+                &#39;type&#39; (str): The type of endpoint in use
+                &#39;AoR&#39; (str): The Address of Record for the endpoint
+            }
+            &#39;appearance&#39; (str): The Call Appearance number
+            &#39;start_time&#39; (str): The UNIX timestanp of the start of the call
+            &#39;answer_time&#39; (str): The UNIX timestamp when the call was answered
+            &#39;status_time&#39; (str): The UNIX timestamp of the status response
+    &#34;&#34;&#34;
+    logging.info(f&#34;Getting call status&#34;)
+    r = requests.get(self._url + f&#34;/{self.id}&#34;,
+                     headers=self._headers)
+    response = r.json()
+    logging.debug(f&#34;Call Status response: {response}&#34;)
+    if r.status_code == 200:
+        return_data = {
+            &#34;network_call_id&#34;: response[&#39;Call&#39;][&#39;networkCallId&#39;][&#39;$&#39;],
+            &#34;personality&#34;: response[&#39;Call&#39;][&#39;personality&#39;][&#39;$&#39;],
+            &#34;state&#34;: response[&#39;Call&#39;][&#39;state&#39;][&#39;$&#39;],
+            &#34;remote_party&#34;: {
+                &#34;address&#34;: response[&#39;Call&#39;][&#39;remoteParty&#39;][&#39;address&#39;][&#39;$&#39;],
+                &#34;call_type&#34;: response[&#39;Call&#39;][&#39;remoteParty&#39;][&#39;callType&#39;][&#39;$&#39;],
+            },
+            &#34;endpoint&#34;: {
+                &#34;type&#34;: response[&#39;Call&#39;][&#39;endpoint&#39;][&#39;@xsi1:type&#39;],
+                &#34;AoR&#34;: response[&#39;Call&#39;][&#39;endpoint&#39;][&#39;addressOfRecord&#39;][&#39;$&#39;]
+            },
+            &#34;appearance&#34;: response[&#39;Call&#39;][&#39;appearance&#39;][&#39;$&#39;],
+            &#34;diversion_inhibited&#34;: response[&#39;Call&#39;][&#39;diversionInhibited&#39;],
+            &#34;start_time&#34;: response[&#39;Call&#39;][&#39;startTime&#39;][&#39;$&#39;],
+            &#34;answer_time&#34;: response[&#39;Call&#39;][&#39;answerTime&#39;][&#39;$&#39;],
+            &#34;status_time&#34;: int(time.time())
+        }
+        return return_data
+    else:
+        return False</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="wxcadm.Call.hangup"><code class="name flex">
+<span>def <span class="ident">hangup</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Hang up the call</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>Whether the command was successful</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def hangup(self):
+    &#34;&#34;&#34;
+    Hang up the call
+    Returns:
+        bool: Whether the command was successful
+    &#34;&#34;&#34;
+    logging.info(f&#34;Hanging up call ID: {self.id}&#34;)
+    r = requests.delete(self._url + f&#34;/{self.id}&#34;,
+                        headers=self._headers)
+    if r.status_code == 200:
+        return True
+    else:
+        return False</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Call.hold"><code class="name flex">
+<span>def <span class="ident">hold</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Place the call on hold</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>Whether the hold command was successful</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def hold(self):
+    &#34;&#34;&#34;
+    Place the call on hold
+    Returns:
+        bool: Whether the hold command was successful
+    &#34;&#34;&#34;
+    r = request.put(self._url + f&#34;/{self.id}/Hold&#34;, headers=self._headers)
+    if r.status_code in [200, 201, 204]:
+        return True
+    else:
+        return False</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Call.originate"><code class="name flex">
+<span>def <span class="ident">originate</span></span>(<span>self, address: str, comment: str = '')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Originate a call on behalf of the Person</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>address</code></strong> :&ensp;<code>str</code></dt>
+<dd>The address (usually a phone number) to originate the call to</dd>
+<dt><strong><code>comment</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Text comment to attach to the call</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>Whether the command was successful</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def originate(self, address: str, comment: str = &#34;&#34;):
+    &#34;&#34;&#34;
+    Originate a call on behalf of the Person
+    Args:
+        address (str): The address (usually a phone number) to originate the call to
+        comment (str, optional): Text comment to attach to the call
+    Returns:
+        bool: Whether the command was successful
+    &#34;&#34;&#34;
+    logging.info(f&#34;Originating a call to {address} for {self._userid}&#34;)
+    params = {&#34;address&#34;: address, &#34;info&#34;: comment}
+    r = requests.post(self._url + &#34;/new&#34;, headers=self._headers, params=params)
+    response = r.json()
+    self.id = response[&#39;CallStartInfo&#39;][&#39;callId&#39;][&#39;$&#39;]
+    self._external_tracking_id = response[&#39;CallStartInfo&#39;][&#39;externalTrackingId&#39;][&#39;$&#39;]
+    if r.status_code == 201:
+        return True
+    else:
+        return False</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Call.resume"><code class="name flex">
+<span>def <span class="ident">resume</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Resume a call that was placed on hold</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>Whether the command was successful</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def resume(self):
+    &#34;&#34;&#34;Resume a call that was placed on hold
+    Returns:
+        bool: Whether the command was successful
+    &#34;&#34;&#34;
+    r = requests.put(self._url + f&#34;/{self.id}/Talk&#34;, headers=self._headers)
+    if r.status_code in [200, 201, 204]:
+        return True
+    else:
+        return False</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Call.transfer"><code class="name flex">
+<span>def <span class="ident">transfer</span></span>(<span>self, address: str, type: str = 'blind')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Transfer the call to the selected address. Type of transfer can be controlled with <code>type</code> param.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>address</code></strong> :&ensp;<code>str</code></dt>
+<dd>The address (usually a phone number or extension) to transfer the call to</dd>
+<dt><strong><code>type</code></strong> :&ensp;<code>str</code></dt>
+<dd>The type of transfer. Accepted options are "blind" and "attended"</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>True if successful. False if unsuccessful</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def transfer(self, address: str, type: str = &#34;blind&#34;):
+    &#34;&#34;&#34;
+    Transfer the call to the selected address. Type of transfer can be controlled with `type` param.
+    Args:
+        address (str): The address (usually a phone number or extension) to transfer the call to
+        type (str): The type of transfer. Accepted options are &#34;blind&#34; and &#34;attended&#34;
+    Returns:
+        bool: True if successful. False if unsuccessful
+    &#34;&#34;&#34;
+    logging.info(f&#34;Transferring call {self.id} to {address} for {self._userid}&#34;)
+    # Set the address param to be passed to XSI
+    params = {&#34;address&#34;: address}
+    # Handle an attended transfer first. Anything else is assumed to be blind
+    if type.lower() == &#34;attended&#34;:
+        # TODO Attended transfer logic, which requires Hold and a New before transfer
+        pass
+    else:
+        r = requests.put(self._url + f&#34;/{self.id}/BlindTransfer&#34;, headers=self._headers, params=params)
+        if r.status_code in [200, 201, 204]:
+            return True
+        else:
+            return False</code></pre>
+</details>
+</dd>
+</dl>
 </dd>
 <dt id="wxcadm.CallQueue"><code class="flex name class">
 <span>class <span class="ident">CallQueue</span></span>
@@ -1309,7 +2030,7 @@ class HuntGroup:
 </dd>
 <dt id="wxcadm.Location"><code class="flex name class">
 <span>class <span class="ident">Location</span></span>
-<span>(</span><span>location_id, name, address=None)</span>
+<span>(</span><span>location_id: str, name: str, address: dict = {})</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Initialize a Location instance</p>
@@ -1329,7 +2050,7 @@ class HuntGroup:
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class Location:
-    def __init__(self, location_id, name, address=None):
+    def __init__(self, location_id: str, name: str, address: dict = {}):
         &#34;&#34;&#34;
         Initialize a Location instance
         Args:
@@ -1339,8 +2060,6 @@ class HuntGroup:
         Returns:
              Location (object): The Location instance
         &#34;&#34;&#34;
-        if address is None:
-            address = {}
         self.id: str = location_id
         self.name: str = name
         self.address: dict = address
@@ -2507,7 +3226,26 @@ See the PickupGroup class for attributes.</dd>
 <span>(</span><span>access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Initialize a Webex instance to communicate with Webex and store data</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>access_token</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Webex API Access Token to authenticate the API calls</dd>
+<dt><strong><code>create_org</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to create an Org instance for all organizations.</dd>
+<dt><strong><code>get_people</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to get all of the People and created instances for them</dd>
+<dt><strong><code>get_locations</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to get all Locations and create instances for them</dd>
+<dt><strong><code>get_xsi</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to get the XSI endpoints for each Org. Defaults to False, since
+not every Org has XSI capability</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a></code></dt>
+<dd>The Webex instance</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -2517,6 +3255,18 @@ See the PickupGroup class for attributes.</dd>
     #    Add token refresh, just for completeness
 
     def __init__(self, access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False):
+        &#34;&#34;&#34;
+        Initialize a Webex instance to communicate with Webex and store data
+        Args:
+            access_token (str): The Webex API Access Token to authenticate the API calls
+            create_org (bool, optional): Whether to create an Org instance for all organizations.
+            get_people (bool, optional): Whether to get all of the People and created instances for them
+            get_locations (bool, optional): Whether to get all Locations and create instances for them
+            get_xsi (bool, optional): Whether to get the XSI endpoints for each Org. Defaults to False, since
+                not every Org has XSI capability
+        Returns:
+            Webex: The Webex instance
+        &#34;&#34;&#34;
         logging.info(&#34;Webex instance initialized&#34;)
         # The access token is the only thing that we need to get started
         self._access_token: str = access_token
@@ -2562,19 +3312,21 @@ See the PickupGroup class for attributes.</dd>
 
     @property
     def headers(self):
+        &#34;&#34;&#34;The &#34;universal&#34; HTTP headers with the Authorization header present&#34;&#34;&#34;
         return self._headers</code></pre>
 </details>
 <h3>Instance variables</h3>
 <dl>
 <dt id="wxcadm.Webex.headers"><code class="name">var <span class="ident">headers</span></code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>The "universal" HTTP headers with the Authorization header present</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@property
 def headers(self):
+    &#34;&#34;&#34;The &#34;universal&#34; HTTP headers with the Authorization header present&#34;&#34;&#34;
     return self._headers</code></pre>
 </details>
 </dd>
@@ -2586,86 +3338,184 @@ def headers(self):
 </dd>
 <dt id="wxcadm.XSI"><code class="flex name class">
 <span>class <span class="ident">XSI</span></span>
-<span>(</span><span>_parent, get_profile=False)</span>
+<span>(</span><span>parent, get_profile: bool = False, cache: bool = False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>The XSI class holds all of the relevant XSI data for a Person
-:param _parent: The Person instance that created the XSI
-:param get_profile: Boolean value to force the XSI to get the user profile when initialized</p></div>
+<div class="desc"><p>The XSI class holds all of the relevant XSI data for a Person</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>parent</code></strong> :&ensp;<code><a title="wxcadm.Person" href="#wxcadm.Person">Person</a></code></dt>
+<dd>The Person who this XSI instance belongs to</dd>
+<dt><strong><code>get_profile</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Whether or not to automatically get the XSI Profile</dd>
+<dt><strong><code>cache</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Whether to cache the XSI data (True) or pull it "live" every time (<strong>False</strong>)</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class XSI:
-    def __init__(self, _parent, get_profile=False):
+    def __init__(self, parent, get_profile: bool = False, cache: bool = False ):
         &#34;&#34;&#34;
         The XSI class holds all of the relevant XSI data for a Person
-        :param _parent: The Person instance that created the XSI
-        :param get_profile: Boolean value to force the XSI to get the user profile when initialized
+        Args:
+            parent (Person): The Person who this XSI instance belongs to
+            get_profile (bool): Whether or not to automatically get the XSI Profile
+            cache (bool): Whether to cache the XSI data (True) or pull it &#34;live&#34; every time (**False**)
         &#34;&#34;&#34;
-        logging.info(f&#34;Initializing XSI instance for {_parent.email}&#34;)
+        logging.info(f&#34;Initializing XSI instance for {parent.email}&#34;)
         # First we need to get the XSI User ID for the Webex person we are working with
         logging.info(&#34;Getting XSI identifiers&#34;)
-        user_id_bytes = base64.b64decode(_parent.id + &#34;===&#34;)
+        user_id_bytes = base64.b64decode(parent.id + &#34;===&#34;)
         user_id_decoded = user_id_bytes.decode(&#34;utf-8&#34;)
         user_id_bwks = user_id_decoded.split(&#34;/&#34;)[-1]
         self.id = user_id_bwks
 
         # Inherited attributes
-        self.xsi_endpoints = _parent._parent.xsi
+        self.xsi_endpoints = parent._parent.xsi
+        self._cache = cache
 
         # API attributes
         self._headers = {&#34;Content-Type&#34;: &#34;application/json&#34;,
                          &#34;Accept&#34;: &#34;application/json&#34;,
                          &#34;X-BroadWorks-Protocol-Version&#34;: &#34;25.0&#34;,
-                         **_parent._headers}
+                         **parent._headers}
         self._params = {&#34;format&#34;: &#34;json&#34;}
 
         # Attribute definitions
-        self.profile = {}
-        self.registrations = None
+        self._calls: list = []
+        self._profile: dict = {}
+        &#34;&#34;&#34;The XSI Profile for this Person&#34;&#34;&#34;
+        self._registrations:dict  = {}
+        &#34;&#34;&#34;The Registrations associated with this Person&#34;&#34;&#34;
         self.fac = None
         self.services = {}
+        self._alternate_numbers: dict = {}
+        &#34;&#34;&#34;The Alternate Numbers for the Person&#34;&#34;&#34;
+        self._anonymous_call_rejection: dict = {}
+        &#34;&#34;&#34;The Anonymous Call Rejection settings for this Person&#34;&#34;&#34;
+        self._single_number_reach: dict = {}
+        &#34;&#34;&#34;The SNR (Office Anywhere) settings for this Person&#34;&#34;&#34;
+        self._monitoring: dict = {}
+        &#34;&#34;&#34;The BLF/Monitoring settings for this Person&#34;&#34;&#34;
 
         # Get the profile if we have been asked to
         if get_profile:
             self.get_profile()
 
-    def get_profile(self):
-        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + &#34;/v2.0/user/&#34; + self.id + &#34;/profile&#34;,
-                         headers=self._headers, params=self._params)
-        response = r.json()
-        # The following is a mapping of the raw XSI format to the profile attribute
-        self.profile[&#39;registrations_url&#39;] = response[&#39;Profile&#39;][&#39;registrations&#39;][&#39;$&#39;]
-        self.profile[&#39;schedule_url&#39;] = response[&#39;Profile&#39;][&#39;scheduleList&#39;][&#39;$&#39;]
-        self.profile[&#39;fac_url&#39;] = response[&#39;Profile&#39;][&#39;fac&#39;][&#39;$&#39;]
-        self.profile[&#39;country_code&#39;] = response[&#39;Profile&#39;][&#39;countryCode&#39;][&#39;$&#39;]
-        self.profile[&#39;user_id&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;userId&#39;][&#39;$&#39;]
-        self.profile[&#39;group_id&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;groupId&#39;][&#39;$&#39;]
-        self.profile[&#39;service_provider&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;serviceProvider&#39;][&#39;$&#39;]
-        # Not everyone has a number and/or extension, so we need to check to see if there are there
-        if &#34;number&#34; in response[&#39;Profile&#39;][&#39;details&#39;]:
-            self.profile[&#39;number&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;number&#39;][&#39;$&#39;]
-        if &#34;extension&#34; in response[&#39;Profile&#39;][&#39;details&#39;]:
-            self.profile[&#39;extension&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;extension&#39;][&#39;$&#39;]
+    def new_call(self):
+        &#34;&#34;&#34;Create a new Call instance&#34;&#34;&#34;
+        call = Call(self)
+        self._calls.append(call)
+        return call
 
-        return self.profile
+    @property
+    def calls(self):
+        &#34;&#34;&#34;
+        Get the list of active calls and creates Call instances. Also destroys any Call instances that are no longer
+        valid.
+        Returns:
+            list[Call]: List of Call instances
+        &#34;&#34;&#34;
+        # First wipe out all of the existing instances
+        for call in self._calls:
+            del call
+        self._calls.clear()
+        calls_data: list = self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/calls&#34;)
+        logging.debug(f&#34;Calls Data: {calls_data}&#34;)
+        if &#34;call&#34; not in calls_data[&#39;Calls&#39;]:
+            self._calls = []
+            return self._calls
+        if type(calls_data[&#39;Calls&#39;][&#39;call&#39;]) is dict:
+            this_call = Call(self, id=calls_data[&#39;Calls&#39;][&#39;call&#39;][&#39;callId&#39;][&#39;$&#39;])
+            self._calls.append(this_call)
+        elif type(calls_data[&#39;Calls&#39;][&#39;call&#39;]) is list:
+            for call in calls_data[&#39;Calls&#39;][&#39;call&#39;]:
+                this_call = Call(self, id=call[&#39;callId&#39;][&#39;$&#39;])
+                self._calls.append(this_call)
+        return self._calls
 
-    def get_registrations(self):
-        # If we don&#39;t have a registrations URL, because we don&#39;t have the profile, go get it
-        if &#34;registrations_url&#34; not in self.profile:
-            self.get_profile()
-        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self.profile[&#39;registrations_url&#39;],
-                         headers=self._headers, params=self._params)
-        response = r.json()
-        self.registrations = response
-        return self.registrations
+    def __get_xsi_data(self, url, params: dict = {}):
+        params = {**params, **self._params}
+        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + url, headers=self._headers, params=params)
+        if r.status_code == 200:
+            try:
+                response = r.json()
+            except json.decoder.JSONDecodeError:
+                response = r.text
+            return_data = response
+        elif r.status_code == 404:
+            return_data = False
+        return return_data
+
+    @property
+    def monitoring(self):
+        &#34;&#34;&#34;The Monitoring/BLF settings for this person&#34;&#34;&#34;
+        if not self._monitoring or not self._cache:
+            self._monitoring = self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/services/BusyLampField&#34;)
+        return self._monitoring
+
+    @property
+    def single_number_reach(self):
+        &#34;&#34;&#34;The SNR (Office Anywhere) settings for this Person&#34;&#34;&#34;
+        if not self._single_number_reach or not self._cache:
+            self._single_number_reach = \
+                self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/services/BroadWorksAnywhere&#34;)
+        return self._single_number_reach
+
+    @property
+    def anonymous_call_rejection(self):
+        &#34;&#34;&#34;The Anonymous Call Rejection settings for this Person&#34;&#34;&#34;
+        if not self._anonymous_call_rejection or not self._cache:
+            self._anonymous_call_rejection = \
+                self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/services/AnonymousCallRejection&#34;)
+        return self._anonymous_call_rejection
+
+    @property
+    def alternate_numbers(self):
+        &#34;&#34;&#34;The Alternate Numbers for this Person&#34;&#34;&#34;
+        if not self._alternate_numbers or not self._cache:
+            self._alternate_numbers = \
+                self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/services/AlternateNumbers&#34;)
+        return self._alternate_numbers
+
+    @property
+    def profile(self):
+        &#34;&#34;&#34;The XSI Profile for this Person&#34;&#34;&#34;
+        if not self._profile or not self._cache:
+            profile_data: dict = \
+                self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/profile&#34;)
+            # The following is a mapping of the raw XSI format to the profile attribute
+            self._profile[&#39;registrations_url&#39;] = profile_data[&#39;Profile&#39;][&#39;registrations&#39;][&#39;$&#39;]
+            self._profile[&#39;schedule_url&#39;] = profile_data[&#39;Profile&#39;][&#39;scheduleList&#39;][&#39;$&#39;]
+            self._profile[&#39;fac_url&#39;] = profile_data[&#39;Profile&#39;][&#39;fac&#39;][&#39;$&#39;]
+            self._profile[&#39;country_code&#39;] = profile_data[&#39;Profile&#39;][&#39;countryCode&#39;][&#39;$&#39;]
+            self._profile[&#39;user_id&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;userId&#39;][&#39;$&#39;]
+            self._profile[&#39;group_id&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;groupId&#39;][&#39;$&#39;]
+            self._profile[&#39;service_provider&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;serviceProvider&#39;][&#39;$&#39;]
+            # Not everyone has a number and/or extension, so we need to check to see if there are there
+            if &#34;number&#34; in profile_data[&#39;Profile&#39;][&#39;details&#39;]:
+                self._profile[&#39;number&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;number&#39;][&#39;$&#39;]
+            if &#34;extension&#34; in profile_data[&#39;Profile&#39;][&#39;details&#39;]:
+                self._profile[&#39;extension&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;extension&#39;][&#39;$&#39;]
+        return self._profile
+
+    @property
+    def registrations(self):
+        &#34;&#34;&#34;The device registrations asscociated with this Person&#34;&#34;&#34;
+        if not self._registrations or not self._cache:
+            # If we don&#39;t have a registrations URL, because we don&#39;t have the profile, go get it
+            if &#34;registrations_url&#34; not in self._profile:
+                self.profile
+            self._registrations = self.__get_xsi_data(self._profile[&#39;registrations_url&#39;])
+        return self._registrations
 
     def get_fac(self):
         # If we don&#39;t have a FAC URL, go get it
-        if &#34;fac_url&#34; not in self.profile:
-            self.get_profile()
-        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self.profile[&#39;fac_url&#39;],
+        if &#34;fac_url&#34; not in self._profile:
+            self.profile()
+        r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self._profile[&#39;fac_url&#39;],
                          headers=self._headers, params=self._params)
         response = r.json()
         self.fac = response
@@ -2698,6 +3548,159 @@ def headers(self):
                 self.services[service[&#39;name&#39;][&#39;$&#39;]] = True
         return self.services</code></pre>
 </details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="wxcadm.XSI.alternate_numbers"><code class="name">var <span class="ident">alternate_numbers</span></code></dt>
+<dd>
+<div class="desc"><p>The Alternate Numbers for this Person</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def alternate_numbers(self):
+    &#34;&#34;&#34;The Alternate Numbers for this Person&#34;&#34;&#34;
+    if not self._alternate_numbers or not self._cache:
+        self._alternate_numbers = \
+            self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/services/AlternateNumbers&#34;)
+    return self._alternate_numbers</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.XSI.anonymous_call_rejection"><code class="name">var <span class="ident">anonymous_call_rejection</span></code></dt>
+<dd>
+<div class="desc"><p>The Anonymous Call Rejection settings for this Person</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def anonymous_call_rejection(self):
+    &#34;&#34;&#34;The Anonymous Call Rejection settings for this Person&#34;&#34;&#34;
+    if not self._anonymous_call_rejection or not self._cache:
+        self._anonymous_call_rejection = \
+            self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/services/AnonymousCallRejection&#34;)
+    return self._anonymous_call_rejection</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.XSI.calls"><code class="name">var <span class="ident">calls</span></code></dt>
+<dd>
+<div class="desc"><p>Get the list of active calls and creates Call instances. Also destroys any Call instances that are no longer
+valid.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[<a title="wxcadm.Call" href="#wxcadm.Call">Call</a>]</code></dt>
+<dd>List of Call instances</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def calls(self):
+    &#34;&#34;&#34;
+    Get the list of active calls and creates Call instances. Also destroys any Call instances that are no longer
+    valid.
+    Returns:
+        list[Call]: List of Call instances
+    &#34;&#34;&#34;
+    # First wipe out all of the existing instances
+    for call in self._calls:
+        del call
+    self._calls.clear()
+    calls_data: list = self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/calls&#34;)
+    logging.debug(f&#34;Calls Data: {calls_data}&#34;)
+    if &#34;call&#34; not in calls_data[&#39;Calls&#39;]:
+        self._calls = []
+        return self._calls
+    if type(calls_data[&#39;Calls&#39;][&#39;call&#39;]) is dict:
+        this_call = Call(self, id=calls_data[&#39;Calls&#39;][&#39;call&#39;][&#39;callId&#39;][&#39;$&#39;])
+        self._calls.append(this_call)
+    elif type(calls_data[&#39;Calls&#39;][&#39;call&#39;]) is list:
+        for call in calls_data[&#39;Calls&#39;][&#39;call&#39;]:
+            this_call = Call(self, id=call[&#39;callId&#39;][&#39;$&#39;])
+            self._calls.append(this_call)
+    return self._calls</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.XSI.monitoring"><code class="name">var <span class="ident">monitoring</span></code></dt>
+<dd>
+<div class="desc"><p>The Monitoring/BLF settings for this person</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def monitoring(self):
+    &#34;&#34;&#34;The Monitoring/BLF settings for this person&#34;&#34;&#34;
+    if not self._monitoring or not self._cache:
+        self._monitoring = self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/services/BusyLampField&#34;)
+    return self._monitoring</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.XSI.profile"><code class="name">var <span class="ident">profile</span></code></dt>
+<dd>
+<div class="desc"><p>The XSI Profile for this Person</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def profile(self):
+    &#34;&#34;&#34;The XSI Profile for this Person&#34;&#34;&#34;
+    if not self._profile or not self._cache:
+        profile_data: dict = \
+            self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/profile&#34;)
+        # The following is a mapping of the raw XSI format to the profile attribute
+        self._profile[&#39;registrations_url&#39;] = profile_data[&#39;Profile&#39;][&#39;registrations&#39;][&#39;$&#39;]
+        self._profile[&#39;schedule_url&#39;] = profile_data[&#39;Profile&#39;][&#39;scheduleList&#39;][&#39;$&#39;]
+        self._profile[&#39;fac_url&#39;] = profile_data[&#39;Profile&#39;][&#39;fac&#39;][&#39;$&#39;]
+        self._profile[&#39;country_code&#39;] = profile_data[&#39;Profile&#39;][&#39;countryCode&#39;][&#39;$&#39;]
+        self._profile[&#39;user_id&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;userId&#39;][&#39;$&#39;]
+        self._profile[&#39;group_id&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;groupId&#39;][&#39;$&#39;]
+        self._profile[&#39;service_provider&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;serviceProvider&#39;][&#39;$&#39;]
+        # Not everyone has a number and/or extension, so we need to check to see if there are there
+        if &#34;number&#34; in profile_data[&#39;Profile&#39;][&#39;details&#39;]:
+            self._profile[&#39;number&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;number&#39;][&#39;$&#39;]
+        if &#34;extension&#34; in profile_data[&#39;Profile&#39;][&#39;details&#39;]:
+            self._profile[&#39;extension&#39;] = profile_data[&#39;Profile&#39;][&#39;details&#39;][&#39;extension&#39;][&#39;$&#39;]
+    return self._profile</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.XSI.registrations"><code class="name">var <span class="ident">registrations</span></code></dt>
+<dd>
+<div class="desc"><p>The device registrations asscociated with this Person</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def registrations(self):
+    &#34;&#34;&#34;The device registrations asscociated with this Person&#34;&#34;&#34;
+    if not self._registrations or not self._cache:
+        # If we don&#39;t have a registrations URL, because we don&#39;t have the profile, go get it
+        if &#34;registrations_url&#34; not in self._profile:
+            self.profile
+        self._registrations = self.__get_xsi_data(self._profile[&#39;registrations_url&#39;])
+    return self._registrations</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.XSI.single_number_reach"><code class="name">var <span class="ident">single_number_reach</span></code></dt>
+<dd>
+<div class="desc"><p>The SNR (Office Anywhere) settings for this Person</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def single_number_reach(self):
+    &#34;&#34;&#34;The SNR (Office Anywhere) settings for this Person&#34;&#34;&#34;
+    if not self._single_number_reach or not self._cache:
+        self._single_number_reach = \
+            self.__get_xsi_data(f&#34;/v2.0/user/{self.id}/services/BroadWorksAnywhere&#34;)
+    return self._single_number_reach</code></pre>
+</details>
+</dd>
+</dl>
 <h3>Methods</h3>
 <dl>
 <dt id="wxcadm.XSI.get_fac"><code class="name flex">
@@ -2711,63 +3714,13 @@ def headers(self):
 </summary>
 <pre><code class="python">def get_fac(self):
     # If we don&#39;t have a FAC URL, go get it
-    if &#34;fac_url&#34; not in self.profile:
-        self.get_profile()
-    r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self.profile[&#39;fac_url&#39;],
+    if &#34;fac_url&#34; not in self._profile:
+        self.profile()
+    r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self._profile[&#39;fac_url&#39;],
                      headers=self._headers, params=self._params)
     response = r.json()
     self.fac = response
     return self.fac</code></pre>
-</details>
-</dd>
-<dt id="wxcadm.XSI.get_profile"><code class="name flex">
-<span>def <span class="ident">get_profile</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_profile(self):
-    r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + &#34;/v2.0/user/&#34; + self.id + &#34;/profile&#34;,
-                     headers=self._headers, params=self._params)
-    response = r.json()
-    # The following is a mapping of the raw XSI format to the profile attribute
-    self.profile[&#39;registrations_url&#39;] = response[&#39;Profile&#39;][&#39;registrations&#39;][&#39;$&#39;]
-    self.profile[&#39;schedule_url&#39;] = response[&#39;Profile&#39;][&#39;scheduleList&#39;][&#39;$&#39;]
-    self.profile[&#39;fac_url&#39;] = response[&#39;Profile&#39;][&#39;fac&#39;][&#39;$&#39;]
-    self.profile[&#39;country_code&#39;] = response[&#39;Profile&#39;][&#39;countryCode&#39;][&#39;$&#39;]
-    self.profile[&#39;user_id&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;userId&#39;][&#39;$&#39;]
-    self.profile[&#39;group_id&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;groupId&#39;][&#39;$&#39;]
-    self.profile[&#39;service_provider&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;serviceProvider&#39;][&#39;$&#39;]
-    # Not everyone has a number and/or extension, so we need to check to see if there are there
-    if &#34;number&#34; in response[&#39;Profile&#39;][&#39;details&#39;]:
-        self.profile[&#39;number&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;number&#39;][&#39;$&#39;]
-    if &#34;extension&#34; in response[&#39;Profile&#39;][&#39;details&#39;]:
-        self.profile[&#39;extension&#39;] = response[&#39;Profile&#39;][&#39;details&#39;][&#39;extension&#39;][&#39;$&#39;]
-
-    return self.profile</code></pre>
-</details>
-</dd>
-<dt id="wxcadm.XSI.get_registrations"><code class="name flex">
-<span>def <span class="ident">get_registrations</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_registrations(self):
-    # If we don&#39;t have a registrations URL, because we don&#39;t have the profile, go get it
-    if &#34;registrations_url&#34; not in self.profile:
-        self.get_profile()
-    r = requests.get(self.xsi_endpoints[&#39;actions_endpoint&#39;] + self.profile[&#39;registrations_url&#39;],
-                     headers=self._headers, params=self._params)
-    response = r.json()
-    self.registrations = response
-    return self.registrations</code></pre>
 </details>
 </dd>
 <dt id="wxcadm.XSI.get_services"><code class="name flex">
@@ -2807,6 +3760,22 @@ def headers(self):
     return self.services</code></pre>
 </details>
 </dd>
+<dt id="wxcadm.XSI.new_call"><code class="name flex">
+<span>def <span class="ident">new_call</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Create a new Call instance</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def new_call(self):
+    &#34;&#34;&#34;Create a new Call instance&#34;&#34;&#34;
+    call = Call(self)
+    self._calls.append(call)
+    return call</code></pre>
+</details>
+</dd>
 </dl>
 </dd>
 </dl>
@@ -2822,6 +3791,18 @@ def headers(self):
 <ul>
 <li>
 <h4><code><a title="wxcadm.APIError" href="#wxcadm.APIError">APIError</a></code></h4>
+</li>
+<li>
+<h4><code><a title="wxcadm.Call" href="#wxcadm.Call">Call</a></code></h4>
+<ul class="two-column">
+<li><code><a title="wxcadm.Call.hangup" href="#wxcadm.Call.hangup">hangup</a></code></li>
+<li><code><a title="wxcadm.Call.hold" href="#wxcadm.Call.hold">hold</a></code></li>
+<li><code><a title="wxcadm.Call.id" href="#wxcadm.Call.id">id</a></code></li>
+<li><code><a title="wxcadm.Call.originate" href="#wxcadm.Call.originate">originate</a></code></li>
+<li><code><a title="wxcadm.Call.resume" href="#wxcadm.Call.resume">resume</a></code></li>
+<li><code><a title="wxcadm.Call.status" href="#wxcadm.Call.status">status</a></code></li>
+<li><code><a title="wxcadm.Call.transfer" href="#wxcadm.Call.transfer">transfer</a></code></li>
+</ul>
 </li>
 <li>
 <h4><code><a title="wxcadm.CallQueue" href="#wxcadm.CallQueue">CallQueue</a></code></h4>
@@ -2935,10 +3916,16 @@ def headers(self):
 <li>
 <h4><code><a title="wxcadm.XSI" href="#wxcadm.XSI">XSI</a></code></h4>
 <ul class="">
+<li><code><a title="wxcadm.XSI.alternate_numbers" href="#wxcadm.XSI.alternate_numbers">alternate_numbers</a></code></li>
+<li><code><a title="wxcadm.XSI.anonymous_call_rejection" href="#wxcadm.XSI.anonymous_call_rejection">anonymous_call_rejection</a></code></li>
+<li><code><a title="wxcadm.XSI.calls" href="#wxcadm.XSI.calls">calls</a></code></li>
 <li><code><a title="wxcadm.XSI.get_fac" href="#wxcadm.XSI.get_fac">get_fac</a></code></li>
-<li><code><a title="wxcadm.XSI.get_profile" href="#wxcadm.XSI.get_profile">get_profile</a></code></li>
-<li><code><a title="wxcadm.XSI.get_registrations" href="#wxcadm.XSI.get_registrations">get_registrations</a></code></li>
 <li><code><a title="wxcadm.XSI.get_services" href="#wxcadm.XSI.get_services">get_services</a></code></li>
+<li><code><a title="wxcadm.XSI.monitoring" href="#wxcadm.XSI.monitoring">monitoring</a></code></li>
+<li><code><a title="wxcadm.XSI.new_call" href="#wxcadm.XSI.new_call">new_call</a></code></li>
+<li><code><a title="wxcadm.XSI.profile" href="#wxcadm.XSI.profile">profile</a></code></li>
+<li><code><a title="wxcadm.XSI.registrations" href="#wxcadm.XSI.registrations">registrations</a></code></li>
+<li><code><a title="wxcadm.XSI.single_number_reach" href="#wxcadm.XSI.single_number_reach">single_number_reach</a></code></li>
 </ul>
 </li>
 </ul>
