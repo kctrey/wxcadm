@@ -714,6 +714,7 @@ class XSI:
         &#34;&#34;&#34;The SNR (Office Anywhere) settings for this Person&#34;&#34;&#34;
         self._monitoring: dict = {}
         &#34;&#34;&#34;The BLF/Monitoring settings for this Person&#34;&#34;&#34;
+        self.conference: object = None
 
         # Get the profile if we have been asked to
         if get_profile:
@@ -724,6 +725,21 @@ class XSI:
         call = Call(self)
         self._calls.append(call)
         return call
+
+    def new_conference(self, calls: list = [], comment:str = &#34;&#34;):
+        &#34;&#34;&#34;
+        Crates a new Conference instance. A user can only have one Conference instance, so this will replace any
+        previous Conference. At the moment, this **should not be called directly** and will be done dynamically by
+        a Call.conference()
+        Args:
+            calls (list): A list of Call IDs involved in this conference. A conference is always started with only
+                two Call IDs. Call IDs after the first two will be ignored.
+            comment (str, optional): An optional text comment for the conference
+        Returns:
+            The instance of the Conference class
+        &#34;&#34;&#34;
+        self.conference = Conference(self, calls, comment)
+        return self.conference
 
     @property
     def calls(self):
@@ -964,7 +980,7 @@ class Call:
         Returns:
             Call: This Call instance
         &#34;&#34;&#34;
-        self._parent: object = parent
+        self._parent: XSI = parent
         &#34;&#34;&#34;The Person or XSI instance that owns this Call&#34;&#34;&#34;
         self._userid: str = self._parent.id
         &#34;&#34;&#34;The Person or XSI ID inherited from the parent&#34;&#34;&#34;
@@ -986,6 +1002,9 @@ class Call:
         elif type(self._parent) is XSI:
             # The Call parent is XSI
             self._url = self._parent.xsi_endpoints[&#39;actions_endpoint&#39;] + f&#34;/v2.0/user/{self._userid}/calls&#34;
+        elif type(self._parent) is Call:
+            # Another Call created this Call instance (probably for a transfer or conference
+            self._url = self._parent.xsi_endpoints[&#39;actions_endpoint&#39;] + f&#34;/v2.0/user/{self._parent._userid}/calls&#34;
 
     def originate(self, address: str, comment: str = &#34;&#34;):
         &#34;&#34;&#34;
@@ -1073,10 +1092,14 @@ class Call:
 
     def transfer(self, address: str, type: str = &#34;blind&#34;):
         &#34;&#34;&#34;
-        Transfer the call to the selected address. Type of transfer can be controlled with `type` param.
+        Transfer the call to the selected address. Type of transfer can be controlled with `type` param. VM
+        transfers will transfer the call directly to the voice mail of the address, even if the address is the
+        user&#39;s own address. Attended transfers require a subsequent call to `finish_transfer()` when the actual transfer
+        should happen.
         Args:
             address (str): The address (usually a phone number or extension) to transfer the call to
-            type (str): The type of transfer. Accepted options are &#34;blind&#34; and &#34;attended&#34;
+            type (str): [&#39;blind&#39;,&#39;vm&#39;,&#39;attended&#39;]:
+                The type of transfer.
         Returns:
             bool: True if successful. False if unsuccessful
         &#34;&#34;&#34;
@@ -1085,8 +1108,19 @@ class Call:
         params = {&#34;address&#34;: address}
         # Handle an attended transfer first. Anything else is assumed to be blind
         if type.lower() == &#34;attended&#34;:
-            # TODO Attended transfer logic, which requires Hold and a New before transfer
-            pass
+            # Attended transfer requires the first call to be put on hold and the second call to be
+            # placed, so those are here. A separate call to finish_transfer will be required when the transfer should
+            # happen.
+            self.hold()
+            self._transfer_call = self._parent.new_call()
+            self._transfer_call.originate(address)
+            return True
+        elif type.lower() == &#34;vm&#34;:
+            r = requests.put(self._url + f&#34;/{self.id}/VmTransfer&#34;, headers=self._headers, params=params)
+            if r.status_code in [200, 201, 204]:
+                return True
+            else:
+                return False
         else:
             r = requests.put(self._url + f&#34;/{self.id}/BlindTransfer&#34;, headers=self._headers, params=params)
             if r.status_code in [200, 201, 204]:
@@ -1094,13 +1128,80 @@ class Call:
             else:
                 return False
 
+    def finish_transfer(self):
+        &#34;&#34;&#34;
+        Complete an Attended Transfer. This method will only complete if a `transfer(address, type=&#34;attended&#34;)`
+        has been done first.
+        Returns:
+            bool: Whether or not the transfer completes
+        &#34;&#34;&#34;
+        logging.info(&#34;Completing transfer...&#34;)
+        r = requests.put(self._url + f&#34;/{self.id}/ConsultTransfer/{self._transfer_call.id}&#34;, headers=self._headers)
+        if r.status_code in [200, 201, 204]:
+            return True
+        else:
+            return False, r.text
+
+    def conference(self, address: str = &#34;&#34;):
+        &#34;&#34;&#34;
+        Starts a multi-party conference. If the call is already held and an attended transfer is in progress,
+        meaning the user is already talking to the transfer-to user, this method will bridge the calls.
+        Args:
+            address (str, optional): The address (usually a phone number or extension) to conference to. Not needed
+                when the call is already part of an Attended Transfer
+        Returns:
+            bool: True if the conference is successful
+        &#34;&#34;&#34;
+        # First, check to see if the call is already part of an attended transfer. If so, just build the conference
+        # based on the two call IDs
+        if self._transfer_call:
+            xml = f&#34;&lt;?xml version=\&#34;1.0\&#34; encoding=\&#34;UTF-8\&#34;?&gt;&#34; \
+                  f&#34;&lt;Conference xmlns=\&#34;http://schema.broadsoft.com/xsi\&#34;&gt;&#34; \
+                  f&#34;&lt;conferenceParticipantList&gt;&#34; \
+                  f&#34;&lt;conferenceParticipant&gt;&#34; \
+                  f&#34;&lt;callId&gt;{self.id}&lt;/callId&gt;&#34; \
+                  f&#34;&lt;/conferenceParticipant&gt;&#34; \
+                  f&#34;&lt;conferenceParticipant&gt;&#34; \
+                  f&#34;&lt;callId&gt;{self._transfer_call.id}&lt;/callId&gt;&#34; \
+                  f&#34;&lt;/conferenceParticipant&gt;&#34; \
+                  f&#34;&lt;/conferenceParticipantList&gt;&#34; \
+                  f&#34;&lt;/Conference&gt;&#34;
+            # Building the XML by hand for right now. Probably going to replace it with something JSON-friendly
+            headers = self._headers
+            headers[&#39;Content-Type&#39;] = &#34;application/xml; charset=UTF-8&#34;
+            r = requests.post(self._url + f&#34;/Conference&#34;, headers=headers, data=xml)
+            if r.status_code in [200, 201, 204]:
+                return self._parent.new_conference([self.id, self._transfer_call.id])
+            else:
+                return False
+        else:
+            # Still needs work.
+            pass
+
+    def send_dtmf(self, dtmf: str):
+        &#34;&#34;&#34;
+        Transmit DTMF tones outbound
+        Args:
+            dtmf (str): The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
+                between digits (i.e. &#34;23456#,123&#34;)
+        Returns:
+            bool: True if the dtmf was sent successfuly
+        &#34;&#34;&#34;
+        params = {&#34;playdtmf&#34;: str(dtmf)}
+        r = requests.put(self._url + f&#34;/self.id/TransmitDTMF&#34;, headers=self._headers, params=params)
+        if r.status_code in [200, 201, 204]:
+            return True
+        else:
+            return False
+
+
     def hold(self):
         &#34;&#34;&#34;
         Place the call on hold
         Returns:
             bool: Whether the hold command was successful
         &#34;&#34;&#34;
-        r = request.put(self._url + f&#34;/{self.id}/Hold&#34;, headers=self._headers)
+        r = requests.put(self._url + f&#34;/{self.id}/Hold&#34;, headers=self._headers)
         if r.status_code in [200, 201, 204]:
             return True
         else:
@@ -1115,7 +1216,38 @@ class Call:
         if r.status_code in [200, 201, 204]:
             return True
         else:
-            return False</code></pre>
+            return False
+
+class Conference:
+    &#34;&#34;&#34;The class for Conference Calls started by a Call.conference()&#34;&#34;&#34;
+    def __init__(self, parent: object, calls: list, comment: str = &#34;&#34;):
+        &#34;&#34;&#34;
+        Initialize a Conferece instance for an XSI instance
+        Args:
+            parent (XSI): The XSI instance that owns this conference
+            calls (list): Call IDs associated with the Conference. Always two Call IDs to start a Conference.
+                Any additional Call IDs will be added to the conference as it is created.
+            comment (str, optional): An optional text comment for the Conference
+        Returns:
+            Conference: This instance of the Conference class
+        &#34;&#34;&#34;
+        self._parent: XSI = parent
+        self._calls: list = calls
+        self._userid = self._parent.id
+        self._headers = self._parent._headers
+        self._url = self._parent.xsi_endpoints[&#39;actions_endpoint&#39;] + f&#34;/v2.0/user/{self._userid}/calls/Conference&#34;
+        self.comment: str = comment
+        &#34;&#34;&#34;Text comment associated with the Conference&#34;&#34;&#34;
+
+    def deaf(self, call: str):
+        &#34;&#34;&#34;
+        Stop audio and video from being sent to a particiapnt. Audio and video from that participant are unaffected.
+        Args:
+            call (str): The Call ID to make deaf
+        Returns:
+            bool: Whether the command was successful
+        &#34;&#34;&#34;
+        pass</code></pre>
 </details>
 </section>
 <section>
@@ -1193,7 +1325,7 @@ development focus right now is the XSI API, which is more feature-rich</p>
         Returns:
             Call: This Call instance
         &#34;&#34;&#34;
-        self._parent: object = parent
+        self._parent: XSI = parent
         &#34;&#34;&#34;The Person or XSI instance that owns this Call&#34;&#34;&#34;
         self._userid: str = self._parent.id
         &#34;&#34;&#34;The Person or XSI ID inherited from the parent&#34;&#34;&#34;
@@ -1215,6 +1347,9 @@ development focus right now is the XSI API, which is more feature-rich</p>
         elif type(self._parent) is XSI:
             # The Call parent is XSI
             self._url = self._parent.xsi_endpoints[&#39;actions_endpoint&#39;] + f&#34;/v2.0/user/{self._userid}/calls&#34;
+        elif type(self._parent) is Call:
+            # Another Call created this Call instance (probably for a transfer or conference
+            self._url = self._parent.xsi_endpoints[&#39;actions_endpoint&#39;] + f&#34;/v2.0/user/{self._parent._userid}/calls&#34;
 
     def originate(self, address: str, comment: str = &#34;&#34;):
         &#34;&#34;&#34;
@@ -1302,10 +1437,14 @@ development focus right now is the XSI API, which is more feature-rich</p>
 
     def transfer(self, address: str, type: str = &#34;blind&#34;):
         &#34;&#34;&#34;
-        Transfer the call to the selected address. Type of transfer can be controlled with `type` param.
+        Transfer the call to the selected address. Type of transfer can be controlled with `type` param. VM
+        transfers will transfer the call directly to the voice mail of the address, even if the address is the
+        user&#39;s own address. Attended transfers require a subsequent call to `finish_transfer()` when the actual transfer
+        should happen.
         Args:
             address (str): The address (usually a phone number or extension) to transfer the call to
-            type (str): The type of transfer. Accepted options are &#34;blind&#34; and &#34;attended&#34;
+            type (str): [&#39;blind&#39;,&#39;vm&#39;,&#39;attended&#39;]:
+                The type of transfer.
         Returns:
             bool: True if successful. False if unsuccessful
         &#34;&#34;&#34;
@@ -1314,8 +1453,19 @@ development focus right now is the XSI API, which is more feature-rich</p>
         params = {&#34;address&#34;: address}
         # Handle an attended transfer first. Anything else is assumed to be blind
         if type.lower() == &#34;attended&#34;:
-            # TODO Attended transfer logic, which requires Hold and a New before transfer
-            pass
+            # Attended transfer requires the first call to be put on hold and the second call to be
+            # placed, so those are here. A separate call to finish_transfer will be required when the transfer should
+            # happen.
+            self.hold()
+            self._transfer_call = self._parent.new_call()
+            self._transfer_call.originate(address)
+            return True
+        elif type.lower() == &#34;vm&#34;:
+            r = requests.put(self._url + f&#34;/{self.id}/VmTransfer&#34;, headers=self._headers, params=params)
+            if r.status_code in [200, 201, 204]:
+                return True
+            else:
+                return False
         else:
             r = requests.put(self._url + f&#34;/{self.id}/BlindTransfer&#34;, headers=self._headers, params=params)
             if r.status_code in [200, 201, 204]:
@@ -1323,13 +1473,80 @@ development focus right now is the XSI API, which is more feature-rich</p>
             else:
                 return False
 
+    def finish_transfer(self):
+        &#34;&#34;&#34;
+        Complete an Attended Transfer. This method will only complete if a `transfer(address, type=&#34;attended&#34;)`
+        has been done first.
+        Returns:
+            bool: Whether or not the transfer completes
+        &#34;&#34;&#34;
+        logging.info(&#34;Completing transfer...&#34;)
+        r = requests.put(self._url + f&#34;/{self.id}/ConsultTransfer/{self._transfer_call.id}&#34;, headers=self._headers)
+        if r.status_code in [200, 201, 204]:
+            return True
+        else:
+            return False, r.text
+
+    def conference(self, address: str = &#34;&#34;):
+        &#34;&#34;&#34;
+        Starts a multi-party conference. If the call is already held and an attended transfer is in progress,
+        meaning the user is already talking to the transfer-to user, this method will bridge the calls.
+        Args:
+            address (str, optional): The address (usually a phone number or extension) to conference to. Not needed
+                when the call is already part of an Attended Transfer
+        Returns:
+            bool: True if the conference is successful
+        &#34;&#34;&#34;
+        # First, check to see if the call is already part of an attended transfer. If so, just build the conference
+        # based on the two call IDs
+        if self._transfer_call:
+            xml = f&#34;&lt;?xml version=\&#34;1.0\&#34; encoding=\&#34;UTF-8\&#34;?&gt;&#34; \
+                  f&#34;&lt;Conference xmlns=\&#34;http://schema.broadsoft.com/xsi\&#34;&gt;&#34; \
+                  f&#34;&lt;conferenceParticipantList&gt;&#34; \
+                  f&#34;&lt;conferenceParticipant&gt;&#34; \
+                  f&#34;&lt;callId&gt;{self.id}&lt;/callId&gt;&#34; \
+                  f&#34;&lt;/conferenceParticipant&gt;&#34; \
+                  f&#34;&lt;conferenceParticipant&gt;&#34; \
+                  f&#34;&lt;callId&gt;{self._transfer_call.id}&lt;/callId&gt;&#34; \
+                  f&#34;&lt;/conferenceParticipant&gt;&#34; \
+                  f&#34;&lt;/conferenceParticipantList&gt;&#34; \
+                  f&#34;&lt;/Conference&gt;&#34;
+            # Building the XML by hand for right now. Probably going to replace it with something JSON-friendly
+            headers = self._headers
+            headers[&#39;Content-Type&#39;] = &#34;application/xml; charset=UTF-8&#34;
+            r = requests.post(self._url + f&#34;/Conference&#34;, headers=headers, data=xml)
+            if r.status_code in [200, 201, 204]:
+                return self._parent.new_conference([self.id, self._transfer_call.id])
+            else:
+                return False
+        else:
+            # Still needs work.
+            pass
+
+    def send_dtmf(self, dtmf: str):
+        &#34;&#34;&#34;
+        Transmit DTMF tones outbound
+        Args:
+            dtmf (str): The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
+                between digits (i.e. &#34;23456#,123&#34;)
+        Returns:
+            bool: True if the dtmf was sent successfuly
+        &#34;&#34;&#34;
+        params = {&#34;playdtmf&#34;: str(dtmf)}
+        r = requests.put(self._url + f&#34;/self.id/TransmitDTMF&#34;, headers=self._headers, params=params)
+        if r.status_code in [200, 201, 204]:
+            return True
+        else:
+            return False
+
+
     def hold(self):
         &#34;&#34;&#34;
         Place the call on hold
         Returns:
             bool: Whether the hold command was successful
         &#34;&#34;&#34;
-        r = request.put(self._url + f&#34;/{self.id}/Hold&#34;, headers=self._headers)
+        r = requests.put(self._url + f&#34;/{self.id}/Hold&#34;, headers=self._headers)
         if r.status_code in [200, 201, 204]:
             return True
         else:
@@ -1433,6 +1650,94 @@ def status(self):
 </dl>
 <h3>Methods</h3>
 <dl>
+<dt id="wxcadm.Call.conference"><code class="name flex">
+<span>def <span class="ident">conference</span></span>(<span>self, address: str = '')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Starts a multi-party conference. If the call is already held and an attended transfer is in progress,
+meaning the user is already talking to the transfer-to user, this method will bridge the calls.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>address</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The address (usually a phone number or extension) to conference to. Not needed
+when the call is already part of an Attended Transfer</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>True if the conference is successful</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def conference(self, address: str = &#34;&#34;):
+    &#34;&#34;&#34;
+    Starts a multi-party conference. If the call is already held and an attended transfer is in progress,
+    meaning the user is already talking to the transfer-to user, this method will bridge the calls.
+    Args:
+        address (str, optional): The address (usually a phone number or extension) to conference to. Not needed
+            when the call is already part of an Attended Transfer
+    Returns:
+        bool: True if the conference is successful
+    &#34;&#34;&#34;
+    # First, check to see if the call is already part of an attended transfer. If so, just build the conference
+    # based on the two call IDs
+    if self._transfer_call:
+        xml = f&#34;&lt;?xml version=\&#34;1.0\&#34; encoding=\&#34;UTF-8\&#34;?&gt;&#34; \
+              f&#34;&lt;Conference xmlns=\&#34;http://schema.broadsoft.com/xsi\&#34;&gt;&#34; \
+              f&#34;&lt;conferenceParticipantList&gt;&#34; \
+              f&#34;&lt;conferenceParticipant&gt;&#34; \
+              f&#34;&lt;callId&gt;{self.id}&lt;/callId&gt;&#34; \
+              f&#34;&lt;/conferenceParticipant&gt;&#34; \
+              f&#34;&lt;conferenceParticipant&gt;&#34; \
+              f&#34;&lt;callId&gt;{self._transfer_call.id}&lt;/callId&gt;&#34; \
+              f&#34;&lt;/conferenceParticipant&gt;&#34; \
+              f&#34;&lt;/conferenceParticipantList&gt;&#34; \
+              f&#34;&lt;/Conference&gt;&#34;
+        # Building the XML by hand for right now. Probably going to replace it with something JSON-friendly
+        headers = self._headers
+        headers[&#39;Content-Type&#39;] = &#34;application/xml; charset=UTF-8&#34;
+        r = requests.post(self._url + f&#34;/Conference&#34;, headers=headers, data=xml)
+        if r.status_code in [200, 201, 204]:
+            return self._parent.new_conference([self.id, self._transfer_call.id])
+        else:
+            return False
+    else:
+        # Still needs work.
+        pass</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Call.finish_transfer"><code class="name flex">
+<span>def <span class="ident">finish_transfer</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Complete an Attended Transfer. This method will only complete if a <code>transfer(address, type="attended")</code>
+has been done first.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>Whether or not the transfer completes</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def finish_transfer(self):
+    &#34;&#34;&#34;
+    Complete an Attended Transfer. This method will only complete if a `transfer(address, type=&#34;attended&#34;)`
+    has been done first.
+    Returns:
+        bool: Whether or not the transfer completes
+    &#34;&#34;&#34;
+    logging.info(&#34;Completing transfer...&#34;)
+    r = requests.put(self._url + f&#34;/{self.id}/ConsultTransfer/{self._transfer_call.id}&#34;, headers=self._headers)
+    if r.status_code in [200, 201, 204]:
+        return True
+    else:
+        return False, r.text</code></pre>
+</details>
+</dd>
 <dt id="wxcadm.Call.hangup"><code class="name flex">
 <span>def <span class="ident">hangup</span></span>(<span>self)</span>
 </code></dt>
@@ -1482,7 +1787,7 @@ def status(self):
     Returns:
         bool: Whether the hold command was successful
     &#34;&#34;&#34;
-    r = request.put(self._url + f&#34;/{self.id}/Hold&#34;, headers=self._headers)
+    r = requests.put(self._url + f&#34;/{self.id}/Hold&#34;, headers=self._headers)
     if r.status_code in [200, 201, 204]:
         return True
     else:
@@ -1557,17 +1862,58 @@ def status(self):
         return False</code></pre>
 </details>
 </dd>
+<dt id="wxcadm.Call.send_dtmf"><code class="name flex">
+<span>def <span class="ident">send_dtmf</span></span>(<span>self, dtmf: str)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Transmit DTMF tones outbound</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>dtmf</code></strong> :&ensp;<code>str</code></dt>
+<dd>The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
+between digits (i.e. "23456#,123")</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>True if the dtmf was sent successfuly</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def send_dtmf(self, dtmf: str):
+    &#34;&#34;&#34;
+    Transmit DTMF tones outbound
+    Args:
+        dtmf (str): The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
+            between digits (i.e. &#34;23456#,123&#34;)
+    Returns:
+        bool: True if the dtmf was sent successfuly
+    &#34;&#34;&#34;
+    params = {&#34;playdtmf&#34;: str(dtmf)}
+    r = requests.put(self._url + f&#34;/self.id/TransmitDTMF&#34;, headers=self._headers, params=params)
+    if r.status_code in [200, 201, 204]:
+        return True
+    else:
+        return False</code></pre>
+</details>
+</dd>
 <dt id="wxcadm.Call.transfer"><code class="name flex">
 <span>def <span class="ident">transfer</span></span>(<span>self, address: str, type: str = 'blind')</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Transfer the call to the selected address. Type of transfer can be controlled with <code>type</code> param.</p>
+<div class="desc"><p>Transfer the call to the selected address. Type of transfer can be controlled with <code>type</code> param. VM
+transfers will transfer the call directly to the voice mail of the address, even if the address is the
+user's own address. Attended transfers require a subsequent call to <code>finish_transfer()</code> when the actual transfer
+should happen.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>address</code></strong> :&ensp;<code>str</code></dt>
 <dd>The address (usually a phone number or extension) to transfer the call to</dd>
 <dt><strong><code>type</code></strong> :&ensp;<code>str</code></dt>
-<dd>The type of transfer. Accepted options are "blind" and "attended"</dd>
+<dd>['blind','vm','attended']:
+The type of transfer.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1580,10 +1926,14 @@ def status(self):
 </summary>
 <pre><code class="python">def transfer(self, address: str, type: str = &#34;blind&#34;):
     &#34;&#34;&#34;
-    Transfer the call to the selected address. Type of transfer can be controlled with `type` param.
+    Transfer the call to the selected address. Type of transfer can be controlled with `type` param. VM
+    transfers will transfer the call directly to the voice mail of the address, even if the address is the
+    user&#39;s own address. Attended transfers require a subsequent call to `finish_transfer()` when the actual transfer
+    should happen.
     Args:
         address (str): The address (usually a phone number or extension) to transfer the call to
-        type (str): The type of transfer. Accepted options are &#34;blind&#34; and &#34;attended&#34;
+        type (str): [&#39;blind&#39;,&#39;vm&#39;,&#39;attended&#39;]:
+            The type of transfer.
     Returns:
         bool: True if successful. False if unsuccessful
     &#34;&#34;&#34;
@@ -1592,8 +1942,19 @@ def status(self):
     params = {&#34;address&#34;: address}
     # Handle an attended transfer first. Anything else is assumed to be blind
     if type.lower() == &#34;attended&#34;:
-        # TODO Attended transfer logic, which requires Hold and a New before transfer
-        pass
+        # Attended transfer requires the first call to be put on hold and the second call to be
+        # placed, so those are here. A separate call to finish_transfer will be required when the transfer should
+        # happen.
+        self.hold()
+        self._transfer_call = self._parent.new_call()
+        self._transfer_call.originate(address)
+        return True
+    elif type.lower() == &#34;vm&#34;:
+        r = requests.put(self._url + f&#34;/{self.id}/VmTransfer&#34;, headers=self._headers, params=params)
+        if r.status_code in [200, 201, 204]:
+            return True
+        else:
+            return False
     else:
         r = requests.put(self._url + f&#34;/{self.id}/BlindTransfer&#34;, headers=self._headers, params=params)
         if r.status_code in [200, 201, 204]:
@@ -1809,6 +2170,104 @@ def status(self):
     response = r.status_code
     self.get_queue_config()
     return self.config</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="wxcadm.Conference"><code class="flex name class">
+<span>class <span class="ident">Conference</span></span>
+<span>(</span><span>parent: object, calls: list, comment: str = '')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>The class for Conference Calls started by a Call.conference()</p>
+<p>Initialize a Conferece instance for an XSI instance</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>parent</code></strong> :&ensp;<code><a title="wxcadm.XSI" href="#wxcadm.XSI">XSI</a></code></dt>
+<dd>The XSI instance that owns this conference</dd>
+<dt><strong><code>calls</code></strong> :&ensp;<code>list</code></dt>
+<dd>Call IDs associated with the Conference. Always two Call IDs to start a Conference.
+Any additional Call IDs will be added to the conference as it is created.</dd>
+<dt><strong><code>comment</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>An optional text comment for the Conference</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="wxcadm.Conference" href="#wxcadm.Conference">Conference</a></code></dt>
+<dd>This instance of the Conference class</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Conference:
+    &#34;&#34;&#34;The class for Conference Calls started by a Call.conference()&#34;&#34;&#34;
+    def __init__(self, parent: object, calls: list, comment: str = &#34;&#34;):
+        &#34;&#34;&#34;
+        Initialize a Conferece instance for an XSI instance
+        Args:
+            parent (XSI): The XSI instance that owns this conference
+            calls (list): Call IDs associated with the Conference. Always two Call IDs to start a Conference.
+                Any additional Call IDs will be added to the conference as it is created.
+            comment (str, optional): An optional text comment for the Conference
+        Returns:
+            Conference: This instance of the Conference class
+        &#34;&#34;&#34;
+        self._parent: XSI = parent
+        self._calls: list = calls
+        self._userid = self._parent.id
+        self._headers = self._parent._headers
+        self._url = self._parent.xsi_endpoints[&#39;actions_endpoint&#39;] + f&#34;/v2.0/user/{self._userid}/calls/Conference&#34;
+        self.comment: str = comment
+        &#34;&#34;&#34;Text comment associated with the Conference&#34;&#34;&#34;
+
+    def deaf(self, call: str):
+        &#34;&#34;&#34;
+        Stop audio and video from being sent to a particiapnt. Audio and video from that participant are unaffected.
+        Args:
+            call (str): The Call ID to make deaf
+        Returns:
+            bool: Whether the command was successful
+        &#34;&#34;&#34;
+        pass</code></pre>
+</details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="wxcadm.Conference.comment"><code class="name">var <span class="ident">comment</span></code></dt>
+<dd>
+<div class="desc"><p>Text comment associated with the Conference</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="wxcadm.Conference.deaf"><code class="name flex">
+<span>def <span class="ident">deaf</span></span>(<span>self, call: str)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Stop audio and video from being sent to a particiapnt. Audio and video from that participant are unaffected.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>call</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Call ID to make deaf</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>Whether the command was successful</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def deaf(self, call: str):
+    &#34;&#34;&#34;
+    Stop audio and video from being sent to a particiapnt. Audio and video from that participant are unaffected.
+    Args:
+        call (str): The Call ID to make deaf
+    Returns:
+        bool: Whether the command was successful
+    &#34;&#34;&#34;
+    pass</code></pre>
 </details>
 </dd>
 </dl>
@@ -3399,6 +3858,7 @@ def headers(self):
         &#34;&#34;&#34;The SNR (Office Anywhere) settings for this Person&#34;&#34;&#34;
         self._monitoring: dict = {}
         &#34;&#34;&#34;The BLF/Monitoring settings for this Person&#34;&#34;&#34;
+        self.conference: object = None
 
         # Get the profile if we have been asked to
         if get_profile:
@@ -3409,6 +3869,21 @@ def headers(self):
         call = Call(self)
         self._calls.append(call)
         return call
+
+    def new_conference(self, calls: list = [], comment:str = &#34;&#34;):
+        &#34;&#34;&#34;
+        Crates a new Conference instance. A user can only have one Conference instance, so this will replace any
+        previous Conference. At the moment, this **should not be called directly** and will be done dynamically by
+        a Call.conference()
+        Args:
+            calls (list): A list of Call IDs involved in this conference. A conference is always started with only
+                two Call IDs. Call IDs after the first two will be ignored.
+            comment (str, optional): An optional text comment for the conference
+        Returns:
+            The instance of the Conference class
+        &#34;&#34;&#34;
+        self.conference = Conference(self, calls, comment)
+        return self.conference
 
     @property
     def calls(self):
@@ -3776,6 +4251,43 @@ def single_number_reach(self):
     return call</code></pre>
 </details>
 </dd>
+<dt id="wxcadm.XSI.new_conference"><code class="name flex">
+<span>def <span class="ident">new_conference</span></span>(<span>self, calls: list = [], comment: str = '')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Crates a new Conference instance. A user can only have one Conference instance, so this will replace any
+previous Conference. At the moment, this <strong>should not be called directly</strong> and will be done dynamically by
+a Call.conference()</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>calls</code></strong> :&ensp;<code>list</code></dt>
+<dd>A list of Call IDs involved in this conference. A conference is always started with only
+two Call IDs. Call IDs after the first two will be ignored.</dd>
+<dt><strong><code>comment</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>An optional text comment for the conference</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>The instance of the Conference class</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def new_conference(self, calls: list = [], comment:str = &#34;&#34;):
+    &#34;&#34;&#34;
+    Crates a new Conference instance. A user can only have one Conference instance, so this will replace any
+    previous Conference. At the moment, this **should not be called directly** and will be done dynamically by
+    a Call.conference()
+    Args:
+        calls (list): A list of Call IDs involved in this conference. A conference is always started with only
+            two Call IDs. Call IDs after the first two will be ignored.
+        comment (str, optional): An optional text comment for the conference
+    Returns:
+        The instance of the Conference class
+    &#34;&#34;&#34;
+    self.conference = Conference(self, calls, comment)
+    return self.conference</code></pre>
+</details>
+</dd>
 </dl>
 </dd>
 </dl>
@@ -3795,11 +4307,14 @@ def single_number_reach(self):
 <li>
 <h4><code><a title="wxcadm.Call" href="#wxcadm.Call">Call</a></code></h4>
 <ul class="two-column">
+<li><code><a title="wxcadm.Call.conference" href="#wxcadm.Call.conference">conference</a></code></li>
+<li><code><a title="wxcadm.Call.finish_transfer" href="#wxcadm.Call.finish_transfer">finish_transfer</a></code></li>
 <li><code><a title="wxcadm.Call.hangup" href="#wxcadm.Call.hangup">hangup</a></code></li>
 <li><code><a title="wxcadm.Call.hold" href="#wxcadm.Call.hold">hold</a></code></li>
 <li><code><a title="wxcadm.Call.id" href="#wxcadm.Call.id">id</a></code></li>
 <li><code><a title="wxcadm.Call.originate" href="#wxcadm.Call.originate">originate</a></code></li>
 <li><code><a title="wxcadm.Call.resume" href="#wxcadm.Call.resume">resume</a></code></li>
+<li><code><a title="wxcadm.Call.send_dtmf" href="#wxcadm.Call.send_dtmf">send_dtmf</a></code></li>
 <li><code><a title="wxcadm.Call.status" href="#wxcadm.Call.status">status</a></code></li>
 <li><code><a title="wxcadm.Call.transfer" href="#wxcadm.Call.transfer">transfer</a></code></li>
 </ul>
@@ -3818,6 +4333,13 @@ def single_number_reach(self):
 <li><code><a title="wxcadm.CallQueue.name" href="#wxcadm.CallQueue.name">name</a></code></li>
 <li><code><a title="wxcadm.CallQueue.phone_number" href="#wxcadm.CallQueue.phone_number">phone_number</a></code></li>
 <li><code><a title="wxcadm.CallQueue.push" href="#wxcadm.CallQueue.push">push</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="wxcadm.Conference" href="#wxcadm.Conference">Conference</a></code></h4>
+<ul class="">
+<li><code><a title="wxcadm.Conference.comment" href="#wxcadm.Conference.comment">comment</a></code></li>
+<li><code><a title="wxcadm.Conference.deaf" href="#wxcadm.Conference.deaf">deaf</a></code></li>
 </ul>
 </li>
 <li>
@@ -3923,6 +4445,7 @@ def single_number_reach(self):
 <li><code><a title="wxcadm.XSI.get_services" href="#wxcadm.XSI.get_services">get_services</a></code></li>
 <li><code><a title="wxcadm.XSI.monitoring" href="#wxcadm.XSI.monitoring">monitoring</a></code></li>
 <li><code><a title="wxcadm.XSI.new_call" href="#wxcadm.XSI.new_call">new_call</a></code></li>
+<li><code><a title="wxcadm.XSI.new_conference" href="#wxcadm.XSI.new_conference">new_conference</a></code></li>
 <li><code><a title="wxcadm.XSI.profile" href="#wxcadm.XSI.profile">profile</a></code></li>
 <li><code><a title="wxcadm.XSI.registrations" href="#wxcadm.XSI.registrations">registrations</a></code></li>
 <li><code><a title="wxcadm.XSI.single_number_reach" href="#wxcadm.XSI.single_number_reach">single_number_reach</a></code></li>

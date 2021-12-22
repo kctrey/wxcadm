@@ -75,6 +75,79 @@ for email in email_list:
     person = webex.org.get_person_by_email(email)
     print(person.display_name)
 ```
+## Common XSI Use Cases
+XSI can be used to accomplish a lot of things on behalf of the user. The following are examples of some commomly-used
+methods provided by the wxcadm module.
+### Place a call
+``` python
+from wxcadm import Webex
+access_token = "your_access_token"
+webex = Webex(access_token, get_xsi=True)
+
+# Get the person that we want to place the call from
+person = webex.org.get_person_by_email("user@domain.com")
+# Start a XSI session for the user
+person.start_xsi()
+# Start a new call
+call = person.xsi.new_call()
+# Originate (dial) the call
+call.originate("17192662837")
+
+# When it is time to end the call, just call hangup()
+call.hangup()
+```
+### Hold/Resume
+``` python
+from wxcadm import Webex
+access_token = "your_access_token"
+webex = Webex(access_token, get_xsi=True)
+
+person = webex.org.get_person_by_email("user@domain.com")
+person.start_xsi()
+call = person.xsi.new_call()
+call.originate("17192662837")
+
+# Put the call on hold
+call.hold()
+
+# Resume the call, taking it off hold
+call.resume()
+```
+### Blind Transfer
+``` python
+from wxcadm import Webex
+access_token = "your_access_token"
+webex = Webex(access_token, get_xsi=True)
+
+person = webex.org.get_person_by_email("user@domain.com")
+person.start_xsi()
+call = person.xsi.new_call()
+call.originate("17192662837")
+
+# Invoke the transfer method, with the target extension or phone number
+target_user = "2345"
+call.transfer(target_user)
+```
+### Attended Transfer
+The attended transfer puts the current call on hold and initiates a new call (origination) to the target user. Once
+the users talk, a call to `finish_transfer()` will complete the transfer of the original call to the new user.
+``` python
+from wxcadm import Webex
+access_token = "your_access_token"
+webex = Webex(access_token, get_xsi=True)
+
+person = webex.org.get_person_by_email("user@domain.com")
+person.start_xsi()
+call = person.xsi.new_call()
+call.originate("17192662837")
+
+# Invoke the transfer method, with the target extension or phone number
+target_user = "2345"
+call.transfer(target_user, type="attended")
+
+# The original user and the target user will be connected. When ready, finish the transfer
+call.finish_transfer()
+```
 ## Logging
 By default, the module logs to ```wxcadm.log```. At the moment, the logs just show the various methods that are invoked
 for API calls to the Webex API.
