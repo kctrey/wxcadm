@@ -77,7 +77,8 @@ for email in email_list:
 ```
 ## Common XSI Use Cases
 XSI can be used to accomplish a lot of things on behalf of the user. The following are examples of some commomly-used
-methods provided by the wxcadm module.
+methods provided by the wxcadm module. **Note that XSI must be enabled by Cisco before it is available to an
+Organization.** Contact Cisco TAC to request that XSI be enabled.
 ### Place a call
 ``` python
 from wxcadm import Webex
@@ -92,6 +93,13 @@ person.start_xsi()
 call = person.xsi.new_call()
 # Originate (dial) the call
 call.originate("17192662837")
+
+# Or create the new call and originate at the same time
+person.xsi.new_call(address="17192662837)
+
+# Or, for a simple click-to-dial where no further control is needed,
+# you can do it all in one line:
+person.start_xsi().new_call().originate("17192662837")
 
 # When it is time to end the call, just call hangup()
 call.hangup()
@@ -146,6 +154,29 @@ target_user = "2345"
 call.transfer(target_user, type="attended")
 
 # The original user and the target user will be connected. When ready, finish the transfer
+call.finish_transfer()
+```
+### Attended Transfer with Conference
+For a lot of cases, admins want to modify the Attended Transfer so that the transferer stays on the line with both
+the caller and the tranferee, then dropping out once introductions hae been made.
+``` python
+from wxcadm import Webex
+access_token = "your_access_token"
+webex = Webex(access_token, get_xsi=True)
+
+person = webex.org.get_person_by_email("user@domain.com")
+person.start_xsi()
+call = person.xsi.new_call()
+call.originate("17192662837")
+
+# Invoke the transfer method, with the target extension or phone number
+target_user = "2345"
+call.transfer(target_user, type="attended")
+
+# When the transferer is ready to bring the caller on, create a conference
+call.conference()
+
+# Once the transferer is ready to leave the other parties, simply finish the transfer
 call.finish_transfer()
 ```
 ## Logging

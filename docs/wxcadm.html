@@ -150,7 +150,7 @@ class Org:
             people (bool, optional): Whether to automatically get all people for the Org
             locations (bool, optional): Whether to automatically get all of the locations for the Org
             xsi (bool, optional): Whether to automatically get the XSI Endpoints for the Org
-            parent (Webex, optional): The parent Webex instance that owns this Org. Usually `_parent=self`
+            parent (Webex, optional): The parent Webex instance that owns this Org.
 
         Returns:
             Org: This instance of the Org class
@@ -369,6 +369,8 @@ class Org:
             for license in person[&#39;licenses&#39;]:
                 if license in wxc_licenses:
                     this_person.wxc = True
+            if &#34;phoneNumbers&#34; in person:
+                this_person.numbers = person[&#39;phoneNumbers&#39;]
             self.people.append(this_person)
         return self.people
 
@@ -409,7 +411,7 @@ class Location:
 
 class Person:
     # TODO List
-    #    Add methods to get and return XSI identifiers
+    #    Revamp to follow the new class structure
 
     def __init__(self, user_id,
                  user_email,
@@ -435,6 +437,8 @@ class Person:
         self.calling_behavior = None
         self.xsi = None
         self._parent = parent
+        self.numbers: list = []
+        &#34;&#34;&#34;The phone numbers for this person from Webex CI&#34;&#34;&#34;
 
         # Set the Authorization header based on how the instance was built
         if licenses is None:
@@ -720,9 +724,19 @@ class XSI:
         if get_profile:
             self.get_profile()
 
-    def new_call(self):
-        &#34;&#34;&#34;Create a new Call instance&#34;&#34;&#34;
-        call = Call(self)
+    def new_call(self, address: str = &#34;&#34;):
+        &#34;&#34;&#34;
+        Create a new Call instance
+        Args:
+            address (str, optional): The address to originate a call to
+        Returns:
+            Call: The Call instance
+        &#34;&#34;&#34;
+        # If we got an address, pass it to the new instance
+        if address:
+            call = Call(self, address=address)
+        else:
+            cal = Call(self)
         self._calls.append(call)
         return call
 
@@ -972,11 +986,13 @@ class Call:
     instance or an XSI instance. At the moment, the Webex API only supports user-scoped call control, so most of the
     development focus right now is the XSI API, which is more feature-rich
     &#34;&#34;&#34;
-    def __init__(self, parent, id: str = &#34;&#34;):
+    def __init__(self, parent, id: str = &#34;&#34;, address: str = &#34;&#34;):
         &#34;&#34;&#34;
         Inititalize a Call instance for a Person
         Args:
             parent (XSI): The Person or XSI instance that owns this Call
+            id (str, optional): The Call ID of a known call. Usually only done during a XSI.calls method
+            address (str, optional): The address to originate a call to when the instance is created
         Returns:
             Call: This Call instance
         &#34;&#34;&#34;
@@ -1005,6 +1021,9 @@ class Call:
         elif type(self._parent) is Call:
             # Another Call created this Call instance (probably for a transfer or conference
             self._url = self._parent.xsi_endpoints[&#39;actions_endpoint&#39;] + f&#34;/v2.0/user/{self._parent._userid}/calls&#34;
+
+        if address:
+            self.originate(address)
 
     def originate(self, address: str, comment: str = &#34;&#34;):
         &#34;&#34;&#34;
@@ -1288,7 +1307,7 @@ class Conference:
 </dd>
 <dt id="wxcadm.Call"><code class="flex name class">
 <span>class <span class="ident">Call</span></span>
-<span>(</span><span>parent, id: str = '')</span>
+<span>(</span><span>parent, id: str = '', address: str = '')</span>
 </code></dt>
 <dd>
 <div class="desc"><p>The Call class represents a call for a person. Since Webex supports calls in the Webex API as well as XSI API,
@@ -1300,6 +1319,10 @@ development focus right now is the XSI API, which is more feature-rich</p>
 <dl>
 <dt><strong><code>parent</code></strong> :&ensp;<code><a title="wxcadm.XSI" href="#wxcadm.XSI">XSI</a></code></dt>
 <dd>The Person or XSI instance that owns this Call</dd>
+<dt><strong><code>id</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The Call ID of a known call. Usually only done during a XSI.calls method</dd>
+<dt><strong><code>address</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The address to originate a call to when the instance is created</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -1317,11 +1340,13 @@ development focus right now is the XSI API, which is more feature-rich</p>
     instance or an XSI instance. At the moment, the Webex API only supports user-scoped call control, so most of the
     development focus right now is the XSI API, which is more feature-rich
     &#34;&#34;&#34;
-    def __init__(self, parent, id: str = &#34;&#34;):
+    def __init__(self, parent, id: str = &#34;&#34;, address: str = &#34;&#34;):
         &#34;&#34;&#34;
         Inititalize a Call instance for a Person
         Args:
             parent (XSI): The Person or XSI instance that owns this Call
+            id (str, optional): The Call ID of a known call. Usually only done during a XSI.calls method
+            address (str, optional): The address to originate a call to when the instance is created
         Returns:
             Call: This Call instance
         &#34;&#34;&#34;
@@ -1350,6 +1375,9 @@ development focus right now is the XSI API, which is more feature-rich</p>
         elif type(self._parent) is Call:
             # Another Call created this Call instance (probably for a transfer or conference
             self._url = self._parent.xsi_endpoints[&#39;actions_endpoint&#39;] + f&#34;/v2.0/user/{self._parent._userid}/calls&#34;
+
+        if address:
+            self.originate(address)
 
     def originate(self, address: str, comment: str = &#34;&#34;):
         &#34;&#34;&#34;
@@ -2547,7 +2575,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 <dt><strong><code>xsi</code></strong> :&ensp;<code>bool</code>, optional</dt>
 <dd>Whether to automatically get the XSI Endpoints for the Org</dd>
 <dt><strong><code>parent</code></strong> :&ensp;<code><a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a></code>, optional</dt>
-<dd>The parent Webex instance that owns this Org. Usually <code>_parent=self</code></dd>
+<dd>The parent Webex instance that owns this Org.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -2570,7 +2598,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
             people (bool, optional): Whether to automatically get all people for the Org
             locations (bool, optional): Whether to automatically get all of the locations for the Org
             xsi (bool, optional): Whether to automatically get the XSI Endpoints for the Org
-            parent (Webex, optional): The parent Webex instance that owns this Org. Usually `_parent=self`
+            parent (Webex, optional): The parent Webex instance that owns this Org.
 
         Returns:
             Org: This instance of the Org class
@@ -2789,6 +2817,8 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
             for license in person[&#39;licenses&#39;]:
                 if license in wxc_licenses:
                     this_person.wxc = True
+            if &#34;phoneNumbers&#34; in person:
+                this_person.numbers = person[&#39;phoneNumbers&#39;]
             self.people.append(this_person)
         return self.people
 
@@ -2993,6 +3023,8 @@ Org.people attributes</p>
         for license in person[&#39;licenses&#39;]:
             if license in wxc_licenses:
                 this_person.wxc = True
+        if &#34;phoneNumbers&#34; in person:
+            this_person.numbers = person[&#39;phoneNumbers&#39;]
         self.people.append(this_person)
     return self.people</code></pre>
 </details>
@@ -3163,7 +3195,7 @@ See the PickupGroup class for attributes.</dd>
 </summary>
 <pre><code class="python">class Person:
     # TODO List
-    #    Add methods to get and return XSI identifiers
+    #    Revamp to follow the new class structure
 
     def __init__(self, user_id,
                  user_email,
@@ -3189,6 +3221,8 @@ See the PickupGroup class for attributes.</dd>
         self.calling_behavior = None
         self.xsi = None
         self._parent = parent
+        self.numbers: list = []
+        &#34;&#34;&#34;The phone numbers for this person from Webex CI&#34;&#34;&#34;
 
         # Set the Authorization header based on how the instance was built
         if licenses is None:
@@ -3323,6 +3357,10 @@ See the PickupGroup class for attributes.</dd>
 <dt id="wxcadm.Person.call_forwarding"><code class="name">var <span class="ident">call_forwarding</span></code></dt>
 <dd>
 <div class="desc"><p>Dictionary of the Call Forwarding config as returned by Webex API</p></div>
+</dd>
+<dt id="wxcadm.Person.numbers"><code class="name">var <span class="ident">numbers</span></code></dt>
+<dd>
+<div class="desc"><p>The phone numbers for this person from Webex CI</p></div>
 </dd>
 <dt id="wxcadm.Person.vm_config"><code class="name">var <span class="ident">vm_config</span></code></dt>
 <dd>
@@ -3864,9 +3902,19 @@ def headers(self):
         if get_profile:
             self.get_profile()
 
-    def new_call(self):
-        &#34;&#34;&#34;Create a new Call instance&#34;&#34;&#34;
-        call = Call(self)
+    def new_call(self, address: str = &#34;&#34;):
+        &#34;&#34;&#34;
+        Create a new Call instance
+        Args:
+            address (str, optional): The address to originate a call to
+        Returns:
+            Call: The Call instance
+        &#34;&#34;&#34;
+        # If we got an address, pass it to the new instance
+        if address:
+            call = Call(self, address=address)
+        else:
+            cal = Call(self)
         self._calls.append(call)
         return call
 
@@ -4236,17 +4284,37 @@ def single_number_reach(self):
 </details>
 </dd>
 <dt id="wxcadm.XSI.new_call"><code class="name flex">
-<span>def <span class="ident">new_call</span></span>(<span>self)</span>
+<span>def <span class="ident">new_call</span></span>(<span>self, address: str = '')</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Create a new Call instance</p></div>
+<div class="desc"><p>Create a new Call instance</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>address</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>The address to originate a call to</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="wxcadm.Call" href="#wxcadm.Call">Call</a></code></dt>
+<dd>The Call instance</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def new_call(self):
-    &#34;&#34;&#34;Create a new Call instance&#34;&#34;&#34;
-    call = Call(self)
+<pre><code class="python">def new_call(self, address: str = &#34;&#34;):
+    &#34;&#34;&#34;
+    Create a new Call instance
+    Args:
+        address (str, optional): The address to originate a call to
+    Returns:
+        Call: The Call instance
+    &#34;&#34;&#34;
+    # If we got an address, pass it to the new instance
+    if address:
+        call = Call(self, address=address)
+    else:
+        cal = Call(self)
     self._calls.append(call)
     return call</code></pre>
 </details>
@@ -4406,6 +4474,7 @@ two Call IDs. Call IDs after the first two will be ignored.</dd>
 <li><code><a title="wxcadm.Person.get_full_config" href="#wxcadm.Person.get_full_config">get_full_config</a></code></li>
 <li><code><a title="wxcadm.Person.get_intercept" href="#wxcadm.Person.get_intercept">get_intercept</a></code></li>
 <li><code><a title="wxcadm.Person.get_vm_config" href="#wxcadm.Person.get_vm_config">get_vm_config</a></code></li>
+<li><code><a title="wxcadm.Person.numbers" href="#wxcadm.Person.numbers">numbers</a></code></li>
 <li><code><a title="wxcadm.Person.push_vm_config" href="#wxcadm.Person.push_vm_config">push_vm_config</a></code></li>
 <li><code><a title="wxcadm.Person.start_xsi" href="#wxcadm.Person.start_xsi">start_xsi</a></code></li>
 <li><code><a title="wxcadm.Person.vm_config" href="#wxcadm.Person.vm_config">vm_config</a></code></li>

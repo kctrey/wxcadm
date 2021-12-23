@@ -19,7 +19,7 @@ Classes
     * wxcadm.PutError
     * wxcadm.TokenError
 
-`Call(parent, id: str = '')`
+`Call(parent, id: str = '', address: str = '')`
 :   The Call class represents a call for a person. Since Webex supports calls in the Webex API as well as XSI API,
     the class supports both styles. When initialized, the parent instance is checked to see if it is a Person
     instance or an XSI instance. At the moment, the Webex API only supports user-scoped call control, so most of the
@@ -28,6 +28,8 @@ Classes
     Inititalize a Call instance for a Person
     Args:
         parent (XSI): The Person or XSI instance that owns this Call
+        id (str, optional): The Call ID of a known call. Usually only done during a XSI.calls method
+        address (str, optional): The address to originate a call to when the instance is created
     Returns:
         Call: This Call instance
 
@@ -275,7 +277,7 @@ Classes
         people (bool, optional): Whether to automatically get all people for the Org
         locations (bool, optional): Whether to automatically get all of the locations for the Org
         xsi (bool, optional): Whether to automatically get the XSI Endpoints for the Org
-        parent (Webex, optional): The parent Webex instance that owns this Org. Usually `_parent=self`
+        parent (Webex, optional): The parent Webex instance that owns this Org.
     
     Returns:
         Org: This instance of the Org class
@@ -367,6 +369,9 @@ Classes
 
     `call_forwarding`
     :   Dictionary of the Call Forwarding config as returned by Webex API
+
+    `numbers`
+    :   The phone numbers for this person from Webex CI
 
     `vm_config`
     :   Dictionary of the VM config as returned by Webex API
@@ -522,8 +527,12 @@ Classes
     `get_services(self)`
     :
 
-    `new_call(self)`
+    `new_call(self, address: str = '')`
     :   Create a new Call instance
+        Args:
+            address (str, optional): The address to originate a call to
+        Returns:
+            Call: The Call instance
 
     `new_conference(self, calls: list = [], comment: str = '')`
     :   Crates a new Conference instance. A user can only have one Conference instance, so this will replace any

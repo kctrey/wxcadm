@@ -122,7 +122,7 @@ class Org:
             people (bool, optional): Whether to automatically get all people for the Org
             locations (bool, optional): Whether to automatically get all of the locations for the Org
             xsi (bool, optional): Whether to automatically get the XSI Endpoints for the Org
-            parent (Webex, optional): The parent Webex instance that owns this Org. Usually `_parent=self`
+            parent (Webex, optional): The parent Webex instance that owns this Org.
 
         Returns:
             Org: This instance of the Org class
@@ -341,6 +341,8 @@ class Org:
             for license in person['licenses']:
                 if license in wxc_licenses:
                     this_person.wxc = True
+            if "phoneNumbers" in person:
+                this_person.numbers = person['phoneNumbers']
             self.people.append(this_person)
         return self.people
 
@@ -381,7 +383,7 @@ class Location:
 
 class Person:
     # TODO List
-    #    Add methods to get and return XSI identifiers
+    #    Revamp to follow the new class structure
 
     def __init__(self, user_id,
                  user_email,
@@ -407,6 +409,8 @@ class Person:
         self.calling_behavior = None
         self.xsi = None
         self._parent = parent
+        self.numbers: list = []
+        """The phone numbers for this person from Webex CI"""
 
         # Set the Authorization header based on how the instance was built
         if licenses is None:
@@ -692,9 +696,19 @@ class XSI:
         if get_profile:
             self.get_profile()
 
-    def new_call(self):
-        """Create a new Call instance"""
-        call = Call(self)
+    def new_call(self, address: str = ""):
+        """
+        Create a new Call instance
+        Args:
+            address (str, optional): The address to originate a call to
+        Returns:
+            Call: The Call instance
+        """
+        # If we got an address, pass it to the new instance
+        if address:
+            call = Call(self, address=address)
+        else:
+            cal = Call(self)
         self._calls.append(call)
         return call
 
@@ -944,11 +958,13 @@ class Call:
     instance or an XSI instance. At the moment, the Webex API only supports user-scoped call control, so most of the
     development focus right now is the XSI API, which is more feature-rich
     """
-    def __init__(self, parent, id: str = ""):
+    def __init__(self, parent, id: str = "", address: str = ""):
         """
         Inititalize a Call instance for a Person
         Args:
             parent (XSI): The Person or XSI instance that owns this Call
+            id (str, optional): The Call ID of a known call. Usually only done during a XSI.calls method
+            address (str, optional): The address to originate a call to when the instance is created
         Returns:
             Call: This Call instance
         """
@@ -977,6 +993,9 @@ class Call:
         elif type(self._parent) is Call:
             # Another Call created this Call instance (probably for a transfer or conference
             self._url = self._parent.xsi_endpoints['actions_endpoint'] + f"/v2.0/user/{self._parent._userid}/calls"
+
+        if address:
+            self.originate(address)
 
     def originate(self, address: str, comment: str = ""):
         """
