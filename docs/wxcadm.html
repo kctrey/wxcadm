@@ -75,8 +75,11 @@ class PutError(APIError):
 class Webex:
     # TODO List
     #    Add token refresh, just for completeness
-
-    def __init__(self, access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False):
+    &#34;&#34;&#34;
+    The base class for working with wxcadm.
+    &#34;&#34;&#34;
+    def __init__(self, access_token: str, create_org: bool = True,
+                 get_people: bool = True, get_locations: bool = True, get_xsi: bool = False) -&gt; object:
         &#34;&#34;&#34;
         Initialize a Webex instance to communicate with Webex and store data
         Args:
@@ -1260,7 +1263,7 @@ class Conference:
 
     def deaf(self, call: str):
         &#34;&#34;&#34;
-        Stop audio and video from being sent to a particiapnt. Audio and video from that participant are unaffected.
+        Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
         Args:
             call (str): The Call ID to make deaf
         Returns:
@@ -2251,7 +2254,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 
     def deaf(self, call: str):
         &#34;&#34;&#34;
-        Stop audio and video from being sent to a particiapnt. Audio and video from that participant are unaffected.
+        Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
         Args:
             call (str): The Call ID to make deaf
         Returns:
@@ -2272,7 +2275,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 <span>def <span class="ident">deaf</span></span>(<span>self, call: str)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Stop audio and video from being sent to a particiapnt. Audio and video from that participant are unaffected.</p>
+<div class="desc"><p>Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>call</code></strong> :&ensp;<code>str</code></dt>
@@ -2289,7 +2292,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 </summary>
 <pre><code class="python">def deaf(self, call: str):
     &#34;&#34;&#34;
-    Stop audio and video from being sent to a particiapnt. Audio and video from that participant are unaffected.
+    Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
     Args:
         call (str): The Call ID to make deaf
     Returns:
@@ -3720,10 +3723,11 @@ See the PickupGroup class for attributes.</dd>
 </dd>
 <dt id="wxcadm.Webex"><code class="flex name class">
 <span>class <span class="ident">Webex</span></span>
-<span>(</span><span>access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False)</span>
+<span>(</span><span>access_token: str, create_org: bool = True, get_people: bool = True, get_locations: bool = True, get_xsi: bool = False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Initialize a Webex instance to communicate with Webex and store data</p>
+<div class="desc"><p>The base class for working with wxcadm.</p>
+<p>Initialize a Webex instance to communicate with Webex and store data</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>access_token</code></strong> :&ensp;<code>str</code></dt>
@@ -3750,8 +3754,11 @@ not every Org has XSI capability</dd>
 <pre><code class="python">class Webex:
     # TODO List
     #    Add token refresh, just for completeness
-
-    def __init__(self, access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False):
+    &#34;&#34;&#34;
+    The base class for working with wxcadm.
+    &#34;&#34;&#34;
+    def __init__(self, access_token: str, create_org: bool = True,
+                 get_people: bool = True, get_locations: bool = True, get_xsi: bool = False) -&gt; object:
         &#34;&#34;&#34;
         Initialize a Webex instance to communicate with Webex and store data
         Args:

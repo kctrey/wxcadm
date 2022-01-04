@@ -185,7 +185,7 @@ Classes
     ### Methods
 
     `deaf(self, call: str)`
-    :   Stop audio and video from being sent to a particiapnt. Audio and video from that participant are unaffected.
+    :   Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
         Args:
             call (str): The Call ID to make deaf
         Returns:
@@ -466,8 +466,10 @@ Classes
     * builtins.Exception
     * builtins.BaseException
 
-`Webex(access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False)`
-:   Initialize a Webex instance to communicate with Webex and store data
+`Webex(access_token: str, create_org: bool = True, get_people: bool = True, get_locations: bool = True, get_xsi: bool = False)`
+:   The base class for working with wxcadm.
+    
+    Initialize a Webex instance to communicate with Webex and store data
     Args:
         access_token (str): The Webex API Access Token to authenticate the API calls
         create_org (bool, optional): Whether to create an Org instance for all organizations.

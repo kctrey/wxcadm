@@ -47,8 +47,11 @@ class PutError(APIError):
 class Webex:
     # TODO List
     #    Add token refresh, just for completeness
-
-    def __init__(self, access_token, create_org=True, get_people=True, get_locations=True, get_xsi=False):
+    """
+    The base class for working with wxcadm.
+    """
+    def __init__(self, access_token: str, create_org: bool = True,
+                 get_people: bool = True, get_locations: bool = True, get_xsi: bool = False) -> object:
         """
         Initialize a Webex instance to communicate with Webex and store data
         Args:
@@ -498,9 +501,7 @@ class Person:
         self.get_vm_config()
         return self.vm_config
 
-    def enable_vm_to_email(self, email=None, push=True):
-        if not email:
-            email = self.email
+    def enable_vm_to_email(self, email: str = self.email, push=True):
         self.vm_config['emailCopyOfMessage']['enabled'] = True
         self.vm_config['emailCopyOfMessage']['emailId'] = email
         if push:
@@ -1232,7 +1233,7 @@ class Conference:
 
     def deaf(self, call: str):
         """
-        Stop audio and video from being sent to a particiapnt. Audio and video from that participant are unaffected.
+        Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
         Args:
             call (str): The Call ID to make deaf
         Returns:

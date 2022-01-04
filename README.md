@@ -13,7 +13,7 @@ are already supported, with more being added regularly.
 
 # Quickstart
 By creating a Webex instance with a valid API Access Token, the module will pull the Webex Organization information as
-well as all of the People within the Organization. The Org instance will contain all People, whether they have the 
+well as all the People within the Organization. The Org instance will contain all People, whether they have the 
 Webex Calling service or not. An Org method ```get_webex_people()``` makes it easy to get only the People that have
 Webex Calling.
 
@@ -31,12 +31,12 @@ Since most administrators only have access to a single Webex Organization, you c
 **org** attribute. If the administrator has access to more than one Organization, they can be accessed using the
 **orgs** attribute, which is a list of the organizations that can be managed.
 
-You can see all of the attributes with
+You can see all the attributes with
 ``` python
 vars(webex.org)
 ```
-Note that, by default, all of the People are pulled when the Org is initilaized. For large organizations, this may take
-a while, but then all of the People are stored as Person objects.
+Note that, by default, all the People are pulled when the Org is initialized. For large organizations, this may take
+a while, but then all the People are stored as Person objects.
 
 To iterate over the list of people, simply loop through the **people** attribute of the Org. For example:
 ``` python
@@ -53,7 +53,7 @@ Full module documentation will be coming soon. Until then, the following example
 ```python
 from wxcadm import Webex
 access_token = "Your API Access Token"
-webex = Webex(access_toke)
+webex = Webex(access_token)
 
 # Get all of the Locations within the org
 locations = webex.org.get_locations()
@@ -75,14 +75,28 @@ for email in email_list:
     person = webex.org.get_person_by_email(email)
     print(person.display_name)
 ```
+## Common Webex Use Cases
+These are some commonly-requested changes that most Webex Calling admins have to deal with
+### Enable VM-to-Email
+By default, the sending of VM as an email attachment is disabled, but most enterprises want this feature. The following
+will step through all the Webex Calling users within the Organization and make that change.
+```python
+from wxcadm import Webex
+access_token = "Your API Access Token"
+webex = Webex(access_token)
+# Iterate over all of the People who have a Webex Calling license
+for person in webex.org.get_wxc_people():
+    # By leaving the email param out of the function call, the function will just use their Webex email
+    person.enable_vm_to_email()
+```
 ## Common XSI Use Cases
-XSI can be used to accomplish a lot of things on behalf of the user. The following are examples of some commomly-used
+XSI can be used to accomplish a lot of things on behalf of the user. The following are examples of some commonly-used
 methods provided by the wxcadm module. **Note that XSI must be enabled by Cisco before it is available to an
 Organization.** Contact Cisco TAC to request that XSI be enabled.
 ### Place a call
 ``` python
 from wxcadm import Webex
-access_token = "your_access_token"
+access_token = "Your API Access Token"
 webex = Webex(access_token, get_xsi=True)
 
 # Get the person that we want to place the call from
@@ -107,7 +121,7 @@ call.hangup()
 ### Hold/Resume
 ``` python
 from wxcadm import Webex
-access_token = "your_access_token"
+access_token = "Your API Access Token"
 webex = Webex(access_token, get_xsi=True)
 
 person = webex.org.get_person_by_email("user@domain.com")
@@ -124,7 +138,7 @@ call.resume()
 ### Blind Transfer
 ``` python
 from wxcadm import Webex
-access_token = "your_access_token"
+access_token = "Your API Access Token"
 webex = Webex(access_token, get_xsi=True)
 
 person = webex.org.get_person_by_email("user@domain.com")
@@ -141,7 +155,7 @@ The attended transfer puts the current call on hold and initiates a new call (or
 the users talk, a call to `finish_transfer()` will complete the transfer of the original call to the new user.
 ``` python
 from wxcadm import Webex
-access_token = "your_access_token"
+access_token = "Your API Access Token"
 webex = Webex(access_token, get_xsi=True)
 
 person = webex.org.get_person_by_email("user@domain.com")
@@ -158,10 +172,10 @@ call.finish_transfer()
 ```
 ### Attended Transfer with Conference
 For a lot of cases, admins want to modify the Attended Transfer so that the transferer stays on the line with both
-the caller and the tranferee, then dropping out once introductions hae been made.
+the caller and the transferee, then dropping out once introductions hae been made.
 ``` python
 from wxcadm import Webex
-access_token = "your_access_token"
+access_token = "Your API Access Token"
 webex = Webex(access_token, get_xsi=True)
 
 person = webex.org.get_person_by_email("user@domain.com")
@@ -194,5 +208,5 @@ we are faced with a decision: keep the flexibility provided by the raw data or s
 when the Webex API is changed.
 
 My goal is to find a happy medium, where the attributes get populated dynamically, but I feel that it is going to be a
-heavy lift, changing the structure of all of the classes and building a lot of "helper" functions to convert between
+heavy lift, changing the structure of all the classes and building a lot of "helper" functions to convert between
 the two. Stay tuned...
