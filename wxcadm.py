@@ -26,6 +26,12 @@ class OrgError(Exception):
         super().__init__(message)
 
 
+class LicenseError(OrgError):
+    def __init__(self, message):
+        """Exceptions dealing with License problems within the Org"""
+        super().__init__(message)
+
+
 class APIError(Exception):
     def __init__(self, message):
         """The base class for any exceptions dealing with the API"""
@@ -182,9 +188,23 @@ class Org:
         for item in response['items']:
             if "Webex Calling" in item['name']:
                 wxc_license = True
+                if "Professional" in item['name']:
+                    wxc_type = "person"
+                elif "Workspace" in item['name']:
+                    wxc_type = "workspace"
+                else:
+                    wxc_type = "unknown"
             else:
                 wxc_license = False
-            lic = {"name": item['name'], "id": item['id'], "wxc_license": wxc_license}
+                wxc_type = None
+            lic = {"name": item['name'],
+                   "id": item['id'],
+                   "total": item['totalUnits'],
+                   "consumed": item['consumedUnits'],
+                   "subscription": item.get("subscriptionId", ""),
+                   "wxc_license": wxc_license,
+                   "wxc_type": wxc_type
+                   }
             license_list.append(lic)
         return license_list
 
@@ -201,6 +221,94 @@ class Org:
             if license['wxc_license']:
                 license_list.append(license['id'])
         return license_list
+
+    def __get_wxc_person_license(self):
+        """
+        Get the Webex Calling - Professional license ID
+        Returns:
+            str: The License ID
+        Todo:
+            Need to account for multiple subscriptions and calculate usage, throwing an exception when there
+                is no license available.
+        """
+        logging.info("__get_wxc_person_license started to find available license")
+        for license in self.licenses:
+            if license['wxc_type'] == "person":
+                return license['id']
+        raise LicenseError("No Webex Calling Professional license found")
+
+
+
+    def create_person(self, email: str,
+                      location: str,
+                      licenses: list = [],
+                      calling: bool = True,
+                      messaging: bool = True,
+                      meetings: bool = True,
+                      phone_number: str = "",
+                      extension: str = "",
+                      first_name: str = "",
+                      last_name: str = "",
+                      display_name: str = "",
+                      ):
+        """
+        Create a new user in Webex. Also creates a new Person instance for the created user.
+        Args:
+            email (str): The email address of the user
+            location (str): The ID of the Location that the user is assigned to.
+            licenses (list, optional): List of license IDs to assign to the user. Use this when the license IDs
+                are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
+                `meetings` parameters.
+            calling (bool, optional): BETA - Whether to assign Calling licenses to the user. Defaults to True.
+            messaging (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
+            meetings (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
+            phone_number (str, optional): The phone number to assign to the user.
+            extension (str, optional): The extension to assign to the user
+            first_name (str, optional): The user's first name. Defaults to empty string.
+            last_name (str, optional): The users' last name. Defaults to empty string.
+            display_name (str, optional): The full name of the user as displayed in Webex. If first name and last name are passed
+                without display_name, the display name will be the concatenation of first and last name.
+        Returns:
+            Person: The Person instance of the newly-created user.
+        """
+        if (first_name or last_name) and not display_name:
+            display_name = f"{first_name} {last_name}"
+
+        # Find the license IDs for each requested service, unless licenses was passed
+        if not licenses:
+            if calling:
+                licenses.append(self.__get_wxc_person_license())
+            if messaging:
+                pass
+            if meetings:
+                pass
+
+        # Build the payload to send to the API
+        payload = {"emails": [email],
+                   "phoneNumbers": [{"type": "work", "value": phone_number}],
+                   "extension": extension,
+                   "locationId": location,
+                   "displayName": display_name,
+                   "firstName": first_name,
+                   "lastName": last_name,
+                   "orgId": self.id,
+                   "licenses": licenses
+                   }
+        r = requests.post(_url_base + "v1/people", headers=self._headers, params={"callingData": "true"},
+                          json=payload)
+        response = r.json()
+        if r.status_code == 200:
+            person = Person(response['id'],
+                            response['emails'][0],
+                            response['firstName'],
+                            response['lastName'],
+                            response['displayName'],
+                            response['licenses'],
+                            self)
+            self.people.append(person)
+            return person
+        else:
+            return f"{r.status_code} - {r.text}"
 
     def get_person_by_email(self, email):
         """
@@ -336,16 +444,9 @@ class Org:
                 else:
                     next_url = r.links['next']['url']
 
-        wxc_licenses = self.__get_wxc_licenses()
+        self.wxc_licenses = self.__get_wxc_licenses()
         for person in people_list['items']:
-            this_person = Person(person['id'], person['emails'][0], first_name=person['firstName'],
-                                 last_name=person['lastName'], display_name=person['displayName'], parent=self)
-            this_person.licenses = person['licenses']
-            for license in person['licenses']:
-                if license in wxc_licenses:
-                    this_person.wxc = True
-            if "phoneNumbers" in person:
-                this_person.numbers = person['phoneNumbers']
+            this_person = Person(person['id'], parent=self, config=person)
             self.people.append(this_person)
         return self.people
 
@@ -385,53 +486,98 @@ class Location:
 
 
 class Person:
-    # TODO List
-    #    Revamp to follow the new class structure
+    def __init__(self, user_id, parent: object = None, config: dict = {}):
+        """
+        Initialize a new Person instance. If only the `user_id` is provided, the API calls will be made to get
+            the config from Webex. To save on API calls, the config can be provided which will set the attributes
+            without an API call.
+        Args:
+            user_id (str): The Webex ID of the person
+            parent (object, optional): The parent object that created the Person instance. Used when the Person
+                is created within the Org instance
+            config (dict, optional): A dictionary of raw values from the `GET v1/people` items. Not normally used
+                except for automated people population from the Org init.
+        """
+        self.id = user_id
+        """The Webex ID of the Person"""
+        self._parent = parent
+        """The parent instance that created this Person"""
 
-    def __init__(self, user_id,
-                 user_email,
-                 first_name=None,
-                 last_name=None,
-                 display_name=None,
-                 licenses=None,
-                 parent=None,
-                 access_token=None,
-                 url_base=None):
-        # Default values for other attrs
+        # Attributes
+        self.email: str = ""
+        """The user's email address"""
+        self.first_name: str = ""
+        """The user's first name"""
+        self.last_name: str = ""
+        """The user's last name"""
+        self.display_name: str = ""
+        """The user's name as displayed in Webex"""
         self.wxc: bool = False
         '''True if this is a Webex Calling User'''
+        self.licenses: list = []
+        """List of licenses assigned to the person"""
+        self.location: str = ""
+        """The Webex ID of the user's assigned location"""
+        self.roles: list = []
+        """The roles assigned to this Person in Webex"""
         self.vm_config: dict = {}
         '''Dictionary of the VM config as returned by Webex API'''
-        self.recording = None
-        self.barge_in = None
+        self.recording: dict = {}
+        """Dictionary of the Recording config as returned by Webex API"""
+        self.barge_in: dict = {}
+        """Dictionary of Barge-In config as returned by Webex API"""
         self.call_forwarding: dict = {}
         '''Dictionary of the Call Forwarding config as returned by Webex API'''
-        self.caller_id = None
-        self.intercept = None
-        self.dnd = None
-        self.calling_behavior = None
+        self.caller_id: dict = {}
+        """Dictionary of Caller ID config as returned by Webex API"""
+        self.intercept: dict = {}
+        """Dictionary of Call Intercept config as returned by Webex API"""
+        self.dnd: dict = {}
+        """Dictionary of DND settings as returned by Webex API"""
+        self.calling_behavior: dict = {}
+        """Dictionary of Calling Behavior as returned by Webex API"""
         self.xsi = None
-        self._parent = parent
+        """Holds the XSI instance when created with the `start_xsi()` method."""
         self.numbers: list = []
         """The phone numbers for this person from Webex CI"""
+        self.extension: str = None
+        """The extension for this person"""
 
+        # API-related attributes
         # Set the Authorization header based on how the instance was built
-        if licenses is None:
-            licenses = []
         if parent is None:  # Instance wasn't created by another instance
             # TODO Need some code here to throw an error if there is no access_token and url_base
             self._headers = {"Authorization": "Bearer " + access_token}
             self._url_base = url_base
         else:  # Instance was created by a parent
             self._headers = parent._headers
+        self._params = {"orgId": parent.id, "callingData": "true"}
 
-        self._params = {"orgId": parent.id}
-        self.id = user_id
-        self.email = user_email
-        self.first_name = first_name
-        self.last_name = last_name
-        self.display_name = display_name
-        self.licenses = licenses
+                # If the config was passed, process it. If not, make the API call for the Person ID and then process
+        if config:
+            self.__process_api_data(config)
+        else:
+            response = self.__get_webex_data(f"v1/people/{self.id}")
+            self.__process_api_data(response)
+
+    def __process_api_data(self, data: dict):
+        """
+        Takes the API data passed as the `data` argument and parses it to the instance attributes.
+        Args:
+            data (dict): A dictionary of the raw data returned by the `v1/people` API call
+        """
+        self.email = data['emails'][0]
+        self.extension = data.get("extension", "")
+        self.location = data.get("location", "")
+        self.display_name = data.get("displayName", "")
+        self.first_name = data.get("firstName", "")
+        self.last_name = data.get("lastName", "")
+        self.roles = data.get("roles", [])
+        self.numbers = data.get("phoneNumbers", [])
+        self.licenses = data.get("licenses", [])
+        for license in self.licenses:
+            if license in self._parent.wxc_licenses:
+                self.wxc = True
 
     def __str__(self):
         return f"{self.email},{self.display_name}"
@@ -466,9 +612,16 @@ class Person:
             raise PutError(r.text)
 
     def start_xsi(self):
+        """Starts an XSI session for the Person"""
         self.xsi = XSI(self)
 
     def get_full_config(self):
+        """Fetches all of the Webex Calling settings for the Person. Due to the number of API calls, this
+            method is not performed automatically on Person init and should be called for each Person during
+            any subsequent processing. If you are only interested in one of the features, calling that method
+            directly can significantly improve the time to return data.
+        """
+        logging.info(f"Getting the full config for {self.email}")
         if self.wxc:
             self.get_call_forwarding()
             self.get_vm_config()
@@ -478,6 +631,9 @@ class Person:
             self.get_dnd()
             self.get_calling_behavior()
             self.get_barge_in()
+            return self
+        else:
+            logging.info(f"{self.email} is not a Webex Calling user.")
 
     def get_call_forwarding(self):
         logging.info("get_call_forwarding() started")
@@ -501,7 +657,9 @@ class Person:
         self.get_vm_config()
         return self.vm_config
 
-    def enable_vm_to_email(self, email: str = self.email, push=True):
+    def enable_vm_to_email(self, email: str = None, push=True):
+        if not email:
+            email = self.email
         self.vm_config['emailCopyOfMessage']['enabled'] = True
         self.vm_config['emailCopyOfMessage']['emailId'] = email
         if push:
@@ -532,14 +690,29 @@ class Person:
         return self.caller_id
 
     def get_dnd(self):
-        logging.info("get_dnd() started")
+        logging.info(f"Getting DND for {self.email}")
         self.dnd = self.__get_webex_data(f"v1/people/{self.id}/features/doNotDisturb")
         return self.dnd
 
     def get_calling_behavior(self):
-        logging.info("get_calling_behavior() started")
+        logging.info(f"Getting Calling Behavior for {self.email}")
         self.calling_behavior = self.__get_webex_data(f"v1/people/{self.id}/features/callingBehavior")
         return self.calling_behavior
+
+    def change_phone_number(self, new_number: str, new_extension: str = None):
+        """
+        Change a person's phone number and extension
+        Args:
+            new_number (str): The new phone number for the person
+            new_extension (str, optional): The new extension, if changing. Omit to leave the same value.
+        Returns:
+            Person: The instance of this person, with the new values
+        """
+        if not new_extension:
+            extension = ""
+        paylod = {"phoneNumbers": [{"type": "work", "value": new_number}],
+                  "extension": extension}
+
 
 
 class PickupGroup:

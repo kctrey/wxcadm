@@ -259,6 +259,17 @@ Classes
     `get_config(self)`
     :   Get the Hunt Group config, including agents
 
+`LicenseError(message)`
+:   Common base class for all non-exit exceptions.
+    
+    Exceptions dealing with License problems within the Org
+
+    ### Ancestors (in MRO)
+
+    * wxcadm.OrgError
+    * builtins.Exception
+    * builtins.BaseException
+
 `Location(location_id: str, name: str, address: dict = {})`
 :   Initialize a Location instance
     Args:
@@ -309,6 +320,26 @@ Classes
     :   A list of the PickupGroup instances for this Org
 
     ### Methods
+
+    `create_person(self, email: str, location: str, licenses: list = [], calling: bool = True, messaging: bool = True, meetings: bool = True, phone_number: str = '', extension: str = '', first_name: str = '', last_name: str = '', display_name: str = '')`
+    :   Create a new user in Webex. Also creates a new Person instance for the created user.
+        Args:
+            email (str): The email address of the user
+            location (str): The ID of the Location that the user is assigned to.
+            licenses (list, optional): List of license IDs to assign to the user. Use this when the license IDs
+                are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
+                `meetings` parameters.
+            calling (bool, optional): BETA - Whether to assign Calling licenses to the user. Defaults to True.
+            messaging (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
+            meetings (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
+            phone_number (str, optional): The phone number to assign to the user.
+            extension (str, optional): The extension to assign to the user
+            first_name (str, optional): The user's first name. Defaults to empty string.
+            last_name (str, optional): The users' last name. Defaults to empty string.
+            display_name (str, optional): The full name of the user as displayed in Webex. If first name and last name are passed
+                without display_name, the display name will be the concatenation of first and last name.
+        Returns:
+            Person: The Person instance of the newly-created user.
 
     `get_call_queues(self)`
     :   Get the Call Queues for an Organization. Also stores them in the Org.call_queues attribute.
@@ -362,16 +393,73 @@ Classes
     * builtins.Exception
     * builtins.BaseException
 
-`Person(user_id, user_email, first_name=None, last_name=None, display_name=None, licenses=None, parent=None, access_token=None, url_base=None)`
-:   
+    ### Descendants
+
+    * wxcadm.LicenseError
+
+`Person(user_id, parent: object = None, config: dict = {})`
+:   Initialize a new Person instance. If only the `user_id` is provided, the API calls will be made to get
+        the config from Webex. To save on API calls, the config can be provided which will set the attributes
+        without an API call.
+    Args:
+        user_id (str): The Webex ID of the person
+        parent (object, optional): The parent object that created the Person instance. Used when the Person
+            is created within the Org instance
+        config (dict, optional): A dictionary of raw values from the `GET v1/people` items. Not normally used
+            except for automated people population from the Org init.
 
     ### Instance variables
+
+    `barge_in`
+    :   Dictionary of Barge-In config as returned by Webex API
 
     `call_forwarding`
     :   Dictionary of the Call Forwarding config as returned by Webex API
 
+    `caller_id`
+    :   Dictionary of Caller ID config as returned by Webex API
+
+    `calling_behavior`
+    :   Dictionary of Calling Behavior as returned by Webex API
+
+    `display_name`
+    :   The user's name as displayed in Webex
+
+    `dnd`
+    :   Dictionary of DND settings as returned by Webex API
+
+    `email`
+    :   The user's email address
+
+    `extension`
+    :   The extension for this person
+
+    `first_name`
+    :   The user's first name
+
+    `id`
+    :   The Webex ID of the Person
+
+    `intercept`
+    :   Dictionary of Call Intercept config as returned by Webex API
+
+    `last_name`
+    :   The user's last name
+
+    `licenses`
+    :   List of licenses assigned to the person
+
+    `location`
+    :   The Webex ID of the user's assigned location
+
     `numbers`
     :   The phone numbers for this person from Webex CI
+
+    `recording`
+    :   Dictionary of the Recording config as returned by Webex API
+
+    `roles`
+    :   The roles assigned to this Person in Webex
 
     `vm_config`
     :   Dictionary of the VM config as returned by Webex API
@@ -379,12 +467,23 @@ Classes
     `wxc`
     :   True if this is a Webex Calling User
 
+    `xsi`
+    :   Holds the XSI instance when created with the `start_xsi()` method.
+
     ### Methods
+
+    `change_phone_number(self, new_number: str, new_extension: str = None)`
+    :   Change a person's phone number and extension
+        Args:
+            new_number (str): The new phone number for the person
+            new_extension (str, optional): The new extension, if changing. Omit to leave the same value.
+        Returns:
+            Person: The instance of this person, with the new values
 
     `disable_vm_to_email(self, push=True)`
     :
 
-    `enable_vm_to_email(self, email=None, push=True)`
+    `enable_vm_to_email(self, email: str = None, push=True)`
     :
 
     `get_barge_in(self)`
@@ -406,7 +505,10 @@ Classes
     :
 
     `get_full_config(self)`
-    :
+    :   Fetches all of the Webex Calling settings for the Person. Due to the number of API calls, this
+        method is not performed automatically on Person init and should be called for each Person during
+        any subsequent processing. If you are only interested in one of the features, calling that method
+        directly can significantly improve the time to return data.
 
     `get_intercept(self)`
     :
@@ -418,7 +520,7 @@ Classes
     :
 
     `start_xsi(self)`
-    :
+    :   Starts an XSI session for the Person
 
 `PickupGroup(parent, location, id, name, users=None)`
 :   
