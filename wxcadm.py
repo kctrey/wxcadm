@@ -1104,7 +1104,7 @@ class XSI:
         if get_profile:
             self.get_profile()
 
-    def new_call(self, address: str = ""):
+    def new_call(self, address: str = None):
         """
         Create a new Call instance
         Args:
@@ -1113,10 +1113,10 @@ class XSI:
             Call: The Call instance
         """
         # If we got an address, pass it to the new instance
-        if address:
+        if address is not None:
             call = Call(self, address=address)
         else:
-            cal = Call(self)
+            call = Call(self)
         self._calls.append(call)
         return call
 
@@ -1444,22 +1444,25 @@ class Call:
         """
         The status of the call
         Returns:
-            dict: {
+            dict:
+
+                {
                 'network_call_id' (str): The unique identifier for the Network side of the call
                 'personality'(str): The user's personalty (Originator or Terminator)
                 'state' (str): The state of the call
                 'remote_party' (dict): {
                     'address' (str): The address of the remote party
                     'call_type' (str): The call type
-                }
+                    }
                 'endpoint' (dict): {
                     'type' (str): The type of endpoint in use
                     'AoR' (str): The Address of Record for the endpoint
-                }
+                    }
                 'appearance' (str): The Call Appearance number
                 'start_time' (str): The UNIX timestanp of the start of the call
                 'answer_time' (str): The UNIX timestamp when the call was answered
                 'status_time' (str): The UNIX timestamp of the status response
+                }
         """
         logging.info(f"Getting call status")
         r = requests.get(self._url + f"/{self.id}",
@@ -1587,11 +1590,11 @@ class Call:
             bool: True if the dtmf was sent successfuly
         """
         params = {"playdtmf": str(dtmf)}
-        r = requests.put(self._url + f"/self.id/TransmitDTMF", headers=self._headers, params=params)
+        r = requests.put(self._url + f"/{self.id}/TransmitDTMF", headers=self._headers, params=params)
         if r.status_code in [200, 201, 204]:
             return True
         else:
-            return False
+            return False, r.text
 
 
     def hold(self):
@@ -1647,5 +1650,3 @@ class Conference:
             bool: Whether the command was successful
         """
         pass
-
-

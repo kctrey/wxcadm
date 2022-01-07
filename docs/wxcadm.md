@@ -41,22 +41,25 @@ Classes
     `status`
     :   The status of the call
         Returns:
-            dict: {
+            dict:
+        
+                {
                 'network_call_id' (str): The unique identifier for the Network side of the call
                 'personality'(str): The user's personalty (Originator or Terminator)
                 'state' (str): The state of the call
                 'remote_party' (dict): {
                     'address' (str): The address of the remote party
                     'call_type' (str): The call type
-                }
+                    }
                 'endpoint' (dict): {
                     'type' (str): The type of endpoint in use
                     'AoR' (str): The Address of Record for the endpoint
-                }
+                    }
                 'appearance' (str): The Call Appearance number
                 'start_time' (str): The UNIX timestanp of the start of the call
                 'answer_time' (str): The UNIX timestamp when the call was answered
                 'status_time' (str): The UNIX timestamp of the status response
+                }
 
     ### Methods
 
@@ -708,7 +711,7 @@ Classes
     `get_services(self)`
     :
 
-    `new_call(self, address: str = '')`
+    `new_call(self, address: str = None)`
     :   Create a new Call instance
         Args:
             address (str, optional): The address to originate a call to

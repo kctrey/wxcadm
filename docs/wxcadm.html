@@ -1132,7 +1132,7 @@ class XSI:
         if get_profile:
             self.get_profile()
 
-    def new_call(self, address: str = &#34;&#34;):
+    def new_call(self, address: str = None):
         &#34;&#34;&#34;
         Create a new Call instance
         Args:
@@ -1141,10 +1141,10 @@ class XSI:
             Call: The Call instance
         &#34;&#34;&#34;
         # If we got an address, pass it to the new instance
-        if address:
+        if address is not None:
             call = Call(self, address=address)
         else:
-            cal = Call(self)
+            call = Call(self)
         self._calls.append(call)
         return call
 
@@ -1472,22 +1472,25 @@ class Call:
         &#34;&#34;&#34;
         The status of the call
         Returns:
-            dict: {
+            dict:
+
+                {
                 &#39;network_call_id&#39; (str): The unique identifier for the Network side of the call
                 &#39;personality&#39;(str): The user&#39;s personalty (Originator or Terminator)
                 &#39;state&#39; (str): The state of the call
                 &#39;remote_party&#39; (dict): {
                     &#39;address&#39; (str): The address of the remote party
                     &#39;call_type&#39; (str): The call type
-                }
+                    }
                 &#39;endpoint&#39; (dict): {
                     &#39;type&#39; (str): The type of endpoint in use
                     &#39;AoR&#39; (str): The Address of Record for the endpoint
-                }
+                    }
                 &#39;appearance&#39; (str): The Call Appearance number
                 &#39;start_time&#39; (str): The UNIX timestanp of the start of the call
                 &#39;answer_time&#39; (str): The UNIX timestamp when the call was answered
                 &#39;status_time&#39; (str): The UNIX timestamp of the status response
+                }
         &#34;&#34;&#34;
         logging.info(f&#34;Getting call status&#34;)
         r = requests.get(self._url + f&#34;/{self.id}&#34;,
@@ -1615,11 +1618,11 @@ class Call:
             bool: True if the dtmf was sent successfuly
         &#34;&#34;&#34;
         params = {&#34;playdtmf&#34;: str(dtmf)}
-        r = requests.put(self._url + f&#34;/self.id/TransmitDTMF&#34;, headers=self._headers, params=params)
+        r = requests.put(self._url + f&#34;/{self.id}/TransmitDTMF&#34;, headers=self._headers, params=params)
         if r.status_code in [200, 201, 204]:
             return True
         else:
-            return False
+            return False, r.text
 
 
     def hold(self):
@@ -1826,22 +1829,25 @@ development focus right now is the XSI API, which is more feature-rich</p>
         &#34;&#34;&#34;
         The status of the call
         Returns:
-            dict: {
+            dict:
+
+                {
                 &#39;network_call_id&#39; (str): The unique identifier for the Network side of the call
                 &#39;personality&#39;(str): The user&#39;s personalty (Originator or Terminator)
                 &#39;state&#39; (str): The state of the call
                 &#39;remote_party&#39; (dict): {
                     &#39;address&#39; (str): The address of the remote party
                     &#39;call_type&#39; (str): The call type
-                }
+                    }
                 &#39;endpoint&#39; (dict): {
                     &#39;type&#39; (str): The type of endpoint in use
                     &#39;AoR&#39; (str): The Address of Record for the endpoint
-                }
+                    }
                 &#39;appearance&#39; (str): The Call Appearance number
                 &#39;start_time&#39; (str): The UNIX timestanp of the start of the call
                 &#39;answer_time&#39; (str): The UNIX timestamp when the call was answered
                 &#39;status_time&#39; (str): The UNIX timestamp of the status response
+                }
         &#34;&#34;&#34;
         logging.info(f&#34;Getting call status&#34;)
         r = requests.get(self._url + f&#34;/{self.id}&#34;,
@@ -1969,11 +1975,11 @@ development focus right now is the XSI API, which is more feature-rich</p>
             bool: True if the dtmf was sent successfuly
         &#34;&#34;&#34;
         params = {&#34;playdtmf&#34;: str(dtmf)}
-        r = requests.put(self._url + f&#34;/self.id/TransmitDTMF&#34;, headers=self._headers, params=params)
+        r = requests.put(self._url + f&#34;/{self.id}/TransmitDTMF&#34;, headers=self._headers, params=params)
         if r.status_code in [200, 201, 204]:
             return True
         else:
-            return False
+            return False, r.text
 
 
     def hold(self):
@@ -2009,25 +2015,25 @@ development focus right now is the XSI API, which is more feature-rich</p>
 <dd>
 <div class="desc"><p>The status of the call</p>
 <h2 id="returns">Returns</h2>
-<dl>
-<dt><code>dict</code></dt>
-<dd>{
+<p>dict:</p>
+<pre><code>{
 'network_call_id' (str): The unique identifier for the Network side of the call
 'personality'(str): The user's personalty (Originator or Terminator)
 'state' (str): The state of the call
 'remote_party' (dict): {
-'address' (str): The address of the remote party
-'call_type' (str): The call type
-}
+    'address' (str): The address of the remote party
+    'call_type' (str): The call type
+    }
 'endpoint' (dict): {
-'type' (str): The type of endpoint in use
-'AoR' (str): The Address of Record for the endpoint
-}
+    'type' (str): The type of endpoint in use
+    'AoR' (str): The Address of Record for the endpoint
+    }
 'appearance' (str): The Call Appearance number
 'start_time' (str): The UNIX timestanp of the start of the call
 'answer_time' (str): The UNIX timestamp when the call was answered
-'status_time' (str): The UNIX timestamp of the status response</dd>
-</dl></div>
+'status_time' (str): The UNIX timestamp of the status response
+}
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -2037,22 +2043,25 @@ def status(self):
     &#34;&#34;&#34;
     The status of the call
     Returns:
-        dict: {
+        dict:
+
+            {
             &#39;network_call_id&#39; (str): The unique identifier for the Network side of the call
             &#39;personality&#39;(str): The user&#39;s personalty (Originator or Terminator)
             &#39;state&#39; (str): The state of the call
             &#39;remote_party&#39; (dict): {
                 &#39;address&#39; (str): The address of the remote party
                 &#39;call_type&#39; (str): The call type
-            }
+                }
             &#39;endpoint&#39; (dict): {
                 &#39;type&#39; (str): The type of endpoint in use
                 &#39;AoR&#39; (str): The Address of Record for the endpoint
-            }
+                }
             &#39;appearance&#39; (str): The Call Appearance number
             &#39;start_time&#39; (str): The UNIX timestanp of the start of the call
             &#39;answer_time&#39; (str): The UNIX timestamp when the call was answered
             &#39;status_time&#39; (str): The UNIX timestamp of the status response
+            }
     &#34;&#34;&#34;
     logging.info(f&#34;Getting call status&#34;)
     r = requests.get(self._url + f&#34;/{self.id}&#34;,
@@ -2328,11 +2337,11 @@ between digits (i.e. "23456#,123")</dd>
         bool: True if the dtmf was sent successfuly
     &#34;&#34;&#34;
     params = {&#34;playdtmf&#34;: str(dtmf)}
-    r = requests.put(self._url + f&#34;/self.id/TransmitDTMF&#34;, headers=self._headers, params=params)
+    r = requests.put(self._url + f&#34;/{self.id}/TransmitDTMF&#34;, headers=self._headers, params=params)
     if r.status_code in [200, 201, 204]:
         return True
     else:
-        return False</code></pre>
+        return False, r.text</code></pre>
 </details>
 </dd>
 <dt id="wxcadm.Call.transfer"><code class="name flex">
@@ -5334,7 +5343,7 @@ def headers(self):
         if get_profile:
             self.get_profile()
 
-    def new_call(self, address: str = &#34;&#34;):
+    def new_call(self, address: str = None):
         &#34;&#34;&#34;
         Create a new Call instance
         Args:
@@ -5343,10 +5352,10 @@ def headers(self):
             Call: The Call instance
         &#34;&#34;&#34;
         # If we got an address, pass it to the new instance
-        if address:
+        if address is not None:
             call = Call(self, address=address)
         else:
-            cal = Call(self)
+            call = Call(self)
         self._calls.append(call)
         return call
 
@@ -5716,7 +5725,7 @@ def single_number_reach(self):
 </details>
 </dd>
 <dt id="wxcadm.XSI.new_call"><code class="name flex">
-<span>def <span class="ident">new_call</span></span>(<span>self, address: str = '')</span>
+<span>def <span class="ident">new_call</span></span>(<span>self, address: str = None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Create a new Call instance</p>
@@ -5734,7 +5743,7 @@ def single_number_reach(self):
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def new_call(self, address: str = &#34;&#34;):
+<pre><code class="python">def new_call(self, address: str = None):
     &#34;&#34;&#34;
     Create a new Call instance
     Args:
@@ -5743,10 +5752,10 @@ def single_number_reach(self):
         Call: The Call instance
     &#34;&#34;&#34;
     # If we got an address, pass it to the new instance
-    if address:
+    if address is not None:
         call = Call(self, address=address)
     else:
-        cal = Call(self)
+        call = Call(self)
     self._calls.append(call)
     return call</code></pre>
 </details>
