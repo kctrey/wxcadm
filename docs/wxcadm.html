@@ -80,12 +80,19 @@ class PutError(APIError):
 
 class Webex:
     # TODO List
-    #    Add token refresh, just for completeness
+    #    Add token refresh, just for completeness. For now, we don&#39;t mess with tokens at all.
     &#34;&#34;&#34;
     The base class for working with wxcadm.
     &#34;&#34;&#34;
-    def __init__(self, access_token: str, create_org: bool = True,
-                 get_people: bool = True, get_locations: bool = True, get_xsi: bool = False) -&gt; object:
+    def __init__(self,
+                 access_token: str,
+                 create_org: bool = True,
+                 get_people: bool = True,
+                 get_locations: bool = True,
+                 get_xsi: bool = False,
+                 get_hunt_groups: bool = False,
+                 get_call_queues: bool = False
+                 ) -&gt; object:
         &#34;&#34;&#34;
         Initialize a Webex instance to communicate with Webex and store data
         Args:
@@ -95,6 +102,8 @@ class Webex:
             get_locations (bool, optional): Whether to get all Locations and create instances for them
             get_xsi (bool, optional): Whether to get the XSI endpoints for each Org. Defaults to False, since
                 not every Org has XSI capability
+            get_hunt_groups (bool, optional): Whether to get the Hunt Groups for each Org. Defaults to False.
+            get_call_queues (bool, optional): Whether to get the Call Queues for each Org. Defaults to False.
         Returns:
             Webex: The Webex instance
         &#34;&#34;&#34;
@@ -132,7 +141,8 @@ class Webex:
                 # if the user manages multiple orgs
                 logging.debug(f&#34;Processing org: {org[&#39;displayName&#39;]}&#34;)
                 org = Org(org[&#39;displayName&#39;], org[&#39;id&#39;],
-                          people=get_people, locations=get_locations, xsi=get_xsi, parent=self)
+                          people=get_people, locations=get_locations, xsi=get_xsi, parent=self,
+                          call_queues=get_call_queues, hunt_groups=get_hunt_groups)
                 self.orgs.append(org)
             # Most users have only one org, so to make that easier for them to work with
             # we are also going to put the orgs[0] instance in the org attr
@@ -148,29 +158,39 @@ class Webex:
 
 
 class Org:
-    def __init__(self, name: str, id: str, people: bool = True,
-                 locations: bool = True, xsi: bool = False, parent: Webex = None):
+    def __init__(self,
+                 name: str,
+                 id: str,
+                 parent: Webex = None,
+                 people: bool = True,
+                 locations: bool = True,
+                 hunt_groups: bool = False,
+                 call_queues: bool = False,
+                 xsi: bool = False,
+                 ):
         &#34;&#34;&#34;
         Initialize an Org instance
 
         Args:
             name (str): The Organization name
             id (str): The Webex ID of the Organization
-            people (bool, optional): Whether to automatically get all people for the Org
-            locations (bool, optional): Whether to automatically get all of the locations for the Org
-            xsi (bool, optional): Whether to automatically get the XSI Endpoints for the Org
             parent (Webex, optional): The parent Webex instance that owns this Org.
+            people (bool, optional): Whether to get all People for the Org. Default True.
+            locations (bool, optional): Whether to get all Locations for the Org. Default True.
+            hunt_groups (bool, optional): Whether to get all Hunt Groups for the Org. Default False.
+            call_queues (bool, optional): Whether to get all Call Queues for the Org. Default False.
+            xsi (bool, optional): Whether to get the XSI Endpoints for the Org. Default False.
 
         Returns:
             Org: This instance of the Org class
         &#34;&#34;&#34;
 
         # Instance attrs
-        self.call_queues: list[CallQueue] = []
+        self.call_queues: list[CallQueue] = None
         &#34;&#34;&#34;The Call Queues for this Org&#34;&#34;&#34;
-        self.hunt_groups: list[HuntGroup] = []
+        self.hunt_groups: list[HuntGroup] = None
         &#34;&#34;&#34;The Hunt Groups for this Org&#34;&#34;&#34;
-        self.pickup_groups: list[PickupGroup] = []
+        self.pickup_groups: list[PickupGroup] = None
         &#39;A list of the PickupGroup instances for this Org&#39;
         self.locations: list[Location] = []
         &#39;A list of the Location instances for this Org&#39;
@@ -179,6 +199,7 @@ class Org:
         self.id:  str = id
         &#39;&#39;&#39;The Webex ID of the Organization&#39;&#39;&#39;
         self.xsi: dict = {}
+        &#34;&#34;&#34;The XSI details for the Organization&#34;&#34;&#34;
         self._params: dict = {&#34;orgId&#34;: self.id}
         self.licenses: list[dict] = []
         &#39;&#39;&#39;A list of all of the licenses for the Organization as a dictionary of names and IDs&#39;&#39;&#39;
@@ -192,11 +213,14 @@ class Org:
         # Get all of the people if we aren&#39;t told not to
         if people:
             self.get_people()
-        # Get all of the locations if we aren&#39;t asked not to
         if locations:
             self.get_locations()
         if xsi:
             self.get_xsi_endpoints()
+        if call_queues:
+            self.get_call_queues()
+        if hunt_groups:
+            self.get_hunt_groups()
 
     @property
     def __str__(self):
@@ -269,15 +293,15 @@ class Org:
 
     def create_person(self, email: str,
                       location: str,
-                      licenses: list = [],
+                      licenses: list = None,
                       calling: bool = True,
                       messaging: bool = True,
                       meetings: bool = True,
-                      phone_number: str = &#34;&#34;,
-                      extension: str = &#34;&#34;,
-                      first_name: str = &#34;&#34;,
-                      last_name: str = &#34;&#34;,
-                      display_name: str = &#34;&#34;,
+                      phone_number: str = None,
+                      extension: str = None,
+                      first_name: str = None,
+                      last_name: str = None,
+                      display_name: str = None,
                       ):
         &#34;&#34;&#34;
         Create a new user in Webex. Also creates a new Person instance for the created user.
@@ -326,13 +350,7 @@ class Org:
                           json=payload)
         response = r.json()
         if r.status_code == 200:
-            person = Person(response[&#39;id&#39;],
-                            response[&#39;emails&#39;][0],
-                            response[&#39;firstName&#39;],
-                            response[&#39;lastName&#39;],
-                            response[&#39;displayName&#39;],
-                            response[&#39;licenses&#39;],
-                            self)
+            person = Person(response[&#39;id&#39;], self, response)
             self.people.append(person)
             return person
         else:
@@ -391,6 +409,7 @@ class Org:
                 See the PickupGroup class for attributes.
         &#34;&#34;&#34;
         logging.info(&#34;get_pickup_groups() started&#34;)
+        self.pickup_groups = []
         # First we need to know if we already have locations, because they are needed
         # for the pickup groups call
         if not self.locations:
@@ -413,6 +432,7 @@ class Org:
             list[CallQueue]: List of CallQueue instances for the Organization
         &#34;&#34;&#34;
         logging.info(&#34;get_call_queues() started&#34;)
+        self.call_queues = []
         if not self.locations:
             self.get_locations()
         r = requests.get(_url_base + &#34;v1/telephony/config/queues&#34;, headers=self._headers, params=self._params)
@@ -436,6 +456,7 @@ class Org:
             list[HuntGroup]: List of HuntGroup instances for the Organization
         &#34;&#34;&#34;
         logging.info(&#34;get_hunt_groups() started&#34;)
+        self.hunt_groups = []
         if not self.locations:
             self.get_locations()
         r = requests.get(_url_base + &#34;v1/telephony/config/huntGroups&#34;, headers=self._headers, params=self._params)
@@ -454,7 +475,7 @@ class Org:
             list[Person]: List of Person instances
         &#34;&#34;&#34;
         logging.info(&#34;get_people() started&#34;)
-        params = {&#34;max&#34;: &#34;1000&#34;, **self._params}
+        params = {&#34;max&#34;: &#34;1000&#34;, &#34;callingData&#34;: &#34;true&#34;, **self._params}
         r = requests.get(_url_base + &#34;v1/people&#34;, headers=self._headers, params=params)
         people_list = r.json()
 
@@ -492,9 +513,22 @@ class Org:
                 wxc_people.append(person)
         return wxc_people
 
+    def get_license_name(self, license_id: str):
+        &#34;&#34;&#34;
+        Gets the name of a license by its ID
+        Args:
+            license_id (str): The License ID
+        Returns:
+            str: The License name. None if not found.
+        &#34;&#34;&#34;
+        for license in self.licenses:
+            if license[&#39;id&#39;] == license_id:
+                return license[&#39;name&#39;]
+        return None
+
 
 class Location:
-    def __init__(self, location_id: str, name: str, address: dict = {}):
+    def __init__(self, location_id: str, name: str, address: dict = None):
         &#34;&#34;&#34;
         Initialize a Location instance
         Args:
@@ -505,8 +539,11 @@ class Location:
              Location (object): The Location instance
         &#34;&#34;&#34;
         self.id: str = location_id
+        &#34;&#34;&#34;The Webex ID of the Location&#34;&#34;&#34;
         self.name: str = name
+        &#34;&#34;&#34;The name of the Location&#34;&#34;&#34;
         self.address: dict = address
+        &#34;&#34;&#34;The address of the Location&#34;&#34;&#34;
 
     @property
     def __str__(self):
@@ -514,7 +551,7 @@ class Location:
 
 
 class Person:
-    def __init__(self, user_id, parent: object = None, config: dict = {}):
+    def __init__(self, user_id, parent: object = None, config: dict = None):
         &#34;&#34;&#34;
         Initialize a new Person instance. If only the `user_id` is provided, the API calls will be made to get
             the config from Webex. To save on API calls, the config can be provided which will set the attributes
@@ -570,6 +607,10 @@ class Person:
         &#34;&#34;&#34;The phone numbers for this person from Webex CI&#34;&#34;&#34;
         self.extension: str = None
         &#34;&#34;&#34;The extension for this person&#34;&#34;&#34;
+        self._hunt_groups: list = []
+        &#34;&#34;&#34;A list of the Hunt Group instances that this user is an Agent for&#34;&#34;&#34;
+        self._call_queues: list = []
+        &#34;&#34;&#34;A list of the Call Queue instances that this user is an Agent for&#34;&#34;&#34;
 
         # API-related attributes
         # Set the Authorization header based on how the instance was built
@@ -612,31 +653,47 @@ class Person:
 
     # The following is to simplify the API call. Eventually I may open this as a public method to
     # allow arbitrary API calls
-    def __get_webex_data(self, endpoint, params=None):
+    def __get_webex_data(self, endpoint: str, params: dict = None):
         &#34;&#34;&#34;
-
-        :param endpoint: The endpoint of the API call (e.g. &#39;v1/locations&#39;)
-        :param params: A dict of param values for the API call. Will be passed as URL params
-        :return: Returns a dict of the JSON response from the API
+        Issue a GET to the Webex API
+        Args:
+            endpoint (str): The endpoint of the call (i.e. &#34;v1/people&#34; or &#34;/v1/people/{Person.id}&#34;)
+            params (dict): Any additional params to be passed in the query (i.e. {&#34;callingData&#34;:&#34;true&#34;}
+        Returns:
+            dict: The response from the Webex API
         &#34;&#34;&#34;
         if params is None:
             params = {}
         logging.info(f&#34;__get_webex_data started for using {endpoint}&#34;)
         my_params = {**params, **self._params}
         r = requests.get(_url_base + endpoint, headers=self._headers, params=my_params)
-        response = r.json()
-        return response
+        if r.status_code in [200]:
+            response = r.json()
+            return response
+        else:
+            return False
 
-    def __push_webex_data(self, endpoint, payload, params=None):
+    def __put_webex_data(self, endpoint: str, payload: dict, params: dict = None):
+        &#34;&#34;&#34;
+        Issue a PUT to the Webex API
+        Args:
+            endpoint: The endpoint of the call (i.e. &#34;v1/people&#34; or &#34;/v1/people/{Person.id}&#34;)
+            payload: A dict to send as the JSON payload of the PUT
+            params: Any additional params to be passed in the query (i.e. {&#34;callingData&#34;:&#34;true&#34;}
+        Returns:
+            bool: True if successful, False if not
+        &#34;&#34;&#34;
         if params is None:
             params = {}
-        logging.info(f&#34;__push_webex_data started using {endpoint}&#34;)
+        logging.info(f&#34;__put_webex_data started using {endpoint}&#34;)
         my_params = {**params, **self._params}
         r = requests.put(_url_base + endpoint, headers=self._headers, params=my_params, json=payload)
         response_code = r.status_code
         if response_code == 200 or response_code == 204:
+            logging.info(&#34;Push successful&#34;)
             return True
         else:
+            logging.info(&#34;Push failed&#34;)
             raise PutError(r.text)
 
     def start_xsi(self):
@@ -663,30 +720,81 @@ class Person:
         else:
             logging.info(f&#34;{self.email} is not a Webex Calling user.&#34;)
 
+    @property
+    def hunt_groups(self):
+        &#34;&#34;&#34;
+        The Hunt Groups that this user is an Agent for.
+        Returns:
+            list[HuntGroup]: A list of the `HuntGroup` instances the user belongs to
+        &#34;&#34;&#34;
+        # First, we need to make sure we know about the Org&#39;s Hunt Groups. If not, pull them.
+        if self._parent.hunt_groups is None:
+            self._parent.get_hunt_groups()
+        hunt_groups = []
+        for hg in self._parent.hunt_groups:
+            # Step through the agents for the Hunt Group to see if this person is there
+            for agent in hg.agents:
+                if agent[&#39;id&#39;] == self.id:
+                    hunt_groups.append(hg)
+        self._hunt_groups = hunt_groups
+        return self._hunt_groups
+
+    @property
+    def call_queues(self):
+        &#34;&#34;&#34;
+        The Call Queues that this user is an Agent for.
+        Returns:
+            list[CallQueue]: A list of the `CallQueue` instances the user belongs to
+        &#34;&#34;&#34;
+        # First, we need to make sure we know about the Org&#39;s Hunt Groups. If not, pull them.
+        if self._parent.call_queues is None:
+            self._parent.get_call_queues()
+        call_queues = []
+        for cq in self._parent.call_queues:
+            # Step through the agents for the Hunt Group to see if this person is there
+            for agent in cq.config[&#39;agents&#39;]:
+                if agent[&#39;id&#39;] == self.id:
+                    call_queues.append(cq)
+        self._call_queues = call_queues
+        return self._call_queues
+
     def get_call_forwarding(self):
+        &#34;&#34;&#34;Fetch the Call Forwarding config for the Person from the Webex API&#34;&#34;&#34;
         logging.info(&#34;get_call_forwarding() started&#34;)
         self.call_forwarding = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callForwarding&#34;)
         return self.call_forwarding
 
     def get_barge_in(self):
+        &#34;&#34;&#34;Fetch the Barge-In config for the Person from the Webex API&#34;&#34;&#34;
         logging.info(&#34;get_barge_in() started&#34;)
         self.barge_in = self.__get_webex_data(f&#34;v1/people/{self.id}/features/bargeIn&#34;)
         return self.barge_in
 
     def get_vm_config(self):
+        &#34;&#34;&#34;Fetch the Voicemail config for the Person from the Webex API&#34;&#34;&#34;
         logging.info(&#34;get_vm_config() started&#34;)
         self.vm_config = self.__get_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;)
         return self.vm_config
 
     def push_vm_config(self):
-        # In progress
+        &#34;&#34;&#34;Pushes the current Person.vm_config attributes back to Webex&#34;&#34;&#34;
         logging.info(f&#34;Pushing VM Config for {self.email}&#34;)
-        success = self.__push_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;, self.vm_config)
-        self.get_vm_config()
-        return self.vm_config
+        success = self.__put_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;, self.vm_config)
+        if success:
+            self.get_vm_config()
+            return self.vm_config
 
     def enable_vm_to_email(self, email: str = None, push=True):
-        if not email:
+        &#34;&#34;&#34;
+        Change the Voicemail config to enable sending a copy of VMs to specified email address. If the email param
+            is not present, it will use the Person&#39;s email address as the default.
+        Args:
+            email (optional): The email address to send VMs to.
+            push (optional): Whether to immediately push the change to Webex. Defaults to True.
+        Returns:
+            dict: The `Person.vm_config` attribute
+        &#34;&#34;&#34;
+        if email is None:
             email = self.email
         self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;enabled&#39;] = True
         self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;emailId&#39;] = email
@@ -727,6 +835,126 @@ class Person:
         self.calling_behavior = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callingBehavior&#34;)
         return self.calling_behavior
 
+    def license_details(self):
+        &#34;&#34;&#34;
+        Get the full details for all of the licenses assigned to the Person
+        Returns:
+            list[dict]: List of the license dictionaries
+        &#34;&#34;&#34;
+        license_list = []
+        for license in self.licenses:
+            for org_lic in self._parent.licenses:
+                if license == org_lic[&#39;id&#39;]:
+                    license_list.append(org_lic)
+        return license_list
+
+    def refresh_person(self):
+        &#34;&#34;&#34;
+        Pull a fresh copy of the Person details from the Webex API and update the instance. Useful when changes
+            are made outside of the script or changes have been pushed and need to get updated info.
+        Returns:
+            bool: True if successful, False if not
+        &#34;&#34;&#34;
+        response = self.__get_webex_data(f&#34;v1/people/{self.id}&#34;)
+        if response:
+            self.__process_api_data(response)
+            return True
+        else:
+            return False
+
+    def update_person(self,
+                      email = None,
+                      numbers = None,
+                      extension = None,
+                      location = None,
+                      display_name = None,
+                      first_name = None,
+                      last_name = None,
+                      roles = None,
+                      licenses = None):
+        &#34;&#34;&#34;
+        Update the Person in Webex. Pass only the arguments that you want to change. Other attributes will be populated
+            with the existing values from the instance. *Note:* This allows changes directly to the instance attrs to
+            be pushed to Webex. For example, changing Person.extension and then calling `update_person()` with no
+            arguments will still push the extension change. This allows for a lot of flexibility if a method does not
+            exist to change the desired value. It is also the method other methods use to push their changes to Webex.
+        Args:
+            email (str): The email address of the Person
+            numbers (list): The list of number dicts (&#34;type&#34; and &#34;value&#34; keys)
+            extension (str): The user&#39;s extension
+            location (str): The Location ID for the user. Note that this can&#39;t actually be changed yet.
+            display_name (str): The Display Name for the Person
+            first_name (str): The Person&#39;s first name
+            last_name (str): The Person&#39;s last name
+            roles (list): List of Role IDs
+            licenses (list): List of License IDs
+        Returns:
+            bool: True if successful. False if not.
+        &#34;&#34;&#34;
+        # Build the payload using the arguments and the instance attrs
+        payload = {}
+        if not email:
+            email = self.email
+        payload[&#39;emails&#39;] = [email]
+        if not numbers:
+            numbers = self.numbers
+        payload[&#39;phoneNumbers&#39;] = numbers
+        if not extension:
+            if self.extension:
+                extension = self.extension
+        payload[&#39;extension&#39;] = extension
+        if not location:
+            location = self.location
+        payload[&#39;location&#39;] = location
+        if not display_name:
+            display_name = self.display_name
+        payload[&#39;displayName&#39;] = display_name
+        if not first_name:
+            first_name = self.first_name
+        payload[&#39;firstName&#39;] = first_name
+        if not last_name:
+            last_name = self.last_name
+        payload[&#39;lastName&#39;] = last_name
+        if not roles:
+            roles = self.roles
+        payload[&#39;roles&#39;] = roles
+        if not licenses:
+            licenses = self.licenses
+        payload[&#39;licenses&#39;] = licenses
+
+        params = {&#34;callingData&#34;: &#34;true&#34;}
+        success = self.__put_webex_data(f&#34;v1/people/{self.id}&#34;, payload, params)
+        if success:
+            self.refresh_person()
+            return True
+        else:
+            return False
+
+    def set_calling_only(self):
+        &#34;&#34;&#34;
+        Removes the Messaging and Meetings licenses, leaving only the Calling capability. **Note that this does not
+            work, and is just here for the future.**
+        Returns:
+            Person: The instance of this person with the updated values
+        &#34;&#34;&#34;
+        # First, iterate the existing licenses and remove the ones we don&#39;t want
+        # Build a list that contains the values to match on to remove
+        remove_matches = [&#34;messaging&#34;,
+                          &#34;meeting&#34;,
+                          &#34;free&#34;]
+        new_licenses = []
+        for license in self.licenses:
+            lic_name = self._parent.get_license_name(license)
+            if lic_name:
+                if lic_name.lower() not in remove_matches:
+                    new_licenses.append((license))
+                else:
+                    continue
+            else:
+                continue
+        success = self.update_person(licenses=new_licenses)
+        return self
+
     def change_phone_number(self, new_number: str, new_extension: str = None):
         &#34;&#34;&#34;
         Change a person&#39;s phone number and extension
@@ -737,10 +965,16 @@ class Person:
             Person: The instance of this person, with the new values
         &#34;&#34;&#34;
         if not new_extension:
-            extension = &#34;&#34;
-        paylod = {&#34;phoneNumbers&#34;: [{&#34;type&#34;: &#34;work&#34;, &#34;value&#34;: new_number}],
-                  &#34;extension&#34;: extension}
+            if self.extension:
+                extension = self.extension
+            else:
+                extension = None
+        else:
+            extension = new_extension
 
+        # Call the update_person() method
+        success = self.update_person(numbers=[{&#34;type&#34;: &#34;work&#34;, &#34;value&#34;: new_number}], extension=extension)
+        return self
 
 
 class PickupGroup:
@@ -2714,7 +2948,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 </dd>
 <dt id="wxcadm.Location"><code class="flex name class">
 <span>class <span class="ident">Location</span></span>
-<span>(</span><span>location_id: str, name: str, address: dict = {})</span>
+<span>(</span><span>location_id: str, name: str, address: dict = None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Initialize a Location instance</p>
@@ -2734,7 +2968,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class Location:
-    def __init__(self, location_id: str, name: str, address: dict = {}):
+    def __init__(self, location_id: str, name: str, address: dict = None):
         &#34;&#34;&#34;
         Initialize a Location instance
         Args:
@@ -2745,17 +2979,35 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
              Location (object): The Location instance
         &#34;&#34;&#34;
         self.id: str = location_id
+        &#34;&#34;&#34;The Webex ID of the Location&#34;&#34;&#34;
         self.name: str = name
+        &#34;&#34;&#34;The name of the Location&#34;&#34;&#34;
         self.address: dict = address
+        &#34;&#34;&#34;The address of the Location&#34;&#34;&#34;
 
     @property
     def __str__(self):
         return f&#34;{self.name},{self.id}&#34;</code></pre>
 </details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="wxcadm.Location.address"><code class="name">var <span class="ident">address</span></code></dt>
+<dd>
+<div class="desc"><p>The address of the Location</p></div>
+</dd>
+<dt id="wxcadm.Location.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<div class="desc"><p>The Webex ID of the Location</p></div>
+</dd>
+<dt id="wxcadm.Location.name"><code class="name">var <span class="ident">name</span></code></dt>
+<dd>
+<div class="desc"><p>The name of the Location</p></div>
+</dd>
+</dl>
 </dd>
 <dt id="wxcadm.Org"><code class="flex name class">
 <span>class <span class="ident">Org</span></span>
-<span>(</span><span>name: str, id: str, people: bool = True, locations: bool = True, xsi: bool = False, parent: <a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a> = None)</span>
+<span>(</span><span>name: str, id: str, parent: <a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a> = None, people: bool = True, locations: bool = True, hunt_groups: bool = False, call_queues: bool = False, xsi: bool = False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Initialize an Org instance</p>
@@ -2765,14 +3017,18 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 <dd>The Organization name</dd>
 <dt><strong><code>id</code></strong> :&ensp;<code>str</code></dt>
 <dd>The Webex ID of the Organization</dd>
-<dt><strong><code>people</code></strong> :&ensp;<code>bool</code>, optional</dt>
-<dd>Whether to automatically get all people for the Org</dd>
-<dt><strong><code>locations</code></strong> :&ensp;<code>bool</code>, optional</dt>
-<dd>Whether to automatically get all of the locations for the Org</dd>
-<dt><strong><code>xsi</code></strong> :&ensp;<code>bool</code>, optional</dt>
-<dd>Whether to automatically get the XSI Endpoints for the Org</dd>
 <dt><strong><code>parent</code></strong> :&ensp;<code><a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a></code>, optional</dt>
 <dd>The parent Webex instance that owns this Org.</dd>
+<dt><strong><code>people</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to get all People for the Org. Default True.</dd>
+<dt><strong><code>locations</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to get all Locations for the Org. Default True.</dd>
+<dt><strong><code>hunt_groups</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to get all Hunt Groups for the Org. Default False.</dd>
+<dt><strong><code>call_queues</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to get all Call Queues for the Org. Default False.</dd>
+<dt><strong><code>xsi</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to get the XSI Endpoints for the Org. Default False.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -2784,29 +3040,39 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class Org:
-    def __init__(self, name: str, id: str, people: bool = True,
-                 locations: bool = True, xsi: bool = False, parent: Webex = None):
+    def __init__(self,
+                 name: str,
+                 id: str,
+                 parent: Webex = None,
+                 people: bool = True,
+                 locations: bool = True,
+                 hunt_groups: bool = False,
+                 call_queues: bool = False,
+                 xsi: bool = False,
+                 ):
         &#34;&#34;&#34;
         Initialize an Org instance
 
         Args:
             name (str): The Organization name
             id (str): The Webex ID of the Organization
-            people (bool, optional): Whether to automatically get all people for the Org
-            locations (bool, optional): Whether to automatically get all of the locations for the Org
-            xsi (bool, optional): Whether to automatically get the XSI Endpoints for the Org
             parent (Webex, optional): The parent Webex instance that owns this Org.
+            people (bool, optional): Whether to get all People for the Org. Default True.
+            locations (bool, optional): Whether to get all Locations for the Org. Default True.
+            hunt_groups (bool, optional): Whether to get all Hunt Groups for the Org. Default False.
+            call_queues (bool, optional): Whether to get all Call Queues for the Org. Default False.
+            xsi (bool, optional): Whether to get the XSI Endpoints for the Org. Default False.
 
         Returns:
             Org: This instance of the Org class
         &#34;&#34;&#34;
 
         # Instance attrs
-        self.call_queues: list[CallQueue] = []
+        self.call_queues: list[CallQueue] = None
         &#34;&#34;&#34;The Call Queues for this Org&#34;&#34;&#34;
-        self.hunt_groups: list[HuntGroup] = []
+        self.hunt_groups: list[HuntGroup] = None
         &#34;&#34;&#34;The Hunt Groups for this Org&#34;&#34;&#34;
-        self.pickup_groups: list[PickupGroup] = []
+        self.pickup_groups: list[PickupGroup] = None
         &#39;A list of the PickupGroup instances for this Org&#39;
         self.locations: list[Location] = []
         &#39;A list of the Location instances for this Org&#39;
@@ -2815,6 +3081,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
         self.id:  str = id
         &#39;&#39;&#39;The Webex ID of the Organization&#39;&#39;&#39;
         self.xsi: dict = {}
+        &#34;&#34;&#34;The XSI details for the Organization&#34;&#34;&#34;
         self._params: dict = {&#34;orgId&#34;: self.id}
         self.licenses: list[dict] = []
         &#39;&#39;&#39;A list of all of the licenses for the Organization as a dictionary of names and IDs&#39;&#39;&#39;
@@ -2828,11 +3095,14 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
         # Get all of the people if we aren&#39;t told not to
         if people:
             self.get_people()
-        # Get all of the locations if we aren&#39;t asked not to
         if locations:
             self.get_locations()
         if xsi:
             self.get_xsi_endpoints()
+        if call_queues:
+            self.get_call_queues()
+        if hunt_groups:
+            self.get_hunt_groups()
 
     @property
     def __str__(self):
@@ -2905,15 +3175,15 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 
     def create_person(self, email: str,
                       location: str,
-                      licenses: list = [],
+                      licenses: list = None,
                       calling: bool = True,
                       messaging: bool = True,
                       meetings: bool = True,
-                      phone_number: str = &#34;&#34;,
-                      extension: str = &#34;&#34;,
-                      first_name: str = &#34;&#34;,
-                      last_name: str = &#34;&#34;,
-                      display_name: str = &#34;&#34;,
+                      phone_number: str = None,
+                      extension: str = None,
+                      first_name: str = None,
+                      last_name: str = None,
+                      display_name: str = None,
                       ):
         &#34;&#34;&#34;
         Create a new user in Webex. Also creates a new Person instance for the created user.
@@ -2962,13 +3232,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
                           json=payload)
         response = r.json()
         if r.status_code == 200:
-            person = Person(response[&#39;id&#39;],
-                            response[&#39;emails&#39;][0],
-                            response[&#39;firstName&#39;],
-                            response[&#39;lastName&#39;],
-                            response[&#39;displayName&#39;],
-                            response[&#39;licenses&#39;],
-                            self)
+            person = Person(response[&#39;id&#39;], self, response)
             self.people.append(person)
             return person
         else:
@@ -3027,6 +3291,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
                 See the PickupGroup class for attributes.
         &#34;&#34;&#34;
         logging.info(&#34;get_pickup_groups() started&#34;)
+        self.pickup_groups = []
         # First we need to know if we already have locations, because they are needed
         # for the pickup groups call
         if not self.locations:
@@ -3049,6 +3314,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
             list[CallQueue]: List of CallQueue instances for the Organization
         &#34;&#34;&#34;
         logging.info(&#34;get_call_queues() started&#34;)
+        self.call_queues = []
         if not self.locations:
             self.get_locations()
         r = requests.get(_url_base + &#34;v1/telephony/config/queues&#34;, headers=self._headers, params=self._params)
@@ -3072,6 +3338,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
             list[HuntGroup]: List of HuntGroup instances for the Organization
         &#34;&#34;&#34;
         logging.info(&#34;get_hunt_groups() started&#34;)
+        self.hunt_groups = []
         if not self.locations:
             self.get_locations()
         r = requests.get(_url_base + &#34;v1/telephony/config/huntGroups&#34;, headers=self._headers, params=self._params)
@@ -3090,7 +3357,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
             list[Person]: List of Person instances
         &#34;&#34;&#34;
         logging.info(&#34;get_people() started&#34;)
-        params = {&#34;max&#34;: &#34;1000&#34;, **self._params}
+        params = {&#34;max&#34;: &#34;1000&#34;, &#34;callingData&#34;: &#34;true&#34;, **self._params}
         r = requests.get(_url_base + &#34;v1/people&#34;, headers=self._headers, params=params)
         people_list = r.json()
 
@@ -3126,7 +3393,20 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
         for person in self.people:
             if person.wxc:
                 wxc_people.append(person)
-        return wxc_people</code></pre>
+        return wxc_people
+
+    def get_license_name(self, license_id: str):
+        &#34;&#34;&#34;
+        Gets the name of a license by its ID
+        Args:
+            license_id (str): The License ID
+        Returns:
+            str: The License name. None if not found.
+        &#34;&#34;&#34;
+        for license in self.licenses:
+            if license[&#39;id&#39;] == license_id:
+                return license[&#39;name&#39;]
+        return None</code></pre>
 </details>
 <h3>Instance variables</h3>
 <dl>
@@ -3162,11 +3442,15 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 <dd>
 <div class="desc"><p>A list of the PickupGroup instances for this Org</p></div>
 </dd>
+<dt id="wxcadm.Org.xsi"><code class="name">var <span class="ident">xsi</span></code></dt>
+<dd>
+<div class="desc"><p>The XSI details for the Organization</p></div>
+</dd>
 </dl>
 <h3>Methods</h3>
 <dl>
 <dt id="wxcadm.Org.create_person"><code class="name flex">
-<span>def <span class="ident">create_person</span></span>(<span>self, email: str, location: str, licenses: list = [], calling: bool = True, messaging: bool = True, meetings: bool = True, phone_number: str = '', extension: str = '', first_name: str = '', last_name: str = '', display_name: str = '')</span>
+<span>def <span class="ident">create_person</span></span>(<span>self, email: str, location: str, licenses: list = None, calling: bool = True, messaging: bool = True, meetings: bool = True, phone_number: str = None, extension: str = None, first_name: str = None, last_name: str = None, display_name: str = None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Create a new user in Webex. Also creates a new Person instance for the created user.</p>
@@ -3209,15 +3493,15 @@ without display_name, the display name will be the concatenation of first and la
 </summary>
 <pre><code class="python">def create_person(self, email: str,
                   location: str,
-                  licenses: list = [],
+                  licenses: list = None,
                   calling: bool = True,
                   messaging: bool = True,
                   meetings: bool = True,
-                  phone_number: str = &#34;&#34;,
-                  extension: str = &#34;&#34;,
-                  first_name: str = &#34;&#34;,
-                  last_name: str = &#34;&#34;,
-                  display_name: str = &#34;&#34;,
+                  phone_number: str = None,
+                  extension: str = None,
+                  first_name: str = None,
+                  last_name: str = None,
+                  display_name: str = None,
                   ):
     &#34;&#34;&#34;
     Create a new user in Webex. Also creates a new Person instance for the created user.
@@ -3266,13 +3550,7 @@ without display_name, the display name will be the concatenation of first and la
                       json=payload)
     response = r.json()
     if r.status_code == 200:
-        person = Person(response[&#39;id&#39;],
-                        response[&#39;emails&#39;][0],
-                        response[&#39;firstName&#39;],
-                        response[&#39;lastName&#39;],
-                        response[&#39;displayName&#39;],
-                        response[&#39;licenses&#39;],
-                        self)
+        person = Person(response[&#39;id&#39;], self, response)
         self.people.append(person)
         return person
     else:
@@ -3300,6 +3578,7 @@ without display_name, the display name will be the concatenation of first and la
         list[CallQueue]: List of CallQueue instances for the Organization
     &#34;&#34;&#34;
     logging.info(&#34;get_call_queues() started&#34;)
+    self.call_queues = []
     if not self.locations:
         self.get_locations()
     r = requests.get(_url_base + &#34;v1/telephony/config/queues&#34;, headers=self._headers, params=self._params)
@@ -3338,6 +3617,7 @@ without display_name, the display name will be the concatenation of first and la
         list[HuntGroup]: List of HuntGroup instances for the Organization
     &#34;&#34;&#34;
     logging.info(&#34;get_hunt_groups() started&#34;)
+    self.hunt_groups = []
     if not self.locations:
         self.get_locations()
     r = requests.get(_url_base + &#34;v1/telephony/config/huntGroups&#34;, headers=self._headers, params=self._params)
@@ -3347,6 +3627,39 @@ without display_name, the display name will be the concatenation of first and la
                                hg.get(&#34;phoneNumber&#34;, &#34;&#34;), hg.get(&#34;extension&#34;, &#34;&#34;))
         self.hunt_groups.append(hunt_group)
     return self.hunt_groups</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Org.get_license_name"><code class="name flex">
+<span>def <span class="ident">get_license_name</span></span>(<span>self, license_id: str)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Gets the name of a license by its ID</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>license_id</code></strong> :&ensp;<code>str</code></dt>
+<dd>The License ID</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>str</code></dt>
+<dd>The License name. None if not found.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_license_name(self, license_id: str):
+    &#34;&#34;&#34;
+    Gets the name of a license by its ID
+    Args:
+        license_id (str): The License ID
+    Returns:
+        str: The License name. None if not found.
+    &#34;&#34;&#34;
+    for license in self.licenses:
+        if license[&#39;id&#39;] == license_id:
+            return license[&#39;name&#39;]
+    return None</code></pre>
 </details>
 </dd>
 <dt id="wxcadm.Org.get_locations"><code class="name flex">
@@ -3403,7 +3716,7 @@ Org.people attributes</p>
         list[Person]: List of Person instances
     &#34;&#34;&#34;
     logging.info(&#34;get_people() started&#34;)
-    params = {&#34;max&#34;: &#34;1000&#34;, **self._params}
+    params = {&#34;max&#34;: &#34;1000&#34;, &#34;callingData&#34;: &#34;true&#34;, **self._params}
     r = requests.get(_url_base + &#34;v1/people&#34;, headers=self._headers, params=params)
     people_list = r.json()
 
@@ -3485,6 +3798,7 @@ See the PickupGroup class for attributes.</dd>
             See the PickupGroup class for attributes.
     &#34;&#34;&#34;
     logging.info(&#34;get_pickup_groups() started&#34;)
+    self.pickup_groups = []
     # First we need to know if we already have locations, because they are needed
     # for the pickup groups call
     if not self.locations:
@@ -3588,7 +3902,7 @@ See the PickupGroup class for attributes.</dd>
 </dd>
 <dt id="wxcadm.Person"><code class="flex name class">
 <span>class <span class="ident">Person</span></span>
-<span>(</span><span>user_id, parent: object = None, config: dict = {})</span>
+<span>(</span><span>user_id, parent: object = None, config: dict = None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Initialize a new Person instance. If only the <code>user_id</code> is provided, the API calls will be made to get
@@ -3610,7 +3924,7 @@ except for automated people population from the Org init.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class Person:
-    def __init__(self, user_id, parent: object = None, config: dict = {}):
+    def __init__(self, user_id, parent: object = None, config: dict = None):
         &#34;&#34;&#34;
         Initialize a new Person instance. If only the `user_id` is provided, the API calls will be made to get
             the config from Webex. To save on API calls, the config can be provided which will set the attributes
@@ -3666,6 +3980,10 @@ except for automated people population from the Org init.</dd>
         &#34;&#34;&#34;The phone numbers for this person from Webex CI&#34;&#34;&#34;
         self.extension: str = None
         &#34;&#34;&#34;The extension for this person&#34;&#34;&#34;
+        self._hunt_groups: list = []
+        &#34;&#34;&#34;A list of the Hunt Group instances that this user is an Agent for&#34;&#34;&#34;
+        self._call_queues: list = []
+        &#34;&#34;&#34;A list of the Call Queue instances that this user is an Agent for&#34;&#34;&#34;
 
         # API-related attributes
         # Set the Authorization header based on how the instance was built
@@ -3708,31 +4026,47 @@ except for automated people population from the Org init.</dd>
 
     # The following is to simplify the API call. Eventually I may open this as a public method to
     # allow arbitrary API calls
-    def __get_webex_data(self, endpoint, params=None):
+    def __get_webex_data(self, endpoint: str, params: dict = None):
         &#34;&#34;&#34;
-
-        :param endpoint: The endpoint of the API call (e.g. &#39;v1/locations&#39;)
-        :param params: A dict of param values for the API call. Will be passed as URL params
-        :return: Returns a dict of the JSON response from the API
+        Issue a GET to the Webex API
+        Args:
+            endpoint (str): The endpoint of the call (i.e. &#34;v1/people&#34; or &#34;/v1/people/{Person.id}&#34;)
+            params (dict): Any additional params to be passed in the query (i.e. {&#34;callingData&#34;:&#34;true&#34;}
+        Returns:
+            dict: The response from the Webex API
         &#34;&#34;&#34;
         if params is None:
             params = {}
         logging.info(f&#34;__get_webex_data started for using {endpoint}&#34;)
         my_params = {**params, **self._params}
         r = requests.get(_url_base + endpoint, headers=self._headers, params=my_params)
-        response = r.json()
-        return response
+        if r.status_code in [200]:
+            response = r.json()
+            return response
+        else:
+            return False
 
-    def __push_webex_data(self, endpoint, payload, params=None):
+    def __put_webex_data(self, endpoint: str, payload: dict, params: dict = None):
+        &#34;&#34;&#34;
+        Issue a PUT to the Webex API
+        Args:
+            endpoint: The endpoint of the call (i.e. &#34;v1/people&#34; or &#34;/v1/people/{Person.id}&#34;)
+            payload: A dict to send as the JSON payload of the PUT
+            params: Any additional params to be passed in the query (i.e. {&#34;callingData&#34;:&#34;true&#34;}
+        Returns:
+            bool: True if successful, False if not
+        &#34;&#34;&#34;
         if params is None:
             params = {}
-        logging.info(f&#34;__push_webex_data started using {endpoint}&#34;)
+        logging.info(f&#34;__put_webex_data started using {endpoint}&#34;)
         my_params = {**params, **self._params}
         r = requests.put(_url_base + endpoint, headers=self._headers, params=my_params, json=payload)
         response_code = r.status_code
         if response_code == 200 or response_code == 204:
+            logging.info(&#34;Push successful&#34;)
             return True
         else:
+            logging.info(&#34;Push failed&#34;)
             raise PutError(r.text)
 
     def start_xsi(self):
@@ -3759,30 +4093,81 @@ except for automated people population from the Org init.</dd>
         else:
             logging.info(f&#34;{self.email} is not a Webex Calling user.&#34;)
 
+    @property
+    def hunt_groups(self):
+        &#34;&#34;&#34;
+        The Hunt Groups that this user is an Agent for.
+        Returns:
+            list[HuntGroup]: A list of the `HuntGroup` instances the user belongs to
+        &#34;&#34;&#34;
+        # First, we need to make sure we know about the Org&#39;s Hunt Groups. If not, pull them.
+        if self._parent.hunt_groups is None:
+            self._parent.get_hunt_groups()
+        hunt_groups = []
+        for hg in self._parent.hunt_groups:
+            # Step through the agents for the Hunt Group to see if this person is there
+            for agent in hg.agents:
+                if agent[&#39;id&#39;] == self.id:
+                    hunt_groups.append(hg)
+        self._hunt_groups = hunt_groups
+        return self._hunt_groups
+
+    @property
+    def call_queues(self):
+        &#34;&#34;&#34;
+        The Call Queues that this user is an Agent for.
+        Returns:
+            list[CallQueue]: A list of the `CallQueue` instances the user belongs to
+        &#34;&#34;&#34;
+        # First, we need to make sure we know about the Org&#39;s Hunt Groups. If not, pull them.
+        if self._parent.call_queues is None:
+            self._parent.get_call_queues()
+        call_queues = []
+        for cq in self._parent.call_queues:
+            # Step through the agents for the Hunt Group to see if this person is there
+            for agent in cq.config[&#39;agents&#39;]:
+                if agent[&#39;id&#39;] == self.id:
+                    call_queues.append(cq)
+        self._call_queues = call_queues
+        return self._call_queues
+
     def get_call_forwarding(self):
+        &#34;&#34;&#34;Fetch the Call Forwarding config for the Person from the Webex API&#34;&#34;&#34;
         logging.info(&#34;get_call_forwarding() started&#34;)
         self.call_forwarding = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callForwarding&#34;)
         return self.call_forwarding
 
     def get_barge_in(self):
+        &#34;&#34;&#34;Fetch the Barge-In config for the Person from the Webex API&#34;&#34;&#34;
         logging.info(&#34;get_barge_in() started&#34;)
         self.barge_in = self.__get_webex_data(f&#34;v1/people/{self.id}/features/bargeIn&#34;)
         return self.barge_in
 
     def get_vm_config(self):
+        &#34;&#34;&#34;Fetch the Voicemail config for the Person from the Webex API&#34;&#34;&#34;
         logging.info(&#34;get_vm_config() started&#34;)
         self.vm_config = self.__get_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;)
         return self.vm_config
 
     def push_vm_config(self):
-        # In progress
+        &#34;&#34;&#34;Pushes the current Person.vm_config attributes back to Webex&#34;&#34;&#34;
         logging.info(f&#34;Pushing VM Config for {self.email}&#34;)
-        success = self.__push_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;, self.vm_config)
-        self.get_vm_config()
-        return self.vm_config
+        success = self.__put_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;, self.vm_config)
+        if success:
+            self.get_vm_config()
+            return self.vm_config
 
     def enable_vm_to_email(self, email: str = None, push=True):
-        if not email:
+        &#34;&#34;&#34;
+        Change the Voicemail config to enable sending a copy of VMs to specified email address. If the email param
+            is not present, it will use the Person&#39;s email address as the default.
+        Args:
+            email (optional): The email address to send VMs to.
+            push (optional): Whether to immediately push the change to Webex. Defaults to True.
+        Returns:
+            dict: The `Person.vm_config` attribute
+        &#34;&#34;&#34;
+        if email is None:
             email = self.email
         self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;enabled&#39;] = True
         self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;emailId&#39;] = email
@@ -3823,6 +4208,126 @@ except for automated people population from the Org init.</dd>
         self.calling_behavior = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callingBehavior&#34;)
         return self.calling_behavior
 
+    def license_details(self):
+        &#34;&#34;&#34;
+        Get the full details for all of the licenses assigned to the Person
+        Returns:
+            list[dict]: List of the license dictionaries
+        &#34;&#34;&#34;
+        license_list = []
+        for license in self.licenses:
+            for org_lic in self._parent.licenses:
+                if license == org_lic[&#39;id&#39;]:
+                    license_list.append(org_lic)
+        return license_list
+
+    def refresh_person(self):
+        &#34;&#34;&#34;
+        Pull a fresh copy of the Person details from the Webex API and update the instance. Useful when changes
+            are made outside of the script or changes have been pushed and need to get updated info.
+        Returns:
+            bool: True if successful, False if not
+        &#34;&#34;&#34;
+        response = self.__get_webex_data(f&#34;v1/people/{self.id}&#34;)
+        if response:
+            self.__process_api_data(response)
+            return True
+        else:
+            return False
+
+    def update_person(self,
+                      email = None,
+                      numbers = None,
+                      extension = None,
+                      location = None,
+                      display_name = None,
+                      first_name = None,
+                      last_name = None,
+                      roles = None,
+                      licenses = None):
+        &#34;&#34;&#34;
+        Update the Person in Webex. Pass only the arguments that you want to change. Other attributes will be populated
+            with the existing values from the instance. *Note:* This allows changes directly to the instance attrs to
+            be pushed to Webex. For example, changing Person.extension and then calling `update_person()` with no
+            arguments will still push the extension change. This allows for a lot of flexibility if a method does not
+            exist to change the desired value. It is also the method other methods use to push their changes to Webex.
+        Args:
+            email (str): The email address of the Person
+            numbers (list): The list of number dicts (&#34;type&#34; and &#34;value&#34; keys)
+            extension (str): The user&#39;s extension
+            location (str): The Location ID for the user. Note that this can&#39;t actually be changed yet.
+            display_name (str): The Display Name for the Person
+            first_name (str): The Person&#39;s first name
+            last_name (str): The Person&#39;s last name
+            roles (list): List of Role IDs
+            licenses (list): List of License IDs
+        Returns:
+            bool: True if successful. False if not.
+        &#34;&#34;&#34;
+        # Build the payload using the arguments and the instance attrs
+        payload = {}
+        if not email:
+            email = self.email
+        payload[&#39;emails&#39;] = [email]
+        if not numbers:
+            numbers = self.numbers
+        payload[&#39;phoneNumbers&#39;] = numbers
+        if not extension:
+            if self.extension:
+                extension = self.extension
+        payload[&#39;extension&#39;] = extension
+        if not location:
+            location = self.location
+        payload[&#39;location&#39;] = location
+        if not display_name:
+            display_name = self.display_name
+        payload[&#39;displayName&#39;] = display_name
+        if not first_name:
+            first_name = self.first_name
+        payload[&#39;firstName&#39;] = first_name
+        if not last_name:
+            last_name = self.last_name
+        payload[&#39;lastName&#39;] = last_name
+        if not roles:
+            roles = self.roles
+        payload[&#39;roles&#39;] = roles
+        if not licenses:
+            licenses = self.licenses
+        payload[&#39;licenses&#39;] = licenses
+
+        params = {&#34;callingData&#34;: &#34;true&#34;}
+        success = self.__put_webex_data(f&#34;v1/people/{self.id}&#34;, payload, params)
+        if success:
+            self.refresh_person()
+            return True
+        else:
+            return False
+
+    def set_calling_only(self):
+        &#34;&#34;&#34;
+        Removes the Messaging and Meetings licenses, leaving only the Calling capability. **Note that this does not
+            work, and is just here for the future.**
+        Returns:
+            Person: The instance of this person with the updated values
+        &#34;&#34;&#34;
+        # First, iterate the existing licenses and remove the ones we don&#39;t want
+        # Build a list that contains the values to match on to remove
+        remove_matches = [&#34;messaging&#34;,
+                          &#34;meeting&#34;,
+                          &#34;free&#34;]
+        new_licenses = []
+        for license in self.licenses:
+            lic_name = self._parent.get_license_name(license)
+            if lic_name:
+                if lic_name.lower() not in remove_matches:
+                    new_licenses.append((license))
+                else:
+                    continue
+            else:
+                continue
+        success = self.update_person(licenses=new_licenses)
+        return self
+
     def change_phone_number(self, new_number: str, new_extension: str = None):
         &#34;&#34;&#34;
         Change a person&#39;s phone number and extension
@@ -3833,9 +4338,16 @@ except for automated people population from the Org init.</dd>
             Person: The instance of this person, with the new values
         &#34;&#34;&#34;
         if not new_extension:
-            extension = &#34;&#34;
-        paylod = {&#34;phoneNumbers&#34;: [{&#34;type&#34;: &#34;work&#34;, &#34;value&#34;: new_number}],
-                  &#34;extension&#34;: extension}</code></pre>
+            if self.extension:
+                extension = self.extension
+            else:
+                extension = None
+        else:
+            extension = new_extension
+
+        # Call the update_person() method
+        success = self.update_person(numbers=[{&#34;type&#34;: &#34;work&#34;, &#34;value&#34;: new_number}], extension=extension)
+        return self</code></pre>
 </details>
 <h3>Instance variables</h3>
 <dl>
@@ -3846,6 +4358,38 @@ except for automated people population from the Org init.</dd>
 <dt id="wxcadm.Person.call_forwarding"><code class="name">var <span class="ident">call_forwarding</span></code></dt>
 <dd>
 <div class="desc"><p>Dictionary of the Call Forwarding config as returned by Webex API</p></div>
+</dd>
+<dt id="wxcadm.Person.call_queues"><code class="name">var <span class="ident">call_queues</span></code></dt>
+<dd>
+<div class="desc"><p>The Call Queues that this user is an Agent for.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[<a title="wxcadm.CallQueue" href="#wxcadm.CallQueue">CallQueue</a>]</code></dt>
+<dd>A list of the <code><a title="wxcadm.CallQueue" href="#wxcadm.CallQueue">CallQueue</a></code> instances the user belongs to</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def call_queues(self):
+    &#34;&#34;&#34;
+    The Call Queues that this user is an Agent for.
+    Returns:
+        list[CallQueue]: A list of the `CallQueue` instances the user belongs to
+    &#34;&#34;&#34;
+    # First, we need to make sure we know about the Org&#39;s Hunt Groups. If not, pull them.
+    if self._parent.call_queues is None:
+        self._parent.get_call_queues()
+    call_queues = []
+    for cq in self._parent.call_queues:
+        # Step through the agents for the Hunt Group to see if this person is there
+        for agent in cq.config[&#39;agents&#39;]:
+            if agent[&#39;id&#39;] == self.id:
+                call_queues.append(cq)
+    self._call_queues = call_queues
+    return self._call_queues</code></pre>
+</details>
 </dd>
 <dt id="wxcadm.Person.caller_id"><code class="name">var <span class="ident">caller_id</span></code></dt>
 <dd>
@@ -3874,6 +4418,38 @@ except for automated people population from the Org init.</dd>
 <dt id="wxcadm.Person.first_name"><code class="name">var <span class="ident">first_name</span></code></dt>
 <dd>
 <div class="desc"><p>The user's first name</p></div>
+</dd>
+<dt id="wxcadm.Person.hunt_groups"><code class="name">var <span class="ident">hunt_groups</span></code></dt>
+<dd>
+<div class="desc"><p>The Hunt Groups that this user is an Agent for.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[<a title="wxcadm.HuntGroup" href="#wxcadm.HuntGroup">HuntGroup</a>]</code></dt>
+<dd>A list of the <code><a title="wxcadm.HuntGroup" href="#wxcadm.HuntGroup">HuntGroup</a></code> instances the user belongs to</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def hunt_groups(self):
+    &#34;&#34;&#34;
+    The Hunt Groups that this user is an Agent for.
+    Returns:
+        list[HuntGroup]: A list of the `HuntGroup` instances the user belongs to
+    &#34;&#34;&#34;
+    # First, we need to make sure we know about the Org&#39;s Hunt Groups. If not, pull them.
+    if self._parent.hunt_groups is None:
+        self._parent.get_hunt_groups()
+    hunt_groups = []
+    for hg in self._parent.hunt_groups:
+        # Step through the agents for the Hunt Group to see if this person is there
+        for agent in hg.agents:
+            if agent[&#39;id&#39;] == self.id:
+                hunt_groups.append(hg)
+    self._hunt_groups = hunt_groups
+    return self._hunt_groups</code></pre>
+</details>
 </dd>
 <dt id="wxcadm.Person.id"><code class="name">var <span class="ident">id</span></code></dt>
 <dd>
@@ -3953,9 +4529,16 @@ except for automated people population from the Org init.</dd>
         Person: The instance of this person, with the new values
     &#34;&#34;&#34;
     if not new_extension:
-        extension = &#34;&#34;
-    paylod = {&#34;phoneNumbers&#34;: [{&#34;type&#34;: &#34;work&#34;, &#34;value&#34;: new_number}],
-              &#34;extension&#34;: extension}</code></pre>
+        if self.extension:
+            extension = self.extension
+        else:
+            extension = None
+    else:
+        extension = new_extension
+
+    # Call the update_person() method
+    success = self.update_person(numbers=[{&#34;type&#34;: &#34;work&#34;, &#34;value&#34;: new_number}], extension=extension)
+    return self</code></pre>
 </details>
 </dd>
 <dt id="wxcadm.Person.disable_vm_to_email"><code class="name flex">
@@ -3979,13 +4562,35 @@ except for automated people population from the Org init.</dd>
 <span>def <span class="ident">enable_vm_to_email</span></span>(<span>self, email: str = None, push=True)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Change the Voicemail config to enable sending a copy of VMs to specified email address. If the email param
+is not present, it will use the Person's email address as the default.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>email</code></strong> :&ensp;<code>optional</code></dt>
+<dd>The email address to send VMs to.</dd>
+<dt><strong><code>push</code></strong> :&ensp;<code>optional</code></dt>
+<dd>Whether to immediately push the change to Webex. Defaults to True.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>dict</code></dt>
+<dd>The <code><a title="wxcadm.Person.vm_config" href="#wxcadm.Person.vm_config">Person.vm_config</a></code> attribute</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def enable_vm_to_email(self, email: str = None, push=True):
-    if not email:
+    &#34;&#34;&#34;
+    Change the Voicemail config to enable sending a copy of VMs to specified email address. If the email param
+        is not present, it will use the Person&#39;s email address as the default.
+    Args:
+        email (optional): The email address to send VMs to.
+        push (optional): Whether to immediately push the change to Webex. Defaults to True.
+    Returns:
+        dict: The `Person.vm_config` attribute
+    &#34;&#34;&#34;
+    if email is None:
         email = self.email
     self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;enabled&#39;] = True
     self.vm_config[&#39;emailCopyOfMessage&#39;][&#39;emailId&#39;] = email
@@ -3999,12 +4604,13 @@ except for automated people population from the Org init.</dd>
 <span>def <span class="ident">get_barge_in</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Fetch the Barge-In config for the Person from the Webex API</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_barge_in(self):
+    &#34;&#34;&#34;Fetch the Barge-In config for the Person from the Webex API&#34;&#34;&#34;
     logging.info(&#34;get_barge_in() started&#34;)
     self.barge_in = self.__get_webex_data(f&#34;v1/people/{self.id}/features/bargeIn&#34;)
     return self.barge_in</code></pre>
@@ -4014,12 +4620,13 @@ except for automated people population from the Org init.</dd>
 <span>def <span class="ident">get_call_forwarding</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Fetch the Call Forwarding config for the Person from the Webex API</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_call_forwarding(self):
+    &#34;&#34;&#34;Fetch the Call Forwarding config for the Person from the Webex API&#34;&#34;&#34;
     logging.info(&#34;get_call_forwarding() started&#34;)
     self.call_forwarding = self.__get_webex_data(f&#34;v1/people/{self.id}/features/callForwarding&#34;)
     return self.call_forwarding</code></pre>
@@ -4137,32 +4744,133 @@ directly can significantly improve the time to return data.</p></div>
 <span>def <span class="ident">get_vm_config</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Fetch the Voicemail config for the Person from the Webex API</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_vm_config(self):
+    &#34;&#34;&#34;Fetch the Voicemail config for the Person from the Webex API&#34;&#34;&#34;
     logging.info(&#34;get_vm_config() started&#34;)
     self.vm_config = self.__get_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;)
     return self.vm_config</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.license_details"><code class="name flex">
+<span>def <span class="ident">license_details</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the full details for all of the licenses assigned to the Person</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[dict]</code></dt>
+<dd>List of the license dictionaries</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def license_details(self):
+    &#34;&#34;&#34;
+    Get the full details for all of the licenses assigned to the Person
+    Returns:
+        list[dict]: List of the license dictionaries
+    &#34;&#34;&#34;
+    license_list = []
+    for license in self.licenses:
+        for org_lic in self._parent.licenses:
+            if license == org_lic[&#39;id&#39;]:
+                license_list.append(org_lic)
+    return license_list</code></pre>
 </details>
 </dd>
 <dt id="wxcadm.Person.push_vm_config"><code class="name flex">
 <span>def <span class="ident">push_vm_config</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Pushes the current Person.vm_config attributes back to Webex</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def push_vm_config(self):
-    # In progress
+    &#34;&#34;&#34;Pushes the current Person.vm_config attributes back to Webex&#34;&#34;&#34;
     logging.info(f&#34;Pushing VM Config for {self.email}&#34;)
-    success = self.__push_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;, self.vm_config)
-    self.get_vm_config()
-    return self.vm_config</code></pre>
+    success = self.__put_webex_data(f&#34;v1/people/{self.id}/features/voicemail&#34;, self.vm_config)
+    if success:
+        self.get_vm_config()
+        return self.vm_config</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.refresh_person"><code class="name flex">
+<span>def <span class="ident">refresh_person</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Pull a fresh copy of the Person details from the Webex API and update the instance. Useful when changes
+are made outside of the script or changes have been pushed and need to get updated info.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>True if successful, False if not</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def refresh_person(self):
+    &#34;&#34;&#34;
+    Pull a fresh copy of the Person details from the Webex API and update the instance. Useful when changes
+        are made outside of the script or changes have been pushed and need to get updated info.
+    Returns:
+        bool: True if successful, False if not
+    &#34;&#34;&#34;
+    response = self.__get_webex_data(f&#34;v1/people/{self.id}&#34;)
+    if response:
+        self.__process_api_data(response)
+        return True
+    else:
+        return False</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.set_calling_only"><code class="name flex">
+<span>def <span class="ident">set_calling_only</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Removes the Messaging and Meetings licenses, leaving only the Calling capability. <strong>Note that this does not
+work, and is just here for the future.</strong></p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="wxcadm.Person" href="#wxcadm.Person">Person</a></code></dt>
+<dd>The instance of this person with the updated values</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_calling_only(self):
+    &#34;&#34;&#34;
+    Removes the Messaging and Meetings licenses, leaving only the Calling capability. **Note that this does not
+        work, and is just here for the future.**
+    Returns:
+        Person: The instance of this person with the updated values
+    &#34;&#34;&#34;
+    # First, iterate the existing licenses and remove the ones we don&#39;t want
+    # Build a list that contains the values to match on to remove
+    remove_matches = [&#34;messaging&#34;,
+                      &#34;meeting&#34;,
+                      &#34;free&#34;]
+    new_licenses = []
+    for license in self.licenses:
+        lic_name = self._parent.get_license_name(license)
+        if lic_name:
+            if lic_name.lower() not in remove_matches:
+                new_licenses.append((license))
+            else:
+                continue
+        else:
+            continue
+    success = self.update_person(licenses=new_licenses)
+    return self</code></pre>
 </details>
 </dd>
 <dt id="wxcadm.Person.start_xsi"><code class="name flex">
@@ -4177,6 +4885,114 @@ directly can significantly improve the time to return data.</p></div>
 <pre><code class="python">def start_xsi(self):
     &#34;&#34;&#34;Starts an XSI session for the Person&#34;&#34;&#34;
     self.xsi = XSI(self)</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Person.update_person"><code class="name flex">
+<span>def <span class="ident">update_person</span></span>(<span>self, email=None, numbers=None, extension=None, location=None, display_name=None, first_name=None, last_name=None, roles=None, licenses=None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Update the Person in Webex. Pass only the arguments that you want to change. Other attributes will be populated
+with the existing values from the instance. <em>Note:</em> This allows changes directly to the instance attrs to
+be pushed to Webex. For example, changing Person.extension and then calling <code>update_person()</code> with no
+arguments will still push the extension change. This allows for a lot of flexibility if a method does not
+exist to change the desired value. It is also the method other methods use to push their changes to Webex.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>email</code></strong> :&ensp;<code>str</code></dt>
+<dd>The email address of the Person</dd>
+<dt><strong><code>numbers</code></strong> :&ensp;<code>list</code></dt>
+<dd>The list of number dicts ("type" and "value" keys)</dd>
+<dt><strong><code>extension</code></strong> :&ensp;<code>str</code></dt>
+<dd>The user's extension</dd>
+<dt><strong><code>location</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Location ID for the user. Note that this can't actually be changed yet.</dd>
+<dt><strong><code>display_name</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Display Name for the Person</dd>
+<dt><strong><code>first_name</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Person's first name</dd>
+<dt><strong><code>last_name</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Person's last name</dd>
+<dt><strong><code>roles</code></strong> :&ensp;<code>list</code></dt>
+<dd>List of Role IDs</dd>
+<dt><strong><code>licenses</code></strong> :&ensp;<code>list</code></dt>
+<dd>List of License IDs</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>True if successful. False if not.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update_person(self,
+                  email = None,
+                  numbers = None,
+                  extension = None,
+                  location = None,
+                  display_name = None,
+                  first_name = None,
+                  last_name = None,
+                  roles = None,
+                  licenses = None):
+    &#34;&#34;&#34;
+    Update the Person in Webex. Pass only the arguments that you want to change. Other attributes will be populated
+        with the existing values from the instance. *Note:* This allows changes directly to the instance attrs to
+        be pushed to Webex. For example, changing Person.extension and then calling `update_person()` with no
+        arguments will still push the extension change. This allows for a lot of flexibility if a method does not
+        exist to change the desired value. It is also the method other methods use to push their changes to Webex.
+    Args:
+        email (str): The email address of the Person
+        numbers (list): The list of number dicts (&#34;type&#34; and &#34;value&#34; keys)
+        extension (str): The user&#39;s extension
+        location (str): The Location ID for the user. Note that this can&#39;t actually be changed yet.
+        display_name (str): The Display Name for the Person
+        first_name (str): The Person&#39;s first name
+        last_name (str): The Person&#39;s last name
+        roles (list): List of Role IDs
+        licenses (list): List of License IDs
+    Returns:
+        bool: True if successful. False if not.
+    &#34;&#34;&#34;
+    # Build the payload using the arguments and the instance attrs
+    payload = {}
+    if not email:
+        email = self.email
+    payload[&#39;emails&#39;] = [email]
+    if not numbers:
+        numbers = self.numbers
+    payload[&#39;phoneNumbers&#39;] = numbers
+    if not extension:
+        if self.extension:
+            extension = self.extension
+    payload[&#39;extension&#39;] = extension
+    if not location:
+        location = self.location
+    payload[&#39;location&#39;] = location
+    if not display_name:
+        display_name = self.display_name
+    payload[&#39;displayName&#39;] = display_name
+    if not first_name:
+        first_name = self.first_name
+    payload[&#39;firstName&#39;] = first_name
+    if not last_name:
+        last_name = self.last_name
+    payload[&#39;lastName&#39;] = last_name
+    if not roles:
+        roles = self.roles
+    payload[&#39;roles&#39;] = roles
+    if not licenses:
+        licenses = self.licenses
+    payload[&#39;licenses&#39;] = licenses
+
+    params = {&#34;callingData&#34;: &#34;true&#34;}
+    success = self.__put_webex_data(f&#34;v1/people/{self.id}&#34;, payload, params)
+    if success:
+        self.refresh_person()
+        return True
+    else:
+        return False</code></pre>
 </details>
 </dd>
 </dl>
@@ -4318,7 +5134,7 @@ directly can significantly improve the time to return data.</p></div>
 </dd>
 <dt id="wxcadm.Webex"><code class="flex name class">
 <span>class <span class="ident">Webex</span></span>
-<span>(</span><span>access_token: str, create_org: bool = True, get_people: bool = True, get_locations: bool = True, get_xsi: bool = False)</span>
+<span>(</span><span>access_token: str, create_org: bool = True, get_people: bool = True, get_locations: bool = True, get_xsi: bool = False, get_hunt_groups: bool = False, get_call_queues: bool = False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>The base class for working with wxcadm.</p>
@@ -4336,6 +5152,10 @@ directly can significantly improve the time to return data.</p></div>
 <dt><strong><code>get_xsi</code></strong> :&ensp;<code>bool</code>, optional</dt>
 <dd>Whether to get the XSI endpoints for each Org. Defaults to False, since
 not every Org has XSI capability</dd>
+<dt><strong><code>get_hunt_groups</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to get the Hunt Groups for each Org. Defaults to False.</dd>
+<dt><strong><code>get_call_queues</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>Whether to get the Call Queues for each Org. Defaults to False.</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -4348,12 +5168,19 @@ not every Org has XSI capability</dd>
 </summary>
 <pre><code class="python">class Webex:
     # TODO List
-    #    Add token refresh, just for completeness
+    #    Add token refresh, just for completeness. For now, we don&#39;t mess with tokens at all.
     &#34;&#34;&#34;
     The base class for working with wxcadm.
     &#34;&#34;&#34;
-    def __init__(self, access_token: str, create_org: bool = True,
-                 get_people: bool = True, get_locations: bool = True, get_xsi: bool = False) -&gt; object:
+    def __init__(self,
+                 access_token: str,
+                 create_org: bool = True,
+                 get_people: bool = True,
+                 get_locations: bool = True,
+                 get_xsi: bool = False,
+                 get_hunt_groups: bool = False,
+                 get_call_queues: bool = False
+                 ) -&gt; object:
         &#34;&#34;&#34;
         Initialize a Webex instance to communicate with Webex and store data
         Args:
@@ -4363,6 +5190,8 @@ not every Org has XSI capability</dd>
             get_locations (bool, optional): Whether to get all Locations and create instances for them
             get_xsi (bool, optional): Whether to get the XSI endpoints for each Org. Defaults to False, since
                 not every Org has XSI capability
+            get_hunt_groups (bool, optional): Whether to get the Hunt Groups for each Org. Defaults to False.
+            get_call_queues (bool, optional): Whether to get the Call Queues for each Org. Defaults to False.
         Returns:
             Webex: The Webex instance
         &#34;&#34;&#34;
@@ -4400,7 +5229,8 @@ not every Org has XSI capability</dd>
                 # if the user manages multiple orgs
                 logging.debug(f&#34;Processing org: {org[&#39;displayName&#39;]}&#34;)
                 org = Org(org[&#39;displayName&#39;], org[&#39;id&#39;],
-                          people=get_people, locations=get_locations, xsi=get_xsi, parent=self)
+                          people=get_people, locations=get_locations, xsi=get_xsi, parent=self,
+                          call_queues=get_call_queues, hunt_groups=get_hunt_groups)
                 self.orgs.append(org)
             # Most users have only one org, so to make that easier for them to work with
             # we are also going to put the orgs[0] instance in the org attr
@@ -5039,6 +5869,11 @@ two Call IDs. Call IDs after the first two will be ignored.</dd>
 </li>
 <li>
 <h4><code><a title="wxcadm.Location" href="#wxcadm.Location">Location</a></code></h4>
+<ul class="">
+<li><code><a title="wxcadm.Location.address" href="#wxcadm.Location.address">address</a></code></li>
+<li><code><a title="wxcadm.Location.id" href="#wxcadm.Location.id">id</a></code></li>
+<li><code><a title="wxcadm.Location.name" href="#wxcadm.Location.name">name</a></code></li>
+</ul>
 </li>
 <li>
 <h4><code><a title="wxcadm.Org" href="#wxcadm.Org">Org</a></code></h4>
@@ -5047,6 +5882,7 @@ two Call IDs. Call IDs after the first two will be ignored.</dd>
 <li><code><a title="wxcadm.Org.create_person" href="#wxcadm.Org.create_person">create_person</a></code></li>
 <li><code><a title="wxcadm.Org.get_call_queues" href="#wxcadm.Org.get_call_queues">get_call_queues</a></code></li>
 <li><code><a title="wxcadm.Org.get_hunt_groups" href="#wxcadm.Org.get_hunt_groups">get_hunt_groups</a></code></li>
+<li><code><a title="wxcadm.Org.get_license_name" href="#wxcadm.Org.get_license_name">get_license_name</a></code></li>
 <li><code><a title="wxcadm.Org.get_locations" href="#wxcadm.Org.get_locations">get_locations</a></code></li>
 <li><code><a title="wxcadm.Org.get_people" href="#wxcadm.Org.get_people">get_people</a></code></li>
 <li><code><a title="wxcadm.Org.get_person_by_email" href="#wxcadm.Org.get_person_by_email">get_person_by_email</a></code></li>
@@ -5060,6 +5896,7 @@ two Call IDs. Call IDs after the first two will be ignored.</dd>
 <li><code><a title="wxcadm.Org.name" href="#wxcadm.Org.name">name</a></code></li>
 <li><code><a title="wxcadm.Org.people" href="#wxcadm.Org.people">people</a></code></li>
 <li><code><a title="wxcadm.Org.pickup_groups" href="#wxcadm.Org.pickup_groups">pickup_groups</a></code></li>
+<li><code><a title="wxcadm.Org.xsi" href="#wxcadm.Org.xsi">xsi</a></code></li>
 </ul>
 </li>
 <li>
@@ -5070,6 +5907,7 @@ two Call IDs. Call IDs after the first two will be ignored.</dd>
 <ul class="">
 <li><code><a title="wxcadm.Person.barge_in" href="#wxcadm.Person.barge_in">barge_in</a></code></li>
 <li><code><a title="wxcadm.Person.call_forwarding" href="#wxcadm.Person.call_forwarding">call_forwarding</a></code></li>
+<li><code><a title="wxcadm.Person.call_queues" href="#wxcadm.Person.call_queues">call_queues</a></code></li>
 <li><code><a title="wxcadm.Person.caller_id" href="#wxcadm.Person.caller_id">caller_id</a></code></li>
 <li><code><a title="wxcadm.Person.calling_behavior" href="#wxcadm.Person.calling_behavior">calling_behavior</a></code></li>
 <li><code><a title="wxcadm.Person.change_phone_number" href="#wxcadm.Person.change_phone_number">change_phone_number</a></code></li>
@@ -5089,16 +5927,21 @@ two Call IDs. Call IDs after the first two will be ignored.</dd>
 <li><code><a title="wxcadm.Person.get_full_config" href="#wxcadm.Person.get_full_config">get_full_config</a></code></li>
 <li><code><a title="wxcadm.Person.get_intercept" href="#wxcadm.Person.get_intercept">get_intercept</a></code></li>
 <li><code><a title="wxcadm.Person.get_vm_config" href="#wxcadm.Person.get_vm_config">get_vm_config</a></code></li>
+<li><code><a title="wxcadm.Person.hunt_groups" href="#wxcadm.Person.hunt_groups">hunt_groups</a></code></li>
 <li><code><a title="wxcadm.Person.id" href="#wxcadm.Person.id">id</a></code></li>
 <li><code><a title="wxcadm.Person.intercept" href="#wxcadm.Person.intercept">intercept</a></code></li>
 <li><code><a title="wxcadm.Person.last_name" href="#wxcadm.Person.last_name">last_name</a></code></li>
+<li><code><a title="wxcadm.Person.license_details" href="#wxcadm.Person.license_details">license_details</a></code></li>
 <li><code><a title="wxcadm.Person.licenses" href="#wxcadm.Person.licenses">licenses</a></code></li>
 <li><code><a title="wxcadm.Person.location" href="#wxcadm.Person.location">location</a></code></li>
 <li><code><a title="wxcadm.Person.numbers" href="#wxcadm.Person.numbers">numbers</a></code></li>
 <li><code><a title="wxcadm.Person.push_vm_config" href="#wxcadm.Person.push_vm_config">push_vm_config</a></code></li>
 <li><code><a title="wxcadm.Person.recording" href="#wxcadm.Person.recording">recording</a></code></li>
+<li><code><a title="wxcadm.Person.refresh_person" href="#wxcadm.Person.refresh_person">refresh_person</a></code></li>
 <li><code><a title="wxcadm.Person.roles" href="#wxcadm.Person.roles">roles</a></code></li>
+<li><code><a title="wxcadm.Person.set_calling_only" href="#wxcadm.Person.set_calling_only">set_calling_only</a></code></li>
 <li><code><a title="wxcadm.Person.start_xsi" href="#wxcadm.Person.start_xsi">start_xsi</a></code></li>
+<li><code><a title="wxcadm.Person.update_person" href="#wxcadm.Person.update_person">update_person</a></code></li>
 <li><code><a title="wxcadm.Person.vm_config" href="#wxcadm.Person.vm_config">vm_config</a></code></li>
 <li><code><a title="wxcadm.Person.wxc" href="#wxcadm.Person.wxc">wxc</a></code></li>
 <li><code><a title="wxcadm.Person.xsi" href="#wxcadm.Person.xsi">xsi</a></code></li>

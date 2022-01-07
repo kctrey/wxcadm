@@ -21,7 +21,7 @@ You can obtain a 12-hour access token by logging into https://developer.webex.co
 page.
 
 Once you have the access token, the following will initialize the API connection and pull data
-``` python
+```python
 from wxcadm import Webex
 
 access_token = "Your API Access Token"
@@ -32,14 +32,14 @@ Since most administrators only have access to a single Webex Organization, you c
 **orgs** attribute, which is a list of the organizations that can be managed.
 
 You can see all the attributes with
-``` python
+```python
 vars(webex.org)
 ```
 Note that, by default, all the People are pulled when the Org is initialized. For large organizations, this may take
 a while, but then all the People are stored as Person objects.
 
 To iterate over the list of people, simply loop through the **people** attribute of the Org. For example:
-``` python
+```python
 for person in webex.org.people:
     # Print all of the attributes of the Person
     print(vars(person))
@@ -89,12 +89,42 @@ for person in webex.org.get_wxc_people():
     # By leaving the email param out of the function call, the function will just use their Webex email
     person.enable_vm_to_email()
 ```
+### Change the user's phone number
+```python
+from wxcadm import Webex
+access_token = "Your API Access Token"
+webex = Webex(access_token)
+# Find the Person that you want to change
+person = webex.org.get_person_by_email("user@domain.com")
+# Call the `change_phone_number()` method for the user
+success = person.change_phone_number(new_number="8185551234", new_extension="1234")
+# The Person instance will reflect the change
+if success:
+    print(person.numbers)
+```
+### Get the Hunt Groups and Call Queues the user is an Agent for
+The `hunt_groups` and `call_queues` attributes hold all of the instances of each that the user is assigned to as an
+"Agent". Of course, this would be more useful if there were methods for those Classes, but that's coming soon. For now,
+it makes it easy to find all of the places the user is being used.
+```python
+from wxcadm import Webex
+access_token = "Your API Access Token"
+webex = Webex(access_token)
+# Find the person you want the details for
+person = webex.org.get_person_by_email("user@domain.com")
+for hunt_group in person.hunt_groups:
+    hg_name = hunt_group.name
+    # And anything else you want to do
+for call_queue in person.call_queues:
+    cq_name = call_queue.name
+    # etc...
+```
 ## Common XSI Use Cases
 XSI can be used to accomplish a lot of things on behalf of the user. The following are examples of some commonly-used
 methods provided by the wxcadm module. **Note that XSI must be enabled by Cisco before it is available to an
 Organization.** Contact Cisco TAC to request that XSI be enabled.
 ### Place a call
-``` python
+```python
 from wxcadm import Webex
 access_token = "Your API Access Token"
 webex = Webex(access_token, get_xsi=True)
@@ -119,7 +149,7 @@ person.start_xsi().new_call().originate("17192662837")
 call.hangup()
 ```
 ### Hold/Resume
-``` python
+```python
 from wxcadm import Webex
 access_token = "Your API Access Token"
 webex = Webex(access_token, get_xsi=True)
@@ -136,7 +166,7 @@ call.hold()
 call.resume()
 ```
 ### Blind Transfer
-``` python
+```python
 from wxcadm import Webex
 access_token = "Your API Access Token"
 webex = Webex(access_token, get_xsi=True)
@@ -153,7 +183,7 @@ call.transfer(target_user)
 ### Attended Transfer
 The attended transfer puts the current call on hold and initiates a new call (origination) to the target user. Once
 the users talk, a call to `finish_transfer()` will complete the transfer of the original call to the new user.
-``` python
+```python
 from wxcadm import Webex
 access_token = "Your API Access Token"
 webex = Webex(access_token, get_xsi=True)
@@ -173,7 +203,7 @@ call.finish_transfer()
 ### Attended Transfer with Conference
 For a lot of cases, admins want to modify the Attended Transfer so that the transferer stays on the line with both
 the caller and the transferee, then dropping out once introductions hae been made.
-``` python
+```python
 from wxcadm import Webex
 access_token = "Your API Access Token"
 webex = Webex(access_token, get_xsi=True)

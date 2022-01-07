@@ -52,12 +52,19 @@ class PutError(APIError):
 
 class Webex:
     # TODO List
-    #    Add token refresh, just for completeness
+    #    Add token refresh, just for completeness. For now, we don't mess with tokens at all.
     """
     The base class for working with wxcadm.
     """
-    def __init__(self, access_token: str, create_org: bool = True,
-                 get_people: bool = True, get_locations: bool = True, get_xsi: bool = False) -> object:
+    def __init__(self,
+                 access_token: str,
+                 create_org: bool = True,
+                 get_people: bool = True,
+                 get_locations: bool = True,
+                 get_xsi: bool = False,
+                 get_hunt_groups: bool = False,
+                 get_call_queues: bool = False
+                 ) -> object:
         """
         Initialize a Webex instance to communicate with Webex and store data
         Args:
@@ -67,6 +74,8 @@ class Webex:
             get_locations (bool, optional): Whether to get all Locations and create instances for them
             get_xsi (bool, optional): Whether to get the XSI endpoints for each Org. Defaults to False, since
                 not every Org has XSI capability
+            get_hunt_groups (bool, optional): Whether to get the Hunt Groups for each Org. Defaults to False.
+            get_call_queues (bool, optional): Whether to get the Call Queues for each Org. Defaults to False.
         Returns:
             Webex: The Webex instance
         """
@@ -104,7 +113,8 @@ class Webex:
                 # if the user manages multiple orgs
                 logging.debug(f"Processing org: {org['displayName']}")
                 org = Org(org['displayName'], org['id'],
-                          people=get_people, locations=get_locations, xsi=get_xsi, parent=self)
+                          people=get_people, locations=get_locations, xsi=get_xsi, parent=self,
+                          call_queues=get_call_queues, hunt_groups=get_hunt_groups)
                 self.orgs.append(org)
             # Most users have only one org, so to make that easier for them to work with
             # we are also going to put the orgs[0] instance in the org attr
@@ -120,29 +130,39 @@ class Webex:
 
 
 class Org:
-    def __init__(self, name: str, id: str, people: bool = True,
-                 locations: bool = True, xsi: bool = False, parent: Webex = None):
+    def __init__(self,
+                 name: str,
+                 id: str,
+                 parent: Webex = None,
+                 people: bool = True,
+                 locations: bool = True,
+                 hunt_groups: bool = False,
+                 call_queues: bool = False,
+                 xsi: bool = False,
+                 ):
         """
         Initialize an Org instance
 
         Args:
             name (str): The Organization name
             id (str): The Webex ID of the Organization
-            people (bool, optional): Whether to automatically get all people for the Org
-            locations (bool, optional): Whether to automatically get all of the locations for the Org
-            xsi (bool, optional): Whether to automatically get the XSI Endpoints for the Org
             parent (Webex, optional): The parent Webex instance that owns this Org.
+            people (bool, optional): Whether to get all People for the Org. Default True.
+            locations (bool, optional): Whether to get all Locations for the Org. Default True.
+            hunt_groups (bool, optional): Whether to get all Hunt Groups for the Org. Default False.
+            call_queues (bool, optional): Whether to get all Call Queues for the Org. Default False.
+            xsi (bool, optional): Whether to get the XSI Endpoints for the Org. Default False.
 
         Returns:
             Org: This instance of the Org class
         """
 
         # Instance attrs
-        self.call_queues: list[CallQueue] = []
+        self.call_queues: list[CallQueue] = None
         """The Call Queues for this Org"""
-        self.hunt_groups: list[HuntGroup] = []
+        self.hunt_groups: list[HuntGroup] = None
         """The Hunt Groups for this Org"""
-        self.pickup_groups: list[PickupGroup] = []
+        self.pickup_groups: list[PickupGroup] = None
         'A list of the PickupGroup instances for this Org'
         self.locations: list[Location] = []
         'A list of the Location instances for this Org'
@@ -151,6 +171,7 @@ class Org:
         self.id:  str = id
         '''The Webex ID of the Organization'''
         self.xsi: dict = {}
+        """The XSI details for the Organization"""
         self._params: dict = {"orgId": self.id}
         self.licenses: list[dict] = []
         '''A list of all of the licenses for the Organization as a dictionary of names and IDs'''
@@ -164,11 +185,14 @@ class Org:
         # Get all of the people if we aren't told not to
         if people:
             self.get_people()
-        # Get all of the locations if we aren't asked not to
         if locations:
             self.get_locations()
         if xsi:
             self.get_xsi_endpoints()
+        if call_queues:
+            self.get_call_queues()
+        if hunt_groups:
+            self.get_hunt_groups()
 
     @property
     def __str__(self):
@@ -241,15 +265,15 @@ class Org:
 
     def create_person(self, email: str,
                       location: str,
-                      licenses: list = [],
+                      licenses: list = None,
                       calling: bool = True,
                       messaging: bool = True,
                       meetings: bool = True,
-                      phone_number: str = "",
-                      extension: str = "",
-                      first_name: str = "",
-                      last_name: str = "",
-                      display_name: str = "",
+                      phone_number: str = None,
+                      extension: str = None,
+                      first_name: str = None,
+                      last_name: str = None,
+                      display_name: str = None,
                       ):
         """
         Create a new user in Webex. Also creates a new Person instance for the created user.
@@ -298,13 +322,7 @@ class Org:
                           json=payload)
         response = r.json()
         if r.status_code == 200:
-            person = Person(response['id'],
-                            response['emails'][0],
-                            response['firstName'],
-                            response['lastName'],
-                            response['displayName'],
-                            response['licenses'],
-                            self)
+            person = Person(response['id'], self, response)
             self.people.append(person)
             return person
         else:
@@ -363,6 +381,7 @@ class Org:
                 See the PickupGroup class for attributes.
         """
         logging.info("get_pickup_groups() started")
+        self.pickup_groups = []
         # First we need to know if we already have locations, because they are needed
         # for the pickup groups call
         if not self.locations:
@@ -385,6 +404,7 @@ class Org:
             list[CallQueue]: List of CallQueue instances for the Organization
         """
         logging.info("get_call_queues() started")
+        self.call_queues = []
         if not self.locations:
             self.get_locations()
         r = requests.get(_url_base + "v1/telephony/config/queues", headers=self._headers, params=self._params)
@@ -408,6 +428,7 @@ class Org:
             list[HuntGroup]: List of HuntGroup instances for the Organization
         """
         logging.info("get_hunt_groups() started")
+        self.hunt_groups = []
         if not self.locations:
             self.get_locations()
         r = requests.get(_url_base + "v1/telephony/config/huntGroups", headers=self._headers, params=self._params)
@@ -426,7 +447,7 @@ class Org:
             list[Person]: List of Person instances
         """
         logging.info("get_people() started")
-        params = {"max": "1000", **self._params}
+        params = {"max": "1000", "callingData": "true", **self._params}
         r = requests.get(_url_base + "v1/people", headers=self._headers, params=params)
         people_list = r.json()
 
@@ -464,9 +485,22 @@ class Org:
                 wxc_people.append(person)
         return wxc_people
 
+    def get_license_name(self, license_id: str):
+        """
+        Gets the name of a license by its ID
+        Args:
+            license_id (str): The License ID
+        Returns:
+            str: The License name. None if not found.
+        """
+        for license in self.licenses:
+            if license['id'] == license_id:
+                return license['name']
+        return None
+
 
 class Location:
-    def __init__(self, location_id: str, name: str, address: dict = {}):
+    def __init__(self, location_id: str, name: str, address: dict = None):
         """
         Initialize a Location instance
         Args:
@@ -477,8 +511,11 @@ class Location:
              Location (object): The Location instance
         """
         self.id: str = location_id
+        """The Webex ID of the Location"""
         self.name: str = name
+        """The name of the Location"""
         self.address: dict = address
+        """The address of the Location"""
 
     @property
     def __str__(self):
@@ -486,7 +523,7 @@ class Location:
 
 
 class Person:
-    def __init__(self, user_id, parent: object = None, config: dict = {}):
+    def __init__(self, user_id, parent: object = None, config: dict = None):
         """
         Initialize a new Person instance. If only the `user_id` is provided, the API calls will be made to get
             the config from Webex. To save on API calls, the config can be provided which will set the attributes
@@ -542,6 +579,10 @@ class Person:
         """The phone numbers for this person from Webex CI"""
         self.extension: str = None
         """The extension for this person"""
+        self._hunt_groups: list = []
+        """A list of the Hunt Group instances that this user is an Agent for"""
+        self._call_queues: list = []
+        """A list of the Call Queue instances that this user is an Agent for"""
 
         # API-related attributes
         # Set the Authorization header based on how the instance was built
@@ -584,31 +625,47 @@ class Person:
 
     # The following is to simplify the API call. Eventually I may open this as a public method to
     # allow arbitrary API calls
-    def __get_webex_data(self, endpoint, params=None):
+    def __get_webex_data(self, endpoint: str, params: dict = None):
         """
-
-        :param endpoint: The endpoint of the API call (e.g. 'v1/locations')
-        :param params: A dict of param values for the API call. Will be passed as URL params
-        :return: Returns a dict of the JSON response from the API
+        Issue a GET to the Webex API
+        Args:
+            endpoint (str): The endpoint of the call (i.e. "v1/people" or "/v1/people/{Person.id}")
+            params (dict): Any additional params to be passed in the query (i.e. {"callingData":"true"}
+        Returns:
+            dict: The response from the Webex API
         """
         if params is None:
             params = {}
         logging.info(f"__get_webex_data started for using {endpoint}")
         my_params = {**params, **self._params}
         r = requests.get(_url_base + endpoint, headers=self._headers, params=my_params)
-        response = r.json()
-        return response
+        if r.status_code in [200]:
+            response = r.json()
+            return response
+        else:
+            return False
 
-    def __push_webex_data(self, endpoint, payload, params=None):
+    def __put_webex_data(self, endpoint: str, payload: dict, params: dict = None):
+        """
+        Issue a PUT to the Webex API
+        Args:
+            endpoint: The endpoint of the call (i.e. "v1/people" or "/v1/people/{Person.id}")
+            payload: A dict to send as the JSON payload of the PUT
+            params: Any additional params to be passed in the query (i.e. {"callingData":"true"}
+        Returns:
+            bool: True if successful, False if not
+        """
         if params is None:
             params = {}
-        logging.info(f"__push_webex_data started using {endpoint}")
+        logging.info(f"__put_webex_data started using {endpoint}")
         my_params = {**params, **self._params}
         r = requests.put(_url_base + endpoint, headers=self._headers, params=my_params, json=payload)
         response_code = r.status_code
         if response_code == 200 or response_code == 204:
+            logging.info("Push successful")
             return True
         else:
+            logging.info("Push failed")
             raise PutError(r.text)
 
     def start_xsi(self):
@@ -635,30 +692,81 @@ class Person:
         else:
             logging.info(f"{self.email} is not a Webex Calling user.")
 
+    @property
+    def hunt_groups(self):
+        """
+        The Hunt Groups that this user is an Agent for.
+        Returns:
+            list[HuntGroup]: A list of the `HuntGroup` instances the user belongs to
+        """
+        # First, we need to make sure we know about the Org's Hunt Groups. If not, pull them.
+        if self._parent.hunt_groups is None:
+            self._parent.get_hunt_groups()
+        hunt_groups = []
+        for hg in self._parent.hunt_groups:
+            # Step through the agents for the Hunt Group to see if this person is there
+            for agent in hg.agents:
+                if agent['id'] == self.id:
+                    hunt_groups.append(hg)
+        self._hunt_groups = hunt_groups
+        return self._hunt_groups
+
+    @property
+    def call_queues(self):
+        """
+        The Call Queues that this user is an Agent for.
+        Returns:
+            list[CallQueue]: A list of the `CallQueue` instances the user belongs to
+        """
+        # First, we need to make sure we know about the Org's Hunt Groups. If not, pull them.
+        if self._parent.call_queues is None:
+            self._parent.get_call_queues()
+        call_queues = []
+        for cq in self._parent.call_queues:
+            # Step through the agents for the Hunt Group to see if this person is there
+            for agent in cq.config['agents']:
+                if agent['id'] == self.id:
+                    call_queues.append(cq)
+        self._call_queues = call_queues
+        return self._call_queues
+
     def get_call_forwarding(self):
+        """Fetch the Call Forwarding config for the Person from the Webex API"""
         logging.info("get_call_forwarding() started")
         self.call_forwarding = self.__get_webex_data(f"v1/people/{self.id}/features/callForwarding")
         return self.call_forwarding
 
     def get_barge_in(self):
+        """Fetch the Barge-In config for the Person from the Webex API"""
         logging.info("get_barge_in() started")
         self.barge_in = self.__get_webex_data(f"v1/people/{self.id}/features/bargeIn")
         return self.barge_in
 
     def get_vm_config(self):
+        """Fetch the Voicemail config for the Person from the Webex API"""
         logging.info("get_vm_config() started")
         self.vm_config = self.__get_webex_data(f"v1/people/{self.id}/features/voicemail")
         return self.vm_config
 
     def push_vm_config(self):
-        # In progress
+        """Pushes the current Person.vm_config attributes back to Webex"""
         logging.info(f"Pushing VM Config for {self.email}")
-        success = self.__push_webex_data(f"v1/people/{self.id}/features/voicemail", self.vm_config)
-        self.get_vm_config()
-        return self.vm_config
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/voicemail", self.vm_config)
+        if success:
+            self.get_vm_config()
+            return self.vm_config
 
     def enable_vm_to_email(self, email: str = None, push=True):
-        if not email:
+        """
+        Change the Voicemail config to enable sending a copy of VMs to specified email address. If the email param
+            is not present, it will use the Person's email address as the default.
+        Args:
+            email (optional): The email address to send VMs to.
+            push (optional): Whether to immediately push the change to Webex. Defaults to True.
+        Returns:
+            dict: The `Person.vm_config` attribute
+        """
+        if email is None:
             email = self.email
         self.vm_config['emailCopyOfMessage']['enabled'] = True
         self.vm_config['emailCopyOfMessage']['emailId'] = email
@@ -699,6 +807,126 @@ class Person:
         self.calling_behavior = self.__get_webex_data(f"v1/people/{self.id}/features/callingBehavior")
         return self.calling_behavior
 
+    def license_details(self):
+        """
+        Get the full details for all of the licenses assigned to the Person
+        Returns:
+            list[dict]: List of the license dictionaries
+        """
+        license_list = []
+        for license in self.licenses:
+            for org_lic in self._parent.licenses:
+                if license == org_lic['id']:
+                    license_list.append(org_lic)
+        return license_list
+
+    def refresh_person(self):
+        """
+        Pull a fresh copy of the Person details from the Webex API and update the instance. Useful when changes
+            are made outside of the script or changes have been pushed and need to get updated info.
+        Returns:
+            bool: True if successful, False if not
+        """
+        response = self.__get_webex_data(f"v1/people/{self.id}")
+        if response:
+            self.__process_api_data(response)
+            return True
+        else:
+            return False
+
+    def update_person(self,
+                      email = None,
+                      numbers = None,
+                      extension = None,
+                      location = None,
+                      display_name = None,
+                      first_name = None,
+                      last_name = None,
+                      roles = None,
+                      licenses = None):
+        """
+        Update the Person in Webex. Pass only the arguments that you want to change. Other attributes will be populated
+            with the existing values from the instance. *Note:* This allows changes directly to the instance attrs to
+            be pushed to Webex. For example, changing Person.extension and then calling `update_person()` with no
+            arguments will still push the extension change. This allows for a lot of flexibility if a method does not
+            exist to change the desired value. It is also the method other methods use to push their changes to Webex.
+        Args:
+            email (str): The email address of the Person
+            numbers (list): The list of number dicts ("type" and "value" keys)
+            extension (str): The user's extension
+            location (str): The Location ID for the user. Note that this can't actually be changed yet.
+            display_name (str): The Display Name for the Person
+            first_name (str): The Person's first name
+            last_name (str): The Person's last name
+            roles (list): List of Role IDs
+            licenses (list): List of License IDs
+        Returns:
+            bool: True if successful. False if not.
+        """
+        # Build the payload using the arguments and the instance attrs
+        payload = {}
+        if not email:
+            email = self.email
+        payload['emails'] = [email]
+        if not numbers:
+            numbers = self.numbers
+        payload['phoneNumbers'] = numbers
+        if not extension:
+            if self.extension:
+                extension = self.extension
+        payload['extension'] = extension
+        if not location:
+            location = self.location
+        payload['location'] = location
+        if not display_name:
+            display_name = self.display_name
+        payload['displayName'] = display_name
+        if not first_name:
+            first_name = self.first_name
+        payload['firstName'] = first_name
+        if not last_name:
+            last_name = self.last_name
+        payload['lastName'] = last_name
+        if not roles:
+            roles = self.roles
+        payload['roles'] = roles
+        if not licenses:
+            licenses = self.licenses
+        payload['licenses'] = licenses
+
+        params = {"callingData": "true"}
+        success = self.__put_webex_data(f"v1/people/{self.id}", payload, params)
+        if success:
+            self.refresh_person()
+            return True
+        else:
+            return False
+
+    def set_calling_only(self):
+        """
+        Removes the Messaging and Meetings licenses, leaving only the Calling capability. **Note that this does not
+            work, and is just here for the future.**
+        Returns:
+            Person: The instance of this person with the updated values
+        """
+        # First, iterate the existing licenses and remove the ones we don't want
+        # Build a list that contains the values to match on to remove
+        remove_matches = ["messaging",
+                          "meeting",
+                          "free"]
+        new_licenses = []
+        for license in self.licenses:
+            lic_name = self._parent.get_license_name(license)
+            if lic_name:
+                if lic_name.lower() not in remove_matches:
+                    new_licenses.append((license))
+                else:
+                    continue
+            else:
+                continue
+        success = self.update_person(licenses=new_licenses)
+        return self
+
     def change_phone_number(self, new_number: str, new_extension: str = None):
         """
         Change a person's phone number and extension
@@ -709,10 +937,16 @@ class Person:
             Person: The instance of this person, with the new values
         """
         if not new_extension:
-            extension = ""
-        paylod = {"phoneNumbers": [{"type": "work", "value": new_number}],
-                  "extension": extension}
+            if self.extension:
+                extension = self.extension
+            else:
+                extension = None
+        else:
+            extension = new_extension
 
+        # Call the update_person() method
+        success = self.update_person(numbers=[{"type": "work", "value": new_number}], extension=extension)
+        return self
 
 
 class PickupGroup:

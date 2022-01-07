@@ -270,7 +270,7 @@ Classes
     * builtins.Exception
     * builtins.BaseException
 
-`Location(location_id: str, name: str, address: dict = {})`
+`Location(location_id: str, name: str, address: dict = None)`
 :   Initialize a Location instance
     Args:
         location_id (str): The Webex ID of the Location
@@ -279,16 +279,29 @@ Classes
     Returns:
          Location (object): The Location instance
 
-`Org(name: str, id: str, people: bool = True, locations: bool = True, xsi: bool = False, parent: wxcadm.Webex = None)`
+    ### Instance variables
+
+    `address`
+    :   The address of the Location
+
+    `id`
+    :   The Webex ID of the Location
+
+    `name`
+    :   The name of the Location
+
+`Org(name: str, id: str, parent: wxcadm.Webex = None, people: bool = True, locations: bool = True, hunt_groups: bool = False, call_queues: bool = False, xsi: bool = False)`
 :   Initialize an Org instance
     
     Args:
         name (str): The Organization name
         id (str): The Webex ID of the Organization
-        people (bool, optional): Whether to automatically get all people for the Org
-        locations (bool, optional): Whether to automatically get all of the locations for the Org
-        xsi (bool, optional): Whether to automatically get the XSI Endpoints for the Org
         parent (Webex, optional): The parent Webex instance that owns this Org.
+        people (bool, optional): Whether to get all People for the Org. Default True.
+        locations (bool, optional): Whether to get all Locations for the Org. Default True.
+        hunt_groups (bool, optional): Whether to get all Hunt Groups for the Org. Default False.
+        call_queues (bool, optional): Whether to get all Call Queues for the Org. Default False.
+        xsi (bool, optional): Whether to get the XSI Endpoints for the Org. Default False.
     
     Returns:
         Org: This instance of the Org class
@@ -319,9 +332,12 @@ Classes
     `pickup_groups`
     :   A list of the PickupGroup instances for this Org
 
+    `xsi`
+    :   The XSI details for the Organization
+
     ### Methods
 
-    `create_person(self, email: str, location: str, licenses: list = [], calling: bool = True, messaging: bool = True, meetings: bool = True, phone_number: str = '', extension: str = '', first_name: str = '', last_name: str = '', display_name: str = '')`
+    `create_person(self, email: str, location: str, licenses: list = None, calling: bool = True, messaging: bool = True, meetings: bool = True, phone_number: str = None, extension: str = None, first_name: str = None, last_name: str = None, display_name: str = None)`
     :   Create a new user in Webex. Also creates a new Person instance for the created user.
         Args:
             email (str): The email address of the user
@@ -350,6 +366,13 @@ Classes
     :   Get the Hunt Groups for an Organization. Also stores them in the Org.hunt_groups attribute.
         Returns:
             list[HuntGroup]: List of HuntGroup instances for the Organization
+
+    `get_license_name(self, license_id: str)`
+    :   Gets the name of a license by its ID
+        Args:
+            license_id (str): The License ID
+        Returns:
+            str: The License name. None if not found.
 
     `get_locations(self)`
     :   Get the Locations for the Organization. Also stores them in the Org.locations attribute.
@@ -397,7 +420,7 @@ Classes
 
     * wxcadm.LicenseError
 
-`Person(user_id, parent: object = None, config: dict = {})`
+`Person(user_id, parent: object = None, config: dict = None)`
 :   Initialize a new Person instance. If only the `user_id` is provided, the API calls will be made to get
         the config from Webex. To save on API calls, the config can be provided which will set the attributes
         without an API call.
@@ -415,6 +438,11 @@ Classes
 
     `call_forwarding`
     :   Dictionary of the Call Forwarding config as returned by Webex API
+
+    `call_queues`
+    :   The Call Queues that this user is an Agent for.
+        Returns:
+            list[CallQueue]: A list of the `CallQueue` instances the user belongs to
 
     `caller_id`
     :   Dictionary of Caller ID config as returned by Webex API
@@ -436,6 +464,11 @@ Classes
 
     `first_name`
     :   The user's first name
+
+    `hunt_groups`
+    :   The Hunt Groups that this user is an Agent for.
+        Returns:
+            list[HuntGroup]: A list of the `HuntGroup` instances the user belongs to
 
     `id`
     :   The Webex ID of the Person
@@ -484,13 +517,19 @@ Classes
     :
 
     `enable_vm_to_email(self, email: str = None, push=True)`
-    :
+    :   Change the Voicemail config to enable sending a copy of VMs to specified email address. If the email param
+            is not present, it will use the Person's email address as the default.
+        Args:
+            email (optional): The email address to send VMs to.
+            push (optional): Whether to immediately push the change to Webex. Defaults to True.
+        Returns:
+            dict: The `Person.vm_config` attribute
 
     `get_barge_in(self)`
-    :
+    :   Fetch the Barge-In config for the Person from the Webex API
 
     `get_call_forwarding(self)`
-    :
+    :   Fetch the Call Forwarding config for the Person from the Webex API
 
     `get_call_recording(self)`
     :
@@ -514,13 +553,49 @@ Classes
     :
 
     `get_vm_config(self)`
-    :
+    :   Fetch the Voicemail config for the Person from the Webex API
+
+    `license_details(self)`
+    :   Get the full details for all of the licenses assigned to the Person
+        Returns:
+            list[dict]: List of the license dictionaries
 
     `push_vm_config(self)`
-    :
+    :   Pushes the current Person.vm_config attributes back to Webex
+
+    `refresh_person(self)`
+    :   Pull a fresh copy of the Person details from the Webex API and update the instance. Useful when changes
+            are made outside of the script or changes have been pushed and need to get updated info.
+        Returns:
+            bool: True if successful, False if not
+
+    `set_calling_only(self)`
+    :   Removes the Messaging and Meetings licenses, leaving only the Calling capability. **Note that this does not
+            work, and is just here for the future.**
+        Returns:
+            Person: The instance of this person with the updated values
 
     `start_xsi(self)`
     :   Starts an XSI session for the Person
+
+    `update_person(self, email=None, numbers=None, extension=None, location=None, display_name=None, first_name=None, last_name=None, roles=None, licenses=None)`
+    :   Update the Person in Webex. Pass only the arguments that you want to change. Other attributes will be populated
+            with the existing values from the instance. *Note:* This allows changes directly to the instance attrs to
+            be pushed to Webex. For example, changing Person.extension and then calling `update_person()` with no
+            arguments will still push the extension change. This allows for a lot of flexibility if a method does not
+            exist to change the desired value. It is also the method other methods use to push their changes to Webex.
+        Args:
+            email (str): The email address of the Person
+            numbers (list): The list of number dicts ("type" and "value" keys)
+            extension (str): The user's extension
+            location (str): The Location ID for the user. Note that this can't actually be changed yet.
+            display_name (str): The Display Name for the Person
+            first_name (str): The Person's first name
+            last_name (str): The Person's last name
+            roles (list): List of Role IDs
+            licenses (list): List of License IDs
+        Returns:
+            bool: True if successful. False if not.
 
 `PickupGroup(parent, location, id, name, users=None)`
 :   
@@ -568,7 +643,7 @@ Classes
     * builtins.Exception
     * builtins.BaseException
 
-`Webex(access_token: str, create_org: bool = True, get_people: bool = True, get_locations: bool = True, get_xsi: bool = False)`
+`Webex(access_token: str, create_org: bool = True, get_people: bool = True, get_locations: bool = True, get_xsi: bool = False, get_hunt_groups: bool = False, get_call_queues: bool = False)`
 :   The base class for working with wxcadm.
     
     Initialize a Webex instance to communicate with Webex and store data
@@ -579,6 +654,8 @@ Classes
         get_locations (bool, optional): Whether to get all Locations and create instances for them
         get_xsi (bool, optional): Whether to get the XSI endpoints for each Org. Defaults to False, since
             not every Org has XSI capability
+        get_hunt_groups (bool, optional): Whether to get the Hunt Groups for each Org. Defaults to False.
+        get_call_queues (bool, optional): Whether to get the Call Queues for each Org. Defaults to False.
     Returns:
         Webex: The Webex instance
 
