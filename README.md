@@ -144,6 +144,11 @@ for call_queue in person.call_queues:
     cq_name = call_queue.name
     # etc...
 ```
+## Workspaces
+The Webex Calling functionality that is exposed to Workspaces is limited. At this time, the Workspaces and their 
+associated Workspace Locations can be obtained with the `get_workspaces()` method of the Org instance. This will
+populate the `Org.workspaces` and `Org.workspace_locations` attributes, which contain the information. As the API is
+enhanced to provide capabilities, new methods will be added to **wxcadm**.
 ## Common XSI Use Cases
 XSI can be used to accomplish a lot of things on behalf of the user. The following are examples of some commonly-used
 methods provided by the wxcadm module. **Note that XSI must be enabled by Cisco before it is available to an
