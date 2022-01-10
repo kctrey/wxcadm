@@ -156,8 +156,22 @@ class Webex:
         &#34;&#34;&#34;The &#34;universal&#34; HTTP headers with the Authorization header present&#34;&#34;&#34;
         return self._headers
 
+    def get_org_by_name(self, name: str):
+        &#34;&#34;&#34;
+        Get the Org instance that matches all or part of the name argument.
+        Args:
+            name (str): Text to match against the Org name
+        Returns:
+            Org: The Org instance of the matching Org
+        Raises:
+            KeyError: Raised when no match is made
+        &#34;&#34;&#34;
+        for org in self.orgs:
+            if name in org.name:
+                return org
+        raise KeyError(&#34;Org not found&#34;)
 
-class Org:
+class Org(Webex):
     def __init__(self,
                  name: str,
                  id: str,
@@ -205,6 +219,10 @@ class Org:
         &#39;&#39;&#39;A list of all of the licenses for the Organization as a dictionary of names and IDs&#39;&#39;&#39;
         self.people: list[Person] = []
         &#39;&#39;&#39;A list of all of the Person stances for the Organization&#39;&#39;&#39;
+        self.workspaces: list[Workspace] = None
+        &#34;&#34;&#34;A list of the Workspace instances for this Org.&#34;&#34;&#34;
+        self.workspace_locations: list[WorkspaceLocation] = None
+        &#34;&#34;&#34;A list of the Workspace Location instanced for this Org.&#34;&#34;&#34;
 
         # Set the Authorization header based on how the instance was built
         self._headers = parent.headers
@@ -400,6 +418,32 @@ class Org:
             self.locations.append(this_location)
 
         return self.locations
+
+    def get_workspaces(self):
+        &#34;&#34;&#34;
+        Get the Workspaces and Workspace Locations for the Organizations.
+            Also stores them in the Org.workspaces and Org.workspace_locations attributes.
+
+        Returns:
+            list[Workspace]: List of Workspace instance objects. See the Workspace class for attributes.
+        &#34;&#34;&#34;
+        logging.info(&#34;Getting Workspaces&#34;)
+        self.workspaces = []
+        r = requests.get(_url_base + &#34;v1/workspaces&#34;, headers=self._headers, params=self._params)
+        response = r.json()
+        for workspace in response[&#39;items&#39;]:
+            this_workspace = Workspace(self, workspace[&#39;id&#39;], workspace)
+            self.workspaces.append(this_workspace)
+
+        logging.info(&#34;Getting Workspace Locations&#34;)
+        self.workspace_locations = []
+        r = requests.get(_url_base + &#34;v1/workspaceLocations&#34;, headers=self._headers, params=self._params)
+        response = r.json()
+        for location in response[&#39;items&#39;]:
+            this_location = WorkspaceLocation(self, location[&#39;id&#39;], location)
+            self.workspace_locations.append(this_location)
+
+        return self.workspaces
 
     def get_pickup_groups(self):
         &#34;&#34;&#34;
@@ -622,7 +666,7 @@ class Person:
             self._headers = parent._headers
         self._params = {&#34;orgId&#34;: parent.id, &#34;callingData&#34;: &#34;true&#34;}
 
-                # If the config was passed, process it. If not, make the API call for the Person ID and then process
+        # If the config was passed, process it. If not, make the API call for the Person ID and then process
         if config:
             self.__process_api_data(config)
         else:
@@ -1677,7 +1721,168 @@ class Conference:
         Returns:
             bool: Whether the command was successful
         &#34;&#34;&#34;
-        pass</code></pre>
+        pass
+
+class Workspace:
+    def __init__(self, parent: Org, id: str, config: dict = None):
+        &#34;&#34;&#34;Initialize a Workspace instance. If only the `id` is provided, the configuration will be fetched from
+            the Webex API. To save API calls, the config dict can be passed using the `config` argument
+        Args:
+            parent (Org): The Organization to which this workspace belongs
+            id (str): The Webex ID of the Workspace
+            config (dict): The configuration of the Workspace as returned by the Webex API
+        &#34;&#34;&#34;
+        self.id: str = id
+        &#34;&#34;&#34;The Webex ID of the Workspace&#34;&#34;&#34;
+        self._parent: Org = parent
+        # Attributes inherited from the Org parent
+        self._headers = self._parent._headers
+        self._params = self._parent._params
+        # Instance attributes
+        self.location: str = None
+        &#34;&#34;&#34;The Webex ID of the Workspace Location (note this is a Workspace Location, not a Calling Location.&#34;&#34;&#34;
+        self.floor: str = None
+        &#34;&#34;&#34;The Webex ID of the Floor ID&#34;&#34;&#34;
+        self.name: str = &#34;&#34;
+        &#34;&#34;&#34;The name of the Workspace&#34;&#34;&#34;
+        self.capacity: int = None
+        &#34;&#34;&#34;The capacity of the Workspace&#34;&#34;&#34;
+        self.type: str = None
+        &#34;&#34;&#34;
+        The type of Workspace. Valid values are:
+        
+            &#34;notSet&#34;: No value set
+            &#34;focus&#34;: High concentration
+            &#34;huddle&#34;: Brainstorm/collaboration
+            &#34;meetingRoom&#34;: Dedicated meeting space
+            &#34;open&#34;: Unstructured agile
+            &#34;desk&#34;: Individual
+            &#34;other&#34;: Unspecified
+        &#34;&#34;&#34;
+        self.sip_address: str = None
+        &#34;&#34;&#34;The SIP Address used to call to the Workspace&#34;&#34;&#34;
+        self.created: str = None
+        &#34;&#34;&#34;The date and time the workspace was created&#34;&#34;&#34;
+        self.calling: str = None
+        &#34;&#34;&#34;
+        The type of Calling license assigned to the Workspace. Valid values are:
+        
+            &#34;freeCalling&#34;: Free Calling
+            &#34;hybridCalling&#34;: Hybrid Calling
+            &#34;webexCalling&#34;: Webex Calling
+            &#34;webexEdgeForDevices&#34;: Webex Edge for Devices
+        &#34;&#34;&#34;
+        self.calendar: dict = None
+        &#34;&#34;&#34;The type of calendar connector assigned to the Workspace&#34;&#34;&#34;
+        self.notes: str = None
+        &#34;&#34;&#34;Notes associated with the Workspace&#34;&#34;&#34;
+
+        if config:
+            self.__process_config(config)
+        else:
+            self.get_config()
+
+    def get_config(self):
+        &#34;&#34;&#34;Get (or refresh) the confiration of the Workspace from the Webex API&#34;&#34;&#34;
+        logging.info(f&#34;Getting Workspace config for {self.id}&#34;)
+        r = requests.get(_url_base + f&#34;v1/workspaces/{self.id}&#34;, headers=self._headers, params=self._params)
+        if r.status_code in [200]:
+            response = r.json()
+            self.__process_config(response)
+        else:
+            raise APIError(f&#34;Unable to fetch workspace config for {self.id}&#34;)
+
+    def __process_config(self, config: dict):
+        &#34;&#34;&#34;Processes the config dict, whether passed in init or from an API call&#34;&#34;&#34;
+        self.name = config.get(&#34;displayName&#34;, &#34;&#34;)
+        self.location = config.get(&#34;workspaceLocationId&#34;, &#34;&#34;)
+        self.floor = config.get(&#34;floorId&#34;, &#34;&#34;)
+        self.capacity = config.get(&#34;capacity&#34;, 0)
+        self.type = config[&#39;type&#39;]
+        self.sip_address = config.get(&#34;sipAddress&#34;, &#34;&#34;)
+        self.created = config.get(&#34;created&#34;, &#34;&#34;)
+        if &#34;calling&#34; in config:
+            self.calling = config[&#39;calling&#39;][&#39;type&#39;]
+        else:
+            self.calling = &#34;None&#34;
+        self.calendar = config[&#39;calendar&#39;]
+        self.notes = config.get(&#34;notes&#34;, &#34;&#34;)
+
+
+class WorkspaceLocation:
+    def __init__(self, parent: Org, id: str, config: dict = None):
+        &#34;&#34;&#34;Initialize a WorkspaceLocation instance. If only the `id` is provided, the configuration will be fetched from
+            the Webex API. To save API calls, the config dict can be passed using the `config` argument
+        Args:
+            parent (Org): The Organization to which this WorkspaceLocation belongs
+            id (str): The Webex ID of the WorkspaceLocation
+            config (dict): The configuration of the WorkspaceLocation as returned by the Webex API
+        &#34;&#34;&#34;
+        self.id: str = id
+        &#34;&#34;&#34;The Webex ID of the Workspace&#34;&#34;&#34;
+        self._parent: Org = parent
+        # Attributes inherited from the Org parent
+        self._headers = self._parent._headers
+        self._params = self._parent._params
+        # Instance attributes
+        self.name: str = None
+        &#34;&#34;&#34;The name of the WorkspaceLocation&#34;&#34;&#34;
+        self.address: str = None
+        &#34;&#34;&#34;The address of the WorkspaceLocation&#34;&#34;&#34;
+        self.country: str = None
+        &#34;&#34;&#34;The country code (ISO 3166-1) for the WorkspaceLocation&#34;&#34;&#34;
+        self.city: str = None
+        &#34;&#34;&#34;The city name where the WorkspaceLocation is located&#34;&#34;&#34;
+        self.latitude: float = None
+        &#34;&#34;&#34;The WorkspaceLocation latitude&#34;&#34;&#34;
+        self.longitude: float = None
+        &#34;&#34;&#34;The WorkspaceLocation longitude&#34;&#34;&#34;
+        self.notes: str = None
+        &#34;&#34;&#34;Notes associated with the WorkspaceLocation&#34;&#34;&#34;
+        self.floors: list[WorkspaceLocationFloor] = None
+
+        if config:
+            self.__process_config(config)
+        else:
+            self.get_config()
+        self.get_floors()
+
+    def get_config(self):
+        &#34;&#34;&#34;Get (or refresh) the configuration of the WorkspaceLocations from the Webex API&#34;&#34;&#34;
+        logging.info(f&#34;Getting Workspace config for {self.id}&#34;)
+        r = requests.get(_url_base + f&#34;v1/workspaceLocations/{self.id}&#34;, headers=self._headers, params=self._params)
+        if r.status_code in [200]:
+            response = r.json()
+            self.__process_config(response)
+        else:
+            raise APIError(f&#34;Unable to fetch workspace config for {self.id}&#34;)
+
+    def get_floors(self):
+        &#34;&#34;&#34;Get (or refresh) the WorkspaceLocationFloor instances for this WorkspaceLocation&#34;&#34;&#34;
+        logging.info(f&#34;Getting Location Floors for {self.name}&#34;)
+        self.floors = []
+        r = requests.get(_url_base + f&#34;v1/workspaceLocations/{self.id}/floors&#34;,
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        for floor in response[&#39;items&#39;]:
+            this_floor = WorkspaceLocationFloor(floor)
+            self.floors.append(this_floor)
+
+    def __process_config(self, config: dict):
+        &#34;&#34;&#34;Processes the config dict, whether passed in init or from an API call&#34;&#34;&#34;
+        self.name = config.get(&#34;displayName&#34;, &#34;&#34;)
+        self.address = config.get(&#34;address&#34;, &#34;&#34;)
+        self.country = config.get(&#34;countryCode&#34;, &#34;&#34;)
+        self.city = config.get(&#34;cityName&#34;, &#34;&#34;)
+        self.latitude = config.get(&#34;latitude&#34;, &#34;&#34;)
+        self.longitude = config.get(&#34;longitude&#34;, &#34;&#34;)
+        self.notes = config.get(&#34;notes&#34;, &#34;&#34;)
+
+class WorkspaceLocationFloor(WorkspaceLocation):
+    def __init__(self, config: dict):
+        self.name = config.get(&#34;displayName&#34;)
+        self.id = config.get(&#34;id&#34;)
+        self.floor = config.get(&#34;floorNumber&#34;)</code></pre>
 </details>
 </section>
 <section>
@@ -3019,7 +3224,8 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 <span>(</span><span>name: str, id: str, parent: <a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a> = None, people: bool = True, locations: bool = True, hunt_groups: bool = False, call_queues: bool = False, xsi: bool = False)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Initialize an Org instance</p>
+<div class="desc"><p>The base class for working with wxcadm.</p>
+<p>Initialize an Org instance</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
@@ -3048,7 +3254,7 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Org:
+<pre><code class="python">class Org(Webex):
     def __init__(self,
                  name: str,
                  id: str,
@@ -3096,6 +3302,10 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
         &#39;&#39;&#39;A list of all of the licenses for the Organization as a dictionary of names and IDs&#39;&#39;&#39;
         self.people: list[Person] = []
         &#39;&#39;&#39;A list of all of the Person stances for the Organization&#39;&#39;&#39;
+        self.workspaces: list[Workspace] = None
+        &#34;&#34;&#34;A list of the Workspace instances for this Org.&#34;&#34;&#34;
+        self.workspace_locations: list[WorkspaceLocation] = None
+        &#34;&#34;&#34;A list of the Workspace Location instanced for this Org.&#34;&#34;&#34;
 
         # Set the Authorization header based on how the instance was built
         self._headers = parent.headers
@@ -3292,6 +3502,32 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 
         return self.locations
 
+    def get_workspaces(self):
+        &#34;&#34;&#34;
+        Get the Workspaces and Workspace Locations for the Organizations.
+            Also stores them in the Org.workspaces and Org.workspace_locations attributes.
+
+        Returns:
+            list[Workspace]: List of Workspace instance objects. See the Workspace class for attributes.
+        &#34;&#34;&#34;
+        logging.info(&#34;Getting Workspaces&#34;)
+        self.workspaces = []
+        r = requests.get(_url_base + &#34;v1/workspaces&#34;, headers=self._headers, params=self._params)
+        response = r.json()
+        for workspace in response[&#39;items&#39;]:
+            this_workspace = Workspace(self, workspace[&#39;id&#39;], workspace)
+            self.workspaces.append(this_workspace)
+
+        logging.info(&#34;Getting Workspace Locations&#34;)
+        self.workspace_locations = []
+        r = requests.get(_url_base + &#34;v1/workspaceLocations&#34;, headers=self._headers, params=self._params)
+        response = r.json()
+        for location in response[&#39;items&#39;]:
+            this_location = WorkspaceLocation(self, location[&#39;id&#39;], location)
+            self.workspace_locations.append(this_location)
+
+        return self.workspaces
+
     def get_pickup_groups(self):
         &#34;&#34;&#34;
         Get all of the Call Pickup Groups for an Organization. Also stores them in the Org.pickup_groups attribute.
@@ -3417,6 +3653,10 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
                 return license[&#39;name&#39;]
         return None</code></pre>
 </details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a></li>
+</ul>
 <h3>Instance variables</h3>
 <dl>
 <dt id="wxcadm.Org.call_queues"><code class="name">var <span class="ident">call_queues</span></code></dt>
@@ -3450,6 +3690,14 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 <dt id="wxcadm.Org.pickup_groups"><code class="name">var <span class="ident">pickup_groups</span></code></dt>
 <dd>
 <div class="desc"><p>A list of the PickupGroup instances for this Org</p></div>
+</dd>
+<dt id="wxcadm.Org.workspace_locations"><code class="name">var <span class="ident">workspace_locations</span></code></dt>
+<dd>
+<div class="desc"><p>A list of the Workspace Location instanced for this Org.</p></div>
+</dd>
+<dt id="wxcadm.Org.workspaces"><code class="name">var <span class="ident">workspaces</span></code></dt>
+<dd>
+<div class="desc"><p>A list of the Workspace instances for this Org.</p></div>
 </dd>
 <dt id="wxcadm.Org.xsi"><code class="name">var <span class="ident">xsi</span></code></dt>
 <dd>
@@ -3824,6 +4072,48 @@ See the PickupGroup class for attributes.</dd>
     return self.pickup_groups</code></pre>
 </details>
 </dd>
+<dt id="wxcadm.Org.get_workspaces"><code class="name flex">
+<span>def <span class="ident">get_workspaces</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the Workspaces and Workspace Locations for the Organizations.
+Also stores them in the Org.workspaces and Org.workspace_locations attributes.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[<a title="wxcadm.Workspace" href="#wxcadm.Workspace">Workspace</a>]</code></dt>
+<dd>List of Workspace instance objects. See the Workspace class for attributes.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_workspaces(self):
+    &#34;&#34;&#34;
+    Get the Workspaces and Workspace Locations for the Organizations.
+        Also stores them in the Org.workspaces and Org.workspace_locations attributes.
+
+    Returns:
+        list[Workspace]: List of Workspace instance objects. See the Workspace class for attributes.
+    &#34;&#34;&#34;
+    logging.info(&#34;Getting Workspaces&#34;)
+    self.workspaces = []
+    r = requests.get(_url_base + &#34;v1/workspaces&#34;, headers=self._headers, params=self._params)
+    response = r.json()
+    for workspace in response[&#39;items&#39;]:
+        this_workspace = Workspace(self, workspace[&#39;id&#39;], workspace)
+        self.workspaces.append(this_workspace)
+
+    logging.info(&#34;Getting Workspace Locations&#34;)
+    self.workspace_locations = []
+    r = requests.get(_url_base + &#34;v1/workspaceLocations&#34;, headers=self._headers, params=self._params)
+    response = r.json()
+    for location in response[&#39;items&#39;]:
+        this_location = WorkspaceLocation(self, location[&#39;id&#39;], location)
+        self.workspace_locations.append(this_location)
+
+    return self.workspaces</code></pre>
+</details>
+</dd>
 <dt id="wxcadm.Org.get_wxc_people"><code class="name flex">
 <span>def <span class="ident">get_wxc_people</span></span>(<span>self)</span>
 </code></dt>
@@ -3884,6 +4174,16 @@ See the PickupGroup class for attributes.</dd>
 </details>
 </dd>
 </dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a></b></code>:
+<ul class="hlist">
+<li><code><a title="wxcadm.Webex.get_org_by_name" href="#wxcadm.Webex.get_org_by_name">get_org_by_name</a></code></li>
+<li><code><a title="wxcadm.Webex.headers" href="#wxcadm.Webex.headers">headers</a></code></li>
+<li><code><a title="wxcadm.Webex.orgs" href="#wxcadm.Webex.orgs">orgs</a></code></li>
+</ul>
+</li>
+</ul>
 </dd>
 <dt id="wxcadm.OrgError"><code class="flex name class">
 <span>class <span class="ident">OrgError</span></span>
@@ -4004,7 +4304,7 @@ except for automated people population from the Org init.</dd>
             self._headers = parent._headers
         self._params = {&#34;orgId&#34;: parent.id, &#34;callingData&#34;: &#34;true&#34;}
 
-                # If the config was passed, process it. If not, make the API call for the Person ID and then process
+        # If the config was passed, process it. If not, make the API call for the Person ID and then process
         if config:
             self.__process_api_data(config)
         else:
@@ -5251,8 +5551,27 @@ not every Org has XSI capability</dd>
     @property
     def headers(self):
         &#34;&#34;&#34;The &#34;universal&#34; HTTP headers with the Authorization header present&#34;&#34;&#34;
-        return self._headers</code></pre>
+        return self._headers
+
+    def get_org_by_name(self, name: str):
+        &#34;&#34;&#34;
+        Get the Org instance that matches all or part of the name argument.
+        Args:
+            name (str): Text to match against the Org name
+        Returns:
+            Org: The Org instance of the matching Org
+        Raises:
+            KeyError: Raised when no match is made
+        &#34;&#34;&#34;
+        for org in self.orgs:
+            if name in org.name:
+                return org
+        raise KeyError(&#34;Org not found&#34;)</code></pre>
 </details>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="wxcadm.Org" href="#wxcadm.Org">Org</a></li>
+</ul>
 <h3>Instance variables</h3>
 <dl>
 <dt id="wxcadm.Webex.headers"><code class="name">var <span class="ident">headers</span></code></dt>
@@ -5273,6 +5592,459 @@ def headers(self):
 <div class="desc"><p>A list of the Org instances that this Webex instance can manage</p></div>
 </dd>
 </dl>
+<h3>Methods</h3>
+<dl>
+<dt id="wxcadm.Webex.get_org_by_name"><code class="name flex">
+<span>def <span class="ident">get_org_by_name</span></span>(<span>self, name: str)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the Org instance that matches all or part of the name argument.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>Text to match against the Org name</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="wxcadm.Org" href="#wxcadm.Org">Org</a></code></dt>
+<dd>The Org instance of the matching Org</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>KeyError</code></dt>
+<dd>Raised when no match is made</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_org_by_name(self, name: str):
+    &#34;&#34;&#34;
+    Get the Org instance that matches all or part of the name argument.
+    Args:
+        name (str): Text to match against the Org name
+    Returns:
+        Org: The Org instance of the matching Org
+    Raises:
+        KeyError: Raised when no match is made
+    &#34;&#34;&#34;
+    for org in self.orgs:
+        if name in org.name:
+            return org
+    raise KeyError(&#34;Org not found&#34;)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="wxcadm.Workspace"><code class="flex name class">
+<span>class <span class="ident">Workspace</span></span>
+<span>(</span><span>parent: <a title="wxcadm.Org" href="#wxcadm.Org">Org</a>, id: str, config: dict = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Initialize a Workspace instance. If only the <code>id</code> is provided, the configuration will be fetched from
+the Webex API. To save API calls, the config dict can be passed using the <code>config</code> argument</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>parent</code></strong> :&ensp;<code><a title="wxcadm.Org" href="#wxcadm.Org">Org</a></code></dt>
+<dd>The Organization to which this workspace belongs</dd>
+<dt><strong><code>id</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Webex ID of the Workspace</dd>
+<dt><strong><code>config</code></strong> :&ensp;<code>dict</code></dt>
+<dd>The configuration of the Workspace as returned by the Webex API</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Workspace:
+    def __init__(self, parent: Org, id: str, config: dict = None):
+        &#34;&#34;&#34;Initialize a Workspace instance. If only the `id` is provided, the configuration will be fetched from
+            the Webex API. To save API calls, the config dict can be passed using the `config` argument
+        Args:
+            parent (Org): The Organization to which this workspace belongs
+            id (str): The Webex ID of the Workspace
+            config (dict): The configuration of the Workspace as returned by the Webex API
+        &#34;&#34;&#34;
+        self.id: str = id
+        &#34;&#34;&#34;The Webex ID of the Workspace&#34;&#34;&#34;
+        self._parent: Org = parent
+        # Attributes inherited from the Org parent
+        self._headers = self._parent._headers
+        self._params = self._parent._params
+        # Instance attributes
+        self.location: str = None
+        &#34;&#34;&#34;The Webex ID of the Workspace Location (note this is a Workspace Location, not a Calling Location.&#34;&#34;&#34;
+        self.floor: str = None
+        &#34;&#34;&#34;The Webex ID of the Floor ID&#34;&#34;&#34;
+        self.name: str = &#34;&#34;
+        &#34;&#34;&#34;The name of the Workspace&#34;&#34;&#34;
+        self.capacity: int = None
+        &#34;&#34;&#34;The capacity of the Workspace&#34;&#34;&#34;
+        self.type: str = None
+        &#34;&#34;&#34;
+        The type of Workspace. Valid values are:
+        
+            &#34;notSet&#34;: No value set
+            &#34;focus&#34;: High concentration
+            &#34;huddle&#34;: Brainstorm/collaboration
+            &#34;meetingRoom&#34;: Dedicated meeting space
+            &#34;open&#34;: Unstructured agile
+            &#34;desk&#34;: Individual
+            &#34;other&#34;: Unspecified
+        &#34;&#34;&#34;
+        self.sip_address: str = None
+        &#34;&#34;&#34;The SIP Address used to call to the Workspace&#34;&#34;&#34;
+        self.created: str = None
+        &#34;&#34;&#34;The date and time the workspace was created&#34;&#34;&#34;
+        self.calling: str = None
+        &#34;&#34;&#34;
+        The type of Calling license assigned to the Workspace. Valid values are:
+        
+            &#34;freeCalling&#34;: Free Calling
+            &#34;hybridCalling&#34;: Hybrid Calling
+            &#34;webexCalling&#34;: Webex Calling
+            &#34;webexEdgeForDevices&#34;: Webex Edge for Devices
+        &#34;&#34;&#34;
+        self.calendar: dict = None
+        &#34;&#34;&#34;The type of calendar connector assigned to the Workspace&#34;&#34;&#34;
+        self.notes: str = None
+        &#34;&#34;&#34;Notes associated with the Workspace&#34;&#34;&#34;
+
+        if config:
+            self.__process_config(config)
+        else:
+            self.get_config()
+
+    def get_config(self):
+        &#34;&#34;&#34;Get (or refresh) the confiration of the Workspace from the Webex API&#34;&#34;&#34;
+        logging.info(f&#34;Getting Workspace config for {self.id}&#34;)
+        r = requests.get(_url_base + f&#34;v1/workspaces/{self.id}&#34;, headers=self._headers, params=self._params)
+        if r.status_code in [200]:
+            response = r.json()
+            self.__process_config(response)
+        else:
+            raise APIError(f&#34;Unable to fetch workspace config for {self.id}&#34;)
+
+    def __process_config(self, config: dict):
+        &#34;&#34;&#34;Processes the config dict, whether passed in init or from an API call&#34;&#34;&#34;
+        self.name = config.get(&#34;displayName&#34;, &#34;&#34;)
+        self.location = config.get(&#34;workspaceLocationId&#34;, &#34;&#34;)
+        self.floor = config.get(&#34;floorId&#34;, &#34;&#34;)
+        self.capacity = config.get(&#34;capacity&#34;, 0)
+        self.type = config[&#39;type&#39;]
+        self.sip_address = config.get(&#34;sipAddress&#34;, &#34;&#34;)
+        self.created = config.get(&#34;created&#34;, &#34;&#34;)
+        if &#34;calling&#34; in config:
+            self.calling = config[&#39;calling&#39;][&#39;type&#39;]
+        else:
+            self.calling = &#34;None&#34;
+        self.calendar = config[&#39;calendar&#39;]
+        self.notes = config.get(&#34;notes&#34;, &#34;&#34;)</code></pre>
+</details>
+<h3>Instance variables</h3>
+<dl>
+<dt id="wxcadm.Workspace.calendar"><code class="name">var <span class="ident">calendar</span></code></dt>
+<dd>
+<div class="desc"><p>The type of calendar connector assigned to the Workspace</p></div>
+</dd>
+<dt id="wxcadm.Workspace.calling"><code class="name">var <span class="ident">calling</span></code></dt>
+<dd>
+<div class="desc"><p>The type of Calling license assigned to the Workspace. Valid values are:</p>
+<pre><code>"freeCalling": Free Calling
+"hybridCalling": Hybrid Calling
+"webexCalling": Webex Calling
+"webexEdgeForDevices": Webex Edge for Devices
+</code></pre></div>
+</dd>
+<dt id="wxcadm.Workspace.capacity"><code class="name">var <span class="ident">capacity</span></code></dt>
+<dd>
+<div class="desc"><p>The capacity of the Workspace</p></div>
+</dd>
+<dt id="wxcadm.Workspace.created"><code class="name">var <span class="ident">created</span></code></dt>
+<dd>
+<div class="desc"><p>The date and time the workspace was created</p></div>
+</dd>
+<dt id="wxcadm.Workspace.floor"><code class="name">var <span class="ident">floor</span></code></dt>
+<dd>
+<div class="desc"><p>The Webex ID of the Floor ID</p></div>
+</dd>
+<dt id="wxcadm.Workspace.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<div class="desc"><p>The Webex ID of the Workspace</p></div>
+</dd>
+<dt id="wxcadm.Workspace.location"><code class="name">var <span class="ident">location</span></code></dt>
+<dd>
+<div class="desc"><p>The Webex ID of the Workspace Location (note this is a Workspace Location, not a Calling Location.</p></div>
+</dd>
+<dt id="wxcadm.Workspace.name"><code class="name">var <span class="ident">name</span></code></dt>
+<dd>
+<div class="desc"><p>The name of the Workspace</p></div>
+</dd>
+<dt id="wxcadm.Workspace.notes"><code class="name">var <span class="ident">notes</span></code></dt>
+<dd>
+<div class="desc"><p>Notes associated with the Workspace</p></div>
+</dd>
+<dt id="wxcadm.Workspace.sip_address"><code class="name">var <span class="ident">sip_address</span></code></dt>
+<dd>
+<div class="desc"><p>The SIP Address used to call to the Workspace</p></div>
+</dd>
+<dt id="wxcadm.Workspace.type"><code class="name">var <span class="ident">type</span></code></dt>
+<dd>
+<div class="desc"><p>The type of Workspace. Valid values are:</p>
+<pre><code>"notSet": No value set
+"focus": High concentration
+"huddle": Brainstorm/collaboration
+"meetingRoom": Dedicated meeting space
+"open": Unstructured agile
+"desk": Individual
+"other": Unspecified
+</code></pre></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="wxcadm.Workspace.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get (or refresh) the confiration of the Workspace from the Webex API</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    &#34;&#34;&#34;Get (or refresh) the confiration of the Workspace from the Webex API&#34;&#34;&#34;
+    logging.info(f&#34;Getting Workspace config for {self.id}&#34;)
+    r = requests.get(_url_base + f&#34;v1/workspaces/{self.id}&#34;, headers=self._headers, params=self._params)
+    if r.status_code in [200]:
+        response = r.json()
+        self.__process_config(response)
+    else:
+        raise APIError(f&#34;Unable to fetch workspace config for {self.id}&#34;)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="wxcadm.WorkspaceLocation"><code class="flex name class">
+<span>class <span class="ident">WorkspaceLocation</span></span>
+<span>(</span><span>parent: <a title="wxcadm.Org" href="#wxcadm.Org">Org</a>, id: str, config: dict = None)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Initialize a WorkspaceLocation instance. If only the <code>id</code> is provided, the configuration will be fetched from
+the Webex API. To save API calls, the config dict can be passed using the <code>config</code> argument</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>parent</code></strong> :&ensp;<code><a title="wxcadm.Org" href="#wxcadm.Org">Org</a></code></dt>
+<dd>The Organization to which this WorkspaceLocation belongs</dd>
+<dt><strong><code>id</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Webex ID of the WorkspaceLocation</dd>
+<dt><strong><code>config</code></strong> :&ensp;<code>dict</code></dt>
+<dd>The configuration of the WorkspaceLocation as returned by the Webex API</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class WorkspaceLocation:
+    def __init__(self, parent: Org, id: str, config: dict = None):
+        &#34;&#34;&#34;Initialize a WorkspaceLocation instance. If only the `id` is provided, the configuration will be fetched from
+            the Webex API. To save API calls, the config dict can be passed using the `config` argument
+        Args:
+            parent (Org): The Organization to which this WorkspaceLocation belongs
+            id (str): The Webex ID of the WorkspaceLocation
+            config (dict): The configuration of the WorkspaceLocation as returned by the Webex API
+        &#34;&#34;&#34;
+        self.id: str = id
+        &#34;&#34;&#34;The Webex ID of the Workspace&#34;&#34;&#34;
+        self._parent: Org = parent
+        # Attributes inherited from the Org parent
+        self._headers = self._parent._headers
+        self._params = self._parent._params
+        # Instance attributes
+        self.name: str = None
+        &#34;&#34;&#34;The name of the WorkspaceLocation&#34;&#34;&#34;
+        self.address: str = None
+        &#34;&#34;&#34;The address of the WorkspaceLocation&#34;&#34;&#34;
+        self.country: str = None
+        &#34;&#34;&#34;The country code (ISO 3166-1) for the WorkspaceLocation&#34;&#34;&#34;
+        self.city: str = None
+        &#34;&#34;&#34;The city name where the WorkspaceLocation is located&#34;&#34;&#34;
+        self.latitude: float = None
+        &#34;&#34;&#34;The WorkspaceLocation latitude&#34;&#34;&#34;
+        self.longitude: float = None
+        &#34;&#34;&#34;The WorkspaceLocation longitude&#34;&#34;&#34;
+        self.notes: str = None
+        &#34;&#34;&#34;Notes associated with the WorkspaceLocation&#34;&#34;&#34;
+        self.floors: list[WorkspaceLocationFloor] = None
+
+        if config:
+            self.__process_config(config)
+        else:
+            self.get_config()
+        self.get_floors()
+
+    def get_config(self):
+        &#34;&#34;&#34;Get (or refresh) the configuration of the WorkspaceLocations from the Webex API&#34;&#34;&#34;
+        logging.info(f&#34;Getting Workspace config for {self.id}&#34;)
+        r = requests.get(_url_base + f&#34;v1/workspaceLocations/{self.id}&#34;, headers=self._headers, params=self._params)
+        if r.status_code in [200]:
+            response = r.json()
+            self.__process_config(response)
+        else:
+            raise APIError(f&#34;Unable to fetch workspace config for {self.id}&#34;)
+
+    def get_floors(self):
+        &#34;&#34;&#34;Get (or refresh) the WorkspaceLocationFloor instances for this WorkspaceLocation&#34;&#34;&#34;
+        logging.info(f&#34;Getting Location Floors for {self.name}&#34;)
+        self.floors = []
+        r = requests.get(_url_base + f&#34;v1/workspaceLocations/{self.id}/floors&#34;,
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        for floor in response[&#39;items&#39;]:
+            this_floor = WorkspaceLocationFloor(floor)
+            self.floors.append(this_floor)
+
+    def __process_config(self, config: dict):
+        &#34;&#34;&#34;Processes the config dict, whether passed in init or from an API call&#34;&#34;&#34;
+        self.name = config.get(&#34;displayName&#34;, &#34;&#34;)
+        self.address = config.get(&#34;address&#34;, &#34;&#34;)
+        self.country = config.get(&#34;countryCode&#34;, &#34;&#34;)
+        self.city = config.get(&#34;cityName&#34;, &#34;&#34;)
+        self.latitude = config.get(&#34;latitude&#34;, &#34;&#34;)
+        self.longitude = config.get(&#34;longitude&#34;, &#34;&#34;)
+        self.notes = config.get(&#34;notes&#34;, &#34;&#34;)</code></pre>
+</details>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="wxcadm.WorkspaceLocationFloor" href="#wxcadm.WorkspaceLocationFloor">WorkspaceLocationFloor</a></li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="wxcadm.WorkspaceLocation.address"><code class="name">var <span class="ident">address</span></code></dt>
+<dd>
+<div class="desc"><p>The address of the WorkspaceLocation</p></div>
+</dd>
+<dt id="wxcadm.WorkspaceLocation.city"><code class="name">var <span class="ident">city</span></code></dt>
+<dd>
+<div class="desc"><p>The city name where the WorkspaceLocation is located</p></div>
+</dd>
+<dt id="wxcadm.WorkspaceLocation.country"><code class="name">var <span class="ident">country</span></code></dt>
+<dd>
+<div class="desc"><p>The country code (ISO 3166-1) for the WorkspaceLocation</p></div>
+</dd>
+<dt id="wxcadm.WorkspaceLocation.id"><code class="name">var <span class="ident">id</span></code></dt>
+<dd>
+<div class="desc"><p>The Webex ID of the Workspace</p></div>
+</dd>
+<dt id="wxcadm.WorkspaceLocation.latitude"><code class="name">var <span class="ident">latitude</span></code></dt>
+<dd>
+<div class="desc"><p>The WorkspaceLocation latitude</p></div>
+</dd>
+<dt id="wxcadm.WorkspaceLocation.longitude"><code class="name">var <span class="ident">longitude</span></code></dt>
+<dd>
+<div class="desc"><p>The WorkspaceLocation longitude</p></div>
+</dd>
+<dt id="wxcadm.WorkspaceLocation.name"><code class="name">var <span class="ident">name</span></code></dt>
+<dd>
+<div class="desc"><p>The name of the WorkspaceLocation</p></div>
+</dd>
+<dt id="wxcadm.WorkspaceLocation.notes"><code class="name">var <span class="ident">notes</span></code></dt>
+<dd>
+<div class="desc"><p>Notes associated with the WorkspaceLocation</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="wxcadm.WorkspaceLocation.get_config"><code class="name flex">
+<span>def <span class="ident">get_config</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get (or refresh) the configuration of the WorkspaceLocations from the Webex API</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_config(self):
+    &#34;&#34;&#34;Get (or refresh) the configuration of the WorkspaceLocations from the Webex API&#34;&#34;&#34;
+    logging.info(f&#34;Getting Workspace config for {self.id}&#34;)
+    r = requests.get(_url_base + f&#34;v1/workspaceLocations/{self.id}&#34;, headers=self._headers, params=self._params)
+    if r.status_code in [200]:
+        response = r.json()
+        self.__process_config(response)
+    else:
+        raise APIError(f&#34;Unable to fetch workspace config for {self.id}&#34;)</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.WorkspaceLocation.get_floors"><code class="name flex">
+<span>def <span class="ident">get_floors</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get (or refresh) the WorkspaceLocationFloor instances for this WorkspaceLocation</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_floors(self):
+    &#34;&#34;&#34;Get (or refresh) the WorkspaceLocationFloor instances for this WorkspaceLocation&#34;&#34;&#34;
+    logging.info(f&#34;Getting Location Floors for {self.name}&#34;)
+    self.floors = []
+    r = requests.get(_url_base + f&#34;v1/workspaceLocations/{self.id}/floors&#34;,
+                     headers=self._headers, params=self._params)
+    response = r.json()
+    for floor in response[&#39;items&#39;]:
+        this_floor = WorkspaceLocationFloor(floor)
+        self.floors.append(this_floor)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="wxcadm.WorkspaceLocationFloor"><code class="flex name class">
+<span>class <span class="ident">WorkspaceLocationFloor</span></span>
+<span>(</span><span>config: dict)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Initialize a WorkspaceLocation instance. If only the <code>id</code> is provided, the configuration will be fetched from
+the Webex API. To save API calls, the config dict can be passed using the <code>config</code> argument</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>parent</code></strong> :&ensp;<code><a title="wxcadm.Org" href="#wxcadm.Org">Org</a></code></dt>
+<dd>The Organization to which this WorkspaceLocation belongs</dd>
+<dt><strong><code>id</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Webex ID of the WorkspaceLocation</dd>
+<dt><strong><code>config</code></strong> :&ensp;<code>dict</code></dt>
+<dd>The configuration of the WorkspaceLocation as returned by the Webex API</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class WorkspaceLocationFloor(WorkspaceLocation):
+    def __init__(self, config: dict):
+        self.name = config.get(&#34;displayName&#34;)
+        self.id = config.get(&#34;id&#34;)
+        self.floor = config.get(&#34;floorNumber&#34;)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="wxcadm.WorkspaceLocation" href="#wxcadm.WorkspaceLocation">WorkspaceLocation</a></li>
+</ul>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="wxcadm.WorkspaceLocation" href="#wxcadm.WorkspaceLocation">WorkspaceLocation</a></b></code>:
+<ul class="hlist">
+<li><code><a title="wxcadm.WorkspaceLocation.address" href="#wxcadm.WorkspaceLocation.address">address</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.city" href="#wxcadm.WorkspaceLocation.city">city</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.country" href="#wxcadm.WorkspaceLocation.country">country</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.get_config" href="#wxcadm.WorkspaceLocation.get_config">get_config</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.get_floors" href="#wxcadm.WorkspaceLocation.get_floors">get_floors</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.id" href="#wxcadm.WorkspaceLocation.id">id</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.latitude" href="#wxcadm.WorkspaceLocation.latitude">latitude</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.longitude" href="#wxcadm.WorkspaceLocation.longitude">longitude</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.name" href="#wxcadm.WorkspaceLocation.name">name</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.notes" href="#wxcadm.WorkspaceLocation.notes">notes</a></code></li>
+</ul>
+</li>
+</ul>
 </dd>
 <dt id="wxcadm.XSI"><code class="flex name class">
 <span>class <span class="ident">XSI</span></span>
@@ -5896,6 +6668,7 @@ two Call IDs. Call IDs after the first two will be ignored.</dd>
 <li><code><a title="wxcadm.Org.get_people" href="#wxcadm.Org.get_people">get_people</a></code></li>
 <li><code><a title="wxcadm.Org.get_person_by_email" href="#wxcadm.Org.get_person_by_email">get_person_by_email</a></code></li>
 <li><code><a title="wxcadm.Org.get_pickup_groups" href="#wxcadm.Org.get_pickup_groups">get_pickup_groups</a></code></li>
+<li><code><a title="wxcadm.Org.get_workspaces" href="#wxcadm.Org.get_workspaces">get_workspaces</a></code></li>
 <li><code><a title="wxcadm.Org.get_wxc_people" href="#wxcadm.Org.get_wxc_people">get_wxc_people</a></code></li>
 <li><code><a title="wxcadm.Org.get_xsi_endpoints" href="#wxcadm.Org.get_xsi_endpoints">get_xsi_endpoints</a></code></li>
 <li><code><a title="wxcadm.Org.hunt_groups" href="#wxcadm.Org.hunt_groups">hunt_groups</a></code></li>
@@ -5905,6 +6678,8 @@ two Call IDs. Call IDs after the first two will be ignored.</dd>
 <li><code><a title="wxcadm.Org.name" href="#wxcadm.Org.name">name</a></code></li>
 <li><code><a title="wxcadm.Org.people" href="#wxcadm.Org.people">people</a></code></li>
 <li><code><a title="wxcadm.Org.pickup_groups" href="#wxcadm.Org.pickup_groups">pickup_groups</a></code></li>
+<li><code><a title="wxcadm.Org.workspace_locations" href="#wxcadm.Org.workspace_locations">workspace_locations</a></code></li>
+<li><code><a title="wxcadm.Org.workspaces" href="#wxcadm.Org.workspaces">workspaces</a></code></li>
 <li><code><a title="wxcadm.Org.xsi" href="#wxcadm.Org.xsi">xsi</a></code></li>
 </ul>
 </li>
@@ -5975,9 +6750,45 @@ two Call IDs. Call IDs after the first two will be ignored.</dd>
 <li>
 <h4><code><a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a></code></h4>
 <ul class="">
+<li><code><a title="wxcadm.Webex.get_org_by_name" href="#wxcadm.Webex.get_org_by_name">get_org_by_name</a></code></li>
 <li><code><a title="wxcadm.Webex.headers" href="#wxcadm.Webex.headers">headers</a></code></li>
 <li><code><a title="wxcadm.Webex.orgs" href="#wxcadm.Webex.orgs">orgs</a></code></li>
 </ul>
+</li>
+<li>
+<h4><code><a title="wxcadm.Workspace" href="#wxcadm.Workspace">Workspace</a></code></h4>
+<ul class="two-column">
+<li><code><a title="wxcadm.Workspace.calendar" href="#wxcadm.Workspace.calendar">calendar</a></code></li>
+<li><code><a title="wxcadm.Workspace.calling" href="#wxcadm.Workspace.calling">calling</a></code></li>
+<li><code><a title="wxcadm.Workspace.capacity" href="#wxcadm.Workspace.capacity">capacity</a></code></li>
+<li><code><a title="wxcadm.Workspace.created" href="#wxcadm.Workspace.created">created</a></code></li>
+<li><code><a title="wxcadm.Workspace.floor" href="#wxcadm.Workspace.floor">floor</a></code></li>
+<li><code><a title="wxcadm.Workspace.get_config" href="#wxcadm.Workspace.get_config">get_config</a></code></li>
+<li><code><a title="wxcadm.Workspace.id" href="#wxcadm.Workspace.id">id</a></code></li>
+<li><code><a title="wxcadm.Workspace.location" href="#wxcadm.Workspace.location">location</a></code></li>
+<li><code><a title="wxcadm.Workspace.name" href="#wxcadm.Workspace.name">name</a></code></li>
+<li><code><a title="wxcadm.Workspace.notes" href="#wxcadm.Workspace.notes">notes</a></code></li>
+<li><code><a title="wxcadm.Workspace.sip_address" href="#wxcadm.Workspace.sip_address">sip_address</a></code></li>
+<li><code><a title="wxcadm.Workspace.type" href="#wxcadm.Workspace.type">type</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="wxcadm.WorkspaceLocation" href="#wxcadm.WorkspaceLocation">WorkspaceLocation</a></code></h4>
+<ul class="two-column">
+<li><code><a title="wxcadm.WorkspaceLocation.address" href="#wxcadm.WorkspaceLocation.address">address</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.city" href="#wxcadm.WorkspaceLocation.city">city</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.country" href="#wxcadm.WorkspaceLocation.country">country</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.get_config" href="#wxcadm.WorkspaceLocation.get_config">get_config</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.get_floors" href="#wxcadm.WorkspaceLocation.get_floors">get_floors</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.id" href="#wxcadm.WorkspaceLocation.id">id</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.latitude" href="#wxcadm.WorkspaceLocation.latitude">latitude</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.longitude" href="#wxcadm.WorkspaceLocation.longitude">longitude</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.name" href="#wxcadm.WorkspaceLocation.name">name</a></code></li>
+<li><code><a title="wxcadm.WorkspaceLocation.notes" href="#wxcadm.WorkspaceLocation.notes">notes</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="wxcadm.WorkspaceLocationFloor" href="#wxcadm.WorkspaceLocationFloor">WorkspaceLocationFloor</a></code></h4>
 </li>
 <li>
 <h4><code><a title="wxcadm.XSI" href="#wxcadm.XSI">XSI</a></code></h4>

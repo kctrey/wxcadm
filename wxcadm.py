@@ -128,8 +128,22 @@ class Webex:
         """The "universal" HTTP headers with the Authorization header present"""
         return self._headers
 
+    def get_org_by_name(self, name: str):
+        """
+        Get the Org instance that matches all or part of the name argument.
+        Args:
+            name (str): Text to match against the Org name
+        Returns:
+            Org: The Org instance of the matching Org
+        Raises:
+            KeyError: Raised when no match is made
+        """
+        for org in self.orgs:
+            if name in org.name:
+                return org
+        raise KeyError("Org not found")
 
-class Org:
+class Org(Webex):
     def __init__(self,
                  name: str,
                  id: str,
@@ -177,6 +191,10 @@ class Org:
         '''A list of all of the licenses for the Organization as a dictionary of names and IDs'''
         self.people: list[Person] = []
         '''A list of all of the Person stances for the Organization'''
+        self.workspaces: list[Workspace] = None
+        """A list of the Workspace instances for this Org."""
+        self.workspace_locations: list[WorkspaceLocation] = None
+        """A list of the Workspace Location instanced for this Org."""
 
         # Set the Authorization header based on how the instance was built
         self._headers = parent.headers
@@ -372,6 +390,32 @@ class Org:
             self.locations.append(this_location)
 
         return self.locations
+
+    def get_workspaces(self):
+        """
+        Get the Workspaces and Workspace Locations for the Organizations.
+            Also stores them in the Org.workspaces and Org.workspace_locations attributes.
+
+        Returns:
+            list[Workspace]: List of Workspace instance objects. See the Workspace class for attributes.
+        """
+        logging.info("Getting Workspaces")
+        self.workspaces = []
+        r = requests.get(_url_base + "v1/workspaces", headers=self._headers, params=self._params)
+        response = r.json()
+        for workspace in response['items']:
+            this_workspace = Workspace(self, workspace['id'], workspace)
+            self.workspaces.append(this_workspace)
+
+        logging.info("Getting Workspace Locations")
+        self.workspace_locations = []
+        r = requests.get(_url_base + "v1/workspaceLocations", headers=self._headers, params=self._params)
+        response = r.json()
+        for location in response['items']:
+            this_location = WorkspaceLocation(self, location['id'], location)
+            self.workspace_locations.append(this_location)
+
+        return self.workspaces
 
     def get_pickup_groups(self):
         """
@@ -594,7 +638,7 @@ class Person:
             self._headers = parent._headers
         self._params = {"orgId": parent.id, "callingData": "true"}
 
-                # If the config was passed, process it. If not, make the API call for the Person ID and then process
+        # If the config was passed, process it. If not, make the API call for the Person ID and then process
         if config:
             self.__process_api_data(config)
         else:
@@ -1650,3 +1694,164 @@ class Conference:
             bool: Whether the command was successful
         """
         pass
+
+class Workspace:
+    def __init__(self, parent: Org, id: str, config: dict = None):
+        """Initialize a Workspace instance. If only the `id` is provided, the configuration will be fetched from
+            the Webex API. To save API calls, the config dict can be passed using the `config` argument
+        Args:
+            parent (Org): The Organization to which this workspace belongs
+            id (str): The Webex ID of the Workspace
+            config (dict): The configuration of the Workspace as returned by the Webex API
+        """
+        self.id: str = id
+        """The Webex ID of the Workspace"""
+        self._parent: Org = parent
+        # Attributes inherited from the Org parent
+        self._headers = self._parent._headers
+        self._params = self._parent._params
+        # Instance attributes
+        self.location: str = None
+        """The Webex ID of the Workspace Location (note this is a Workspace Location, not a Calling Location."""
+        self.floor: str = None
+        """The Webex ID of the Floor ID"""
+        self.name: str = ""
+        """The name of the Workspace"""
+        self.capacity: int = None
+        """The capacity of the Workspace"""
+        self.type: str = None
+        """
+        The type of Workspace. Valid values are:
+        
+            "notSet": No value set
+            "focus": High concentration
+            "huddle": Brainstorm/collaboration
+            "meetingRoom": Dedicated meeting space
+            "open": Unstructured agile
+            "desk": Individual
+            "other": Unspecified
+        """
+        self.sip_address: str = None
+        """The SIP Address used to call to the Workspace"""
+        self.created: str = None
+        """The date and time the workspace was created"""
+        self.calling: str = None
+        """
+        The type of Calling license assigned to the Workspace. Valid values are:
+        
+            "freeCalling": Free Calling
+            "hybridCalling": Hybrid Calling
+            "webexCalling": Webex Calling
+            "webexEdgeForDevices": Webex Edge for Devices
+        """
+        self.calendar: dict = None
+        """The type of calendar connector assigned to the Workspace"""
+        self.notes: str = None
+        """Notes associated with the Workspace"""
+
+        if config:
+            self.__process_config(config)
+        else:
+            self.get_config()
+
+    def get_config(self):
+        """Get (or refresh) the confiration of the Workspace from the Webex API"""
+        logging.info(f"Getting Workspace config for {self.id}")
+        r = requests.get(_url_base + f"v1/workspaces/{self.id}", headers=self._headers, params=self._params)
+        if r.status_code in [200]:
+            response = r.json()
+            self.__process_config(response)
+        else:
+            raise APIError(f"Unable to fetch workspace config for {self.id}")
+
+    def __process_config(self, config: dict):
+        """Processes the config dict, whether passed in init or from an API call"""
+        self.name = config.get("displayName", "")
+        self.location = config.get("workspaceLocationId", "")
+        self.floor = config.get("floorId", "")
+        self.capacity = config.get("capacity", 0)
+        self.type = config['type']
+        self.sip_address = config.get("sipAddress", "")
+        self.created = config.get("created", "")
+        if "calling" in config:
+            self.calling = config['calling']['type']
+        else:
+            self.calling = "None"
+        self.calendar = config['calendar']
+        self.notes = config.get("notes", "")
+
+
+class WorkspaceLocation:
+    def __init__(self, parent: Org, id: str, config: dict = None):
+        """Initialize a WorkspaceLocation instance. If only the `id` is provided, the configuration will be fetched from
+            the Webex API. To save API calls, the config dict can be passed using the `config` argument
+        Args:
+            parent (Org): The Organization to which this WorkspaceLocation belongs
+            id (str): The Webex ID of the WorkspaceLocation
+            config (dict): The configuration of the WorkspaceLocation as returned by the Webex API
+        """
+        self.id: str = id
+        """The Webex ID of the Workspace"""
+        self._parent: Org = parent
+        # Attributes inherited from the Org parent
+        self._headers = self._parent._headers
+        self._params = self._parent._params
+        # Instance attributes
+        self.name: str = None
+        """The name of the WorkspaceLocation"""
+        self.address: str = None
+        """The address of the WorkspaceLocation"""
+        self.country: str = None
+        """The country code (ISO 3166-1) for the WorkspaceLocation"""
+        self.city: str = None
+        """The city name where the WorkspaceLocation is located"""
+        self.latitude: float = None
+        """The WorkspaceLocation latitude"""
+        self.longitude: float = None
+        """The WorkspaceLocation longitude"""
+        self.notes: str = None
+        """Notes associated with the WorkspaceLocation"""
+        self.floors: list[WorkspaceLocationFloor] = None
+
+        if config:
+            self.__process_config(config)
+        else:
+            self.get_config()
+        self.get_floors()
+
+    def get_config(self):
+        """Get (or refresh) the configuration of the WorkspaceLocations from the Webex API"""
+        logging.info(f"Getting Workspace config for {self.id}")
+        r = requests.get(_url_base + f"v1/workspaceLocations/{self.id}", headers=self._headers, params=self._params)
+        if r.status_code in [200]:
+            response = r.json()
+            self.__process_config(response)
+        else:
+            raise APIError(f"Unable to fetch workspace config for {self.id}")
+
+    def get_floors(self):
+        """Get (or refresh) the WorkspaceLocationFloor instances for this WorkspaceLocation"""
+        logging.info(f"Getting Location Floors for {self.name}")
+        self.floors = []
+        r = requests.get(_url_base + f"v1/workspaceLocations/{self.id}/floors",
+                         headers=self._headers, params=self._params)
+        response = r.json()
+        for floor in response['items']:
+            this_floor = WorkspaceLocationFloor(floor)
+            self.floors.append(this_floor)
+
+    def __process_config(self, config: dict):
+        """Processes the config dict, whether passed in init or from an API call"""
+        self.name = config.get("displayName", "")
+        self.address = config.get("address", "")
+        self.country = config.get("countryCode", "")
+        self.city = config.get("cityName", "")
+        self.latitude = config.get("latitude", "")
+        self.longitude = config.get("longitude", "")
+        self.notes = config.get("notes", "")
+
+class WorkspaceLocationFloor(WorkspaceLocation):
+    def __init__(self, config: dict):
+        self.name = config.get("displayName")
+        self.id = config.get("id")
+        self.floor = config.get("floorNumber")

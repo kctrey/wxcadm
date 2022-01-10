@@ -46,7 +46,32 @@ for person in webex.org.people:
     # Or access the attributes directly
     email = person.email
 ```
+## Regarding Multiple Organizations
+Most Webex admins only have access to a single Org, but Webex does allow a single admin to manage multiple Orgs. When
+the Webex instance is created, it creates the `org` attribute when only one Org is present. If there are mutliple, the
+`orgs` attribute contains a list of all the Orgs. `orgs` is created whether there is one Org or multiple, so `Webex.org`
+is equivalent to `Webex.orgs[0]`. For example:
+```python
+from wxcadm import Webex
 
+access_token = "Your API Access Token"
+webex = Webex(access_token)
+for org in webex.orgs:
+    print(org.name)
+```
+It is recommended to take action on only one Org at a time, although the design allows for more flexibility. For
+example, to enable VM-to-Email across all users of every Org, the following is supported:
+```python
+for org in webex.orgs:
+    for person in org.people:
+        person.enable_vm_to_email()
+```
+The `get_org_by_name()` method is provided to allow the selection of the desired org by name.
+```python
+my_org = webex.get_org_by_name("My Company")
+for people in my_org.people:
+    person.enable_vm_to_email()
+```
 # Documentation
 Full module documentation will be coming soon. Until then, the following examples show the available methods.
 

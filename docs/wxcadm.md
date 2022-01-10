@@ -294,7 +294,9 @@ Classes
     :   The name of the Location
 
 `Org(name: str, id: str, parent: wxcadm.Webex = None, people: bool = True, locations: bool = True, hunt_groups: bool = False, call_queues: bool = False, xsi: bool = False)`
-:   Initialize an Org instance
+:   The base class for working with wxcadm.
+    
+    Initialize an Org instance
     
     Args:
         name (str): The Organization name
@@ -308,6 +310,10 @@ Classes
     
     Returns:
         Org: This instance of the Org class
+
+    ### Ancestors (in MRO)
+
+    * wxcadm.Webex
 
     ### Instance variables
 
@@ -334,6 +340,12 @@ Classes
 
     `pickup_groups`
     :   A list of the PickupGroup instances for this Org
+
+    `workspace_locations`
+    :   A list of the Workspace Location instanced for this Org.
+
+    `workspaces`
+    :   A list of the Workspace instances for this Org.
 
     `xsi`
     :   The XSI details for the Organization
@@ -400,6 +412,13 @@ Classes
         Returns:
             list[PickupGroup]: List of Call Pickup Groups as a list of dictionaries.
                 See the PickupGroup class for attributes.
+
+    `get_workspaces(self)`
+    :   Get the Workspaces and Workspace Locations for the Organizations.
+            Also stores them in the Org.workspaces and Org.workspace_locations attributes.
+        
+        Returns:
+            list[Workspace]: List of Workspace instance objects. See the Workspace class for attributes.
 
     `get_wxc_people(self)`
     :   Get all of the people within the Organization **who have Webex Calling**
@@ -662,6 +681,10 @@ Classes
     Returns:
         Webex: The Webex instance
 
+    ### Descendants
+
+    * wxcadm.Org
+
     ### Instance variables
 
     `headers`
@@ -669,6 +692,136 @@ Classes
 
     `orgs`
     :   A list of the Org instances that this Webex instance can manage
+
+    ### Methods
+
+    `get_org_by_name(self, name: str)`
+    :   Get the Org instance that matches all or part of the name argument.
+        Args:
+            name (str): Text to match against the Org name
+        Returns:
+            Org: The Org instance of the matching Org
+        Raises:
+            KeyError: Raised when no match is made
+
+`Workspace(parent: wxcadm.Org, id: str, config: dict = None)`
+:   Initialize a Workspace instance. If only the `id` is provided, the configuration will be fetched from
+        the Webex API. To save API calls, the config dict can be passed using the `config` argument
+    Args:
+        parent (Org): The Organization to which this workspace belongs
+        id (str): The Webex ID of the Workspace
+        config (dict): The configuration of the Workspace as returned by the Webex API
+
+    ### Instance variables
+
+    `calendar`
+    :   The type of calendar connector assigned to the Workspace
+
+    `calling`
+    :   The type of Calling license assigned to the Workspace. Valid values are:
+        
+            "freeCalling": Free Calling
+            "hybridCalling": Hybrid Calling
+            "webexCalling": Webex Calling
+            "webexEdgeForDevices": Webex Edge for Devices
+
+    `capacity`
+    :   The capacity of the Workspace
+
+    `created`
+    :   The date and time the workspace was created
+
+    `floor`
+    :   The Webex ID of the Floor ID
+
+    `id`
+    :   The Webex ID of the Workspace
+
+    `location`
+    :   The Webex ID of the Workspace Location (note this is a Workspace Location, not a Calling Location.
+
+    `name`
+    :   The name of the Workspace
+
+    `notes`
+    :   Notes associated with the Workspace
+
+    `sip_address`
+    :   The SIP Address used to call to the Workspace
+
+    `type`
+    :   The type of Workspace. Valid values are:
+        
+            "notSet": No value set
+            "focus": High concentration
+            "huddle": Brainstorm/collaboration
+            "meetingRoom": Dedicated meeting space
+            "open": Unstructured agile
+            "desk": Individual
+            "other": Unspecified
+
+    ### Methods
+
+    `get_config(self)`
+    :   Get (or refresh) the confiration of the Workspace from the Webex API
+
+`WorkspaceLocation(parent: wxcadm.Org, id: str, config: dict = None)`
+:   Initialize a WorkspaceLocation instance. If only the `id` is provided, the configuration will be fetched from
+        the Webex API. To save API calls, the config dict can be passed using the `config` argument
+    Args:
+        parent (Org): The Organization to which this WorkspaceLocation belongs
+        id (str): The Webex ID of the WorkspaceLocation
+        config (dict): The configuration of the WorkspaceLocation as returned by the Webex API
+
+    ### Descendants
+
+    * wxcadm.WorkspaceLocationFloor
+
+    ### Instance variables
+
+    `address`
+    :   The address of the WorkspaceLocation
+
+    `city`
+    :   The city name where the WorkspaceLocation is located
+
+    `country`
+    :   The country code (ISO 3166-1) for the WorkspaceLocation
+
+    `id`
+    :   The Webex ID of the Workspace
+
+    `latitude`
+    :   The WorkspaceLocation latitude
+
+    `longitude`
+    :   The WorkspaceLocation longitude
+
+    `name`
+    :   The name of the WorkspaceLocation
+
+    `notes`
+    :   Notes associated with the WorkspaceLocation
+
+    ### Methods
+
+    `get_config(self)`
+    :   Get (or refresh) the configuration of the WorkspaceLocations from the Webex API
+
+    `get_floors(self)`
+    :   Get (or refresh) the WorkspaceLocationFloor instances for this WorkspaceLocation
+
+`WorkspaceLocationFloor(config: dict)`
+:   Initialize a WorkspaceLocation instance. If only the `id` is provided, the configuration will be fetched from
+        the Webex API. To save API calls, the config dict can be passed using the `config` argument
+    Args:
+        parent (Org): The Organization to which this WorkspaceLocation belongs
+        id (str): The Webex ID of the WorkspaceLocation
+        config (dict): The configuration of the WorkspaceLocation as returned by the Webex API
+
+    ### Ancestors (in MRO)
+
+    * wxcadm.WorkspaceLocation
 
 `XSI(parent, get_profile: bool = False, cache: bool = False)`
 :   The XSI class holds all of the relevant XSI data for a Person
