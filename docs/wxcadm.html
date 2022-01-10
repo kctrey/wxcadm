@@ -1880,6 +1880,11 @@ class WorkspaceLocation:
 
 class WorkspaceLocationFloor(WorkspaceLocation):
     def __init__(self, config: dict):
+        &#34;&#34;&#34;
+        Initialize a new WorkspaceLocationFloor
+        Args:
+            config (dict): The config as returned by the Webex API
+        &#34;&#34;&#34;
         self.name = config.get(&#34;displayName&#34;)
         self.id = config.get(&#34;id&#34;)
         self.floor = config.get(&#34;floorNumber&#34;)</code></pre>
@@ -6003,16 +6008,11 @@ the Webex API. To save API calls, the config dict can be passed using the <code>
 <span>(</span><span>config: dict)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Initialize a WorkspaceLocation instance. If only the <code>id</code> is provided, the configuration will be fetched from
-the Webex API. To save API calls, the config dict can be passed using the <code>config</code> argument</p>
+<div class="desc"><p>Initialize a new WorkspaceLocationFloor</p>
 <h2 id="args">Args</h2>
 <dl>
-<dt><strong><code>parent</code></strong> :&ensp;<code><a title="wxcadm.Org" href="#wxcadm.Org">Org</a></code></dt>
-<dd>The Organization to which this WorkspaceLocation belongs</dd>
-<dt><strong><code>id</code></strong> :&ensp;<code>str</code></dt>
-<dd>The Webex ID of the WorkspaceLocation</dd>
 <dt><strong><code>config</code></strong> :&ensp;<code>dict</code></dt>
-<dd>The configuration of the WorkspaceLocation as returned by the Webex API</dd>
+<dd>The config as returned by the Webex API</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -6020,6 +6020,11 @@ the Webex API. To save API calls, the config dict can be passed using the <code>
 </summary>
 <pre><code class="python">class WorkspaceLocationFloor(WorkspaceLocation):
     def __init__(self, config: dict):
+        &#34;&#34;&#34;
+        Initialize a new WorkspaceLocationFloor
+        Args:
+            config (dict): The config as returned by the Webex API
+        &#34;&#34;&#34;
         self.name = config.get(&#34;displayName&#34;)
         self.id = config.get(&#34;id&#34;)
         self.floor = config.get(&#34;floorNumber&#34;)</code></pre>

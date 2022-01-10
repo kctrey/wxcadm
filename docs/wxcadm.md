@@ -812,12 +812,9 @@ Classes
     :   Get (or refresh) the WorkspaceLocationFloor instances for this WorkspaceLocation
 
 `WorkspaceLocationFloor(config: dict)`
-:   Initialize a WorkspaceLocation instance. If only the `id` is provided, the configuration will be fetched from
-        the Webex API. To save API calls, the config dict can be passed using the `config` argument
+:   Initialize a new WorkspaceLocationFloor
     Args:
-        parent (Org): The Organization to which this WorkspaceLocation belongs
-        id (str): The Webex ID of the WorkspaceLocation
-        config (dict): The configuration of the WorkspaceLocation as returned by the Webex API
+        config (dict): The config as returned by the Webex API
 
     ### Ancestors (in MRO)
 

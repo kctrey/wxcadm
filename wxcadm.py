@@ -1852,6 +1852,11 @@ class WorkspaceLocation:
 
 class WorkspaceLocationFloor(WorkspaceLocation):
     def __init__(self, config: dict):
+        """
+        Initialize a new WorkspaceLocationFloor
+        Args:
+            config (dict): The config as returned by the Webex API
+        """
         self.name = config.get("displayName")
         self.id = config.get("id")
         self.floor = config.get("floorNumber")
