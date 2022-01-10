@@ -1855,4 +1855,3 @@ class WorkspaceLocationFloor(WorkspaceLocation):
         self.name = config.get("displayName")
         self.id = config.get("id")
         self.floor = config.get("floorNumber")
-
