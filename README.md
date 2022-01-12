@@ -2,7 +2,10 @@
 Python Library for Webex Calling Administration
 
 # Purpose
-wxcadm is a Python 3 library to simplify the API calls to Webex in order to manage and report on users of Webex Calling
+wxcadm is a Python 3 library to simplify the API calls to Webex in order to manage and report on users of Webex Calling.
+Although the primary focus is Webex Calling, many of the other Webex admin functions are included. This library is not
+meant to be an interface to the Meetings and Messaging capabilities of Webex....there are plenty of other modules that
+provide that.
 
 # Status
 The current version in this branch is mostly complete. All the Webex Calling related functions and classes work.
@@ -29,7 +32,8 @@ webex = Webex(access_token)
 ```
 Since most administrators only have access to a single Webex Organization, you can access that Organization with the
 **org** attribute. If the administrator has access to more than one Organization, they can be accessed using the
-**orgs** attribute, which is a list of the organizations that can be managed.
+**orgs** attribute, which is a list of the organizations that can be managed. See the "Regarding Multiple 
+Organizations" section below for further information.
 
 You can see all the attributes with
 ```python
@@ -153,6 +157,24 @@ enhanced to provide capabilities, new methods will be added to **wxcadm**.
 XSI can be used to accomplish a lot of things on behalf of the user. The following are examples of some commonly-used
 methods provided by the wxcadm module. **Note that XSI must be enabled by Cisco before it is available to an
 Organization.** Contact Cisco TAC to request that XSI be enabled.
+### Get the user's profile (phone number)
+The XSI Profile is retrieved directly from the Call Control back-end, so it represents the actual user profile, rather
+than the Common Identity profile present in the `Org.people` attribute. A common use is to get the Webex Calling phone
+number for the user rather than what is recived from Active Directory.
+```python
+from wxcadm import Webex
+access_token = "Your API Access Token"
+webex = Webex(access_token, get_xsi=True)
+
+# Get the person that we want to get the profile for
+person = webex.org.get_person_by_email("user@domain.com")
+person.start_xsi()      # Starts an XSI session for the Person and creates the XSI instance in Person.xsi
+print(person.xsi.profile)
+# Get the phone number for the person
+country_code = person.xsi.profile['country_code']
+phone_number = person.xsi.profile['number']
+e164_number = f"+{country_code}{phone_number}"
+```
 ### Place a call
 ```python
 from wxcadm import Webex

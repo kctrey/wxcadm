@@ -4,20 +4,27 @@ Module wxcadm
 Classes
 -------
 
-`APIError(message)`
-:   Common base class for all non-exit exceptions.
-    
-    The base class for any exceptions dealing with the API
+`CPAPI(org: wxcadm.Org, access_token: str)`
+:   The CPAPI class handles API calls using the CP-API, which is the native API used by Webex Control Hub.
 
-    ### Ancestors (in MRO)
+    ### Methods
 
-    * builtins.Exception
-    * builtins.BaseException
+    `clear_global_vm_pin(self)`
+    :
 
-    ### Descendants
+    `get_numbers(self)`
+    :
 
-    * wxcadm.PutError
-    * wxcadm.TokenError
+    `reset_vm_pin(self, person: wxcadm.Person, pin: str = None)`
+    :
+
+    `set_global_vm_pin(self, pin: str)`
+    :   Set the Org-wide default VM PIN
+        Args:
+            pin (str): The PIN to set as the global default
+        
+        Returns:
+            bool: True is successful. False if not.
 
 `Call(parent, id: str = '', address: str = '')`
 :   The Call class represents a call for a person. Since Webex supports calls in the Webex API as well as XSI API,
@@ -262,18 +269,7 @@ Classes
     `get_config(self)`
     :   Get the Hunt Group config, including agents
 
-`LicenseError(message)`
-:   Common base class for all non-exit exceptions.
-    
-    Exceptions dealing with License problems within the Org
-
-    ### Ancestors (in MRO)
-
-    * wxcadm.OrgError
-    * builtins.Exception
-    * builtins.BaseException
-
-`Location(location_id: str, name: str, address: dict = None)`
+`Location(parent: wxcadm.Org, location_id: str, name: str, address: dict = None)`
 :   Initialize a Location instance
     Args:
         location_id (str): The Webex ID of the Location
@@ -287,13 +283,19 @@ Classes
     `address`
     :   The address of the Location
 
+    `call_queues`
+    :   List of CallQueue instances for this Location
+
+    `hunt_groups`
+    :   List of HuntGroup instances for this Location
+
     `id`
     :   The Webex ID of the Location
 
     `name`
     :   The name of the Location
 
-`Org(name: str, id: str, parent: wxcadm.Webex = None, people: bool = True, locations: bool = True, hunt_groups: bool = False, call_queues: bool = False, xsi: bool = False)`
+`Org(name: str, id: str, parent: wxcadm.Webex = None, people: bool = True, locations: bool = True, hunt_groups: bool = False, call_queues: bool = False, numbers: bool = False, xsi: bool = False)`
 :   The base class for working with wxcadm.
     
     Initialize an Org instance
@@ -334,6 +336,12 @@ Classes
 
     `name`
     :   The name of the Organization
+
+    `numbers`
+    :   All of the Numbers for the Org
+        
+        Returns:
+            list[dict]: List of dict containing information about each number
 
     `people`
     :   A list of all of the Person stances for the Organization
@@ -425,24 +433,20 @@ Classes
         Returns:
             list[Person]: List of Person instances of people who have a Webex Calling license
 
+    `get_wxc_person_license(self)`
+    :   Get the Webex Calling - Professional license ID
+        Returns:
+            str: The License ID
+        Todo:
+            Need to account for multiple subscriptions and calculate usage, throwing an exception when there
+                is no license available.
+
     `get_xsi_endpoints(self)`
     :   Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.
         Returns:
-            dict: Org.xsi attribute dictionary with each endpoint as an entry
+            dict: Org.xsi attribute dictionary with each endpoint as an entry.
 
-`OrgError(message)`
-:   Common base class for all non-exit exceptions.
-
-    ### Ancestors (in MRO)
-
-    * builtins.Exception
-    * builtins.BaseException
-
-    ### Descendants
-
-    * wxcadm.LicenseError
-
-`Person(user_id, parent: object = None, config: dict = None)`
+`Person(user_id, parent: wxcadm.Org = None, config: dict = None)`
 :   Initialize a new Person instance. If only the `user_id` is provided, the API calls will be made to get
         the config from Webex. To save on API calls, the config can be provided which will set the attributes
         without an API call.
@@ -516,6 +520,9 @@ Classes
     `roles`
     :   The roles assigned to this Person in Webex
 
+    `spark_id`
+    :
+
     `vm_config`
     :   Dictionary of the VM config as returned by Webex API
 
@@ -526,6 +533,17 @@ Classes
     :   Holds the XSI instance when created with the `start_xsi()` method.
 
     ### Methods
+
+    `assign_wxc(self, location: wxcadm.Location, phone_number: str = None, extension: str = None)`
+    :   Assign Webex Calling to the user, along with a phone number and/or an extension.
+        
+        Args:
+            location (Location): The Location instance to assign the Person to.
+            phone_number (str, optional): The phone number to assign to the Person.
+            extension (str, optional): The extension to assign to the Person
+        
+        Returns:
+            bool: True on success, False if otherwise
 
     `change_phone_number(self, new_number: str, new_extension: str = None)`
     :   Change a person's phone number and extension
@@ -585,11 +603,24 @@ Classes
     `push_vm_config(self)`
     :   Pushes the current Person.vm_config attributes back to Webex
 
-    `refresh_person(self)`
+    `refresh_person(self, raw: bool = False)`
     :   Pull a fresh copy of the Person details from the Webex API and update the instance. Useful when changes
             are made outside of the script or changes have been pushed and need to get updated info.
+        Args:
+            raw (bool, optional): Return the "raw" config from the as a dict. Useful when making changes to
+                the user, because you have to send all of the values over again.
         Returns:
             bool: True if successful, False if not
+
+    `reset_vm_pin(self, pin: str = None)`
+    :   Resets the user's voicemail PIN. If no PIN is provided, the reset command is sent, and assumes that
+        a default PIN exists for the organization. Because of the operation of Webex, if a PIN is provided, the
+        method will temporarily set the Org-wide PIN to the chosen PIN, then does the reset, then un-sets the
+        Org default in Control Hub. ***This can cause unintended consequences if a PIN is provided and the Org
+        already has a default PIN** because that PIN will be un-set at the end of this method.
+        
+        Args:
+            pin (str): The new temporary PIN to set for the Person
 
     `set_calling_only(self)`
     :   Removes the Messaging and Meetings licenses, leaving only the Calling capability. **Note that this does not
@@ -642,28 +673,6 @@ Classes
     :   Gets the configuration of the Pickup Group from Webex
         Returns:
             dict: The configuration of the Pickup Group
-
-`PutError(message)`
-:   Common base class for all non-exit exceptions.
-    
-    Exception class for problems putting values back into Webex
-
-    ### Ancestors (in MRO)
-
-    * wxcadm.APIError
-    * builtins.Exception
-    * builtins.BaseException
-
-`TokenError(message)`
-:   Common base class for all non-exit exceptions.
-    
-    Exceptions dealing with the Access Token itself
-
-    ### Ancestors (in MRO)
-
-    * wxcadm.APIError
-    * builtins.Exception
-    * builtins.BaseException
 
 `Webex(access_token: str, create_org: bool = True, get_people: bool = True, get_locations: bool = True, get_xsi: bool = False, get_hunt_groups: bool = False, get_call_queues: bool = False)`
 :   The base class for working with wxcadm.
@@ -720,10 +729,10 @@ Classes
     `calling`
     :   The type of Calling license assigned to the Workspace. Valid values are:
         
-            "freeCalling": Free Calling
-            "hybridCalling": Hybrid Calling
-            "webexCalling": Webex Calling
-            "webexEdgeForDevices": Webex Edge for Devices
+            'freeCalling': Free Calling
+            'hybridCalling': Hybrid Calling
+            'webexCalling': Webex Calling
+            'webexEdgeForDevices': Webex Edge for Devices
 
     `capacity`
     :   The capacity of the Workspace
@@ -748,6 +757,9 @@ Classes
 
     `sip_address`
     :   The SIP Address used to call to the Workspace
+
+    `spark_id`
+    :
 
     `type`
     :   The type of Workspace. Valid values are:

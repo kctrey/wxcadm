@@ -3,6 +3,7 @@ import time
 import requests
 import logging
 import base64
+from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, XSIError)
 
 # TODO: Eventually I would like to use dataclasses, but it will be a heavy lift
 
@@ -19,35 +20,6 @@ logging.basicConfig(level=logging.INFO,
 # Some functions available to all classes and instances (optionally)
 # TODO Lots of stuff probably could be moved here since there are common functions in most classes
 _url_base = "https://webexapis.com/"
-
-
-class OrgError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
-
-
-class LicenseError(OrgError):
-    def __init__(self, message):
-        """Exceptions dealing with License problems within the Org"""
-        super().__init__(message)
-
-
-class APIError(Exception):
-    def __init__(self, message):
-        """The base class for any exceptions dealing with the API"""
-        super().__init__(message)
-
-
-class TokenError(APIError):
-    def __init__(self, message):
-        """Exceptions dealing with the Access Token itself"""
-        super().__init__(message)
-
-
-class PutError(APIError):
-    def __init__(self, message):
-        """Exception class for problems putting values back into Webex"""
-        super().__init__(message)
 
 
 class Webex:
@@ -152,6 +124,7 @@ class Org(Webex):
                  locations: bool = True,
                  hunt_groups: bool = False,
                  call_queues: bool = False,
+                 numbers: bool = False,
                  xsi: bool = False,
                  ):
         """
@@ -172,6 +145,7 @@ class Org(Webex):
         """
 
         # Instance attrs
+        self._parent = parent
         self.call_queues: list[CallQueue] = None
         """The Call Queues for this Org"""
         self.hunt_groups: list[HuntGroup] = None
@@ -200,6 +174,9 @@ class Org(Webex):
         self._headers = parent.headers
         self.licenses = self.__get_licenses()
 
+        # Create a CPAPI instance for CPAPI work
+        self._cpapi = CPAPI(self, self._parent._access_token)
+
         # Get all of the people if we aren't told not to
         if people:
             self.get_people()
@@ -212,9 +189,11 @@ class Org(Webex):
         if hunt_groups:
             self.get_hunt_groups()
 
-    @property
     def __str__(self):
-        return f"{self.name},{self.id}"
+        return self.name
+
+    def __repr__(self):
+        return self.id
 
     def __get_licenses(self):
         """
@@ -250,6 +229,17 @@ class Org(Webex):
             license_list.append(lic)
         return license_list
 
+    @property
+    def numbers(self):
+        """
+        All of the Numbers for the Org
+
+        Returns:
+            list[dict]: List of dict containing information about each number
+
+        """
+        return self._cpapi.get_numbers()
+
     def __get_wxc_licenses(self):
         """
         Get only the Webex Calling licenses from the Org.licenses attribute
@@ -264,7 +254,7 @@ class Org(Webex):
                 license_list.append(license['id'])
         return license_list
 
-    def __get_wxc_person_license(self):
+    def get_wxc_person_license(self):
         """
         Get the Webex Calling - Professional license ID
         Returns:
@@ -278,8 +268,6 @@ class Org(Webex):
             if license['wxc_type'] == "person":
                 return license['id']
         raise LicenseError("No Webex Calling Professional license found")
-
-
 
     def create_person(self, email: str,
                       location: str,
@@ -319,7 +307,7 @@ class Org(Webex):
         # Find the license IDs for each requested service, unless licenses was passed
         if not licenses:
             if calling:
-                licenses.append(self.__get_wxc_person_license())
+                licenses.append(self.get_wxc_person_license())
             if messaging:
                 pass
             if meetings:
@@ -364,15 +352,17 @@ class Org(Webex):
         """
         Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.
         Returns:
-            dict: Org.xsi attribute dictionary with each endpoint as an entry
+            dict: Org.xsi attribute dictionary with each endpoint as an entry.
         """
         params = {"callingData": "true", **self._params}
         r = requests.get(_url_base + "v1/organizations/" + self.id, headers=self._headers, params=params)
         response = r.json()
-        self.xsi['actions_endpoint'] = response['xsiActionsEndpoint']
-        self.xsi['events_endpoint'] = response['xsiEventsEndpoint']
-        self.xsi['events_channel_endpoint'] = response['xsiEventsChannelEndpoint']
-
+        if "xsiActionsEndpoint" in response:
+            self.xsi['actions_endpoint'] = response['xsiActionsEndpoint']
+            self.xsi['events_endpoint'] = response['xsiEventsEndpoint']
+            self.xsi['events_channel_endpoint'] = response['xsiEventsChannelEndpoint']
+        else:
+            raise XSIError("XSI requested but not present in Org. Contact Cisco TAC to enable XSI.")
         return self.xsi
 
     def get_locations(self):
@@ -386,7 +376,7 @@ class Org(Webex):
         response = r.json()
         # I am aware that this doesn't support pagination, so there will be a limit on number of Locations returned
         for location in response['items']:
-            this_location = Location(location['id'], location['name'], address=location['address'])
+            this_location = Location(self, location['id'], location['name'], address=location['address'])
             self.locations.append(this_location)
 
         return self.locations
@@ -544,7 +534,7 @@ class Org(Webex):
 
 
 class Location:
-    def __init__(self, location_id: str, name: str, address: dict = None):
+    def __init__(self, parent: Org, location_id: str, name: str, address: dict = None):
         """
         Initialize a Location instance
         Args:
@@ -554,6 +544,7 @@ class Location:
         Returns:
              Location (object): The Location instance
         """
+        self._parent = parent
         self.id: str = location_id
         """The Webex ID of the Location"""
         self.name: str = name
@@ -561,13 +552,33 @@ class Location:
         self.address: dict = address
         """The address of the Location"""
 
-    @property
     def __str__(self):
-        return f"{self.name},{self.id}"
+        return self.name
+
+    def __repr__(self):
+        return self.id
+
+    @property
+    def hunt_groups(self):
+        """List of HuntGroup instances for this Location"""
+        my_hunt_groups = []
+        for hg in self._parent.hunt_groups:
+            if hg.location == self.id:
+                my_hunt_groups.append(hg)
+        return my_hunt_groups
+
+    @property
+    def call_queues(self):
+        """List of CallQueue instances for this Location"""
+        my_call_queues = []
+        for cq in self._parent.call_queues:
+            if cq.location_id == self.id:
+                my_call_queues.append(cq)
+        return my_call_queues
 
 
 class Person:
-    def __init__(self, user_id, parent: object = None, config: dict = None):
+    def __init__(self, user_id, parent: Org = None, config: dict = None):
         """
         Initialize a new Person instance. If only the `user_id` is provided, the API calls will be made to get
             the config from Webex. To save on API calls, the config can be provided which will set the attributes
@@ -667,6 +678,9 @@ class Person:
     def __str__(self):
         return f"{self.email},{self.display_name}"
 
+    def __repr__(self):
+        return self.id
+
     # The following is to simplify the API call. Eventually I may open this as a public method to
     # allow arbitrary API calls
     def __get_webex_data(self, endpoint: str, params: dict = None):
@@ -712,9 +726,52 @@ class Person:
             logging.info("Push failed")
             raise PutError(r.text)
 
+    @property
+    def spark_id(self):
+        user_id_bytes = base64.b64decode(self.id + "===")
+        spark_id = user_id_bytes.decode("utf-8")
+        return spark_id
+
+
+    def assign_wxc(self, location: Location, phone_number: str = None, extension: str = None):
+        """
+        Assign Webex Calling to the user, along with a phone number and/or an extension.
+
+        Args:
+            location (Location): The Location instance to assign the Person to.
+            phone_number (str, optional): The phone number to assign to the Person.
+            extension (str, optional): The extension to assign to the Person
+
+        Returns:
+            bool: True on success, False if otherwise
+        """
+        # To assign Webex Calling to a Person, we need to find the License ID for Webex Calling Professional
+        license = self._parent.get_wxc_person_license()
+        self.licenses.append(license)
+
+        # Call the update_person() method to update the new values.
+        success = self.update_person(numbers=[{"type": "work", "value": phone_number}],
+                                     extension=extension, location=location.id)
+        if success:
+            return True
+        else:
+            return False
+
     def start_xsi(self):
         """Starts an XSI session for the Person"""
         self.xsi = XSI(self)
+        return self.xsi
+
+    def reset_vm_pin(self, pin: str = None):
+        """Resets the user's voicemail PIN. If no PIN is provided, the reset command is sent, and assumes that
+            a default PIN exists for the organization. Because of the operation of Webex, if a PIN is provided, the
+            method will temporarily set the Org-wide PIN to the chosen PIN, then does the reset, then un-sets the
+            Org default in Control Hub. ***This can cause unintended consequences if a PIN is provided and the Org
+            already has a default PIN** because that PIN will be un-set at the end of this method.
+
+            Args:
+                pin (str): The new temporary PIN to set for the Person
+        """
 
     def get_full_config(self):
         """Fetches all of the Webex Calling settings for the Person. Due to the number of API calls, this
@@ -864,17 +921,23 @@ class Person:
                     license_list.append(org_lic)
         return license_list
 
-    def refresh_person(self):
+    def refresh_person(self, raw: bool = False):
         """
         Pull a fresh copy of the Person details from the Webex API and update the instance. Useful when changes
             are made outside of the script or changes have been pushed and need to get updated info.
+        Args:
+            raw (bool, optional): Return the "raw" config from the as a dict. Useful when making changes to
+                the user, because you have to send all of the values over again.
         Returns:
             bool: True if successful, False if not
         """
         response = self.__get_webex_data(f"v1/people/{self.id}")
         if response:
             self.__process_api_data(response)
-            return True
+            if raw:
+                return response
+            else:
+                return True
         else:
             return False
 
@@ -909,32 +972,32 @@ class Person:
         """
         # Build the payload using the arguments and the instance attrs
         payload = {}
-        if not email:
+        if email is None:
             email = self.email
         payload['emails'] = [email]
-        if not numbers:
+        if numbers is None:
             numbers = self.numbers
         payload['phoneNumbers'] = numbers
-        if not extension:
+        if extension is None:
             if self.extension:
                 extension = self.extension
         payload['extension'] = extension
-        if not location:
+        if location is None:
             location = self.location
         payload['location'] = location
-        if not display_name:
+        if display_name is None:
             display_name = self.display_name
         payload['displayName'] = display_name
-        if not first_name:
+        if first_name is None:
             first_name = self.first_name
         payload['firstName'] = first_name
-        if not last_name:
+        if last_name is None:
             last_name = self.last_name
         payload['lastName'] = last_name
-        if not roles:
+        if roles is None:
             roles = self.roles
         payload['roles'] = roles
-        if not licenses:
+        if licenses is None:
             licenses = self.licenses
         payload['licenses'] = licenses
 
@@ -1018,6 +1081,12 @@ class PickupGroup:
             for agent in response['agents']:
                 self.users.append(agent)
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.id
+
     def get_config(self):
         """Gets the configuration of the Pickup Group from Webex
         Returns:
@@ -1051,6 +1120,12 @@ class CallQueue:
         if get_config:
             self.get_queue_config()
             self.get_queue_forwarding()
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.id
 
     def get_queue_config(self):
         """
@@ -1383,6 +1458,12 @@ class HuntGroup:
         if config:
             logging.info(f"Getting config for Hunt Group {self.id} in Location {self.location}")
             self.get_config()
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.id
 
     def get_config(self):
         """Get the Hunt Group config, including agents"""
@@ -1739,10 +1820,10 @@ class Workspace:
         """
         The type of Calling license assigned to the Workspace. Valid values are:
         
-            "freeCalling": Free Calling
-            "hybridCalling": Hybrid Calling
-            "webexCalling": Webex Calling
-            "webexEdgeForDevices": Webex Edge for Devices
+            'freeCalling': Free Calling
+            'hybridCalling': Hybrid Calling
+            'webexCalling': Webex Calling
+            'webexEdgeForDevices': Webex Edge for Devices
         """
         self.calendar: dict = None
         """The type of calendar connector assigned to the Workspace"""
@@ -1753,6 +1834,18 @@ class Workspace:
             self.__process_config(config)
         else:
             self.get_config()
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.id
+
+    @property
+    def spark_id(self):
+        bytes = base64.b64decode(self.id + "===")
+        spark_id = bytes.decode("utf-8")
+        return spark_id
 
     def get_config(self):
         """Get (or refresh) the confiration of the Workspace from the Webex API"""
@@ -1860,3 +1953,78 @@ class WorkspaceLocationFloor(WorkspaceLocation):
         self.name = config.get("displayName")
         self.id = config.get("id")
         self.floor = config.get("floorNumber")
+
+class CPAPI:
+    """The CPAPI class handles API calls using the CP-API, which is the native API used by Webex Control Hub."""
+    def __init__(self, org: Org, access_token: str):
+        self._access_token = access_token
+        self._headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Calculate the "customer" ID from the Org ID
+        org_id_bytes = base64.b64decode(org.id + "===")
+        org_id_decoded = org_id_bytes.decode("utf-8")
+        self._customer = org_id_decoded.split("/")[-1]
+
+        self._url_base = f"https://cpapi-a.wbx2.com/api/v1/customers/{self._customer}/"
+
+    def set_global_vm_pin(self, pin: str):
+        """
+        Set the Org-wide default VM PIN
+        Args:
+            pin (str): The PIN to set as the global default
+
+        Returns:
+            bool: True is successful. False if not.
+
+        """
+        logging.info("Setting Org-wide default VM PIN")
+        payload = {
+            "defaultVoicemailPinEnabled": True,
+            "defaultVoicemailPin": str(pin)
+        }
+        r = requests.patch(self._url_base + "features/voicemail/rules",
+                           headers=self._headers, json=payload)
+        return r.text
+
+    def clear_global_vm_pin(self):
+        logging.info("Clearing Org-wide default VM PIN")
+        payload = {
+            "defaultVoicemailPinEnabled": False,
+        }
+        r = requests.patch(self._url_base + f"{self._customer}/features/voicemail/rules",
+                           headers=self._headers, json=payload)
+        return r.text
+
+    def reset_vm_pin(self, person: Person, pin: str = None):
+        logging.info(f"Resetting VM PIN for {person.email}")
+        user_id = person.spark_id.split("/")[-1]
+
+        if pin is not None:
+            self.set_global_vm_pin(pin)
+
+        requests.post(self._url_base + f"{self._customer}/users/{user_id}/features/voicemail/actions/resetpin/invoke",
+                      headers=self._headers)
+
+        if pin is not None:
+            self.clear_global_vm_pin()
+
+        return True
+
+    def get_numbers(self):
+        numbers = []
+        r = requests.get(self._url_base + f"{self._customer}/numbers", headers=self._headers)
+        response = r.json()
+        for number in response['numbers']:
+            if "owner" in number:
+                user_str = f"ciscospark://us/PEOPLE/{number['owner']['id']}"
+                user_bytes = user_str.encode("utf-8")
+                base64_bytes = base64.b64encode(user_bytes)
+                base64_id = base64_bytes.decode('utf-8')
+                base64_id = base64_id.rstrip("=")
+                number['owner']['id'] = base64_id
+
+            numbers.append(number)
+
+        # Get the pagination for future use
+        pagination = response['paging']
+        return numbers
