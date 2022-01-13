@@ -33,7 +33,7 @@ import logging
 import base64
 from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, XSIError)
 
-# TODO: Eventually I would like to use dataclasses, but it will be a heavy lift
+# TODO: Eventually I would like to use dataclasses, but it will be a heavy lift, and doesn&#39;t save that much code
 
 # TODO: There is a package-wide problem where we have Webex-native data and instance attributes that we write
 #       to make the instances easier to work with. I have kept the native data because it is easier to push back
@@ -43,8 +43,8 @@ from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, 
 
 # Set up logging
 logging.basicConfig(level=logging.INFO,
-                    filename=&#34;wxcadm.log&#34;,
-                    format=&#39;%(asctime)s %(module)s:%(levelname)s:%(message)s&#39;)
+                      filename=&#34;wxcadm.log&#34;,
+                      format=&#39;%(asctime)s %(module)s:%(levelname)s:%(message)s&#39;)
 # Some functions available to all classes and instances (optionally)
 # TODO Lots of stuff probably could be moved here since there are common functions in most classes
 _url_base = &#34;https://webexapis.com/&#34;
@@ -56,6 +56,7 @@ class Webex:
     &#34;&#34;&#34;
     The base class for working with wxcadm.
     &#34;&#34;&#34;
+
     def __init__(self,
                  access_token: str,
                  create_org: bool = True,
@@ -64,7 +65,7 @@ class Webex:
                  get_xsi: bool = False,
                  get_hunt_groups: bool = False,
                  get_call_queues: bool = False
-                 ) -&gt; object:
+                 ) -&gt; None:
         &#34;&#34;&#34;
         Initialize a Webex instance to communicate with Webex and store data
         Args:
@@ -143,6 +144,7 @@ class Webex:
                 return org
         raise KeyError(&#34;Org not found&#34;)
 
+
 class Org(Webex):
     def __init__(self,
                  name: str,
@@ -152,7 +154,6 @@ class Org(Webex):
                  locations: bool = True,
                  hunt_groups: bool = False,
                  call_queues: bool = False,
-                 numbers: bool = False,
                  xsi: bool = False,
                  ):
         &#34;&#34;&#34;
@@ -184,7 +185,7 @@ class Org(Webex):
         &#39;A list of the Location instances for this Org&#39;
         self.name: str = name
         &#39;The name of the Organization&#39;
-        self.id:  str = id
+        self.id: str = id
         &#39;&#39;&#39;The Webex ID of the Organization&#39;&#39;&#39;
         self.xsi: dict = {}
         &#34;&#34;&#34;The XSI details for the Organization&#34;&#34;&#34;
@@ -668,13 +669,7 @@ class Person:
         &#34;&#34;&#34;A list of the Call Queue instances that this user is an Agent for&#34;&#34;&#34;
 
         # API-related attributes
-        # Set the Authorization header based on how the instance was built
-        if parent is None:  # Instance wasn&#39;t created by another instance
-            # TODO Need some code here to throw an error if there is no access_token and url_base
-            self._headers = {&#34;Authorization&#34;: &#34;Bearer &#34; + access_token}
-            self._url_base = url_base
-        else:  # Instance was created by a parent
-            self._headers = parent._headers
+        self._headers = parent._headers
         self._params = {&#34;orgId&#34;: parent.id, &#34;callingData&#34;: &#34;true&#34;}
 
         # If the config was passed, process it. If not, make the API call for the Person ID and then process
@@ -760,7 +755,6 @@ class Person:
         spark_id = user_id_bytes.decode(&#34;utf-8&#34;)
         return spark_id
 
-
     def assign_wxc(self, location: Location, phone_number: str = None, extension: str = None):
         &#34;&#34;&#34;
         Assign Webex Calling to the user, along with a phone number and/or an extension.
@@ -800,6 +794,7 @@ class Person:
             Args:
                 pin (str): The new temporary PIN to set for the Person
         &#34;&#34;&#34;
+        self._parent._cpapi.reset_vm_pin(self, pin=pin)
 
     def get_full_config(self):
         &#34;&#34;&#34;Fetches all of the Webex Calling settings for the Person. Due to the number of API calls, this
@@ -970,15 +965,15 @@ class Person:
             return False
 
     def update_person(self,
-                      email = None,
-                      numbers = None,
-                      extension = None,
-                      location = None,
-                      display_name = None,
-                      first_name = None,
-                      last_name = None,
-                      roles = None,
-                      licenses = None):
+                      email=None,
+                      numbers=None,
+                      extension=None,
+                      location=None,
+                      display_name=None,
+                      first_name=None,
+                      last_name=None,
+                      roles=None,
+                      licenses=None):
         &#34;&#34;&#34;
         Update the Person in Webex. Pass only the arguments that you want to change. Other attributes will be populated
             with the existing values from the instance. *Note:* This allows changes directly to the instance attrs to
@@ -1052,13 +1047,13 @@ class Person:
         new_licenses = []
         for license in self.licenses:
             lic_name = self._parent.get_license_name(license)
-            if lic_name:
-                if lic_name.lower() not in remove_matches:
-                    new_licenses.append((license))
+            for match in remove_matches:
+                if match not in lic_name.lower():
+                    new_licenses.append(license)
                 else:
-                    continue
-            else:
-                continue
+                    if &#34;screen share&#34; in lic_name.lower():
+                        new_licenses.append(license)
+
         success = self.update_person(licenses=new_licenses)
         return self
 
@@ -1202,7 +1197,7 @@ class CallQueue:
 
 
 class XSI:
-    def __init__(self, parent, get_profile: bool = False, cache: bool = False ):
+    def __init__(self, parent, get_profile: bool = False, cache: bool = False):
         &#34;&#34;&#34;
         The XSI class holds all of the relevant XSI data for a Person
         Args:
@@ -1233,7 +1228,7 @@ class XSI:
         self._calls: list = []
         self._profile: dict = {}
         &#34;&#34;&#34;The XSI Profile for this Person&#34;&#34;&#34;
-        self._registrations:dict  = {}
+        self._registrations: dict = {}
         &#34;&#34;&#34;The Registrations associated with this Person&#34;&#34;&#34;
         self.fac = None
         self.services = {}
@@ -1267,7 +1262,7 @@ class XSI:
         self._calls.append(call)
         return call
 
-    def new_conference(self, calls: list = [], comment:str = &#34;&#34;):
+    def new_conference(self, calls: list = [], comment: str = &#34;&#34;):
         &#34;&#34;&#34;
         Crates a new Conference instance. A user can only have one Conference instance, so this will replace any
         previous Conference. At the moment, this **should not be called directly** and will be done dynamically by
@@ -1375,7 +1370,7 @@ class XSI:
 
     @property
     def registrations(self):
-        &#34;&#34;&#34;The device registrations asscociated with this Person&#34;&#34;&#34;
+        &#34;&#34;&#34;The device registrations associated with this Person&#34;&#34;&#34;
         if not self._registrations or not self._cache:
             # If we don&#39;t have a registrations URL, because we don&#39;t have the profile, go get it
             if &#34;registrations_url&#34; not in self._profile:
@@ -1519,6 +1514,7 @@ class Call:
     instance or an XSI instance. At the moment, the Webex API only supports user-scoped call control, so most of the
     development focus right now is the XSI API, which is more feature-rich
     &#34;&#34;&#34;
+
     def __init__(self, parent, id: str = &#34;&#34;, address: str = &#34;&#34;):
         &#34;&#34;&#34;
         Inititalize a Call instance for a Person
@@ -1542,7 +1538,6 @@ class Call:
         &#34;&#34;&#34;The externalTrackingId used by XSI&#34;&#34;&#34;
         self._status: dict = {}
         &#34;&#34;&#34;The status of the call&#34;&#34;&#34;
-
 
         if type(self._parent) is Person:
             # This is where we set things based on whether the parent is a Person
@@ -1740,7 +1735,7 @@ class Call:
             dtmf (str): The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
                 between digits (i.e. &#34;23456#,123&#34;)
         Returns:
-            bool: True if the dtmf was sent successfuly
+            bool: True if the dtmf was sent successfully
         &#34;&#34;&#34;
         params = {&#34;playdtmf&#34;: str(dtmf)}
         r = requests.put(self._url + f&#34;/{self.id}/TransmitDTMF&#34;, headers=self._headers, params=params)
@@ -1748,7 +1743,6 @@ class Call:
             return True
         else:
             return False, r.text
-
 
     def hold(self):
         &#34;&#34;&#34;
@@ -1773,11 +1767,13 @@ class Call:
         else:
             return False
 
+
 class Conference:
     &#34;&#34;&#34;The class for Conference Calls started by a Call.conference()&#34;&#34;&#34;
+
     def __init__(self, parent: object, calls: list, comment: str = &#34;&#34;):
         &#34;&#34;&#34;
-        Initialize a Conferece instance for an XSI instance
+        Initialize a Conference instance for an XSI instance
         Args:
             parent (XSI): The XSI instance that owns this conference
             calls (list): Call IDs associated with the Conference. Always two Call IDs to start a Conference.
@@ -1803,6 +1799,7 @@ class Conference:
             bool: Whether the command was successful
         &#34;&#34;&#34;
         pass
+
 
 class Workspace:
     def __init__(self, parent: Org, id: str, config: dict = None):
@@ -1876,7 +1873,7 @@ class Workspace:
         return spark_id
 
     def get_config(self):
-        &#34;&#34;&#34;Get (or refresh) the confiration of the Workspace from the Webex API&#34;&#34;&#34;
+        &#34;&#34;&#34;Get (or refresh) the confirmation of the Workspace from the Webex API&#34;&#34;&#34;
         logging.info(f&#34;Getting Workspace config for {self.id}&#34;)
         r = requests.get(_url_base + f&#34;v1/workspaces/{self.id}&#34;, headers=self._headers, params=self._params)
         if r.status_code in [200]:
@@ -1971,6 +1968,7 @@ class WorkspaceLocation:
         self.longitude = config.get(&#34;longitude&#34;, &#34;&#34;)
         self.notes = config.get(&#34;notes&#34;, &#34;&#34;)
 
+
 class WorkspaceLocationFloor(WorkspaceLocation):
     def __init__(self, config: dict):
         &#34;&#34;&#34;
@@ -1982,8 +1980,10 @@ class WorkspaceLocationFloor(WorkspaceLocation):
         self.id = config.get(&#34;id&#34;)
         self.floor = config.get(&#34;floorNumber&#34;)
 
+
 class CPAPI:
     &#34;&#34;&#34;The CPAPI class handles API calls using the CP-API, which is the native API used by Webex Control Hub.&#34;&#34;&#34;
+
     def __init__(self, org: Org, access_token: str):
         self._access_token = access_token
         self._headers = {&#34;Authorization&#34;: f&#34;Bearer {access_token}&#34;}
@@ -2002,7 +2002,11 @@ class CPAPI:
             pin (str): The PIN to set as the global default
 
         Returns:
-            bool: True is successful. False if not.
+            bool: True is successful
+
+        Raises:
+            ValueError: Raised when the PIN value is rejected by Webex, usually because the PIN doesn&#39;t comply
+                with the security policy.
 
         &#34;&#34;&#34;
         logging.info(&#34;Setting Org-wide default VM PIN&#34;)
@@ -2019,7 +2023,7 @@ class CPAPI:
         payload = {
             &#34;defaultVoicemailPinEnabled&#34;: False,
         }
-        r = requests.patch(self._url_base + f&#34;{self._customer}/features/voicemail/rules&#34;,
+        r = requests.patch(self._url_base + f&#34;features/voicemail/rules&#34;,
                            headers=self._headers, json=payload)
         return r.text
 
@@ -2030,7 +2034,7 @@ class CPAPI:
         if pin is not None:
             self.set_global_vm_pin(pin)
 
-        requests.post(self._url_base + f&#34;{self._customer}/users/{user_id}/features/voicemail/actions/resetpin/invoke&#34;,
+        requests.post(self._url_base + f&#34;users/{user_id}/features/voicemail/actions/resetpin/invoke&#34;,
                       headers=self._headers)
 
         if pin is not None:
@@ -2040,22 +2044,24 @@ class CPAPI:
 
     def get_numbers(self):
         numbers = []
-        r = requests.get(self._url_base + f&#34;{self._customer}/numbers&#34;, headers=self._headers)
-        response = r.json()
-        for number in response[&#39;numbers&#39;]:
-            if &#34;owner&#34; in number:
-                user_str = f&#34;ciscospark://us/PEOPLE/{number[&#39;owner&#39;][&#39;id&#39;]}&#34;
-                user_bytes = user_str.encode(&#34;utf-8&#34;)
-                base64_bytes = base64.b64encode(user_bytes)
-                base64_id = base64_bytes.decode(&#39;utf-8&#39;)
-                base64_id = base64_id.rstrip(&#34;=&#34;)
-                number[&#39;owner&#39;][&#39;id&#39;] = base64_id
+        r = requests.get(self._url_base + f&#34;numbers&#34;, headers=self._headers)
+        if r.status_code == 200:
+            response = r.json()
+            for number in response[&#39;numbers&#39;]:
+                if &#34;owner&#34; in number:
+                    user_str = f&#34;ciscospark://us/PEOPLE/{number[&#39;owner&#39;][&#39;id&#39;]}&#34;
+                    user_bytes = user_str.encode(&#34;utf-8&#34;)
+                    base64_bytes = base64.b64encode(user_bytes)
+                    base64_id = base64_bytes.decode(&#39;utf-8&#39;)
+                    base64_id = base64_id.rstrip(&#34;=&#34;)
+                    number[&#39;owner&#39;][&#39;id&#39;] = base64_id
 
-            numbers.append(number)
-
-        # Get the pagination for future use
-        pagination = response[&#39;paging&#39;]
-        return numbers</code></pre>
+                numbers.append(number)
+            # Get the pagination for future use
+            pagination = response[&#39;paging&#39;]
+            return numbers
+        else:
+            return r.text</code></pre>
 </details>
 </section>
 <section>
@@ -2079,6 +2085,7 @@ class CPAPI:
 </summary>
 <pre><code class="python">class CPAPI:
     &#34;&#34;&#34;The CPAPI class handles API calls using the CP-API, which is the native API used by Webex Control Hub.&#34;&#34;&#34;
+
     def __init__(self, org: Org, access_token: str):
         self._access_token = access_token
         self._headers = {&#34;Authorization&#34;: f&#34;Bearer {access_token}&#34;}
@@ -2097,7 +2104,11 @@ class CPAPI:
             pin (str): The PIN to set as the global default
 
         Returns:
-            bool: True is successful. False if not.
+            bool: True is successful
+
+        Raises:
+            ValueError: Raised when the PIN value is rejected by Webex, usually because the PIN doesn&#39;t comply
+                with the security policy.
 
         &#34;&#34;&#34;
         logging.info(&#34;Setting Org-wide default VM PIN&#34;)
@@ -2114,7 +2125,7 @@ class CPAPI:
         payload = {
             &#34;defaultVoicemailPinEnabled&#34;: False,
         }
-        r = requests.patch(self._url_base + f&#34;{self._customer}/features/voicemail/rules&#34;,
+        r = requests.patch(self._url_base + f&#34;features/voicemail/rules&#34;,
                            headers=self._headers, json=payload)
         return r.text
 
@@ -2125,7 +2136,7 @@ class CPAPI:
         if pin is not None:
             self.set_global_vm_pin(pin)
 
-        requests.post(self._url_base + f&#34;{self._customer}/users/{user_id}/features/voicemail/actions/resetpin/invoke&#34;,
+        requests.post(self._url_base + f&#34;users/{user_id}/features/voicemail/actions/resetpin/invoke&#34;,
                       headers=self._headers)
 
         if pin is not None:
@@ -2135,22 +2146,24 @@ class CPAPI:
 
     def get_numbers(self):
         numbers = []
-        r = requests.get(self._url_base + f&#34;{self._customer}/numbers&#34;, headers=self._headers)
-        response = r.json()
-        for number in response[&#39;numbers&#39;]:
-            if &#34;owner&#34; in number:
-                user_str = f&#34;ciscospark://us/PEOPLE/{number[&#39;owner&#39;][&#39;id&#39;]}&#34;
-                user_bytes = user_str.encode(&#34;utf-8&#34;)
-                base64_bytes = base64.b64encode(user_bytes)
-                base64_id = base64_bytes.decode(&#39;utf-8&#39;)
-                base64_id = base64_id.rstrip(&#34;=&#34;)
-                number[&#39;owner&#39;][&#39;id&#39;] = base64_id
+        r = requests.get(self._url_base + f&#34;numbers&#34;, headers=self._headers)
+        if r.status_code == 200:
+            response = r.json()
+            for number in response[&#39;numbers&#39;]:
+                if &#34;owner&#34; in number:
+                    user_str = f&#34;ciscospark://us/PEOPLE/{number[&#39;owner&#39;][&#39;id&#39;]}&#34;
+                    user_bytes = user_str.encode(&#34;utf-8&#34;)
+                    base64_bytes = base64.b64encode(user_bytes)
+                    base64_id = base64_bytes.decode(&#39;utf-8&#39;)
+                    base64_id = base64_id.rstrip(&#34;=&#34;)
+                    number[&#39;owner&#39;][&#39;id&#39;] = base64_id
 
-            numbers.append(number)
-
-        # Get the pagination for future use
-        pagination = response[&#39;paging&#39;]
-        return numbers</code></pre>
+                numbers.append(number)
+            # Get the pagination for future use
+            pagination = response[&#39;paging&#39;]
+            return numbers
+        else:
+            return r.text</code></pre>
 </details>
 <h3>Methods</h3>
 <dl>
@@ -2168,7 +2181,7 @@ class CPAPI:
     payload = {
         &#34;defaultVoicemailPinEnabled&#34;: False,
     }
-    r = requests.patch(self._url_base + f&#34;{self._customer}/features/voicemail/rules&#34;,
+    r = requests.patch(self._url_base + f&#34;features/voicemail/rules&#34;,
                        headers=self._headers, json=payload)
     return r.text</code></pre>
 </details>
@@ -2184,22 +2197,24 @@ class CPAPI:
 </summary>
 <pre><code class="python">def get_numbers(self):
     numbers = []
-    r = requests.get(self._url_base + f&#34;{self._customer}/numbers&#34;, headers=self._headers)
-    response = r.json()
-    for number in response[&#39;numbers&#39;]:
-        if &#34;owner&#34; in number:
-            user_str = f&#34;ciscospark://us/PEOPLE/{number[&#39;owner&#39;][&#39;id&#39;]}&#34;
-            user_bytes = user_str.encode(&#34;utf-8&#34;)
-            base64_bytes = base64.b64encode(user_bytes)
-            base64_id = base64_bytes.decode(&#39;utf-8&#39;)
-            base64_id = base64_id.rstrip(&#34;=&#34;)
-            number[&#39;owner&#39;][&#39;id&#39;] = base64_id
+    r = requests.get(self._url_base + f&#34;numbers&#34;, headers=self._headers)
+    if r.status_code == 200:
+        response = r.json()
+        for number in response[&#39;numbers&#39;]:
+            if &#34;owner&#34; in number:
+                user_str = f&#34;ciscospark://us/PEOPLE/{number[&#39;owner&#39;][&#39;id&#39;]}&#34;
+                user_bytes = user_str.encode(&#34;utf-8&#34;)
+                base64_bytes = base64.b64encode(user_bytes)
+                base64_id = base64_bytes.decode(&#39;utf-8&#39;)
+                base64_id = base64_id.rstrip(&#34;=&#34;)
+                number[&#39;owner&#39;][&#39;id&#39;] = base64_id
 
-        numbers.append(number)
-
-    # Get the pagination for future use
-    pagination = response[&#39;paging&#39;]
-    return numbers</code></pre>
+            numbers.append(number)
+        # Get the pagination for future use
+        pagination = response[&#39;paging&#39;]
+        return numbers
+    else:
+        return r.text</code></pre>
 </details>
 </dd>
 <dt id="wxcadm.CPAPI.reset_vm_pin"><code class="name flex">
@@ -2218,7 +2233,7 @@ class CPAPI:
     if pin is not None:
         self.set_global_vm_pin(pin)
 
-    requests.post(self._url_base + f&#34;{self._customer}/users/{user_id}/features/voicemail/actions/resetpin/invoke&#34;,
+    requests.post(self._url_base + f&#34;users/{user_id}/features/voicemail/actions/resetpin/invoke&#34;,
                   headers=self._headers)
 
     if pin is not None:
@@ -2240,7 +2255,13 @@ class CPAPI:
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>bool</code></dt>
-<dd>True is successful. False if not.</dd>
+<dd>True is successful</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>Raised when the PIN value is rejected by Webex, usually because the PIN doesn't comply
+with the security policy.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -2253,7 +2274,11 @@ class CPAPI:
         pin (str): The PIN to set as the global default
 
     Returns:
-        bool: True is successful. False if not.
+        bool: True is successful
+
+    Raises:
+        ValueError: Raised when the PIN value is rejected by Webex, usually because the PIN doesn&#39;t comply
+            with the security policy.
 
     &#34;&#34;&#34;
     logging.info(&#34;Setting Org-wide default VM PIN&#34;)
@@ -2303,6 +2328,7 @@ development focus right now is the XSI API, which is more feature-rich</p>
     instance or an XSI instance. At the moment, the Webex API only supports user-scoped call control, so most of the
     development focus right now is the XSI API, which is more feature-rich
     &#34;&#34;&#34;
+
     def __init__(self, parent, id: str = &#34;&#34;, address: str = &#34;&#34;):
         &#34;&#34;&#34;
         Inititalize a Call instance for a Person
@@ -2326,7 +2352,6 @@ development focus right now is the XSI API, which is more feature-rich</p>
         &#34;&#34;&#34;The externalTrackingId used by XSI&#34;&#34;&#34;
         self._status: dict = {}
         &#34;&#34;&#34;The status of the call&#34;&#34;&#34;
-
 
         if type(self._parent) is Person:
             # This is where we set things based on whether the parent is a Person
@@ -2524,7 +2549,7 @@ development focus right now is the XSI API, which is more feature-rich</p>
             dtmf (str): The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
                 between digits (i.e. &#34;23456#,123&#34;)
         Returns:
-            bool: True if the dtmf was sent successfuly
+            bool: True if the dtmf was sent successfully
         &#34;&#34;&#34;
         params = {&#34;playdtmf&#34;: str(dtmf)}
         r = requests.put(self._url + f&#34;/{self.id}/TransmitDTMF&#34;, headers=self._headers, params=params)
@@ -2532,7 +2557,6 @@ development focus right now is the XSI API, which is more feature-rich</p>
             return True
         else:
             return False, r.text
-
 
     def hold(self):
         &#34;&#34;&#34;
@@ -2873,7 +2897,7 @@ between digits (i.e. "23456#,123")</dd>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>bool</code></dt>
-<dd>True if the dtmf was sent successfuly</dd>
+<dd>True if the dtmf was sent successfully</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -2886,7 +2910,7 @@ between digits (i.e. "23456#,123")</dd>
         dtmf (str): The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
             between digits (i.e. &#34;23456#,123&#34;)
     Returns:
-        bool: True if the dtmf was sent successfuly
+        bool: True if the dtmf was sent successfully
     &#34;&#34;&#34;
     params = {&#34;playdtmf&#34;: str(dtmf)}
     r = requests.put(self._url + f&#34;/{self.id}/TransmitDTMF&#34;, headers=self._headers, params=params)
@@ -3183,7 +3207,7 @@ The type of transfer.</dd>
 </code></dt>
 <dd>
 <div class="desc"><p>The class for Conference Calls started by a Call.conference()</p>
-<p>Initialize a Conferece instance for an XSI instance</p>
+<p>Initialize a Conference instance for an XSI instance</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>parent</code></strong> :&ensp;<code><a title="wxcadm.XSI" href="#wxcadm.XSI">XSI</a></code></dt>
@@ -3205,9 +3229,10 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 </summary>
 <pre><code class="python">class Conference:
     &#34;&#34;&#34;The class for Conference Calls started by a Call.conference()&#34;&#34;&#34;
+
     def __init__(self, parent: object, calls: list, comment: str = &#34;&#34;):
         &#34;&#34;&#34;
-        Initialize a Conferece instance for an XSI instance
+        Initialize a Conference instance for an XSI instance
         Args:
             parent (XSI): The XSI instance that owns this conference
             calls (list): Call IDs associated with the Conference. Always two Call IDs to start a Conference.
@@ -3612,7 +3637,7 @@ def hunt_groups(self):
 </dd>
 <dt id="wxcadm.Org"><code class="flex name class">
 <span>class <span class="ident">Org</span></span>
-<span>(</span><span>name: str, id: str, parent: <a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a> = None, people: bool = True, locations: bool = True, hunt_groups: bool = False, call_queues: bool = False, numbers: bool = False, xsi: bool = False)</span>
+<span>(</span><span>name: str, id: str, parent: <a title="wxcadm.Webex" href="#wxcadm.Webex">Webex</a> = None, people: bool = True, locations: bool = True, hunt_groups: bool = False, call_queues: bool = False, xsi: bool = False)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>The base class for working with wxcadm.</p>
@@ -3654,7 +3679,6 @@ def hunt_groups(self):
                  locations: bool = True,
                  hunt_groups: bool = False,
                  call_queues: bool = False,
-                 numbers: bool = False,
                  xsi: bool = False,
                  ):
         &#34;&#34;&#34;
@@ -3686,7 +3710,7 @@ def hunt_groups(self):
         &#39;A list of the Location instances for this Org&#39;
         self.name: str = name
         &#39;The name of the Organization&#39;
-        self.id:  str = id
+        self.id: str = id
         &#39;&#39;&#39;The Webex ID of the Organization&#39;&#39;&#39;
         self.xsi: dict = {}
         &#34;&#34;&#34;The XSI details for the Organization&#34;&#34;&#34;
@@ -4739,13 +4763,7 @@ except for automated people population from the Org init.</dd>
         &#34;&#34;&#34;A list of the Call Queue instances that this user is an Agent for&#34;&#34;&#34;
 
         # API-related attributes
-        # Set the Authorization header based on how the instance was built
-        if parent is None:  # Instance wasn&#39;t created by another instance
-            # TODO Need some code here to throw an error if there is no access_token and url_base
-            self._headers = {&#34;Authorization&#34;: &#34;Bearer &#34; + access_token}
-            self._url_base = url_base
-        else:  # Instance was created by a parent
-            self._headers = parent._headers
+        self._headers = parent._headers
         self._params = {&#34;orgId&#34;: parent.id, &#34;callingData&#34;: &#34;true&#34;}
 
         # If the config was passed, process it. If not, make the API call for the Person ID and then process
@@ -4831,7 +4849,6 @@ except for automated people population from the Org init.</dd>
         spark_id = user_id_bytes.decode(&#34;utf-8&#34;)
         return spark_id
 
-
     def assign_wxc(self, location: Location, phone_number: str = None, extension: str = None):
         &#34;&#34;&#34;
         Assign Webex Calling to the user, along with a phone number and/or an extension.
@@ -4871,6 +4888,7 @@ except for automated people population from the Org init.</dd>
             Args:
                 pin (str): The new temporary PIN to set for the Person
         &#34;&#34;&#34;
+        self._parent._cpapi.reset_vm_pin(self, pin=pin)
 
     def get_full_config(self):
         &#34;&#34;&#34;Fetches all of the Webex Calling settings for the Person. Due to the number of API calls, this
@@ -5041,15 +5059,15 @@ except for automated people population from the Org init.</dd>
             return False
 
     def update_person(self,
-                      email = None,
-                      numbers = None,
-                      extension = None,
-                      location = None,
-                      display_name = None,
-                      first_name = None,
-                      last_name = None,
-                      roles = None,
-                      licenses = None):
+                      email=None,
+                      numbers=None,
+                      extension=None,
+                      location=None,
+                      display_name=None,
+                      first_name=None,
+                      last_name=None,
+                      roles=None,
+                      licenses=None):
         &#34;&#34;&#34;
         Update the Person in Webex. Pass only the arguments that you want to change. Other attributes will be populated
             with the existing values from the instance. *Note:* This allows changes directly to the instance attrs to
@@ -5123,13 +5141,13 @@ except for automated people population from the Org init.</dd>
         new_licenses = []
         for license in self.licenses:
             lic_name = self._parent.get_license_name(license)
-            if lic_name:
-                if lic_name.lower() not in remove_matches:
-                    new_licenses.append((license))
+            for match in remove_matches:
+                if match not in lic_name.lower():
+                    new_licenses.append(license)
                 else:
-                    continue
-            else:
-                continue
+                    if &#34;screen share&#34; in lic_name.lower():
+                        new_licenses.append(license)
+
         success = self.update_person(licenses=new_licenses)
         return self
 
@@ -5738,7 +5756,8 @@ already has a default PIN</strong> because that PIN will be un-set at the end of
 
         Args:
             pin (str): The new temporary PIN to set for the Person
-    &#34;&#34;&#34;</code></pre>
+    &#34;&#34;&#34;
+    self._parent._cpapi.reset_vm_pin(self, pin=pin)</code></pre>
 </details>
 </dd>
 <dt id="wxcadm.Person.set_calling_only"><code class="name flex">
@@ -5771,13 +5790,13 @@ work, and is just here for the future.</strong></p>
     new_licenses = []
     for license in self.licenses:
         lic_name = self._parent.get_license_name(license)
-        if lic_name:
-            if lic_name.lower() not in remove_matches:
-                new_licenses.append((license))
+        for match in remove_matches:
+            if match not in lic_name.lower():
+                new_licenses.append(license)
             else:
-                continue
-        else:
-            continue
+                if &#34;screen share&#34; in lic_name.lower():
+                    new_licenses.append(license)
+
     success = self.update_person(licenses=new_licenses)
     return self</code></pre>
 </details>
@@ -5837,15 +5856,15 @@ exist to change the desired value. It is also the method other methods use to pu
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def update_person(self,
-                  email = None,
-                  numbers = None,
-                  extension = None,
-                  location = None,
-                  display_name = None,
-                  first_name = None,
-                  last_name = None,
-                  roles = None,
-                  licenses = None):
+                  email=None,
+                  numbers=None,
+                  extension=None,
+                  location=None,
+                  display_name=None,
+                  first_name=None,
+                  last_name=None,
+                  roles=None,
+                  licenses=None):
     &#34;&#34;&#34;
     Update the Person in Webex. Pass only the arguments that you want to change. Other attributes will be populated
         with the existing values from the instance. *Note:* This allows changes directly to the instance attrs to
@@ -6042,6 +6061,7 @@ not every Org has XSI capability</dd>
     &#34;&#34;&#34;
     The base class for working with wxcadm.
     &#34;&#34;&#34;
+
     def __init__(self,
                  access_token: str,
                  create_org: bool = True,
@@ -6050,7 +6070,7 @@ not every Org has XSI capability</dd>
                  get_xsi: bool = False,
                  get_hunt_groups: bool = False,
                  get_call_queues: bool = False
-                 ) -&gt; object:
+                 ) -&gt; None:
         &#34;&#34;&#34;
         Initialize a Webex instance to communicate with Webex and store data
         Args:
@@ -6289,7 +6309,7 @@ the Webex API. To save API calls, the config dict can be passed using the <code>
         return spark_id
 
     def get_config(self):
-        &#34;&#34;&#34;Get (or refresh) the confiration of the Workspace from the Webex API&#34;&#34;&#34;
+        &#34;&#34;&#34;Get (or refresh) the confirmation of the Workspace from the Webex API&#34;&#34;&#34;
         logging.info(f&#34;Getting Workspace config for {self.id}&#34;)
         r = requests.get(_url_base + f&#34;v1/workspaces/{self.id}&#34;, headers=self._headers, params=self._params)
         if r.status_code in [200]:
@@ -6394,13 +6414,13 @@ def spark_id(self):
 <span>def <span class="ident">get_config</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Get (or refresh) the confiration of the Workspace from the Webex API</p></div>
+<div class="desc"><p>Get (or refresh) the confirmation of the Workspace from the Webex API</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_config(self):
-    &#34;&#34;&#34;Get (or refresh) the confiration of the Workspace from the Webex API&#34;&#34;&#34;
+    &#34;&#34;&#34;Get (or refresh) the confirmation of the Workspace from the Webex API&#34;&#34;&#34;
     logging.info(f&#34;Getting Workspace config for {self.id}&#34;)
     r = requests.get(_url_base + f&#34;v1/workspaces/{self.id}&#34;, headers=self._headers, params=self._params)
     if r.status_code in [200]:
@@ -6653,7 +6673,7 @@ the Webex API. To save API calls, the config dict can be passed using the <code>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class XSI:
-    def __init__(self, parent, get_profile: bool = False, cache: bool = False ):
+    def __init__(self, parent, get_profile: bool = False, cache: bool = False):
         &#34;&#34;&#34;
         The XSI class holds all of the relevant XSI data for a Person
         Args:
@@ -6684,7 +6704,7 @@ the Webex API. To save API calls, the config dict can be passed using the <code>
         self._calls: list = []
         self._profile: dict = {}
         &#34;&#34;&#34;The XSI Profile for this Person&#34;&#34;&#34;
-        self._registrations:dict  = {}
+        self._registrations: dict = {}
         &#34;&#34;&#34;The Registrations associated with this Person&#34;&#34;&#34;
         self.fac = None
         self.services = {}
@@ -6718,7 +6738,7 @@ the Webex API. To save API calls, the config dict can be passed using the <code>
         self._calls.append(call)
         return call
 
-    def new_conference(self, calls: list = [], comment:str = &#34;&#34;):
+    def new_conference(self, calls: list = [], comment: str = &#34;&#34;):
         &#34;&#34;&#34;
         Crates a new Conference instance. A user can only have one Conference instance, so this will replace any
         previous Conference. At the moment, this **should not be called directly** and will be done dynamically by
@@ -6826,7 +6846,7 @@ the Webex API. To save API calls, the config dict can be passed using the <code>
 
     @property
     def registrations(self):
-        &#34;&#34;&#34;The device registrations asscociated with this Person&#34;&#34;&#34;
+        &#34;&#34;&#34;The device registrations associated with this Person&#34;&#34;&#34;
         if not self._registrations or not self._cache:
             # If we don&#39;t have a registrations URL, because we don&#39;t have the profile, go get it
             if &#34;registrations_url&#34; not in self._profile:
@@ -6991,14 +7011,14 @@ def profile(self):
 </dd>
 <dt id="wxcadm.XSI.registrations"><code class="name">var <span class="ident">registrations</span></code></dt>
 <dd>
-<div class="desc"><p>The device registrations asscociated with this Person</p></div>
+<div class="desc"><p>The device registrations associated with this Person</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@property
 def registrations(self):
-    &#34;&#34;&#34;The device registrations asscociated with this Person&#34;&#34;&#34;
+    &#34;&#34;&#34;The device registrations associated with this Person&#34;&#34;&#34;
     if not self._registrations or not self._cache:
         # If we don&#39;t have a registrations URL, because we don&#39;t have the profile, go get it
         if &#34;registrations_url&#34; not in self._profile:
@@ -7140,7 +7160,7 @@ two Call IDs. Call IDs after the first two will be ignored.</dd>
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def new_conference(self, calls: list = [], comment:str = &#34;&#34;):
+<pre><code class="python">def new_conference(self, calls: list = [], comment: str = &#34;&#34;):
     &#34;&#34;&#34;
     Crates a new Conference instance. A user can only have one Conference instance, so this will replace any
     previous Conference. At the moment, this **should not be called directly** and will be done dynamically by

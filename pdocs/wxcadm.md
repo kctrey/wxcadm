@@ -24,7 +24,11 @@ Classes
             pin (str): The PIN to set as the global default
         
         Returns:
-            bool: True is successful. False if not.
+            bool: True is successful
+        
+        Raises:
+            ValueError: Raised when the PIN value is rejected by Webex, usually because the PIN doesn't comply
+                with the security policy.
 
 `Call(parent, id: str = '', address: str = '')`
 :   The Call class represents a call for a person. Since Webex supports calls in the Webex API as well as XSI API,
@@ -114,7 +118,7 @@ Classes
             dtmf (str): The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
                 between digits (i.e. "23456#,123")
         Returns:
-            bool: True if the dtmf was sent successfuly
+            bool: True if the dtmf was sent successfully
 
     `transfer(self, address: str, type: str = 'blind')`
     :   Transfer the call to the selected address. Type of transfer can be controlled with `type` param. VM
@@ -178,7 +182,7 @@ Classes
 `Conference(parent: object, calls: list, comment: str = '')`
 :   The class for Conference Calls started by a Call.conference()
     
-    Initialize a Conferece instance for an XSI instance
+    Initialize a Conference instance for an XSI instance
     Args:
         parent (XSI): The XSI instance that owns this conference
         calls (list): Call IDs associated with the Conference. Always two Call IDs to start a Conference.
@@ -295,7 +299,7 @@ Classes
     `name`
     :   The name of the Location
 
-`Org(name: str, id: str, parent: wxcadm.Webex = None, people: bool = True, locations: bool = True, hunt_groups: bool = False, call_queues: bool = False, numbers: bool = False, xsi: bool = False)`
+`Org(name: str, id: str, parent: wxcadm.Webex = None, people: bool = True, locations: bool = True, hunt_groups: bool = False, call_queues: bool = False, xsi: bool = False)`
 :   The base class for working with wxcadm.
     
     Initialize an Org instance
@@ -775,7 +779,7 @@ Classes
     ### Methods
 
     `get_config(self)`
-    :   Get (or refresh) the confiration of the Workspace from the Webex API
+    :   Get (or refresh) the confirmation of the Workspace from the Webex API
 
 `WorkspaceLocation(parent: wxcadm.Org, id: str, config: dict = None)`
 :   Initialize a WorkspaceLocation instance. If only the `id` is provided, the configuration will be fetched from
@@ -860,7 +864,7 @@ Classes
     :   The XSI Profile for this Person
 
     `registrations`
-    :   The device registrations asscociated with this Person
+    :   The device registrations associated with this Person
 
     `single_number_reach`
     :   The SNR (Office Anywhere) settings for this Person
