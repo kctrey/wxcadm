@@ -14,7 +14,7 @@ from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, 
 #       I end up with the same values in multiple attributes, which is a bad idea.
 
 # Set up logging
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                       filename="wxcadm.log",
                       format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
 # Some functions available to all classes and instances (optionally)
@@ -1043,6 +1043,7 @@ class Person:
         Returns:
             Person: The instance of this person with the updated values
         """
+        logging.info(f"Setting {self.email} to Calling-Only")
         # First, iterate the existing licenses and remove the ones we don't want
         # Build a list that contains the values to match on to remove
         remove_matches = ["messaging",
@@ -1050,13 +1051,19 @@ class Person:
                           "free"]
         new_licenses = []
         for license in self.licenses:
+            logging.debug(f"Checking license: {license}")
             lic_name = self._parent.get_license_name(license)
-            for match in remove_matches:
-                if match not in lic_name.lower():
+            logging.debug(f"License Name: {lic_name}")
+            if any(match in lic_name.lower() for match in remove_matches):
+                if "screen share" in lic_name.lower():
+                    logging.debug(f"{lic_name} matches but is needed")
                     new_licenses.append(license)
                 else:
-                    if "screen share" in lic_name.lower():
-                        new_licenses.append(license)
+                    logging.debug(f"License should be removed")
+                    continue
+            else:
+                logging.debug(f"Keeping license")
+                new_licenses.append(license)
 
         success = self.update_person(licenses=new_licenses)
         return self

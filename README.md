@@ -77,7 +77,8 @@ for people in my_org.people:
     person.enable_vm_to_email()
 ```
 # Documentation
-Full module documentation will be coming soon. Until then, the following examples show the available methods.
+**wxcadm** documentation is housed at [Read The Docs](https://wxcadm.readthedocs.io/en/latest/). The documentation
+below can be found there, along with full module documentation.
 
 ```python
 from wxcadm import Webex

@@ -1,5 +1,5 @@
-wxcadm module
-=============
+wxcadm Module Documentation
+===========================
 
 .. automodule:: wxcadm
    :members:

@@ -15,7 +15,7 @@
     <script src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Quickstart" href="usage/quickstart.html" />
+    <link rel="next" title="Installation" href="usage/installation.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -34,15 +34,332 @@
             
   <section id="wxcadm-documentation">
 <h1>wxcadm Documentation<a class="headerlink" href="#wxcadm-documentation" title="Permalink to this headline">¶</a></h1>
+<p>Welcome to the documentation home of <strong>wxcadm</strong>, a Python 3 library to simplify the API calls to Webex in order to
+manage and report on users of Webex Calling.</p>
+<p>Although the primary focus is Webex Calling, many of the other Webex admin functions are included. This library is not
+meant to be an interface to the Meetings and Messaging capabilities of Webex….there are plenty of other modules that
+provide that.</p>
+<section id="status">
+<h2>Status<a class="headerlink" href="#status" title="Permalink to this headline">¶</a></h2>
+<p>The current version in this branch is mostly complete. All the Webex Calling related functions and classes work.</p>
+<p>There are still some enhancements being made so pulling a fresh copy will likely give you some additional capabilities.
+The current focus is on the XSI API and the features that are available with that. Some of the most useful XSI methods
+are already supported, with more being added regularly.</p>
+</section>
+<section id="quickstart">
+<h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h2>
+<p>By creating a Webex instance with a valid API Access Token, the module will pull the Webex Organization information as
+well as all the People within the Organization. The Org instance will contain all People, whether they have the
+Webex Calling service or not. An Org method <code class="docutils literal notranslate"><span class="pre">get_webex_people()</span></code> makes it easy to get only the People that have
+Webex Calling.</p>
+<p>You can obtain a 12-hour access token by logging into <a class="reference external" href="https://developer.webex.com">https://developer.webex.com</a> and visiting the <strong>Getting Started</strong>
+page.</p>
+<p>Once you have the access token, the following will initialize the API connection and pull data</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Since most administrators only have access to a single Webex Organization, you can access that Organization with the
+<code class="docutils literal notranslate"><span class="pre">org</span></code> attribute. If the administrator has access to more than one Organization, they can be accessed using the
+<code class="docutils literal notranslate"><span class="pre">orgs</span></code> attribute, which is a list of the organizations that can be managed. See the “Regarding Multiple
+Organizations” section below for further information.</p>
+<p>You can see all the attributes with</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">vars</span><span class="p">(</span><span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that, by default, all the People are pulled when the Org is initialized. For large organizations, this may take
+a while, but then all the People are stored as Person objects.</p>
+<p>To iterate over the list of people, simply loop through the <code class="docutils literal notranslate"><span class="pre">people</span></code> attribute of the Org. For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">person</span> <span class="ow">in</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">people</span><span class="p">:</span>
+    <span class="c1"># Print all of the attributes of the Person</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">vars</span><span class="p">(</span><span class="n">person</span><span class="p">))</span>
+    <span class="c1"># Or access the attributes directly</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">email</span>
+</pre></div>
+</div>
+</section>
+<section id="regarding-multiple-organizations">
+<h2>Regarding Multiple Organizations<a class="headerlink" href="#regarding-multiple-organizations" title="Permalink to this headline">¶</a></h2>
+<p>Most Webex admins only have access to a single Org, but Webex does allow a single admin to manage multiple Orgs. When
+the Webex instance is created, it creates the <code class="docutils literal notranslate"><span class="pre">org</span></code> attribute when only one Org is present. If there are mutliple, the
+<code class="docutils literal notranslate"><span class="pre">orgs</span></code> attribute contains a list of all the Orgs. <code class="docutils literal notranslate"><span class="pre">orgs</span></code> is created whether there is one Org or multiple, so
+<code class="docutils literal notranslate"><span class="pre">Webex.org</span></code> is equivalent to <code class="docutils literal notranslate"><span class="pre">Webex.orgs[0]</span></code>. For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">org</span> <span class="ow">in</span> <span class="n">webex</span><span class="o">.</span><span class="n">orgs</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">org</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>It is recommended to take action on only one Org at a time, although the design allows for more flexibility. For
+example, to enable VM-to-Email across all users of every Org, the following is supported:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">org</span> <span class="ow">in</span> <span class="n">webex</span><span class="o">.</span><span class="n">orgs</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">person</span> <span class="ow">in</span> <span class="n">org</span><span class="o">.</span><span class="n">people</span><span class="p">:</span>
+        <span class="n">person</span><span class="o">.</span><span class="n">enable_vm_to_email</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">get_org_by_name()</span></code> method is provided to allow the selection of the desired org by name.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">my_org</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">get_org_by_name</span><span class="p">(</span><span class="s2">&quot;My Company&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="n">my_org</span><span class="o">.</span><span class="n">people</span><span class="p">:</span>
+    <span class="n">person</span><span class="o">.</span><span class="n">enable_vm_to_email</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="documentation">
+<h2>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h2>
+<p>Full module documentation can be found here: <a class="reference internal" href="reference/wxcadm.html"><span class="doc">wxcadm Module Documentation</span></a></p>
+<p>The following examples show many of the common use cases supported by <strong>wxcadm</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+
+<span class="c1"># Get all of the Locations within the org</span>
+<span class="n">locations</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_locations</span><span class="p">()</span>
+
+<span class="c1"># Get a list of all of the People who have Webex Calling</span>
+<span class="n">wxc_people</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_wxc_people</span><span class="p">()</span>
+<span class="c1"># Or iterate over the list directly</span>
+<span class="k">for</span> <span class="n">person</span> <span class="ow">in</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_wxc_people</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Name: </span><span class="si">{</span><span class="n">person</span><span class="o">.</span><span class="n">display_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Email: </span><span class="si">{</span><span class="n">person</span><span class="o">.</span><span class="n">email</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>One of the more useful methods is the <code class="docutils literal notranslate"><span class="pre">get_person_by_email()</span></code> method, which takes an email address and returns the
+Person instance of that user. This is especially useful if processing an external list of email addresses for bulk
+processing.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">email_list</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;user1@company.com&#39;</span><span class="p">,</span> <span class="s1">&#39;user2@company.com&#39;</span><span class="p">,</span> <span class="s1">&#39;user3@company.com&#39;</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">email</span> <span class="ow">in</span> <span class="n">email_list</span><span class="p">:</span>
+    <span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="n">email</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">person</span><span class="o">.</span><span class="n">display_name</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="common-webex-use-cases">
+<h3>Common Webex Use Cases<a class="headerlink" href="#common-webex-use-cases" title="Permalink to this headline">¶</a></h3>
+<p>These are some commonly-requested changes that most Webex Calling admins have to deal with</p>
+<section id="enable-vm-to-email">
+<h4>Enable VM-to-Email<a class="headerlink" href="#enable-vm-to-email" title="Permalink to this headline">¶</a></h4>
+<p>By default, the sending of VM as an email attachment is disabled, but most enterprises want this feature. The following
+will step through all the Webex Calling users within the Organization and make that change.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+<span class="c1"># Iterate over all of the People who have a Webex Calling license</span>
+<span class="k">for</span> <span class="n">person</span> <span class="ow">in</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_wxc_people</span><span class="p">():</span>
+    <span class="c1"># By leaving the email param out of the function call, the function will just use their Webex email</span>
+    <span class="n">person</span><span class="o">.</span><span class="n">enable_vm_to_email</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="change-the-user-s-phone-number">
+<h4>Change the user’s phone number<a class="headerlink" href="#change-the-user-s-phone-number" title="Permalink to this headline">¶</a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+<span class="c1"># Find the Person that you want to change</span>
+<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
+<span class="c1"># Call the `change_phone_number()` method for the user</span>
+<span class="n">success</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">change_phone_number</span><span class="p">(</span><span class="n">new_number</span><span class="o">=</span><span class="s2">&quot;8185551234&quot;</span><span class="p">,</span> <span class="n">new_extension</span><span class="o">=</span><span class="s2">&quot;1234&quot;</span><span class="p">)</span>
+<span class="c1"># The Person instance will reflect the change</span>
+<span class="k">if</span> <span class="n">success</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">person</span><span class="o">.</span><span class="n">numbers</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="get-the-hunt-groups-and-call-queues-the-user-is-an-agent-for">
+<h4>Get the Hunt Groups and Call Queues the user is an Agent for<a class="headerlink" href="#get-the-hunt-groups-and-call-queues-the-user-is-an-agent-for" title="Permalink to this headline">¶</a></h4>
+<p>The <code class="docutils literal notranslate"><span class="pre">hunt_groups</span></code> and <code class="docutils literal notranslate"><span class="pre">call_queues</span></code> attributes hold all of the instances of each that the user is assigned to as an
+“agent”. Of course, this would be more useful if there were methods for those Classes, but that’s coming soon. For now,
+it makes it easy to find all of the places the user is being used.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+<span class="c1"># Find the person you want the details for</span>
+<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">hunt_group</span> <span class="ow">in</span> <span class="n">person</span><span class="o">.</span><span class="n">hunt_groups</span><span class="p">:</span>
+    <span class="n">hg_name</span> <span class="o">=</span> <span class="n">hunt_group</span><span class="o">.</span><span class="n">name</span>
+    <span class="c1"># And anything else you want to do</span>
+<span class="k">for</span> <span class="n">call_queue</span> <span class="ow">in</span> <span class="n">person</span><span class="o">.</span><span class="n">call_queues</span><span class="p">:</span>
+    <span class="n">cq_name</span> <span class="o">=</span> <span class="n">call_queue</span><span class="o">.</span><span class="n">name</span>
+    <span class="c1"># etc...</span>
+</pre></div>
+</div>
+</section>
+<section id="workspaces">
+<h4>Workspaces<a class="headerlink" href="#workspaces" title="Permalink to this headline">¶</a></h4>
+<p>The Webex Calling functionality that is exposed to Workspaces is limited. At this time, the Workspaces and their
+associated Workspace Locations can be obtained with the <code class="docutils literal notranslate"><span class="pre">get_workspaces()</span></code> method of the Org instance. This will
+populate the <code class="docutils literal notranslate"><span class="pre">Org.workspaces</span></code> and <code class="docutils literal notranslate"><span class="pre">Org.workspace_locations</span></code> attributes, which contain the information. As the API is
+enhanced to provide capabilities, new methods will be added to <strong>wxcadm</strong>.</p>
+</section>
+</section>
+<section id="common-xsi-use-cases">
+<h3>Common XSI Use Cases<a class="headerlink" href="#common-xsi-use-cases" title="Permalink to this headline">¶</a></h3>
+<p>XSI can be used to accomplish a lot of things on behalf of the user. The following are examples of some commonly-used
+methods provided by the wxcadm module. <strong>Note that XSI must be enabled by Cisco before it is available to an
+Organization.</strong> Contact Cisco TAC to request that XSI be enabled.</p>
+<section id="get-the-user-s-profile-phone-number">
+<h4>Get the user’s profile (phone number)<a class="headerlink" href="#get-the-user-s-profile-phone-number" title="Permalink to this headline">¶</a></h4>
+<p>The XSI Profile is retrieved directly from the Call Control back-end, so it represents the actual user profile, rather
+than the Common Identity profile present in the <code class="docutils literal notranslate"><span class="pre">Org.people</span></code> attribute. A common use is to get the Webex Calling phone
+number for the user rather than what is received from Active Directory.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">get_xsi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Get the person that we want to get the profile for</span>
+<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
+<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span>      <span class="c1"># Starts an XSI session for the Person and creates the XSI instance in Person.xsi</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">profile</span><span class="p">)</span>
+<span class="c1"># Get the phone number for the person</span>
+<span class="n">country_code</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">profile</span><span class="p">[</span><span class="s1">&#39;country_code&#39;</span><span class="p">]</span>
+<span class="n">phone_number</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">profile</span><span class="p">[</span><span class="s1">&#39;number&#39;</span><span class="p">]</span>
+<span class="n">e164_number</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;+</span><span class="si">{</span><span class="n">country_code</span><span class="si">}{</span><span class="n">phone_number</span><span class="si">}</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="place-a-call">
+<h4>Place a call<a class="headerlink" href="#place-a-call" title="Permalink to this headline">¶</a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">get_xsi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Get the person that we want to place the call from</span>
+<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
+<span class="c1"># Start a XSI session for the user</span>
+<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span>
+<span class="c1"># Start a new call</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">new_call</span><span class="p">()</span>
+<span class="c1"># Originate (dial) the call</span>
+<span class="n">call</span><span class="o">.</span><span class="n">originate</span><span class="p">(</span><span class="s2">&quot;17192662837&quot;</span><span class="p">)</span>
+
+<span class="c1"># Or create the new call and originate at the same time</span>
+<span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">new_call</span><span class="p">(</span><span class="n">address</span><span class="o">=</span><span class="s2">&quot;17192662837)</span>
+
+<span class="c1"># Or, for a simple click-to-dial where no further control is needed,</span>
+<span class="c1"># you can do it all in one line:</span>
+<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span><span class="o">.</span><span class="n">new_call</span><span class="p">()</span><span class="o">.</span><span class="n">originate</span><span class="p">(</span><span class="s2">&quot;17192662837&quot;</span><span class="p">)</span>
+
+<span class="c1"># When it is time to end the call, just call hangup()</span>
+<span class="n">call</span><span class="o">.</span><span class="n">hangup</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="hold-resume">
+<h4>Hold/Resume<a class="headerlink" href="#hold-resume" title="Permalink to this headline">¶</a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">get_xsi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
+<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">new_call</span><span class="p">()</span>
+<span class="n">call</span><span class="o">.</span><span class="n">originate</span><span class="p">(</span><span class="s2">&quot;17192662837&quot;</span><span class="p">)</span>
+
+<span class="c1"># Put the call on hold</span>
+<span class="n">call</span><span class="o">.</span><span class="n">hold</span><span class="p">()</span>
+
+<span class="c1"># Resume the call, taking it off hold</span>
+<span class="n">call</span><span class="o">.</span><span class="n">resume</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="blind-transfer">
+<h4>Blind Transfer<a class="headerlink" href="#blind-transfer" title="Permalink to this headline">¶</a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">get_xsi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
+<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">new_call</span><span class="p">()</span>
+<span class="n">call</span><span class="o">.</span><span class="n">originate</span><span class="p">(</span><span class="s2">&quot;17192662837&quot;</span><span class="p">)</span>
+
+<span class="c1"># Invoke the transfer method, with the target extension or phone number</span>
+<span class="n">target_user</span> <span class="o">=</span> <span class="s2">&quot;2345&quot;</span>
+<span class="n">call</span><span class="o">.</span><span class="n">transfer</span><span class="p">(</span><span class="n">target_user</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="attended-transfer">
+<h4>Attended Transfer<a class="headerlink" href="#attended-transfer" title="Permalink to this headline">¶</a></h4>
+<p>The attended transfer puts the current call on hold and initiates a new call (origination) to the target user. Once
+the users talk, a call to <code class="docutils literal notranslate"><span class="pre">finish_transfer()</span></code> will complete the transfer of the original call to the new user.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">get_xsi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
+<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">new_call</span><span class="p">()</span>
+<span class="n">call</span><span class="o">.</span><span class="n">originate</span><span class="p">(</span><span class="s2">&quot;17192662837&quot;</span><span class="p">)</span>
+
+<span class="c1"># Invoke the transfer method, with the target extension or phone number</span>
+<span class="n">target_user</span> <span class="o">=</span> <span class="s2">&quot;2345&quot;</span>
+<span class="n">call</span><span class="o">.</span><span class="n">transfer</span><span class="p">(</span><span class="n">target_user</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;attended&quot;</span><span class="p">)</span>
+
+<span class="c1"># The original user and the target user will be connected. When ready, finish the transfer</span>
+<span class="n">call</span><span class="o">.</span><span class="n">finish_transfer</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="attended-transfer-with-conference">
+<h4>Attended Transfer with Conference<a class="headerlink" href="#attended-transfer-with-conference" title="Permalink to this headline">¶</a></h4>
+<p>For a lot of cases, admins want to modify the Attended Transfer so that the transferer stays on the line with both
+the caller and the transferee, then dropping out once introductions hae been made.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">get_xsi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
+<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span>
+<span class="n">call</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">new_call</span><span class="p">()</span>
+<span class="n">call</span><span class="o">.</span><span class="n">originate</span><span class="p">(</span><span class="s2">&quot;17192662837&quot;</span><span class="p">)</span>
+
+<span class="c1"># Invoke the transfer method, with the target extension or phone number</span>
+<span class="n">target_user</span> <span class="o">=</span> <span class="s2">&quot;2345&quot;</span>
+<span class="n">call</span><span class="o">.</span><span class="n">transfer</span><span class="p">(</span><span class="n">target_user</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;attended&quot;</span><span class="p">)</span>
+
+<span class="c1"># When the transferer is ready to bring the caller on, create a conference</span>
+<span class="n">call</span><span class="o">.</span><span class="n">conference</span><span class="p">()</span>
+
+<span class="c1"># Once the transferer is ready to leave the other parties, simply finish the transfer</span>
+<span class="n">call</span><span class="o">.</span><span class="n">finish_transfer</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+<section id="logging">
+<h2>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h2>
+<p>By default, the module logs to <code class="docutils literal notranslate"><span class="pre">wxcadm.log</span></code>. At the moment, the logs just show the various methods that are invoked
+for API calls to the Webex API.</p>
+</section>
+<section id="data-structure-note">
+<h2>Data Structure Note<a class="headerlink" href="#data-structure-note" title="Permalink to this headline">¶</a></h2>
+<p>At the moment, the module works in two ways. In one way, it populates attributes based on the data from Webex. In
+another, it stores the JSON representation directly from Webex. The latter is very handy for pushing data back to
+Webex, but it requires some knowledge of the API structure, and doesn’t abstract it well. Not to mention that the
+Webex API doesn’t do anything in a standard way.</p>
+<p>The purpose of this module is to simplify that so the user doesn’t have to have detailed knowledge of the Webex API, so
+we are faced with a decision: keep the flexibility provided by the raw data or simplify it, at the cost of compatibility
+when the Webex API is changed.</p>
+<p>My goal is to find a happy medium, where the attributes get populated dynamically, but I feel that it is going to be a
+heavy lift, changing the structure of all the classes and building a lot of “helper” functions to convert between
+the two. Stay tuned…</p>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Quickstart</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference/wxcadm.html">wxcadm module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/wxcadm.html">wxcadm Module Documentation</a></li>
 </ul>
 </div>
-<section id="indices-and-tables">
-<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="indexes-and-tables">
+<h2>Indexes and tables<a class="headerlink" href="#indexes-and-tables" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
@@ -70,15 +387,16 @@
 <h3>Navigation</h3>
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Quickstart</a></li>
-<li class="toctree-l1"><a class="reference internal" href="reference/wxcadm.html">wxcadm module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/wxcadm.html">wxcadm Module Documentation</a></li>
 </ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
   <li><a href="#">Documentation overview</a><ul>
-      <li>Next: <a href="usage/quickstart.html" title="next chapter">Quickstart</a></li>
+      <li>Next: <a href="usage/installation.html" title="next chapter">Installation</a></li>
   </ul></li>
 </ul>
 </div>
