@@ -25,8 +25,8 @@ _url_base = "https://webexapis.com/"
 class Webex:
     # TODO List
     #    Add token refresh, just for completeness. For now, we don't mess with tokens at all.
-    """
-    The base class for working with wxcadm.
+    """The base class for working with wxcadm.
+
     """
 
     def __init__(self,
@@ -38,8 +38,8 @@ class Webex:
                  get_hunt_groups: bool = False,
                  get_call_queues: bool = False
                  ) -> None:
-        """
-        Initialize a Webex instance to communicate with Webex and store data
+        """Initialize a Webex instance to communicate with Webex and store data
+
         Args:
             access_token (str): The Webex API Access Token to authenticate the API calls
             create_org (bool, optional): Whether to create an Org instance for all organizations.
@@ -49,8 +49,10 @@ class Webex:
                 not every Org has XSI capability
             get_hunt_groups (bool, optional): Whether to get the Hunt Groups for each Org. Defaults to False.
             get_call_queues (bool, optional): Whether to get the Call Queues for each Org. Defaults to False.
+
         Returns:
             Webex: The Webex instance
+
         """
         logging.info("Webex instance initialized")
         # The access token is the only thing that we need to get started
@@ -102,14 +104,17 @@ class Webex:
         return self._headers
 
     def get_org_by_name(self, name: str):
-        """
-        Get the Org instance that matches all or part of the name argument.
+        """Get the Org instance that matches all or part of the name argument.
+
         Args:
             name (str): Text to match against the Org name
+
         Returns:
             Org: The Org instance of the matching Org
+
         Raises:
             KeyError: Raised when no match is made
+
         """
         for org in self.orgs:
             if name in org.name:
@@ -128,8 +133,7 @@ class Org(Webex):
                  call_queues: bool = False,
                  xsi: bool = False,
                  ):
-        """
-        Initialize an Org instance
+        """Initialize an Org instance
 
         Args:
             name (str): The Organization name
@@ -143,6 +147,7 @@ class Org(Webex):
 
         Returns:
             Org: This instance of the Org class
+
         """
 
         # Instance attrs
@@ -197,11 +202,11 @@ class Org(Webex):
         return self.id
 
     def __get_licenses(self):
-        """
-        Gets all of the licenses for the Organization
+        """Gets all of the licenses for the Organization
 
-        :return:
+        Returns:
             list: List of dictionaries containing the license name and ID
+
         """
         logging.info("__get_licenses() started for org")
         license_list = []
@@ -232,8 +237,7 @@ class Org(Webex):
 
     @property
     def numbers(self):
-        """
-        All of the Numbers for the Org
+        """All of the Numbers for the Org
 
         Returns:
             list[dict]: List of dict containing information about each number
@@ -242,11 +246,11 @@ class Org(Webex):
         return self._cpapi.get_numbers()
 
     def __get_wxc_licenses(self):
-        """
-        Get only the Webex Calling licenses from the Org.licenses attribute
+        """Get only the Webex Calling licenses from the Org.licenses attribute
 
         Returns:
             list[str]:
+
         """
         logging.info("__get_wxc_licenses started")
         license_list = []
@@ -256,13 +260,11 @@ class Org(Webex):
         return license_list
 
     def get_wxc_person_license(self):
-        """
-        Get the Webex Calling - Professional license ID
+        """Get the Webex Calling - Professional license ID
+
         Returns:
             str: The License ID
-        Todo:
-            Need to account for multiple subscriptions and calculate usage, throwing an exception when there
-                is no license available.
+
         """
         logging.info("__get_wxc_person_license started to find available license")
         for license in self.licenses:
@@ -282,14 +284,17 @@ class Org(Webex):
                       last_name: str = None,
                       display_name: str = None,
                       ):
-        """
-        Create a new user in Webex. Also creates a new Person instance for the created user.
+        """Create a new user in Webex.
+
+        Also creates a new Person instance for the created user.
+
         Args:
             email (str): The email address of the user
             location (str): The ID of the Location that the user is assigned to.
             licenses (list, optional): List of license IDs to assign to the user. Use this when the license IDs
-                are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
-                `meetings` parameters.
+            are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
+            meetings` parameters.
+
             calling (bool, optional): BETA - Whether to assign Calling licenses to the user. Defaults to True.
             messaging (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
             meetings (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
@@ -299,8 +304,10 @@ class Org(Webex):
             last_name (str, optional): The users' last name. Defaults to empty string.
             display_name (str, optional): The full name of the user as displayed in Webex. If first name and last name are passed
                 without display_name, the display name will be the concatenation of first and last name.
+
         Returns:
             Person: The Person instance of the newly-created user.
+
         """
         if (first_name or last_name) and not display_name:
             display_name = f"{first_name} {last_name}"
@@ -336,12 +343,14 @@ class Org(Webex):
             return f"{r.status_code} - {r.text}"
 
     def get_person_by_email(self, email):
-        """
-        Get the Person instance from an email address
+        """Get the Person instance from an email address
+
         Args:
             email (str): The email of the Person to return
+
         Returns:
             Person: Person instance object. None in returned when no Person is found
+
         """
         logging.info("get_person_by_email() started")
         for person in self.people:
@@ -350,10 +359,13 @@ class Org(Webex):
         return None
 
     def get_xsi_endpoints(self):
-        """
-        Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.
+        """Get the XSI endpoints for the Organization.
+
+        Also stores them in the Org.xsi attribute.
+
         Returns:
             dict: Org.xsi attribute dictionary with each endpoint as an entry.
+
         """
         params = {"callingData": "true", **self._params}
         r = requests.get(_url_base + "v1/organizations/" + self.id, headers=self._headers, params=params)
@@ -367,10 +379,13 @@ class Org(Webex):
         return self.xsi
 
     def get_locations(self):
-        """
-        Get the Locations for the Organization. Also stores them in the Org.locations attribute.
+        """Get the Locations for the Organization.
+
+        Also stores them in the Org.locations attribute.
+
         Returns:
             list[Location]: List of Location instance objects. See the Locations class for attributes.
+
         """
         logging.info("get_locations() started")
         r = requests.get(_url_base + "v1/locations", headers=self._headers, params=self._params)
@@ -383,12 +398,13 @@ class Org(Webex):
         return self.locations
 
     def get_workspaces(self):
-        """
-        Get the Workspaces and Workspace Locations for the Organizations.
-            Also stores them in the Org.workspaces and Org.workspace_locations attributes.
+        """Get the Workspaces and Workspace Locations for the Organizations.
+
+        Also stores them in the Org.workspaces and Org.workspace_locations attributes.
 
         Returns:
             list[Workspace]: List of Workspace instance objects. See the Workspace class for attributes.
+
         """
         logging.info("Getting Workspaces")
         self.workspaces = []
@@ -409,11 +425,14 @@ class Org(Webex):
         return self.workspaces
 
     def get_pickup_groups(self):
-        """
-        Get all of the Call Pickup Groups for an Organization. Also stores them in the Org.pickup_groups attribute.
+        """Get all of the Call Pickup Groups for an Organization.
+
+        Also stores them in the Org.pickup_groups attribute.
+
         Returns:
             list[PickupGroup]: List of Call Pickup Groups as a list of dictionaries.
-                See the PickupGroup class for attributes.
+            See the PickupGroup class for attributes.
+
         """
         logging.info("get_pickup_groups() started")
         self.pickup_groups = []
@@ -433,10 +452,13 @@ class Org(Webex):
         return self.pickup_groups
 
     def get_call_queues(self):
-        """
-        Get the Call Queues for an Organization. Also stores them in the Org.call_queues attribute.
+        """Get the Call Queues for an Organization.
+
+        Also stores them in the Org.call_queues attribute.
+
         Returns:
             list[CallQueue]: List of CallQueue instances for the Organization
+
         """
         logging.info("get_call_queues() started")
         self.call_queues = []
@@ -457,10 +479,13 @@ class Org(Webex):
         return self.call_queues
 
     def get_hunt_groups(self):
-        """
-        Get the Hunt Groups for an Organization. Also stores them in the Org.hunt_groups attribute.
+        """Get the Hunt Groups for an Organization.
+
+        Also stores them in the Org.hunt_groups attribute.
+
         Returns:
             list[HuntGroup]: List of HuntGroup instances for the Organization
+
         """
         logging.info("get_hunt_groups() started")
         self.hunt_groups = []
@@ -475,11 +500,13 @@ class Org(Webex):
         return self.hunt_groups
 
     def get_people(self):
-        """
-        Get all of the people within the Organization. Also creates a Person instance and stores it in the
-            Org.people attributes
+        """Get all of the people within the Organization.
+
+        Also creates a Person instance and stores it in the Org.people attributes
+
         Returns:
             list[Person]: List of Person instances
+
         """
         logging.info("get_people() started")
         params = {"max": "1000", "callingData": "true", **self._params}
@@ -507,10 +534,11 @@ class Org(Webex):
         return self.people
 
     def get_wxc_people(self):
-        """
-        Get all of the people within the Organization **who have Webex Calling**
+        """Get all of the people within the Organization **who have Webex Calling**
+
         Returns:
             list[Person]: List of Person instances of people who have a Webex Calling license
+
         """
         if not self.people:
             self.get_people()
@@ -521,12 +549,14 @@ class Org(Webex):
         return wxc_people
 
     def get_license_name(self, license_id: str):
-        """
-        Gets the name of a license by its ID
+        """Gets the name of a license by its ID
+
         Args:
             license_id (str): The License ID
+
         Returns:
             str: The License name. None if not found.
+
         """
         for license in self.licenses:
             if license['id'] == license_id:
@@ -536,14 +566,16 @@ class Org(Webex):
 
 class Location:
     def __init__(self, parent: Org, location_id: str, name: str, address: dict = None):
-        """
-        Initialize a Location instance
+        """Initialize a Location instance
+
         Args:
             location_id (str): The Webex ID of the Location
             name (str): The name of the Location
             address (dict): The address information for the Location
+
         Returns:
              Location (object): The Location instance
+
         """
         self._parent = parent
         self.id: str = location_id
@@ -1613,17 +1645,20 @@ class Call:
             return False
 
     def transfer(self, address: str, type: str = "blind"):
-        """
-        Transfer the call to the selected address. Type of transfer can be controlled with `type` param. VM
-        transfers will transfer the call directly to the voice mail of the address, even if the address is the
-        user's own address. Attended transfers require a subsequent call to `finish_transfer()` when the actual transfer
-        should happen.
+        """Transfer the call to the selected address.
+
+        Type of transfer can be controlled with `type` param. VM transfers will transfer the call directly to the voice
+        mail of the address, even if the address is the user's own address. Attended transfers require a subsequent call
+        to `finish_transfer()` when the actual transfer should happen.
+
         Args:
             address (str): The address (usually a phone number or extension) to transfer the call to
             type (str): ['blind','vm','attended']:
                 The type of transfer.
+
         Returns:
             bool: True if successful. False if unsuccessful
+
         """
         logging.info(f"Transferring call {self.id} to {address} for {self._userid}")
         # Set the address param to be passed to XSI

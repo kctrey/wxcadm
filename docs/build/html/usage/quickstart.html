@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Quickstart &#8212; wxcadm 1.0.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="wxcadm Module Reference" href="../reference/wxcadm.html" />
+    <link rel="prev" title="Welcome to wxcadm’s documentation!" href="../index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="quickstart">
+<h1>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h1>
+<p>By creating a Webex instance with a valid API Access Token, the module will pull the Webex Organization information as
+well as all the People within the Organization. The Org instance will contain all People, whether they have the
+Webex Calling service or not. An Org method <code class="docutils literal notranslate"><span class="pre">`get_webex_people()`</span></code> makes it easy to get only the People that have
+Webex Calling.</p>
+<p>You can obtain a 12-hour access token by logging into <a class="reference external" href="https://developer.webex.com">https://developer.webex.com</a> and visiting the <strong>Getting Started</strong>
+page.</p>
+<p>Once you have the access token, the following will initialize the API connection and pull data</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Since most administrators only have access to a single Webex Organization, you can access that Organization with the
+<strong>org</strong> attribute. If the administrator has access to more than one Organization, they can be accessed using the
+<strong>orgs</strong> attribute, which is a list of the organizations that can be managed. See the “Regarding Multiple
+Organizations” section below for further information.</p>
+<p>You can see all the attributes with</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">vars</span><span class="p">(</span><span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that, by default, all the People are pulled when the Org is initialized. For large organizations, this may take
+a while, but then all the People are stored as Person objects.</p>
+<p>To iterate over the list of people, simply loop through the <strong>people</strong> attribute of the Org. For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">person</span> <span class="ow">in</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">people</span><span class="p">:</span>
+    <span class="c1"># Print all of the attributes of the Person</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">vars</span><span class="p">(</span><span class="n">person</span><span class="p">))</span>
+    <span class="c1"># Or access the attributes directly</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">email</span>
+</pre></div>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">wxcadm</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reference/wxcadm.html">wxcadm Module Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../index.html" title="previous chapter">Welcome to wxcadm’s documentation!</a></li>
+      <li>Next: <a href="../reference/wxcadm.html" title="next chapter">wxcadm Module Reference</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Trey Hilyard.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/usage/quickstart.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,10 @@
+wxcadm
+======
+
+.. toctree::
+   :maxdepth: 4
+
+   exceptions
+   globals
+   wxcadm
+   wxcadm_cli
