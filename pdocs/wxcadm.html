@@ -53,8 +53,8 @@ _url_base = &#34;https://webexapis.com/&#34;
 class Webex:
     # TODO List
     #    Add token refresh, just for completeness. For now, we don&#39;t mess with tokens at all.
-    &#34;&#34;&#34;
-    The base class for working with wxcadm.
+    &#34;&#34;&#34;The base class for working with wxcadm.
+
     &#34;&#34;&#34;
 
     def __init__(self,
@@ -66,8 +66,8 @@ class Webex:
                  get_hunt_groups: bool = False,
                  get_call_queues: bool = False
                  ) -&gt; None:
-        &#34;&#34;&#34;
-        Initialize a Webex instance to communicate with Webex and store data
+        &#34;&#34;&#34;Initialize a Webex instance to communicate with Webex and store data
+
         Args:
             access_token (str): The Webex API Access Token to authenticate the API calls
             create_org (bool, optional): Whether to create an Org instance for all organizations.
@@ -77,8 +77,10 @@ class Webex:
                 not every Org has XSI capability
             get_hunt_groups (bool, optional): Whether to get the Hunt Groups for each Org. Defaults to False.
             get_call_queues (bool, optional): Whether to get the Call Queues for each Org. Defaults to False.
+
         Returns:
             Webex: The Webex instance
+
         &#34;&#34;&#34;
         logging.info(&#34;Webex instance initialized&#34;)
         # The access token is the only thing that we need to get started
@@ -130,14 +132,17 @@ class Webex:
         return self._headers
 
     def get_org_by_name(self, name: str):
-        &#34;&#34;&#34;
-        Get the Org instance that matches all or part of the name argument.
+        &#34;&#34;&#34;Get the Org instance that matches all or part of the name argument.
+
         Args:
             name (str): Text to match against the Org name
+
         Returns:
             Org: The Org instance of the matching Org
+
         Raises:
             KeyError: Raised when no match is made
+
         &#34;&#34;&#34;
         for org in self.orgs:
             if name in org.name:
@@ -156,8 +161,7 @@ class Org(Webex):
                  call_queues: bool = False,
                  xsi: bool = False,
                  ):
-        &#34;&#34;&#34;
-        Initialize an Org instance
+        &#34;&#34;&#34;Initialize an Org instance
 
         Args:
             name (str): The Organization name
@@ -171,6 +175,7 @@ class Org(Webex):
 
         Returns:
             Org: This instance of the Org class
+
         &#34;&#34;&#34;
 
         # Instance attrs
@@ -225,11 +230,11 @@ class Org(Webex):
         return self.id
 
     def __get_licenses(self):
-        &#34;&#34;&#34;
-        Gets all of the licenses for the Organization
+        &#34;&#34;&#34;Gets all of the licenses for the Organization
 
-        :return:
+        Returns:
             list: List of dictionaries containing the license name and ID
+
         &#34;&#34;&#34;
         logging.info(&#34;__get_licenses() started for org&#34;)
         license_list = []
@@ -260,21 +265,61 @@ class Org(Webex):
 
     @property
     def numbers(self):
-        &#34;&#34;&#34;
-        All of the Numbers for the Org
+        &#34;&#34;&#34;All of the Numbers for the Org
 
         Returns:
             list[dict]: List of dict containing information about each number
 
         &#34;&#34;&#34;
-        return self._cpapi.get_numbers()
+        my_numbers = self._cpapi.get_numbers()
+        for num in my_numbers:
+            if &#34;owner&#34; in num:
+                person = self.get_person_by_id(num[&#39;owner&#39;][&#39;id&#39;])
+                if person is not None:
+                    num[&#39;owner&#39;] = person
+            if &#34;location&#34; in num:
+                location = self.get_location_by_name(num[&#39;location&#39;][&#39;name&#39;])
+                if location is not None:
+                    num[&#39;location&#39;] = location
+        return my_numbers
+
+    def get_location_by_name(self, name: str):
+        &#34;&#34;&#34;Get the Location instance associated with a given Location ID
+
+        Args:
+            name (str): The full name of the Location to look for. (Case sensitive)
+
+        Returns:
+            Location: The Location instance. If no match is found, None is returned
+
+        &#34;&#34;&#34;
+        for location in self.locations:
+            if location.name == name:
+                return location
+        return None
+
+    def get_person_by_id(self, id: str):
+        &#34;&#34;&#34;Get the Person instance associated with a given ID
+
+        Args:
+            id (str): The Webex ID of the Person to look for.
+
+        Returns:
+            Person: The Person instance. If no match is found, None is returned
+
+        &#34;&#34;&#34;
+        for person in self.people:
+            if person.id == id:
+                return person
+        return None
+
 
     def __get_wxc_licenses(self):
-        &#34;&#34;&#34;
-        Get only the Webex Calling licenses from the Org.licenses attribute
+        &#34;&#34;&#34;Get only the Webex Calling licenses from the Org.licenses attribute
 
         Returns:
             list[str]:
+
         &#34;&#34;&#34;
         logging.info(&#34;__get_wxc_licenses started&#34;)
         license_list = []
@@ -284,13 +329,11 @@ class Org(Webex):
         return license_list
 
     def get_wxc_person_license(self):
-        &#34;&#34;&#34;
-        Get the Webex Calling - Professional license ID
+        &#34;&#34;&#34;Get the Webex Calling - Professional license ID
+
         Returns:
             str: The License ID
-        Todo:
-            Need to account for multiple subscriptions and calculate usage, throwing an exception when there
-                is no license available.
+
         &#34;&#34;&#34;
         logging.info(&#34;__get_wxc_person_license started to find available license&#34;)
         for license in self.licenses:
@@ -310,14 +353,17 @@ class Org(Webex):
                       last_name: str = None,
                       display_name: str = None,
                       ):
-        &#34;&#34;&#34;
-        Create a new user in Webex. Also creates a new Person instance for the created user.
+        &#34;&#34;&#34;Create a new user in Webex.
+
+        Also creates a new Person instance for the created user.
+
         Args:
             email (str): The email address of the user
             location (str): The ID of the Location that the user is assigned to.
             licenses (list, optional): List of license IDs to assign to the user. Use this when the license IDs
-                are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
-                `meetings` parameters.
+            are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
+            meetings` parameters.
+
             calling (bool, optional): BETA - Whether to assign Calling licenses to the user. Defaults to True.
             messaging (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
             meetings (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
@@ -327,8 +373,10 @@ class Org(Webex):
             last_name (str, optional): The users&#39; last name. Defaults to empty string.
             display_name (str, optional): The full name of the user as displayed in Webex. If first name and last name are passed
                 without display_name, the display name will be the concatenation of first and last name.
+
         Returns:
             Person: The Person instance of the newly-created user.
+
         &#34;&#34;&#34;
         if (first_name or last_name) and not display_name:
             display_name = f&#34;{first_name} {last_name}&#34;
@@ -364,12 +412,14 @@ class Org(Webex):
             return f&#34;{r.status_code} - {r.text}&#34;
 
     def get_person_by_email(self, email):
-        &#34;&#34;&#34;
-        Get the Person instance from an email address
+        &#34;&#34;&#34;Get the Person instance from an email address
+
         Args:
             email (str): The email of the Person to return
+
         Returns:
             Person: Person instance object. None in returned when no Person is found
+
         &#34;&#34;&#34;
         logging.info(&#34;get_person_by_email() started&#34;)
         for person in self.people:
@@ -378,10 +428,13 @@ class Org(Webex):
         return None
 
     def get_xsi_endpoints(self):
-        &#34;&#34;&#34;
-        Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.
+        &#34;&#34;&#34;Get the XSI endpoints for the Organization.
+
+        Also stores them in the Org.xsi attribute.
+
         Returns:
             dict: Org.xsi attribute dictionary with each endpoint as an entry.
+
         &#34;&#34;&#34;
         params = {&#34;callingData&#34;: &#34;true&#34;, **self._params}
         r = requests.get(_url_base + &#34;v1/organizations/&#34; + self.id, headers=self._headers, params=params)
@@ -395,10 +448,13 @@ class Org(Webex):
         return self.xsi
 
     def get_locations(self):
-        &#34;&#34;&#34;
-        Get the Locations for the Organization. Also stores them in the Org.locations attribute.
+        &#34;&#34;&#34;Get the Locations for the Organization.
+
+        Also stores them in the Org.locations attribute.
+
         Returns:
             list[Location]: List of Location instance objects. See the Locations class for attributes.
+
         &#34;&#34;&#34;
         logging.info(&#34;get_locations() started&#34;)
         r = requests.get(_url_base + &#34;v1/locations&#34;, headers=self._headers, params=self._params)
@@ -411,12 +467,13 @@ class Org(Webex):
         return self.locations
 
     def get_workspaces(self):
-        &#34;&#34;&#34;
-        Get the Workspaces and Workspace Locations for the Organizations.
-            Also stores them in the Org.workspaces and Org.workspace_locations attributes.
+        &#34;&#34;&#34;Get the Workspaces and Workspace Locations for the Organizations.
+
+        Also stores them in the Org.workspaces and Org.workspace_locations attributes.
 
         Returns:
             list[Workspace]: List of Workspace instance objects. See the Workspace class for attributes.
+
         &#34;&#34;&#34;
         logging.info(&#34;Getting Workspaces&#34;)
         self.workspaces = []
@@ -437,11 +494,14 @@ class Org(Webex):
         return self.workspaces
 
     def get_pickup_groups(self):
-        &#34;&#34;&#34;
-        Get all of the Call Pickup Groups for an Organization. Also stores them in the Org.pickup_groups attribute.
+        &#34;&#34;&#34;Get all of the Call Pickup Groups for an Organization.
+
+        Also stores them in the Org.pickup_groups attribute.
+
         Returns:
             list[PickupGroup]: List of Call Pickup Groups as a list of dictionaries.
-                See the PickupGroup class for attributes.
+            See the PickupGroup class for attributes.
+
         &#34;&#34;&#34;
         logging.info(&#34;get_pickup_groups() started&#34;)
         self.pickup_groups = []
@@ -461,10 +521,13 @@ class Org(Webex):
         return self.pickup_groups
 
     def get_call_queues(self):
-        &#34;&#34;&#34;
-        Get the Call Queues for an Organization. Also stores them in the Org.call_queues attribute.
+        &#34;&#34;&#34;Get the Call Queues for an Organization.
+
+        Also stores them in the Org.call_queues attribute.
+
         Returns:
             list[CallQueue]: List of CallQueue instances for the Organization
+
         &#34;&#34;&#34;
         logging.info(&#34;get_call_queues() started&#34;)
         self.call_queues = []
@@ -485,10 +548,13 @@ class Org(Webex):
         return self.call_queues
 
     def get_hunt_groups(self):
-        &#34;&#34;&#34;
-        Get the Hunt Groups for an Organization. Also stores them in the Org.hunt_groups attribute.
+        &#34;&#34;&#34;Get the Hunt Groups for an Organization.
+
+        Also stores them in the Org.hunt_groups attribute.
+
         Returns:
             list[HuntGroup]: List of HuntGroup instances for the Organization
+
         &#34;&#34;&#34;
         logging.info(&#34;get_hunt_groups() started&#34;)
         self.hunt_groups = []
@@ -503,11 +569,13 @@ class Org(Webex):
         return self.hunt_groups
 
     def get_people(self):
-        &#34;&#34;&#34;
-        Get all of the people within the Organization. Also creates a Person instance and stores it in the
-            Org.people attributes
+        &#34;&#34;&#34;Get all of the people within the Organization.
+
+        Also creates a Person instance and stores it in the Org.people attributes
+
         Returns:
             list[Person]: List of Person instances
+
         &#34;&#34;&#34;
         logging.info(&#34;get_people() started&#34;)
         params = {&#34;max&#34;: &#34;1000&#34;, &#34;callingData&#34;: &#34;true&#34;, **self._params}
@@ -535,10 +603,11 @@ class Org(Webex):
         return self.people
 
     def get_wxc_people(self):
-        &#34;&#34;&#34;
-        Get all of the people within the Organization **who have Webex Calling**
+        &#34;&#34;&#34;Get all of the people within the Organization **who have Webex Calling**
+
         Returns:
             list[Person]: List of Person instances of people who have a Webex Calling license
+
         &#34;&#34;&#34;
         if not self.people:
             self.get_people()
@@ -549,12 +618,14 @@ class Org(Webex):
         return wxc_people
 
     def get_license_name(self, license_id: str):
-        &#34;&#34;&#34;
-        Gets the name of a license by its ID
+        &#34;&#34;&#34;Gets the name of a license by its ID
+
         Args:
             license_id (str): The License ID
+
         Returns:
             str: The License name. None if not found.
+
         &#34;&#34;&#34;
         for license in self.licenses:
             if license[&#39;id&#39;] == license_id:
@@ -564,14 +635,16 @@ class Org(Webex):
 
 class Location:
     def __init__(self, parent: Org, location_id: str, name: str, address: dict = None):
-        &#34;&#34;&#34;
-        Initialize a Location instance
+        &#34;&#34;&#34;Initialize a Location instance
+
         Args:
             location_id (str): The Webex ID of the Location
             name (str): The name of the Location
             address (dict): The address information for the Location
+
         Returns:
              Location (object): The Location instance
+
         &#34;&#34;&#34;
         self._parent = parent
         self.id: str = location_id
@@ -586,6 +659,13 @@ class Location:
 
     def __repr__(self):
         return self.id
+
+    @property
+    def spark_id(self):
+        &#34;&#34;&#34;The ID used by all of the underlying services.&#34;&#34;&#34;
+        bytes = base64.b64decode(self.id + &#34;===&#34;)
+        spark_id = bytes.decode(&#34;utf-8&#34;)
+        return spark_id
 
     @property
     def hunt_groups(self):
@@ -604,6 +684,22 @@ class Location:
             if cq.location_id == self.id:
                 my_call_queues.append(cq)
         return my_call_queues
+
+    @property
+    def available_numbers(self):
+        &#34;&#34;&#34;Returns all of the available numbers for the Location.
+
+        Only returns active numbers, so numbers that have not been activated yet will not be returned.
+
+        Returns:
+            list[dict]: A list of available numbers, in dict form
+
+        &#34;&#34;&#34;
+        available_numbers = []
+        for number in self._parent.numbers:
+            if number[&#39;location&#39;].name == self.name and number.get(&#39;state&#39;, &#34;&#34;) == &#34;ACTIVE&#34;:
+                available_numbers.append(number)
+        return available_numbers
 
 
 class Person:
@@ -1034,11 +1130,13 @@ class Person:
 
     def set_calling_only(self):
         &#34;&#34;&#34;
-        Removes the Messaging and Meetings licenses, leaving only the Calling capability. **Note that this does not
-            work, and is just here for the future.**
+        Removes the Messaging and Meetings licenses, leaving only the Calling capability.
+
         Returns:
             Person: The instance of this person with the updated values
+
         &#34;&#34;&#34;
+        logging.info(f&#34;Setting {self.email} to Calling-Only&#34;)
         # First, iterate the existing licenses and remove the ones we don&#39;t want
         # Build a list that contains the values to match on to remove
         remove_matches = [&#34;messaging&#34;,
@@ -1046,13 +1144,19 @@ class Person:
                           &#34;free&#34;]
         new_licenses = []
         for license in self.licenses:
+            logging.debug(f&#34;Checking license: {license}&#34;)
             lic_name = self._parent.get_license_name(license)
-            for match in remove_matches:
-                if match not in lic_name.lower():
+            logging.debug(f&#34;License Name: {lic_name}&#34;)
+            if any(match in lic_name.lower() for match in remove_matches):
+                if &#34;screen share&#34; in lic_name.lower():
+                    logging.debug(f&#34;{lic_name} matches but is needed&#34;)
                     new_licenses.append(license)
                 else:
-                    if &#34;screen share&#34; in lic_name.lower():
-                        new_licenses.append(license)
+                    logging.debug(f&#34;License should be removed&#34;)
+                    continue
+            else:
+                logging.debug(f&#34;Keeping license&#34;)
+                new_licenses.append(license)
 
         success = self.update_person(licenses=new_licenses)
         return self
@@ -1589,8 +1693,8 @@ class Call:
 
     @property
     def status(self):
-        &#34;&#34;&#34;
-        The status of the call
+        &#34;&#34;&#34;The status of the call
+
         Returns:
             dict:
 
@@ -1611,6 +1715,7 @@ class Call:
                 &#39;answer_time&#39; (str): The UNIX timestamp when the call was answered
                 &#39;status_time&#39; (str): The UNIX timestamp of the status response
                 }
+
         &#34;&#34;&#34;
         logging.info(f&#34;Getting call status&#34;)
         r = requests.get(self._url + f&#34;/{self.id}&#34;,
@@ -1641,17 +1746,20 @@ class Call:
             return False
 
     def transfer(self, address: str, type: str = &#34;blind&#34;):
-        &#34;&#34;&#34;
-        Transfer the call to the selected address. Type of transfer can be controlled with `type` param. VM
-        transfers will transfer the call directly to the voice mail of the address, even if the address is the
-        user&#39;s own address. Attended transfers require a subsequent call to `finish_transfer()` when the actual transfer
-        should happen.
+        &#34;&#34;&#34;Transfer the call to the selected address.
+
+        Type of transfer can be controlled with `type` param. VM transfers will transfer the call directly to the voice
+        mail of the address, even if the address is the user&#39;s own address. Attended transfers require a subsequent call
+        to `finish_transfer()` when the actual transfer should happen.
+
         Args:
             address (str): The address (usually a phone number or extension) to transfer the call to
             type (str): [&#39;blind&#39;,&#39;vm&#39;,&#39;attended&#39;]:
                 The type of transfer.
+
         Returns:
             bool: True if successful. False if unsuccessful
+
         &#34;&#34;&#34;
         logging.info(f&#34;Transferring call {self.id} to {address} for {self._userid}&#34;)
         # Set the address param to be passed to XSI
@@ -1682,8 +1790,10 @@ class Call:
         &#34;&#34;&#34;
         Complete an Attended Transfer. This method will only complete if a `transfer(address, type=&#34;attended&#34;)`
         has been done first.
+
         Returns:
             bool: Whether or not the transfer completes
+
         &#34;&#34;&#34;
         logging.info(&#34;Completing transfer...&#34;)
         r = requests.put(self._url + f&#34;/{self.id}/ConsultTransfer/{self._transfer_call.id}&#34;, headers=self._headers)
@@ -1696,11 +1806,14 @@ class Call:
         &#34;&#34;&#34;
         Starts a multi-party conference. If the call is already held and an attended transfer is in progress,
         meaning the user is already talking to the transfer-to user, this method will bridge the calls.
+
         Args:
             address (str, optional): The address (usually a phone number or extension) to conference to. Not needed
                 when the call is already part of an Attended Transfer
+
         Returns:
             bool: True if the conference is successful
+
         &#34;&#34;&#34;
         # First, check to see if the call is already part of an attended transfer. If so, just build the conference
         # based on the two call IDs
@@ -1729,11 +1842,12 @@ class Call:
             pass
 
     def send_dtmf(self, dtmf: str):
-        &#34;&#34;&#34;
-        Transmit DTMF tones outbound
+        &#34;&#34;&#34;Transmit DTMF tones outbound
+
         Args:
             dtmf (str): The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
                 between digits (i.e. &#34;23456#,123&#34;)
+
         Returns:
             bool: True if the dtmf was sent successfully
         &#34;&#34;&#34;
@@ -1745,10 +1859,11 @@ class Call:
             return False, r.text
 
     def hold(self):
-        &#34;&#34;&#34;
-        Place the call on hold
+        &#34;&#34;&#34;Place the call on hold
+
         Returns:
             bool: Whether the hold command was successful
+
         &#34;&#34;&#34;
         r = requests.put(self._url + f&#34;/{self.id}/Hold&#34;, headers=self._headers)
         if r.status_code in [200, 201, 204]:
@@ -1758,8 +1873,10 @@ class Call:
 
     def resume(self):
         &#34;&#34;&#34;Resume a call that was placed on hold
+
         Returns:
             bool: Whether the command was successful
+
         &#34;&#34;&#34;
         r = requests.put(self._url + f&#34;/{self.id}/Talk&#34;, headers=self._headers)
         if r.status_code in [200, 201, 204]:
@@ -1772,15 +1889,17 @@ class Conference:
     &#34;&#34;&#34;The class for Conference Calls started by a Call.conference()&#34;&#34;&#34;
 
     def __init__(self, parent: object, calls: list, comment: str = &#34;&#34;):
-        &#34;&#34;&#34;
-        Initialize a Conference instance for an XSI instance
+        &#34;&#34;&#34;Initialize a Conference instance for an XSI instance
+
         Args:
             parent (XSI): The XSI instance that owns this conference
             calls (list): Call IDs associated with the Conference. Always two Call IDs to start a Conference.
                 Any additional Call IDs will be added to the conference as it is created.
             comment (str, optional): An optional text comment for the Conference
+
         Returns:
             Conference: This instance of the Conference class
+
         &#34;&#34;&#34;
         self._parent: XSI = parent
         self._calls: list = calls
@@ -1791,12 +1910,14 @@ class Conference:
         &#34;&#34;&#34;Text comment associated with the Conference&#34;&#34;&#34;
 
     def deaf(self, call: str):
-        &#34;&#34;&#34;
-        Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
+        &#34;&#34;&#34;Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
+
         Args:
             call (str): The Call ID to make deaf
+
         Returns:
             bool: Whether the command was successful
+
         &#34;&#34;&#34;
         pass
 
@@ -1901,12 +2022,16 @@ class Workspace:
 
 class WorkspaceLocation:
     def __init__(self, parent: Org, id: str, config: dict = None):
-        &#34;&#34;&#34;Initialize a WorkspaceLocation instance. If only the `id` is provided, the configuration will be fetched from
+        &#34;&#34;&#34;Initialize a WorkspaceLocation instance.
+
+        If only the `id` is provided, the configuration will be fetched from
             the Webex API. To save API calls, the config dict can be passed using the `config` argument
+
         Args:
             parent (Org): The Organization to which this WorkspaceLocation belongs
             id (str): The Webex ID of the WorkspaceLocation
             config (dict): The configuration of the WorkspaceLocation as returned by the Webex API
+
         &#34;&#34;&#34;
         self.id: str = id
         &#34;&#34;&#34;The Webex ID of the Workspace&#34;&#34;&#34;
@@ -1971,10 +2096,11 @@ class WorkspaceLocation:
 
 class WorkspaceLocationFloor(WorkspaceLocation):
     def __init__(self, config: dict):
-        &#34;&#34;&#34;
-        Initialize a new WorkspaceLocationFloor
+        &#34;&#34;&#34;Initialize a new WorkspaceLocationFloor
+
         Args:
             config (dict): The config as returned by the Webex API
+
         &#34;&#34;&#34;
         self.name = config.get(&#34;displayName&#34;)
         self.id = config.get(&#34;id&#34;)
@@ -1996,8 +2122,8 @@ class CPAPI:
         self._url_base = f&#34;https://cpapi-a.wbx2.com/api/v1/customers/{self._customer}/&#34;
 
     def set_global_vm_pin(self, pin: str):
-        &#34;&#34;&#34;
-        Set the Org-wide default VM PIN
+        &#34;&#34;&#34;Set the Org-wide default VM PIN
+
         Args:
             pin (str): The PIN to set as the global default
 
@@ -2098,8 +2224,8 @@ class CPAPI:
         self._url_base = f&#34;https://cpapi-a.wbx2.com/api/v1/customers/{self._customer}/&#34;
 
     def set_global_vm_pin(self, pin: str):
-        &#34;&#34;&#34;
-        Set the Org-wide default VM PIN
+        &#34;&#34;&#34;Set the Org-wide default VM PIN
+
         Args:
             pin (str): The PIN to set as the global default
 
@@ -2268,8 +2394,8 @@ with the security policy.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_global_vm_pin(self, pin: str):
-    &#34;&#34;&#34;
-    Set the Org-wide default VM PIN
+    &#34;&#34;&#34;Set the Org-wide default VM PIN
+
     Args:
         pin (str): The PIN to set as the global default
 
@@ -2403,8 +2529,8 @@ development focus right now is the XSI API, which is more feature-rich</p>
 
     @property
     def status(self):
-        &#34;&#34;&#34;
-        The status of the call
+        &#34;&#34;&#34;The status of the call
+
         Returns:
             dict:
 
@@ -2425,6 +2551,7 @@ development focus right now is the XSI API, which is more feature-rich</p>
                 &#39;answer_time&#39; (str): The UNIX timestamp when the call was answered
                 &#39;status_time&#39; (str): The UNIX timestamp of the status response
                 }
+
         &#34;&#34;&#34;
         logging.info(f&#34;Getting call status&#34;)
         r = requests.get(self._url + f&#34;/{self.id}&#34;,
@@ -2455,17 +2582,20 @@ development focus right now is the XSI API, which is more feature-rich</p>
             return False
 
     def transfer(self, address: str, type: str = &#34;blind&#34;):
-        &#34;&#34;&#34;
-        Transfer the call to the selected address. Type of transfer can be controlled with `type` param. VM
-        transfers will transfer the call directly to the voice mail of the address, even if the address is the
-        user&#39;s own address. Attended transfers require a subsequent call to `finish_transfer()` when the actual transfer
-        should happen.
+        &#34;&#34;&#34;Transfer the call to the selected address.
+
+        Type of transfer can be controlled with `type` param. VM transfers will transfer the call directly to the voice
+        mail of the address, even if the address is the user&#39;s own address. Attended transfers require a subsequent call
+        to `finish_transfer()` when the actual transfer should happen.
+
         Args:
             address (str): The address (usually a phone number or extension) to transfer the call to
             type (str): [&#39;blind&#39;,&#39;vm&#39;,&#39;attended&#39;]:
                 The type of transfer.
+
         Returns:
             bool: True if successful. False if unsuccessful
+
         &#34;&#34;&#34;
         logging.info(f&#34;Transferring call {self.id} to {address} for {self._userid}&#34;)
         # Set the address param to be passed to XSI
@@ -2496,8 +2626,10 @@ development focus right now is the XSI API, which is more feature-rich</p>
         &#34;&#34;&#34;
         Complete an Attended Transfer. This method will only complete if a `transfer(address, type=&#34;attended&#34;)`
         has been done first.
+
         Returns:
             bool: Whether or not the transfer completes
+
         &#34;&#34;&#34;
         logging.info(&#34;Completing transfer...&#34;)
         r = requests.put(self._url + f&#34;/{self.id}/ConsultTransfer/{self._transfer_call.id}&#34;, headers=self._headers)
@@ -2510,11 +2642,14 @@ development focus right now is the XSI API, which is more feature-rich</p>
         &#34;&#34;&#34;
         Starts a multi-party conference. If the call is already held and an attended transfer is in progress,
         meaning the user is already talking to the transfer-to user, this method will bridge the calls.
+
         Args:
             address (str, optional): The address (usually a phone number or extension) to conference to. Not needed
                 when the call is already part of an Attended Transfer
+
         Returns:
             bool: True if the conference is successful
+
         &#34;&#34;&#34;
         # First, check to see if the call is already part of an attended transfer. If so, just build the conference
         # based on the two call IDs
@@ -2543,11 +2678,12 @@ development focus right now is the XSI API, which is more feature-rich</p>
             pass
 
     def send_dtmf(self, dtmf: str):
-        &#34;&#34;&#34;
-        Transmit DTMF tones outbound
+        &#34;&#34;&#34;Transmit DTMF tones outbound
+
         Args:
             dtmf (str): The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
                 between digits (i.e. &#34;23456#,123&#34;)
+
         Returns:
             bool: True if the dtmf was sent successfully
         &#34;&#34;&#34;
@@ -2559,10 +2695,11 @@ development focus right now is the XSI API, which is more feature-rich</p>
             return False, r.text
 
     def hold(self):
-        &#34;&#34;&#34;
-        Place the call on hold
+        &#34;&#34;&#34;Place the call on hold
+
         Returns:
             bool: Whether the hold command was successful
+
         &#34;&#34;&#34;
         r = requests.put(self._url + f&#34;/{self.id}/Hold&#34;, headers=self._headers)
         if r.status_code in [200, 201, 204]:
@@ -2572,8 +2709,10 @@ development focus right now is the XSI API, which is more feature-rich</p>
 
     def resume(self):
         &#34;&#34;&#34;Resume a call that was placed on hold
+
         Returns:
             bool: Whether the command was successful
+
         &#34;&#34;&#34;
         r = requests.put(self._url + f&#34;/{self.id}/Talk&#34;, headers=self._headers)
         if r.status_code in [200, 201, 204]:
@@ -2616,8 +2755,8 @@ development focus right now is the XSI API, which is more feature-rich</p>
 </summary>
 <pre><code class="python">@property
 def status(self):
-    &#34;&#34;&#34;
-    The status of the call
+    &#34;&#34;&#34;The status of the call
+
     Returns:
         dict:
 
@@ -2638,6 +2777,7 @@ def status(self):
             &#39;answer_time&#39; (str): The UNIX timestamp when the call was answered
             &#39;status_time&#39; (str): The UNIX timestamp of the status response
             }
+
     &#34;&#34;&#34;
     logging.info(f&#34;Getting call status&#34;)
     r = requests.get(self._url + f&#34;/{self.id}&#34;,
@@ -2696,11 +2836,14 @@ when the call is already part of an Attended Transfer</dd>
     &#34;&#34;&#34;
     Starts a multi-party conference. If the call is already held and an attended transfer is in progress,
     meaning the user is already talking to the transfer-to user, this method will bridge the calls.
+
     Args:
         address (str, optional): The address (usually a phone number or extension) to conference to. Not needed
             when the call is already part of an Attended Transfer
+
     Returns:
         bool: True if the conference is successful
+
     &#34;&#34;&#34;
     # First, check to see if the call is already part of an attended transfer. If so, just build the conference
     # based on the two call IDs
@@ -2748,8 +2891,10 @@ has been done first.</p>
     &#34;&#34;&#34;
     Complete an Attended Transfer. This method will only complete if a `transfer(address, type=&#34;attended&#34;)`
     has been done first.
+
     Returns:
         bool: Whether or not the transfer completes
+
     &#34;&#34;&#34;
     logging.info(&#34;Completing transfer...&#34;)
     r = requests.put(self._url + f&#34;/{self.id}/ConsultTransfer/{self._transfer_call.id}&#34;, headers=self._headers)
@@ -2803,10 +2948,11 @@ has been done first.</p>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def hold(self):
-    &#34;&#34;&#34;
-    Place the call on hold
+    &#34;&#34;&#34;Place the call on hold
+
     Returns:
         bool: Whether the hold command was successful
+
     &#34;&#34;&#34;
     r = requests.put(self._url + f&#34;/{self.id}/Hold&#34;, headers=self._headers)
     if r.status_code in [200, 201, 204]:
@@ -2873,8 +3019,10 @@ has been done first.</p>
 </summary>
 <pre><code class="python">def resume(self):
     &#34;&#34;&#34;Resume a call that was placed on hold
+
     Returns:
         bool: Whether the command was successful
+
     &#34;&#34;&#34;
     r = requests.put(self._url + f&#34;/{self.id}/Talk&#34;, headers=self._headers)
     if r.status_code in [200, 201, 204]:
@@ -2904,11 +3052,12 @@ between digits (i.e. "23456#,123")</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def send_dtmf(self, dtmf: str):
-    &#34;&#34;&#34;
-    Transmit DTMF tones outbound
+    &#34;&#34;&#34;Transmit DTMF tones outbound
+
     Args:
         dtmf (str): The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
             between digits (i.e. &#34;23456#,123&#34;)
+
     Returns:
         bool: True if the dtmf was sent successfully
     &#34;&#34;&#34;
@@ -2924,10 +3073,10 @@ between digits (i.e. "23456#,123")</dd>
 <span>def <span class="ident">transfer</span></span>(<span>self, address: str, type: str = 'blind')</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Transfer the call to the selected address. Type of transfer can be controlled with <code>type</code> param. VM
-transfers will transfer the call directly to the voice mail of the address, even if the address is the
-user's own address. Attended transfers require a subsequent call to <code>finish_transfer()</code> when the actual transfer
-should happen.</p>
+<div class="desc"><p>Transfer the call to the selected address.</p>
+<p>Type of transfer can be controlled with <code>type</code> param. VM transfers will transfer the call directly to the voice
+mail of the address, even if the address is the user's own address. Attended transfers require a subsequent call
+to <code>finish_transfer()</code> when the actual transfer should happen.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>address</code></strong> :&ensp;<code>str</code></dt>
@@ -2946,17 +3095,20 @@ The type of transfer.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def transfer(self, address: str, type: str = &#34;blind&#34;):
-    &#34;&#34;&#34;
-    Transfer the call to the selected address. Type of transfer can be controlled with `type` param. VM
-    transfers will transfer the call directly to the voice mail of the address, even if the address is the
-    user&#39;s own address. Attended transfers require a subsequent call to `finish_transfer()` when the actual transfer
-    should happen.
+    &#34;&#34;&#34;Transfer the call to the selected address.
+
+    Type of transfer can be controlled with `type` param. VM transfers will transfer the call directly to the voice
+    mail of the address, even if the address is the user&#39;s own address. Attended transfers require a subsequent call
+    to `finish_transfer()` when the actual transfer should happen.
+
     Args:
         address (str): The address (usually a phone number or extension) to transfer the call to
         type (str): [&#39;blind&#39;,&#39;vm&#39;,&#39;attended&#39;]:
             The type of transfer.
+
     Returns:
         bool: True if successful. False if unsuccessful
+
     &#34;&#34;&#34;
     logging.info(f&#34;Transferring call {self.id} to {address} for {self._userid}&#34;)
     # Set the address param to be passed to XSI
@@ -3231,15 +3383,17 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
     &#34;&#34;&#34;The class for Conference Calls started by a Call.conference()&#34;&#34;&#34;
 
     def __init__(self, parent: object, calls: list, comment: str = &#34;&#34;):
-        &#34;&#34;&#34;
-        Initialize a Conference instance for an XSI instance
+        &#34;&#34;&#34;Initialize a Conference instance for an XSI instance
+
         Args:
             parent (XSI): The XSI instance that owns this conference
             calls (list): Call IDs associated with the Conference. Always two Call IDs to start a Conference.
                 Any additional Call IDs will be added to the conference as it is created.
             comment (str, optional): An optional text comment for the Conference
+
         Returns:
             Conference: This instance of the Conference class
+
         &#34;&#34;&#34;
         self._parent: XSI = parent
         self._calls: list = calls
@@ -3250,12 +3404,14 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
         &#34;&#34;&#34;Text comment associated with the Conference&#34;&#34;&#34;
 
     def deaf(self, call: str):
-        &#34;&#34;&#34;
-        Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
+        &#34;&#34;&#34;Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
+
         Args:
             call (str): The Call ID to make deaf
+
         Returns:
             bool: Whether the command was successful
+
         &#34;&#34;&#34;
         pass</code></pre>
 </details>
@@ -3288,12 +3444,14 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def deaf(self, call: str):
-    &#34;&#34;&#34;
-    Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
+    &#34;&#34;&#34;Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
+
     Args:
         call (str): The Call ID to make deaf
+
     Returns:
         bool: Whether the command was successful
+
     &#34;&#34;&#34;
     pass</code></pre>
 </details>
@@ -3544,14 +3702,16 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 </summary>
 <pre><code class="python">class Location:
     def __init__(self, parent: Org, location_id: str, name: str, address: dict = None):
-        &#34;&#34;&#34;
-        Initialize a Location instance
+        &#34;&#34;&#34;Initialize a Location instance
+
         Args:
             location_id (str): The Webex ID of the Location
             name (str): The name of the Location
             address (dict): The address information for the Location
+
         Returns:
              Location (object): The Location instance
+
         &#34;&#34;&#34;
         self._parent = parent
         self.id: str = location_id
@@ -3566,6 +3726,13 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
 
     def __repr__(self):
         return self.id
+
+    @property
+    def spark_id(self):
+        &#34;&#34;&#34;The ID used by all of the underlying services.&#34;&#34;&#34;
+        bytes = base64.b64decode(self.id + &#34;===&#34;)
+        spark_id = bytes.decode(&#34;utf-8&#34;)
+        return spark_id
 
     @property
     def hunt_groups(self):
@@ -3583,13 +3750,59 @@ Any additional Call IDs will be added to the conference as it is created.</dd>
         for cq in self._parent.call_queues:
             if cq.location_id == self.id:
                 my_call_queues.append(cq)
-        return my_call_queues</code></pre>
+        return my_call_queues
+
+    @property
+    def available_numbers(self):
+        &#34;&#34;&#34;Returns all of the available numbers for the Location.
+
+        Only returns active numbers, so numbers that have not been activated yet will not be returned.
+
+        Returns:
+            list[dict]: A list of available numbers, in dict form
+
+        &#34;&#34;&#34;
+        available_numbers = []
+        for number in self._parent.numbers:
+            if number[&#39;location&#39;].name == self.name and number.get(&#39;state&#39;, &#34;&#34;) == &#34;ACTIVE&#34;:
+                available_numbers.append(number)
+        return available_numbers</code></pre>
 </details>
 <h3>Instance variables</h3>
 <dl>
 <dt id="wxcadm.Location.address"><code class="name">var <span class="ident">address</span></code></dt>
 <dd>
 <div class="desc"><p>The address of the Location</p></div>
+</dd>
+<dt id="wxcadm.Location.available_numbers"><code class="name">var <span class="ident">available_numbers</span></code></dt>
+<dd>
+<div class="desc"><p>Returns all of the available numbers for the Location.</p>
+<p>Only returns active numbers, so numbers that have not been activated yet will not be returned.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[dict]</code></dt>
+<dd>A list of available numbers, in dict form</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def available_numbers(self):
+    &#34;&#34;&#34;Returns all of the available numbers for the Location.
+
+    Only returns active numbers, so numbers that have not been activated yet will not be returned.
+
+    Returns:
+        list[dict]: A list of available numbers, in dict form
+
+    &#34;&#34;&#34;
+    available_numbers = []
+    for number in self._parent.numbers:
+        if number[&#39;location&#39;].name == self.name and number.get(&#39;state&#39;, &#34;&#34;) == &#34;ACTIVE&#34;:
+            available_numbers.append(number)
+    return available_numbers</code></pre>
+</details>
 </dd>
 <dt id="wxcadm.Location.call_queues"><code class="name">var <span class="ident">call_queues</span></code></dt>
 <dd>
@@ -3632,6 +3845,21 @@ def hunt_groups(self):
 <dt id="wxcadm.Location.name"><code class="name">var <span class="ident">name</span></code></dt>
 <dd>
 <div class="desc"><p>The name of the Location</p></div>
+</dd>
+<dt id="wxcadm.Location.spark_id"><code class="name">var <span class="ident">spark_id</span></code></dt>
+<dd>
+<div class="desc"><p>The ID used by all of the underlying services.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def spark_id(self):
+    &#34;&#34;&#34;The ID used by all of the underlying services.&#34;&#34;&#34;
+    bytes = base64.b64decode(self.id + &#34;===&#34;)
+    spark_id = bytes.decode(&#34;utf-8&#34;)
+    return spark_id</code></pre>
+</details>
 </dd>
 </dl>
 </dd>
@@ -3681,8 +3909,7 @@ def hunt_groups(self):
                  call_queues: bool = False,
                  xsi: bool = False,
                  ):
-        &#34;&#34;&#34;
-        Initialize an Org instance
+        &#34;&#34;&#34;Initialize an Org instance
 
         Args:
             name (str): The Organization name
@@ -3696,6 +3923,7 @@ def hunt_groups(self):
 
         Returns:
             Org: This instance of the Org class
+
         &#34;&#34;&#34;
 
         # Instance attrs
@@ -3750,11 +3978,11 @@ def hunt_groups(self):
         return self.id
 
     def __get_licenses(self):
-        &#34;&#34;&#34;
-        Gets all of the licenses for the Organization
+        &#34;&#34;&#34;Gets all of the licenses for the Organization
 
-        :return:
+        Returns:
             list: List of dictionaries containing the license name and ID
+
         &#34;&#34;&#34;
         logging.info(&#34;__get_licenses() started for org&#34;)
         license_list = []
@@ -3785,21 +4013,61 @@ def hunt_groups(self):
 
     @property
     def numbers(self):
-        &#34;&#34;&#34;
-        All of the Numbers for the Org
+        &#34;&#34;&#34;All of the Numbers for the Org
 
         Returns:
             list[dict]: List of dict containing information about each number
 
         &#34;&#34;&#34;
-        return self._cpapi.get_numbers()
+        my_numbers = self._cpapi.get_numbers()
+        for num in my_numbers:
+            if &#34;owner&#34; in num:
+                person = self.get_person_by_id(num[&#39;owner&#39;][&#39;id&#39;])
+                if person is not None:
+                    num[&#39;owner&#39;] = person
+            if &#34;location&#34; in num:
+                location = self.get_location_by_name(num[&#39;location&#39;][&#39;name&#39;])
+                if location is not None:
+                    num[&#39;location&#39;] = location
+        return my_numbers
+
+    def get_location_by_name(self, name: str):
+        &#34;&#34;&#34;Get the Location instance associated with a given Location ID
+
+        Args:
+            name (str): The full name of the Location to look for. (Case sensitive)
+
+        Returns:
+            Location: The Location instance. If no match is found, None is returned
+
+        &#34;&#34;&#34;
+        for location in self.locations:
+            if location.name == name:
+                return location
+        return None
+
+    def get_person_by_id(self, id: str):
+        &#34;&#34;&#34;Get the Person instance associated with a given ID
+
+        Args:
+            id (str): The Webex ID of the Person to look for.
+
+        Returns:
+            Person: The Person instance. If no match is found, None is returned
+
+        &#34;&#34;&#34;
+        for person in self.people:
+            if person.id == id:
+                return person
+        return None
+
 
     def __get_wxc_licenses(self):
-        &#34;&#34;&#34;
-        Get only the Webex Calling licenses from the Org.licenses attribute
+        &#34;&#34;&#34;Get only the Webex Calling licenses from the Org.licenses attribute
 
         Returns:
             list[str]:
+
         &#34;&#34;&#34;
         logging.info(&#34;__get_wxc_licenses started&#34;)
         license_list = []
@@ -3809,13 +4077,11 @@ def hunt_groups(self):
         return license_list
 
     def get_wxc_person_license(self):
-        &#34;&#34;&#34;
-        Get the Webex Calling - Professional license ID
+        &#34;&#34;&#34;Get the Webex Calling - Professional license ID
+
         Returns:
             str: The License ID
-        Todo:
-            Need to account for multiple subscriptions and calculate usage, throwing an exception when there
-                is no license available.
+
         &#34;&#34;&#34;
         logging.info(&#34;__get_wxc_person_license started to find available license&#34;)
         for license in self.licenses:
@@ -3835,14 +4101,17 @@ def hunt_groups(self):
                       last_name: str = None,
                       display_name: str = None,
                       ):
-        &#34;&#34;&#34;
-        Create a new user in Webex. Also creates a new Person instance for the created user.
+        &#34;&#34;&#34;Create a new user in Webex.
+
+        Also creates a new Person instance for the created user.
+
         Args:
             email (str): The email address of the user
             location (str): The ID of the Location that the user is assigned to.
             licenses (list, optional): List of license IDs to assign to the user. Use this when the license IDs
-                are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
-                `meetings` parameters.
+            are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
+            meetings` parameters.
+
             calling (bool, optional): BETA - Whether to assign Calling licenses to the user. Defaults to True.
             messaging (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
             meetings (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
@@ -3852,8 +4121,10 @@ def hunt_groups(self):
             last_name (str, optional): The users&#39; last name. Defaults to empty string.
             display_name (str, optional): The full name of the user as displayed in Webex. If first name and last name are passed
                 without display_name, the display name will be the concatenation of first and last name.
+
         Returns:
             Person: The Person instance of the newly-created user.
+
         &#34;&#34;&#34;
         if (first_name or last_name) and not display_name:
             display_name = f&#34;{first_name} {last_name}&#34;
@@ -3889,12 +4160,14 @@ def hunt_groups(self):
             return f&#34;{r.status_code} - {r.text}&#34;
 
     def get_person_by_email(self, email):
-        &#34;&#34;&#34;
-        Get the Person instance from an email address
+        &#34;&#34;&#34;Get the Person instance from an email address
+
         Args:
             email (str): The email of the Person to return
+
         Returns:
             Person: Person instance object. None in returned when no Person is found
+
         &#34;&#34;&#34;
         logging.info(&#34;get_person_by_email() started&#34;)
         for person in self.people:
@@ -3903,10 +4176,13 @@ def hunt_groups(self):
         return None
 
     def get_xsi_endpoints(self):
-        &#34;&#34;&#34;
-        Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.
+        &#34;&#34;&#34;Get the XSI endpoints for the Organization.
+
+        Also stores them in the Org.xsi attribute.
+
         Returns:
             dict: Org.xsi attribute dictionary with each endpoint as an entry.
+
         &#34;&#34;&#34;
         params = {&#34;callingData&#34;: &#34;true&#34;, **self._params}
         r = requests.get(_url_base + &#34;v1/organizations/&#34; + self.id, headers=self._headers, params=params)
@@ -3920,10 +4196,13 @@ def hunt_groups(self):
         return self.xsi
 
     def get_locations(self):
-        &#34;&#34;&#34;
-        Get the Locations for the Organization. Also stores them in the Org.locations attribute.
+        &#34;&#34;&#34;Get the Locations for the Organization.
+
+        Also stores them in the Org.locations attribute.
+
         Returns:
             list[Location]: List of Location instance objects. See the Locations class for attributes.
+
         &#34;&#34;&#34;
         logging.info(&#34;get_locations() started&#34;)
         r = requests.get(_url_base + &#34;v1/locations&#34;, headers=self._headers, params=self._params)
@@ -3936,12 +4215,13 @@ def hunt_groups(self):
         return self.locations
 
     def get_workspaces(self):
-        &#34;&#34;&#34;
-        Get the Workspaces and Workspace Locations for the Organizations.
-            Also stores them in the Org.workspaces and Org.workspace_locations attributes.
+        &#34;&#34;&#34;Get the Workspaces and Workspace Locations for the Organizations.
+
+        Also stores them in the Org.workspaces and Org.workspace_locations attributes.
 
         Returns:
             list[Workspace]: List of Workspace instance objects. See the Workspace class for attributes.
+
         &#34;&#34;&#34;
         logging.info(&#34;Getting Workspaces&#34;)
         self.workspaces = []
@@ -3962,11 +4242,14 @@ def hunt_groups(self):
         return self.workspaces
 
     def get_pickup_groups(self):
-        &#34;&#34;&#34;
-        Get all of the Call Pickup Groups for an Organization. Also stores them in the Org.pickup_groups attribute.
+        &#34;&#34;&#34;Get all of the Call Pickup Groups for an Organization.
+
+        Also stores them in the Org.pickup_groups attribute.
+
         Returns:
             list[PickupGroup]: List of Call Pickup Groups as a list of dictionaries.
-                See the PickupGroup class for attributes.
+            See the PickupGroup class for attributes.
+
         &#34;&#34;&#34;
         logging.info(&#34;get_pickup_groups() started&#34;)
         self.pickup_groups = []
@@ -3986,10 +4269,13 @@ def hunt_groups(self):
         return self.pickup_groups
 
     def get_call_queues(self):
-        &#34;&#34;&#34;
-        Get the Call Queues for an Organization. Also stores them in the Org.call_queues attribute.
+        &#34;&#34;&#34;Get the Call Queues for an Organization.
+
+        Also stores them in the Org.call_queues attribute.
+
         Returns:
             list[CallQueue]: List of CallQueue instances for the Organization
+
         &#34;&#34;&#34;
         logging.info(&#34;get_call_queues() started&#34;)
         self.call_queues = []
@@ -4010,10 +4296,13 @@ def hunt_groups(self):
         return self.call_queues
 
     def get_hunt_groups(self):
-        &#34;&#34;&#34;
-        Get the Hunt Groups for an Organization. Also stores them in the Org.hunt_groups attribute.
+        &#34;&#34;&#34;Get the Hunt Groups for an Organization.
+
+        Also stores them in the Org.hunt_groups attribute.
+
         Returns:
             list[HuntGroup]: List of HuntGroup instances for the Organization
+
         &#34;&#34;&#34;
         logging.info(&#34;get_hunt_groups() started&#34;)
         self.hunt_groups = []
@@ -4028,11 +4317,13 @@ def hunt_groups(self):
         return self.hunt_groups
 
     def get_people(self):
-        &#34;&#34;&#34;
-        Get all of the people within the Organization. Also creates a Person instance and stores it in the
-            Org.people attributes
+        &#34;&#34;&#34;Get all of the people within the Organization.
+
+        Also creates a Person instance and stores it in the Org.people attributes
+
         Returns:
             list[Person]: List of Person instances
+
         &#34;&#34;&#34;
         logging.info(&#34;get_people() started&#34;)
         params = {&#34;max&#34;: &#34;1000&#34;, &#34;callingData&#34;: &#34;true&#34;, **self._params}
@@ -4060,10 +4351,11 @@ def hunt_groups(self):
         return self.people
 
     def get_wxc_people(self):
-        &#34;&#34;&#34;
-        Get all of the people within the Organization **who have Webex Calling**
+        &#34;&#34;&#34;Get all of the people within the Organization **who have Webex Calling**
+
         Returns:
             list[Person]: List of Person instances of people who have a Webex Calling license
+
         &#34;&#34;&#34;
         if not self.people:
             self.get_people()
@@ -4074,12 +4366,14 @@ def hunt_groups(self):
         return wxc_people
 
     def get_license_name(self, license_id: str):
-        &#34;&#34;&#34;
-        Gets the name of a license by its ID
+        &#34;&#34;&#34;Gets the name of a license by its ID
+
         Args:
             license_id (str): The License ID
+
         Returns:
             str: The License name. None if not found.
+
         &#34;&#34;&#34;
         for license in self.licenses:
             if license[&#39;id&#39;] == license_id:
@@ -4130,14 +4424,23 @@ def hunt_groups(self):
 </summary>
 <pre><code class="python">@property
 def numbers(self):
-    &#34;&#34;&#34;
-    All of the Numbers for the Org
+    &#34;&#34;&#34;All of the Numbers for the Org
 
     Returns:
         list[dict]: List of dict containing information about each number
 
     &#34;&#34;&#34;
-    return self._cpapi.get_numbers()</code></pre>
+    my_numbers = self._cpapi.get_numbers()
+    for num in my_numbers:
+        if &#34;owner&#34; in num:
+            person = self.get_person_by_id(num[&#39;owner&#39;][&#39;id&#39;])
+            if person is not None:
+                num[&#39;owner&#39;] = person
+        if &#34;location&#34; in num:
+            location = self.get_location_by_name(num[&#39;location&#39;][&#39;name&#39;])
+            if location is not None:
+                num[&#39;location&#39;] = location
+    return my_numbers</code></pre>
 </details>
 </dd>
 <dt id="wxcadm.Org.people"><code class="name">var <span class="ident">people</span></code></dt>
@@ -4167,7 +4470,8 @@ def numbers(self):
 <span>def <span class="ident">create_person</span></span>(<span>self, email: str, location: str, licenses: list = None, calling: bool = True, messaging: bool = True, meetings: bool = True, phone_number: str = None, extension: str = None, first_name: str = None, last_name: str = None, display_name: str = None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Create a new user in Webex. Also creates a new Person instance for the created user.</p>
+<div class="desc"><p>Create a new user in Webex.</p>
+<p>Also creates a new Person instance for the created user.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>email</code></strong> :&ensp;<code>str</code></dt>
@@ -4175,9 +4479,11 @@ def numbers(self):
 <dt><strong><code>location</code></strong> :&ensp;<code>str</code></dt>
 <dd>The ID of the Location that the user is assigned to.</dd>
 <dt><strong><code>licenses</code></strong> :&ensp;<code>list</code>, optional</dt>
-<dd>List of license IDs to assign to the user. Use this when the license IDs
-are known. To have the license IDs determined dynamically, use the <code>calling</code>, <code>messaging</code> and
-<code>meetings</code> parameters.</dd>
+<dd>List of license IDs to assign to the user. Use this when the license IDs</dd>
+</dl>
+<p>are known. To have the license IDs determined dynamically, use the <code>calling</code>, <code>messaging</code> and
+meetings` parameters.</p>
+<dl>
 <dt><strong><code>calling</code></strong> :&ensp;<code>bool</code>, optional</dt>
 <dd>BETA - Whether to assign Calling licenses to the user. Defaults to True.</dd>
 <dt><strong><code>messaging</code></strong> :&ensp;<code>bool</code>, optional</dt>
@@ -4217,14 +4523,17 @@ without display_name, the display name will be the concatenation of first and la
                   last_name: str = None,
                   display_name: str = None,
                   ):
-    &#34;&#34;&#34;
-    Create a new user in Webex. Also creates a new Person instance for the created user.
+    &#34;&#34;&#34;Create a new user in Webex.
+
+    Also creates a new Person instance for the created user.
+
     Args:
         email (str): The email address of the user
         location (str): The ID of the Location that the user is assigned to.
         licenses (list, optional): List of license IDs to assign to the user. Use this when the license IDs
-            are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
-            `meetings` parameters.
+        are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
+        meetings` parameters.
+
         calling (bool, optional): BETA - Whether to assign Calling licenses to the user. Defaults to True.
         messaging (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
         meetings (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
@@ -4234,8 +4543,10 @@ without display_name, the display name will be the concatenation of first and la
         last_name (str, optional): The users&#39; last name. Defaults to empty string.
         display_name (str, optional): The full name of the user as displayed in Webex. If first name and last name are passed
             without display_name, the display name will be the concatenation of first and last name.
+
     Returns:
         Person: The Person instance of the newly-created user.
+
     &#34;&#34;&#34;
     if (first_name or last_name) and not display_name:
         display_name = f&#34;{first_name} {last_name}&#34;
@@ -4275,7 +4586,8 @@ without display_name, the display name will be the concatenation of first and la
 <span>def <span class="ident">get_call_queues</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Get the Call Queues for an Organization. Also stores them in the Org.call_queues attribute.</p>
+<div class="desc"><p>Get the Call Queues for an Organization.</p>
+<p>Also stores them in the Org.call_queues attribute.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>list[<a title="wxcadm.CallQueue" href="#wxcadm.CallQueue">CallQueue</a>]</code></dt>
@@ -4286,10 +4598,13 @@ without display_name, the display name will be the concatenation of first and la
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_call_queues(self):
-    &#34;&#34;&#34;
-    Get the Call Queues for an Organization. Also stores them in the Org.call_queues attribute.
+    &#34;&#34;&#34;Get the Call Queues for an Organization.
+
+    Also stores them in the Org.call_queues attribute.
+
     Returns:
         list[CallQueue]: List of CallQueue instances for the Organization
+
     &#34;&#34;&#34;
     logging.info(&#34;get_call_queues() started&#34;)
     self.call_queues = []
@@ -4314,7 +4629,8 @@ without display_name, the display name will be the concatenation of first and la
 <span>def <span class="ident">get_hunt_groups</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Get the Hunt Groups for an Organization. Also stores them in the Org.hunt_groups attribute.</p>
+<div class="desc"><p>Get the Hunt Groups for an Organization.</p>
+<p>Also stores them in the Org.hunt_groups attribute.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>list[<a title="wxcadm.HuntGroup" href="#wxcadm.HuntGroup">HuntGroup</a>]</code></dt>
@@ -4325,10 +4641,13 @@ without display_name, the display name will be the concatenation of first and la
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_hunt_groups(self):
-    &#34;&#34;&#34;
-    Get the Hunt Groups for an Organization. Also stores them in the Org.hunt_groups attribute.
+    &#34;&#34;&#34;Get the Hunt Groups for an Organization.
+
+    Also stores them in the Org.hunt_groups attribute.
+
     Returns:
         list[HuntGroup]: List of HuntGroup instances for the Organization
+
     &#34;&#34;&#34;
     logging.info(&#34;get_hunt_groups() started&#34;)
     self.hunt_groups = []
@@ -4363,12 +4682,14 @@ without display_name, the display name will be the concatenation of first and la
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_license_name(self, license_id: str):
-    &#34;&#34;&#34;
-    Gets the name of a license by its ID
+    &#34;&#34;&#34;Gets the name of a license by its ID
+
     Args:
         license_id (str): The License ID
+
     Returns:
         str: The License name. None if not found.
+
     &#34;&#34;&#34;
     for license in self.licenses:
         if license[&#39;id&#39;] == license_id:
@@ -4376,11 +4697,47 @@ without display_name, the display name will be the concatenation of first and la
     return None</code></pre>
 </details>
 </dd>
+<dt id="wxcadm.Org.get_location_by_name"><code class="name flex">
+<span>def <span class="ident">get_location_by_name</span></span>(<span>self, name: str)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the Location instance associated with a given Location ID</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>The full name of the Location to look for. (Case sensitive)</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="wxcadm.Location" href="#wxcadm.Location">Location</a></code></dt>
+<dd>The Location instance. If no match is found, None is returned</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_location_by_name(self, name: str):
+    &#34;&#34;&#34;Get the Location instance associated with a given Location ID
+
+    Args:
+        name (str): The full name of the Location to look for. (Case sensitive)
+
+    Returns:
+        Location: The Location instance. If no match is found, None is returned
+
+    &#34;&#34;&#34;
+    for location in self.locations:
+        if location.name == name:
+            return location
+    return None</code></pre>
+</details>
+</dd>
 <dt id="wxcadm.Org.get_locations"><code class="name flex">
 <span>def <span class="ident">get_locations</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Get the Locations for the Organization. Also stores them in the Org.locations attribute.</p>
+<div class="desc"><p>Get the Locations for the Organization.</p>
+<p>Also stores them in the Org.locations attribute.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>list[<a title="wxcadm.Location" href="#wxcadm.Location">Location</a>]</code></dt>
@@ -4391,10 +4748,13 @@ without display_name, the display name will be the concatenation of first and la
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_locations(self):
-    &#34;&#34;&#34;
-    Get the Locations for the Organization. Also stores them in the Org.locations attribute.
+    &#34;&#34;&#34;Get the Locations for the Organization.
+
+    Also stores them in the Org.locations attribute.
+
     Returns:
         list[Location]: List of Location instance objects. See the Locations class for attributes.
+
     &#34;&#34;&#34;
     logging.info(&#34;get_locations() started&#34;)
     r = requests.get(_url_base + &#34;v1/locations&#34;, headers=self._headers, params=self._params)
@@ -4411,8 +4771,8 @@ without display_name, the display name will be the concatenation of first and la
 <span>def <span class="ident">get_people</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Get all of the people within the Organization. Also creates a Person instance and stores it in the
-Org.people attributes</p>
+<div class="desc"><p>Get all of the people within the Organization.</p>
+<p>Also creates a Person instance and stores it in the Org.people attributes</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>list[<a title="wxcadm.Person" href="#wxcadm.Person">Person</a>]</code></dt>
@@ -4423,11 +4783,13 @@ Org.people attributes</p>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_people(self):
-    &#34;&#34;&#34;
-    Get all of the people within the Organization. Also creates a Person instance and stores it in the
-        Org.people attributes
+    &#34;&#34;&#34;Get all of the people within the Organization.
+
+    Also creates a Person instance and stores it in the Org.people attributes
+
     Returns:
         list[Person]: List of Person instances
+
     &#34;&#34;&#34;
     logging.info(&#34;get_people() started&#34;)
     params = {&#34;max&#34;: &#34;1000&#34;, &#34;callingData&#34;: &#34;true&#34;, **self._params}
@@ -4475,12 +4837,14 @@ Org.people attributes</p>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_person_by_email(self, email):
-    &#34;&#34;&#34;
-    Get the Person instance from an email address
+    &#34;&#34;&#34;Get the Person instance from an email address
+
     Args:
         email (str): The email of the Person to return
+
     Returns:
         Person: Person instance object. None in returned when no Person is found
+
     &#34;&#34;&#34;
     logging.info(&#34;get_person_by_email() started&#34;)
     for person in self.people:
@@ -4489,27 +4853,66 @@ Org.people attributes</p>
     return None</code></pre>
 </details>
 </dd>
-<dt id="wxcadm.Org.get_pickup_groups"><code class="name flex">
-<span>def <span class="ident">get_pickup_groups</span></span>(<span>self)</span>
+<dt id="wxcadm.Org.get_person_by_id"><code class="name flex">
+<span>def <span class="ident">get_person_by_id</span></span>(<span>self, id: str)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Get all of the Call Pickup Groups for an Organization. Also stores them in the Org.pickup_groups attribute.</p>
+<div class="desc"><p>Get the Person instance associated with a given ID</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>id</code></strong> :&ensp;<code>str</code></dt>
+<dd>The Webex ID of the Person to look for.</dd>
+</dl>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>list[<a title="wxcadm.PickupGroup" href="#wxcadm.PickupGroup">PickupGroup</a>]</code></dt>
-<dd>List of Call Pickup Groups as a list of dictionaries.
-See the PickupGroup class for attributes.</dd>
+<dt><code><a title="wxcadm.Person" href="#wxcadm.Person">Person</a></code></dt>
+<dd>The Person instance. If no match is found, None is returned</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_pickup_groups(self):
+<pre><code class="python">def get_person_by_id(self, id: str):
+    &#34;&#34;&#34;Get the Person instance associated with a given ID
+
+    Args:
+        id (str): The Webex ID of the Person to look for.
+
+    Returns:
+        Person: The Person instance. If no match is found, None is returned
+
     &#34;&#34;&#34;
-    Get all of the Call Pickup Groups for an Organization. Also stores them in the Org.pickup_groups attribute.
+    for person in self.people:
+        if person.id == id:
+            return person
+    return None</code></pre>
+</details>
+</dd>
+<dt id="wxcadm.Org.get_pickup_groups"><code class="name flex">
+<span>def <span class="ident">get_pickup_groups</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get all of the Call Pickup Groups for an Organization.</p>
+<p>Also stores them in the Org.pickup_groups attribute.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[<a title="wxcadm.PickupGroup" href="#wxcadm.PickupGroup">PickupGroup</a>]</code></dt>
+<dd>List of Call Pickup Groups as a list of dictionaries.</dd>
+</dl>
+<p>See the PickupGroup class for attributes.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_pickup_groups(self):
+    &#34;&#34;&#34;Get all of the Call Pickup Groups for an Organization.
+
+    Also stores them in the Org.pickup_groups attribute.
+
     Returns:
         list[PickupGroup]: List of Call Pickup Groups as a list of dictionaries.
-            See the PickupGroup class for attributes.
+        See the PickupGroup class for attributes.
+
     &#34;&#34;&#34;
     logging.info(&#34;get_pickup_groups() started&#34;)
     self.pickup_groups = []
@@ -4533,8 +4936,8 @@ See the PickupGroup class for attributes.</dd>
 <span>def <span class="ident">get_workspaces</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Get the Workspaces and Workspace Locations for the Organizations.
-Also stores them in the Org.workspaces and Org.workspace_locations attributes.</p>
+<div class="desc"><p>Get the Workspaces and Workspace Locations for the Organizations.</p>
+<p>Also stores them in the Org.workspaces and Org.workspace_locations attributes.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>list[<a title="wxcadm.Workspace" href="#wxcadm.Workspace">Workspace</a>]</code></dt>
@@ -4545,12 +4948,13 @@ Also stores them in the Org.workspaces and Org.workspace_locations attributes.</
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_workspaces(self):
-    &#34;&#34;&#34;
-    Get the Workspaces and Workspace Locations for the Organizations.
-        Also stores them in the Org.workspaces and Org.workspace_locations attributes.
+    &#34;&#34;&#34;Get the Workspaces and Workspace Locations for the Organizations.
+
+    Also stores them in the Org.workspaces and Org.workspace_locations attributes.
 
     Returns:
         list[Workspace]: List of Workspace instance objects. See the Workspace class for attributes.
+
     &#34;&#34;&#34;
     logging.info(&#34;Getting Workspaces&#34;)
     self.workspaces = []
@@ -4586,10 +4990,11 @@ Also stores them in the Org.workspaces and Org.workspace_locations attributes.</
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_wxc_people(self):
-    &#34;&#34;&#34;
-    Get all of the people within the Organization **who have Webex Calling**
+    &#34;&#34;&#34;Get all of the people within the Organization **who have Webex Calling**
+
     Returns:
         list[Person]: List of Person instances of people who have a Webex Calling license
+
     &#34;&#34;&#34;
     if not self.people:
         self.get_people()
@@ -4609,22 +5014,17 @@ Also stores them in the Org.workspaces and Org.workspace_locations attributes.</
 <dl>
 <dt><code>str</code></dt>
 <dd>The License ID</dd>
-</dl>
-<h2 id="todo">Todo</h2>
-<p>Need to account for multiple subscriptions and calculate usage, throwing an exception when there
-is no license available.</p></div>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_wxc_person_license(self):
-    &#34;&#34;&#34;
-    Get the Webex Calling - Professional license ID
+    &#34;&#34;&#34;Get the Webex Calling - Professional license ID
+
     Returns:
         str: The License ID
-    Todo:
-        Need to account for multiple subscriptions and calculate usage, throwing an exception when there
-            is no license available.
+
     &#34;&#34;&#34;
     logging.info(&#34;__get_wxc_person_license started to find available license&#34;)
     for license in self.licenses:
@@ -4637,7 +5037,8 @@ is no license available.</p></div>
 <span>def <span class="ident">get_xsi_endpoints</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.</p>
+<div class="desc"><p>Get the XSI endpoints for the Organization.</p>
+<p>Also stores them in the Org.xsi attribute.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>dict</code></dt>
@@ -4648,10 +5049,13 @@ is no license available.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_xsi_endpoints(self):
-    &#34;&#34;&#34;
-    Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.
+    &#34;&#34;&#34;Get the XSI endpoints for the Organization.
+
+    Also stores them in the Org.xsi attribute.
+
     Returns:
         dict: Org.xsi attribute dictionary with each endpoint as an entry.
+
     &#34;&#34;&#34;
     params = {&#34;callingData&#34;: &#34;true&#34;, **self._params}
     r = requests.get(_url_base + &#34;v1/organizations/&#34; + self.id, headers=self._headers, params=params)
@@ -5128,11 +5532,13 @@ except for automated people population from the Org init.</dd>
 
     def set_calling_only(self):
         &#34;&#34;&#34;
-        Removes the Messaging and Meetings licenses, leaving only the Calling capability. **Note that this does not
-            work, and is just here for the future.**
+        Removes the Messaging and Meetings licenses, leaving only the Calling capability.
+
         Returns:
             Person: The instance of this person with the updated values
+
         &#34;&#34;&#34;
+        logging.info(f&#34;Setting {self.email} to Calling-Only&#34;)
         # First, iterate the existing licenses and remove the ones we don&#39;t want
         # Build a list that contains the values to match on to remove
         remove_matches = [&#34;messaging&#34;,
@@ -5140,13 +5546,19 @@ except for automated people population from the Org init.</dd>
                           &#34;free&#34;]
         new_licenses = []
         for license in self.licenses:
+            logging.debug(f&#34;Checking license: {license}&#34;)
             lic_name = self._parent.get_license_name(license)
-            for match in remove_matches:
-                if match not in lic_name.lower():
+            logging.debug(f&#34;License Name: {lic_name}&#34;)
+            if any(match in lic_name.lower() for match in remove_matches):
+                if &#34;screen share&#34; in lic_name.lower():
+                    logging.debug(f&#34;{lic_name} matches but is needed&#34;)
                     new_licenses.append(license)
                 else:
-                    if &#34;screen share&#34; in lic_name.lower():
-                        new_licenses.append(license)
+                    logging.debug(f&#34;License should be removed&#34;)
+                    continue
+            else:
+                logging.debug(f&#34;Keeping license&#34;)
+                new_licenses.append(license)
 
         success = self.update_person(licenses=new_licenses)
         return self
@@ -5764,8 +6176,7 @@ already has a default PIN</strong> because that PIN will be un-set at the end of
 <span>def <span class="ident">set_calling_only</span></span>(<span>self)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Removes the Messaging and Meetings licenses, leaving only the Calling capability. <strong>Note that this does not
-work, and is just here for the future.</strong></p>
+<div class="desc"><p>Removes the Messaging and Meetings licenses, leaving only the Calling capability.</p>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code><a title="wxcadm.Person" href="#wxcadm.Person">Person</a></code></dt>
@@ -5777,11 +6188,13 @@ work, and is just here for the future.</strong></p>
 </summary>
 <pre><code class="python">def set_calling_only(self):
     &#34;&#34;&#34;
-    Removes the Messaging and Meetings licenses, leaving only the Calling capability. **Note that this does not
-        work, and is just here for the future.**
+    Removes the Messaging and Meetings licenses, leaving only the Calling capability.
+
     Returns:
         Person: The instance of this person with the updated values
+
     &#34;&#34;&#34;
+    logging.info(f&#34;Setting {self.email} to Calling-Only&#34;)
     # First, iterate the existing licenses and remove the ones we don&#39;t want
     # Build a list that contains the values to match on to remove
     remove_matches = [&#34;messaging&#34;,
@@ -5789,13 +6202,19 @@ work, and is just here for the future.</strong></p>
                       &#34;free&#34;]
     new_licenses = []
     for license in self.licenses:
+        logging.debug(f&#34;Checking license: {license}&#34;)
         lic_name = self._parent.get_license_name(license)
-        for match in remove_matches:
-            if match not in lic_name.lower():
+        logging.debug(f&#34;License Name: {lic_name}&#34;)
+        if any(match in lic_name.lower() for match in remove_matches):
+            if &#34;screen share&#34; in lic_name.lower():
+                logging.debug(f&#34;{lic_name} matches but is needed&#34;)
                 new_licenses.append(license)
             else:
-                if &#34;screen share&#34; in lic_name.lower():
-                    new_licenses.append(license)
+                logging.debug(f&#34;License should be removed&#34;)
+                continue
+        else:
+            logging.debug(f&#34;Keeping license&#34;)
+            new_licenses.append(license)
 
     success = self.update_person(licenses=new_licenses)
     return self</code></pre>
@@ -6058,8 +6477,8 @@ not every Org has XSI capability</dd>
 <pre><code class="python">class Webex:
     # TODO List
     #    Add token refresh, just for completeness. For now, we don&#39;t mess with tokens at all.
-    &#34;&#34;&#34;
-    The base class for working with wxcadm.
+    &#34;&#34;&#34;The base class for working with wxcadm.
+
     &#34;&#34;&#34;
 
     def __init__(self,
@@ -6071,8 +6490,8 @@ not every Org has XSI capability</dd>
                  get_hunt_groups: bool = False,
                  get_call_queues: bool = False
                  ) -&gt; None:
-        &#34;&#34;&#34;
-        Initialize a Webex instance to communicate with Webex and store data
+        &#34;&#34;&#34;Initialize a Webex instance to communicate with Webex and store data
+
         Args:
             access_token (str): The Webex API Access Token to authenticate the API calls
             create_org (bool, optional): Whether to create an Org instance for all organizations.
@@ -6082,8 +6501,10 @@ not every Org has XSI capability</dd>
                 not every Org has XSI capability
             get_hunt_groups (bool, optional): Whether to get the Hunt Groups for each Org. Defaults to False.
             get_call_queues (bool, optional): Whether to get the Call Queues for each Org. Defaults to False.
+
         Returns:
             Webex: The Webex instance
+
         &#34;&#34;&#34;
         logging.info(&#34;Webex instance initialized&#34;)
         # The access token is the only thing that we need to get started
@@ -6135,14 +6556,17 @@ not every Org has XSI capability</dd>
         return self._headers
 
     def get_org_by_name(self, name: str):
-        &#34;&#34;&#34;
-        Get the Org instance that matches all or part of the name argument.
+        &#34;&#34;&#34;Get the Org instance that matches all or part of the name argument.
+
         Args:
             name (str): Text to match against the Org name
+
         Returns:
             Org: The Org instance of the matching Org
+
         Raises:
             KeyError: Raised when no match is made
+
         &#34;&#34;&#34;
         for org in self.orgs:
             if name in org.name:
@@ -6200,14 +6624,17 @@ def headers(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def get_org_by_name(self, name: str):
-    &#34;&#34;&#34;
-    Get the Org instance that matches all or part of the name argument.
+    &#34;&#34;&#34;Get the Org instance that matches all or part of the name argument.
+
     Args:
         name (str): Text to match against the Org name
+
     Returns:
         Org: The Org instance of the matching Org
+
     Raises:
         KeyError: Raised when no match is made
+
     &#34;&#34;&#34;
     for org in self.orgs:
         if name in org.name:
@@ -6437,7 +6864,8 @@ def spark_id(self):
 <span>(</span><span>parent: <a title="wxcadm.Org" href="#wxcadm.Org">Org</a>, id: str, config: dict = None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Initialize a WorkspaceLocation instance. If only the <code>id</code> is provided, the configuration will be fetched from
+<div class="desc"><p>Initialize a WorkspaceLocation instance.</p>
+<p>If only the <code>id</code> is provided, the configuration will be fetched from
 the Webex API. To save API calls, the config dict can be passed using the <code>config</code> argument</p>
 <h2 id="args">Args</h2>
 <dl>
@@ -6454,12 +6882,16 @@ the Webex API. To save API calls, the config dict can be passed using the <code>
 </summary>
 <pre><code class="python">class WorkspaceLocation:
     def __init__(self, parent: Org, id: str, config: dict = None):
-        &#34;&#34;&#34;Initialize a WorkspaceLocation instance. If only the `id` is provided, the configuration will be fetched from
+        &#34;&#34;&#34;Initialize a WorkspaceLocation instance.
+
+        If only the `id` is provided, the configuration will be fetched from
             the Webex API. To save API calls, the config dict can be passed using the `config` argument
+
         Args:
             parent (Org): The Organization to which this WorkspaceLocation belongs
             id (str): The Webex ID of the WorkspaceLocation
             config (dict): The configuration of the WorkspaceLocation as returned by the Webex API
+
         &#34;&#34;&#34;
         self.id: str = id
         &#34;&#34;&#34;The Webex ID of the Workspace&#34;&#34;&#34;
@@ -6622,10 +7054,11 @@ the Webex API. To save API calls, the config dict can be passed using the <code>
 </summary>
 <pre><code class="python">class WorkspaceLocationFloor(WorkspaceLocation):
     def __init__(self, config: dict):
-        &#34;&#34;&#34;
-        Initialize a new WorkspaceLocationFloor
+        &#34;&#34;&#34;Initialize a new WorkspaceLocationFloor
+
         Args:
             config (dict): The config as returned by the Webex API
+
         &#34;&#34;&#34;
         self.name = config.get(&#34;displayName&#34;)
         self.id = config.get(&#34;id&#34;)
@@ -7260,12 +7693,14 @@ two Call IDs. Call IDs after the first two will be ignored.</dd>
 </li>
 <li>
 <h4><code><a title="wxcadm.Location" href="#wxcadm.Location">Location</a></code></h4>
-<ul class="">
+<ul class="two-column">
 <li><code><a title="wxcadm.Location.address" href="#wxcadm.Location.address">address</a></code></li>
+<li><code><a title="wxcadm.Location.available_numbers" href="#wxcadm.Location.available_numbers">available_numbers</a></code></li>
 <li><code><a title="wxcadm.Location.call_queues" href="#wxcadm.Location.call_queues">call_queues</a></code></li>
 <li><code><a title="wxcadm.Location.hunt_groups" href="#wxcadm.Location.hunt_groups">hunt_groups</a></code></li>
 <li><code><a title="wxcadm.Location.id" href="#wxcadm.Location.id">id</a></code></li>
 <li><code><a title="wxcadm.Location.name" href="#wxcadm.Location.name">name</a></code></li>
+<li><code><a title="wxcadm.Location.spark_id" href="#wxcadm.Location.spark_id">spark_id</a></code></li>
 </ul>
 </li>
 <li>
@@ -7276,9 +7711,11 @@ two Call IDs. Call IDs after the first two will be ignored.</dd>
 <li><code><a title="wxcadm.Org.get_call_queues" href="#wxcadm.Org.get_call_queues">get_call_queues</a></code></li>
 <li><code><a title="wxcadm.Org.get_hunt_groups" href="#wxcadm.Org.get_hunt_groups">get_hunt_groups</a></code></li>
 <li><code><a title="wxcadm.Org.get_license_name" href="#wxcadm.Org.get_license_name">get_license_name</a></code></li>
+<li><code><a title="wxcadm.Org.get_location_by_name" href="#wxcadm.Org.get_location_by_name">get_location_by_name</a></code></li>
 <li><code><a title="wxcadm.Org.get_locations" href="#wxcadm.Org.get_locations">get_locations</a></code></li>
 <li><code><a title="wxcadm.Org.get_people" href="#wxcadm.Org.get_people">get_people</a></code></li>
 <li><code><a title="wxcadm.Org.get_person_by_email" href="#wxcadm.Org.get_person_by_email">get_person_by_email</a></code></li>
+<li><code><a title="wxcadm.Org.get_person_by_id" href="#wxcadm.Org.get_person_by_id">get_person_by_id</a></code></li>
 <li><code><a title="wxcadm.Org.get_pickup_groups" href="#wxcadm.Org.get_pickup_groups">get_pickup_groups</a></code></li>
 <li><code><a title="wxcadm.Org.get_workspaces" href="#wxcadm.Org.get_workspaces">get_workspaces</a></code></li>
 <li><code><a title="wxcadm.Org.get_wxc_people" href="#wxcadm.Org.get_wxc_people">get_wxc_people</a></code></li>

@@ -92,7 +92,26 @@ processing.
 
 Common Webex Use Cases
 ----------------------
-These are some commonly-requested changes that most Webex Calling admins have to deal with
+These are some commonly-requested changes that most Webex Calling admins have to deal with.
+
+Organization and Location Numbers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+In order to create users, or sometimes to report on them, it is useful to pull the numbers associated with an
+Org. The ``Org.numbers`` attribute provides a list of numbers, along with the Location each is assigned to. If a
+number is assigned to a Person, then the person instance will be included.
+
+.. code-block:: python
+
+   from wxcadm import Webex
+   access_token = "Your API Access Token"
+   webex = Webex(access_token)
+   for number in webex.org.numbers:
+      if "owner" in number:
+         # The number is assigned
+         print(f"{number['number']} is assigned to {number['owner'].email}")
+      else:
+         # The number is not assigned
+         print(f"{number['number']} is not assigned")
 
 Enable VM-to-Email
 ^^^^^^^^^^^^^^^^^^

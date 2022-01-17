@@ -20,6 +20,7 @@ Classes
 
     `set_global_vm_pin(self, pin: str)`
     :   Set the Org-wide default VM PIN
+        
         Args:
             pin (str): The PIN to set as the global default
         
@@ -51,6 +52,7 @@ Classes
 
     `status`
     :   The status of the call
+        
         Returns:
             dict:
         
@@ -77,15 +79,18 @@ Classes
     `conference(self, address: str = '')`
     :   Starts a multi-party conference. If the call is already held and an attended transfer is in progress,
         meaning the user is already talking to the transfer-to user, this method will bridge the calls.
+        
         Args:
             address (str, optional): The address (usually a phone number or extension) to conference to. Not needed
                 when the call is already part of an Attended Transfer
+        
         Returns:
             bool: True if the conference is successful
 
     `finish_transfer(self)`
     :   Complete an Attended Transfer. This method will only complete if a `transfer(address, type="attended")`
         has been done first.
+        
         Returns:
             bool: Whether or not the transfer completes
 
@@ -96,6 +101,7 @@ Classes
 
     `hold(self)`
     :   Place the call on hold
+        
         Returns:
             bool: Whether the hold command was successful
 
@@ -109,26 +115,32 @@ Classes
 
     `resume(self)`
     :   Resume a call that was placed on hold
+        
         Returns:
             bool: Whether the command was successful
 
     `send_dtmf(self, dtmf: str)`
     :   Transmit DTMF tones outbound
+        
         Args:
             dtmf (str): The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
                 between digits (i.e. "23456#,123")
+        
         Returns:
             bool: True if the dtmf was sent successfully
 
     `transfer(self, address: str, type: str = 'blind')`
-    :   Transfer the call to the selected address. Type of transfer can be controlled with `type` param. VM
-        transfers will transfer the call directly to the voice mail of the address, even if the address is the
-        user's own address. Attended transfers require a subsequent call to `finish_transfer()` when the actual transfer
-        should happen.
+    :   Transfer the call to the selected address.
+        
+        Type of transfer can be controlled with `type` param. VM transfers will transfer the call directly to the voice
+        mail of the address, even if the address is the user's own address. Attended transfers require a subsequent call
+        to `finish_transfer()` when the actual transfer should happen.
+        
         Args:
             address (str): The address (usually a phone number or extension) to transfer the call to
             type (str): ['blind','vm','attended']:
                 The type of transfer.
+        
         Returns:
             bool: True if successful. False if unsuccessful
 
@@ -183,11 +195,13 @@ Classes
 :   The class for Conference Calls started by a Call.conference()
     
     Initialize a Conference instance for an XSI instance
+    
     Args:
         parent (XSI): The XSI instance that owns this conference
         calls (list): Call IDs associated with the Conference. Always two Call IDs to start a Conference.
             Any additional Call IDs will be added to the conference as it is created.
         comment (str, optional): An optional text comment for the Conference
+    
     Returns:
         Conference: This instance of the Conference class
 
@@ -200,8 +214,10 @@ Classes
 
     `deaf(self, call: str)`
     :   Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
+        
         Args:
             call (str): The Call ID to make deaf
+        
         Returns:
             bool: Whether the command was successful
 
@@ -275,10 +291,12 @@ Classes
 
 `Location(parent: wxcadm.Org, location_id: str, name: str, address: dict = None)`
 :   Initialize a Location instance
+    
     Args:
         location_id (str): The Webex ID of the Location
         name (str): The name of the Location
         address (dict): The address information for the Location
+    
     Returns:
          Location (object): The Location instance
 
@@ -286,6 +304,14 @@ Classes
 
     `address`
     :   The address of the Location
+
+    `available_numbers`
+    :   Returns all of the available numbers for the Location.
+        
+        Only returns active numbers, so numbers that have not been activated yet will not be returned.
+        
+        Returns:
+            list[dict]: A list of available numbers, in dict form
 
     `call_queues`
     :   List of CallQueue instances for this Location
@@ -299,8 +325,13 @@ Classes
     `name`
     :   The name of the Location
 
+    `spark_id`
+    :   The ID used by all of the underlying services.
+
 `Org(name: str, id: str, parent: wxcadm.Webex = None, people: bool = True, locations: bool = True, hunt_groups: bool = False, call_queues: bool = False, xsi: bool = False)`
 :   The base class for working with wxcadm.
+    
+        
     
     Initialize an Org instance
     
@@ -365,13 +396,17 @@ Classes
     ### Methods
 
     `create_person(self, email: str, location: str, licenses: list = None, calling: bool = True, messaging: bool = True, meetings: bool = True, phone_number: str = None, extension: str = None, first_name: str = None, last_name: str = None, display_name: str = None)`
-    :   Create a new user in Webex. Also creates a new Person instance for the created user.
+    :   Create a new user in Webex.
+        
+        Also creates a new Person instance for the created user.
+        
         Args:
             email (str): The email address of the user
             location (str): The ID of the Location that the user is assigned to.
             licenses (list, optional): List of license IDs to assign to the user. Use this when the license IDs
-                are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
-                `meetings` parameters.
+            are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
+            meetings` parameters.
+        
             calling (bool, optional): BETA - Whether to assign Calling licenses to the user. Defaults to True.
             messaging (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
             meetings (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
@@ -381,72 +416,112 @@ Classes
             last_name (str, optional): The users' last name. Defaults to empty string.
             display_name (str, optional): The full name of the user as displayed in Webex. If first name and last name are passed
                 without display_name, the display name will be the concatenation of first and last name.
+        
         Returns:
             Person: The Person instance of the newly-created user.
 
     `get_call_queues(self)`
-    :   Get the Call Queues for an Organization. Also stores them in the Org.call_queues attribute.
+    :   Get the Call Queues for an Organization.
+        
+        Also stores them in the Org.call_queues attribute.
+        
         Returns:
             list[CallQueue]: List of CallQueue instances for the Organization
 
     `get_hunt_groups(self)`
-    :   Get the Hunt Groups for an Organization. Also stores them in the Org.hunt_groups attribute.
+    :   Get the Hunt Groups for an Organization.
+        
+        Also stores them in the Org.hunt_groups attribute.
+        
         Returns:
             list[HuntGroup]: List of HuntGroup instances for the Organization
 
     `get_license_name(self, license_id: str)`
     :   Gets the name of a license by its ID
+        
         Args:
             license_id (str): The License ID
+        
         Returns:
             str: The License name. None if not found.
 
+    `get_location_by_name(self, name: str)`
+    :   Get the Location instance associated with a given Location ID
+        
+        Args:
+            name (str): The full name of the Location to look for. (Case sensitive)
+        
+        Returns:
+            Location: The Location instance. If no match is found, None is returned
+
     `get_locations(self)`
-    :   Get the Locations for the Organization. Also stores them in the Org.locations attribute.
+    :   Get the Locations for the Organization.
+        
+        Also stores them in the Org.locations attribute.
+        
         Returns:
             list[Location]: List of Location instance objects. See the Locations class for attributes.
 
     `get_people(self)`
-    :   Get all of the people within the Organization. Also creates a Person instance and stores it in the
-            Org.people attributes
+    :   Get all of the people within the Organization.
+        
+        Also creates a Person instance and stores it in the Org.people attributes
+        
         Returns:
             list[Person]: List of Person instances
 
     `get_person_by_email(self, email)`
     :   Get the Person instance from an email address
+        
         Args:
             email (str): The email of the Person to return
+        
         Returns:
             Person: Person instance object. None in returned when no Person is found
 
+    `get_person_by_id(self, id: str)`
+    :   Get the Person instance associated with a given ID
+        
+        Args:
+            id (str): The Webex ID of the Person to look for.
+        
+        Returns:
+            Person: The Person instance. If no match is found, None is returned
+
     `get_pickup_groups(self)`
-    :   Get all of the Call Pickup Groups for an Organization. Also stores them in the Org.pickup_groups attribute.
+    :   Get all of the Call Pickup Groups for an Organization.
+        
+        Also stores them in the Org.pickup_groups attribute.
+        
         Returns:
             list[PickupGroup]: List of Call Pickup Groups as a list of dictionaries.
-                See the PickupGroup class for attributes.
+            See the PickupGroup class for attributes.
 
     `get_workspaces(self)`
     :   Get the Workspaces and Workspace Locations for the Organizations.
-            Also stores them in the Org.workspaces and Org.workspace_locations attributes.
+        
+        Also stores them in the Org.workspaces and Org.workspace_locations attributes.
         
         Returns:
             list[Workspace]: List of Workspace instance objects. See the Workspace class for attributes.
 
     `get_wxc_people(self)`
     :   Get all of the people within the Organization **who have Webex Calling**
+        
         Returns:
             list[Person]: List of Person instances of people who have a Webex Calling license
 
     `get_wxc_person_license(self)`
     :   Get the Webex Calling - Professional license ID
+        
         Returns:
             str: The License ID
-        Todo:
-            Need to account for multiple subscriptions and calculate usage, throwing an exception when there
-                is no license available.
 
     `get_xsi_endpoints(self)`
-    :   Get the XSI endpoints for the Organization. Also stores them in the Org.xsi attribute.
+    :   Get the XSI endpoints for the Organization.
+        
+        Also stores them in the Org.xsi attribute.
+        
         Returns:
             dict: Org.xsi attribute dictionary with each endpoint as an entry.
 
@@ -627,8 +702,8 @@ Classes
             pin (str): The new temporary PIN to set for the Person
 
     `set_calling_only(self)`
-    :   Removes the Messaging and Meetings licenses, leaving only the Calling capability. **Note that this does not
-            work, and is just here for the future.**
+    :   Removes the Messaging and Meetings licenses, leaving only the Calling capability.
+        
         Returns:
             Person: The instance of this person with the updated values
 
@@ -681,7 +756,10 @@ Classes
 `Webex(access_token: str, create_org: bool = True, get_people: bool = True, get_locations: bool = True, get_xsi: bool = False, get_hunt_groups: bool = False, get_call_queues: bool = False)`
 :   The base class for working with wxcadm.
     
+        
+    
     Initialize a Webex instance to communicate with Webex and store data
+    
     Args:
         access_token (str): The Webex API Access Token to authenticate the API calls
         create_org (bool, optional): Whether to create an Org instance for all organizations.
@@ -691,6 +769,7 @@ Classes
             not every Org has XSI capability
         get_hunt_groups (bool, optional): Whether to get the Hunt Groups for each Org. Defaults to False.
         get_call_queues (bool, optional): Whether to get the Call Queues for each Org. Defaults to False.
+    
     Returns:
         Webex: The Webex instance
 
@@ -710,10 +789,13 @@ Classes
 
     `get_org_by_name(self, name: str)`
     :   Get the Org instance that matches all or part of the name argument.
+        
         Args:
             name (str): Text to match against the Org name
+        
         Returns:
             Org: The Org instance of the matching Org
+        
         Raises:
             KeyError: Raised when no match is made
 
@@ -782,8 +864,11 @@ Classes
     :   Get (or refresh) the confirmation of the Workspace from the Webex API
 
 `WorkspaceLocation(parent: wxcadm.Org, id: str, config: dict = None)`
-:   Initialize a WorkspaceLocation instance. If only the `id` is provided, the configuration will be fetched from
+:   Initialize a WorkspaceLocation instance.
+    
+    If only the `id` is provided, the configuration will be fetched from
         the Webex API. To save API calls, the config dict can be passed using the `config` argument
+    
     Args:
         parent (Org): The Organization to which this WorkspaceLocation belongs
         id (str): The Webex ID of the WorkspaceLocation
@@ -829,6 +914,7 @@ Classes
 
 `WorkspaceLocationFloor(config: dict)`
 :   Initialize a new WorkspaceLocationFloor
+    
     Args:
         config (dict): The config as returned by the Webex API
 

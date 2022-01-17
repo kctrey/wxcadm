@@ -138,7 +138,25 @@ processing.</p>
 </div>
 <section id="common-webex-use-cases">
 <h3>Common Webex Use Cases<a class="headerlink" href="#common-webex-use-cases" title="Permalink to this headline">¶</a></h3>
-<p>These are some commonly-requested changes that most Webex Calling admins have to deal with</p>
+<p>These are some commonly-requested changes that most Webex Calling admins have to deal with.</p>
+<section id="organization-and-location-numbers">
+<h4>Organization and Location Numbers<a class="headerlink" href="#organization-and-location-numbers" title="Permalink to this headline">¶</a></h4>
+<p>In order to create users, or sometimes to report on them, it is useful to pull the numbers associated with an
+Org. The <code class="docutils literal notranslate"><span class="pre">Org.numbers</span></code> attribute provides a list of numbers, along with the Location each is assigned to. If a
+number is assigned to a Person, then the person instance will be included.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">number</span> <span class="ow">in</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">numbers</span><span class="p">:</span>
+   <span class="k">if</span> <span class="s2">&quot;owner&quot;</span> <span class="ow">in</span> <span class="n">number</span><span class="p">:</span>
+      <span class="c1"># The number is assigned</span>
+      <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">number</span><span class="p">[</span><span class="s1">&#39;number&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> is assigned to </span><span class="si">{</span><span class="n">number</span><span class="p">[</span><span class="s1">&#39;owner&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">email</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+   <span class="k">else</span><span class="p">:</span>
+      <span class="c1"># The number is not assigned</span>
+      <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">number</span><span class="p">[</span><span class="s1">&#39;number&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> is not assigned&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
 <section id="enable-vm-to-email">
 <h4>Enable VM-to-Email<a class="headerlink" href="#enable-vm-to-email" title="Permalink to this headline">¶</a></h4>
 <p>By default, the sending of VM as an email attachment is disabled, but most enterprises want this feature. The following

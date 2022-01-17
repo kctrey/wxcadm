@@ -14,7 +14,7 @@ from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, 
 #       I end up with the same values in multiple attributes, which is a bad idea.
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                       filename="wxcadm.log",
                       format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
 # Some functions available to all classes and instances (optionally)
@@ -243,7 +243,48 @@ class Org(Webex):
             list[dict]: List of dict containing information about each number
 
         """
-        return self._cpapi.get_numbers()
+        my_numbers = self._cpapi.get_numbers()
+        for num in my_numbers:
+            if "owner" in num:
+                person = self.get_person_by_id(num['owner']['id'])
+                if person is not None:
+                    num['owner'] = person
+            if "location" in num:
+                location = self.get_location_by_name(num['location']['name'])
+                if location is not None:
+                    num['location'] = location
+        return my_numbers
+
+    def get_location_by_name(self, name: str):
+        """Get the Location instance associated with a given Location ID
+
+        Args:
+            name (str): The full name of the Location to look for. (Case sensitive)
+
+        Returns:
+            Location: The Location instance. If no match is found, None is returned
+
+        """
+        for location in self.locations:
+            if location.name == name:
+                return location
+        return None
+
+    def get_person_by_id(self, id: str):
+        """Get the Person instance associated with a given ID
+
+        Args:
+            id (str): The Webex ID of the Person to look for.
+
+        Returns:
+            Person: The Person instance. If no match is found, None is returned
+
+        """
+        for person in self.people:
+            if person.id == id:
+                return person
+        return None
+
 
     def __get_wxc_licenses(self):
         """Get only the Webex Calling licenses from the Org.licenses attribute
@@ -592,6 +633,13 @@ class Location:
         return self.id
 
     @property
+    def spark_id(self):
+        """The ID used by all of the underlying services."""
+        bytes = base64.b64decode(self.id + "===")
+        spark_id = bytes.decode("utf-8")
+        return spark_id
+
+    @property
     def hunt_groups(self):
         """List of HuntGroup instances for this Location"""
         my_hunt_groups = []
@@ -608,6 +656,22 @@ class Location:
             if cq.location_id == self.id:
                 my_call_queues.append(cq)
         return my_call_queues
+
+    @property
+    def available_numbers(self):
+        """Returns all of the available numbers for the Location.
+
+        Only returns active numbers, so numbers that have not been activated yet will not be returned.
+
+        Returns:
+            list[dict]: A list of available numbers, in dict form
+
+        """
+        available_numbers = []
+        for number in self._parent.numbers:
+            if number['location'].name == self.name and number.get('state', "") == "ACTIVE":
+                available_numbers.append(number)
+        return available_numbers
 
 
 class Person:
@@ -1038,10 +1102,11 @@ class Person:
 
     def set_calling_only(self):
         """
-        Removes the Messaging and Meetings licenses, leaving only the Calling capability. **Note that this does not
-            work, and is just here for the future.**
+        Removes the Messaging and Meetings licenses, leaving only the Calling capability.
+
         Returns:
             Person: The instance of this person with the updated values
+
         """
         logging.info(f"Setting {self.email} to Calling-Only")
         # First, iterate the existing licenses and remove the ones we don't want
@@ -1600,8 +1665,8 @@ class Call:
 
     @property
     def status(self):
-        """
-        The status of the call
+        """The status of the call
+
         Returns:
             dict:
 
@@ -1622,6 +1687,7 @@ class Call:
                 'answer_time' (str): The UNIX timestamp when the call was answered
                 'status_time' (str): The UNIX timestamp of the status response
                 }
+
         """
         logging.info(f"Getting call status")
         r = requests.get(self._url + f"/{self.id}",
@@ -1696,8 +1762,10 @@ class Call:
         """
         Complete an Attended Transfer. This method will only complete if a `transfer(address, type="attended")`
         has been done first.
+
         Returns:
             bool: Whether or not the transfer completes
+
         """
         logging.info("Completing transfer...")
         r = requests.put(self._url + f"/{self.id}/ConsultTransfer/{self._transfer_call.id}", headers=self._headers)
@@ -1710,11 +1778,14 @@ class Call:
         """
         Starts a multi-party conference. If the call is already held and an attended transfer is in progress,
         meaning the user is already talking to the transfer-to user, this method will bridge the calls.
+
         Args:
             address (str, optional): The address (usually a phone number or extension) to conference to. Not needed
                 when the call is already part of an Attended Transfer
+
         Returns:
             bool: True if the conference is successful
+
         """
         # First, check to see if the call is already part of an attended transfer. If so, just build the conference
         # based on the two call IDs
@@ -1743,11 +1814,12 @@ class Call:
             pass
 
     def send_dtmf(self, dtmf: str):
-        """
-        Transmit DTMF tones outbound
+        """Transmit DTMF tones outbound
+
         Args:
             dtmf (str): The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
                 between digits (i.e. "23456#,123")
+
         Returns:
             bool: True if the dtmf was sent successfully
         """
@@ -1759,10 +1831,11 @@ class Call:
             return False, r.text
 
     def hold(self):
-        """
-        Place the call on hold
+        """Place the call on hold
+
         Returns:
             bool: Whether the hold command was successful
+
         """
         r = requests.put(self._url + f"/{self.id}/Hold", headers=self._headers)
         if r.status_code in [200, 201, 204]:
@@ -1772,8 +1845,10 @@ class Call:
 
     def resume(self):
         """Resume a call that was placed on hold
+
         Returns:
             bool: Whether the command was successful
+
         """
         r = requests.put(self._url + f"/{self.id}/Talk", headers=self._headers)
         if r.status_code in [200, 201, 204]:
@@ -1786,15 +1861,17 @@ class Conference:
     """The class for Conference Calls started by a Call.conference()"""
 
     def __init__(self, parent: object, calls: list, comment: str = ""):
-        """
-        Initialize a Conference instance for an XSI instance
+        """Initialize a Conference instance for an XSI instance
+
         Args:
             parent (XSI): The XSI instance that owns this conference
             calls (list): Call IDs associated with the Conference. Always two Call IDs to start a Conference.
                 Any additional Call IDs will be added to the conference as it is created.
             comment (str, optional): An optional text comment for the Conference
+
         Returns:
             Conference: This instance of the Conference class
+
         """
         self._parent: XSI = parent
         self._calls: list = calls
@@ -1805,12 +1882,14 @@ class Conference:
         """Text comment associated with the Conference"""
 
     def deaf(self, call: str):
-        """
-        Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
+        """Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
+
         Args:
             call (str): The Call ID to make deaf
+
         Returns:
             bool: Whether the command was successful
+
         """
         pass
 
@@ -1915,12 +1994,16 @@ class Workspace:
 
 class WorkspaceLocation:
     def __init__(self, parent: Org, id: str, config: dict = None):
-        """Initialize a WorkspaceLocation instance. If only the `id` is provided, the configuration will be fetched from
+        """Initialize a WorkspaceLocation instance.
+
+        If only the `id` is provided, the configuration will be fetched from
             the Webex API. To save API calls, the config dict can be passed using the `config` argument
+
         Args:
             parent (Org): The Organization to which this WorkspaceLocation belongs
             id (str): The Webex ID of the WorkspaceLocation
             config (dict): The configuration of the WorkspaceLocation as returned by the Webex API
+
         """
         self.id: str = id
         """The Webex ID of the Workspace"""
@@ -1985,10 +2068,11 @@ class WorkspaceLocation:
 
 class WorkspaceLocationFloor(WorkspaceLocation):
     def __init__(self, config: dict):
-        """
-        Initialize a new WorkspaceLocationFloor
+        """Initialize a new WorkspaceLocationFloor
+
         Args:
             config (dict): The config as returned by the Webex API
+
         """
         self.name = config.get("displayName")
         self.id = config.get("id")
@@ -2010,8 +2094,8 @@ class CPAPI:
         self._url_base = f"https://cpapi-a.wbx2.com/api/v1/customers/{self._customer}/"
 
     def set_global_vm_pin(self, pin: str):
-        """
-        Set the Org-wide default VM PIN
+        """Set the Org-wide default VM PIN
+
         Args:
             pin (str): The PIN to set as the global default
 

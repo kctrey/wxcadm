@@ -56,18 +56,19 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="wxcadm.CPAPI.set_global_vm_pin">
 <span class="sig-name descname"><span class="pre">set_global_vm_pin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#wxcadm.CPAPI.set_global_vm_pin" title="Permalink to this definition">¶</a></dt>
-<dd><p>Set the Org-wide default VM PIN
-:param pin: The PIN to set as the global default
-:type pin: str</p>
+<dd><p>Set the Org-wide default VM PIN</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>True is successful</p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>pin</strong> (<em>str</em>) – The PIN to set as the global default</p>
 </dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>bool</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>True is successful</p>
 </dd>
-<dt class="field-odd">Raises</dt>
-<dd class="field-odd"><p><strong>ValueError</strong> – Raised when the PIN value is rejected by Webex, usually because the PIN doesn’t comply
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – Raised when the PIN value is rejected by Webex, usually because the PIN doesn’t comply
     with the security policy.</p>
 </dd>
 </dl>
@@ -86,17 +87,17 @@ development focus right now is the XSI API, which is more feature-rich</p>
 <dt class="sig sig-object py" id="wxcadm.Call.conference">
 <span class="sig-name descname"><span class="pre">conference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">address</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#wxcadm.Call.conference" title="Permalink to this definition">¶</a></dt>
 <dd><p>Starts a multi-party conference. If the call is already held and an attended transfer is in progress,
-meaning the user is already talking to the transfer-to user, this method will bridge the calls.
-:param address: The address (usually a phone number or extension) to conference to. Not needed</p>
-<blockquote>
-<div><p>when the call is already part of an Attended Transfer</p>
-</div></blockquote>
+meaning the user is already talking to the transfer-to user, this method will bridge the calls.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>True if the conference is successful</p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>address</strong> (<em>str</em><em>, </em><em>optional</em>) – The address (usually a phone number or extension) to conference to. Not needed
+when the call is already part of an Attended Transfer</p>
 </dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>bool</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>True if the conference is successful</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>bool</p>
 </dd>
 </dl>
 </dd></dl>
@@ -105,9 +106,15 @@ meaning the user is already talking to the transfer-to user, this method will br
 <dt class="sig sig-object py" id="wxcadm.Call.finish_transfer">
 <span class="sig-name descname"><span class="pre">finish_transfer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#wxcadm.Call.finish_transfer" title="Permalink to this definition">¶</a></dt>
 <dd><p>Complete an Attended Transfer. This method will only complete if a <cite>transfer(address, type=”attended”)</cite>
-has been done first.
-:returns: Whether or not the transfer completes
-:rtype: bool</p>
+has been done first.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Whether or not the transfer completes</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -121,9 +128,15 @@ has been done first.
 <dl class="py method">
 <dt class="sig sig-object py" id="wxcadm.Call.hold">
 <span class="sig-name descname"><span class="pre">hold</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#wxcadm.Call.hold" title="Permalink to this definition">¶</a></dt>
-<dd><p>Place the call on hold
-:returns: Whether the hold command was successful
-:rtype: bool</p>
+<dd><p>Place the call on hold</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Whether the hold command was successful</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py attribute">
@@ -153,22 +166,10 @@ has been done first.
 <dl class="py method">
 <dt class="sig sig-object py" id="wxcadm.Call.resume">
 <span class="sig-name descname"><span class="pre">resume</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#wxcadm.Call.resume" title="Permalink to this definition">¶</a></dt>
-<dd><p>Resume a call that was placed on hold
-:returns: Whether the command was successful
-:rtype: bool</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="wxcadm.Call.send_dtmf">
-<span class="sig-name descname"><span class="pre">send_dtmf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dtmf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#wxcadm.Call.send_dtmf" title="Permalink to this definition">¶</a></dt>
-<dd><p>Transmit DTMF tones outbound
-:param dtmf: The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause</p>
-<blockquote>
-<div><p>between digits (i.e. “23456#,123”)</p>
-</div></blockquote>
+<dd><p>Resume a call that was placed on hold</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>True if the dtmf was sent successfully</p>
+<dd class="field-odd"><p>Whether the command was successful</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>bool</p>
@@ -176,36 +177,55 @@ has been done first.
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="wxcadm.Call.send_dtmf">
+<span class="sig-name descname"><span class="pre">send_dtmf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dtmf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#wxcadm.Call.send_dtmf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transmit DTMF tones outbound</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dtmf</strong> (<em>str</em>) – The string of dtmf digits to send. Accepted digits 0-9, star, pound. A comma will pause
+between digits (i.e. “23456#,123”)</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>True if the dtmf was sent successfully</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="wxcadm.Call.status">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">status</span></span><a class="headerlink" href="#wxcadm.Call.status" title="Permalink to this definition">¶</a></dt>
-<dd><p>The status of the call
-:returns:     {</p>
-<blockquote>
-<div><p>‘network_call_id’ (str): The unique identifier for the Network side of the call
+<dd><p>The status of the call</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><p>{
+‘network_call_id’ (str): The unique identifier for the Network side of the call
 ‘personality’(str): The user’s personalty (Originator or Terminator)
 ‘state’ (str): The state of the call
 ‘remote_party’ (dict): {</p>
 <blockquote>
-<div><p>‘address’ (str): The address of the remote party
+<div><p>’address’ (str): The address of the remote party
 ‘call_type’ (str): The call type
 }</p>
 </div></blockquote>
 <dl class="simple">
-<dt>‘endpoint’ (dict): {</dt><dd><p>‘type’ (str): The type of endpoint in use
+<dt>’endpoint’ (dict): {</dt><dd><p>‘type’ (str): The type of endpoint in use
 ‘AoR’ (str): The Address of Record for the endpoint
 }</p>
 </dd>
 </dl>
-<p>‘appearance’ (str): The Call Appearance number
+<p>’appearance’ (str): The Call Appearance number
 ‘start_time’ (str): The UNIX timestanp of the start of the call
 ‘answer_time’ (str): The UNIX timestamp when the call was answered
 ‘status_time’ (str): The UNIX timestamp of the status response
 }</p>
-</div></blockquote>
-<dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>dict</p>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
 </dd>
 </dl>
 </dd></dl>
@@ -332,15 +352,16 @@ The type of transfer.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="wxcadm.Conference.deaf">
 <span class="sig-name descname"><span class="pre">deaf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">call</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#wxcadm.Conference.deaf" title="Permalink to this definition">¶</a></dt>
-<dd><p>Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
-:param call: The Call ID to make deaf
-:type call: str</p>
+<dd><p>Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>Whether the command was successful</p>
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>call</strong> (<em>str</em>) – The Call ID to make deaf</p>
 </dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>bool</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Whether the command was successful</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>bool</p>
 </dd>
 </dl>
 </dd></dl>
@@ -464,6 +485,21 @@ The type of transfer.</p></li>
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="wxcadm.Location.available_numbers">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">available_numbers</span></span><a class="headerlink" href="#wxcadm.Location.available_numbers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all of the available numbers for the Location.</p>
+<p>Only returns active numbers, so numbers that have not been activated yet will not be returned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A list of available numbers, in dict form</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>list[dict]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="wxcadm.Location.call_queues">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">call_queues</span></span><a class="headerlink" href="#wxcadm.Location.call_queues" title="Permalink to this definition">¶</a></dt>
 <dd><p>List of CallQueue instances for this Location</p>
@@ -485,6 +521,12 @@ The type of transfer.</p></li>
 <dt class="sig sig-object py" id="wxcadm.Location.name">
 <span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#wxcadm.Location.name" title="Permalink to this definition">¶</a></dt>
 <dd><p>The name of the Location</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="wxcadm.Location.spark_id">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">spark_id</span></span><a class="headerlink" href="#wxcadm.Location.spark_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The ID used by all of the underlying services.</p>
 </dd></dl>
 
 </dd></dl>
@@ -581,6 +623,23 @@ without display_name, the display name will be the concatenation of first and la
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="wxcadm.Org.get_location_by_name">
+<span class="sig-name descname"><span class="pre">get_location_by_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#wxcadm.Org.get_location_by_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the Location instance associated with a given Location ID</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – The full name of the Location to look for. (Case sensitive)</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The Location instance. If no match is found, None is returned</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#wxcadm.Location" title="wxcadm.Location">Location</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="wxcadm.Org.get_locations">
 <span class="sig-name descname"><span class="pre">get_locations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#wxcadm.Org.get_locations" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get the Locations for the Organization.</p>
@@ -620,6 +679,23 @@ without display_name, the display name will be the concatenation of first and la
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>Person instance object. None in returned when no Person is found</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#wxcadm.Person" title="wxcadm.Person">Person</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="wxcadm.Org.get_person_by_id">
+<span class="sig-name descname"><span class="pre">get_person_by_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#wxcadm.Org.get_person_by_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the Person instance associated with a given ID</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>id</strong> (<em>str</em>) – The Webex ID of the Person to look for.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The Person instance. If no match is found, None is returned</p>
 </dd>
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p><a class="reference internal" href="#wxcadm.Person" title="wxcadm.Person">Person</a></p>
@@ -1070,10 +1146,7 @@ already has a default PIN</strong> because that PIN will be un-set at the end of
 <dl class="py method">
 <dt class="sig sig-object py" id="wxcadm.Person.set_calling_only">
 <span class="sig-name descname"><span class="pre">set_calling_only</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#wxcadm.Person.set_calling_only" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>Removes the Messaging and Meetings licenses, leaving only the Calling capability. <a href="#id1"><span class="problematic" id="id2">**</span></a>Note that this does not</dt><dd><p>work, and is just here for the future.**</p>
-</dd>
-</dl>
+<dd><p>Removes the Messaging and Meetings licenses, leaving only the Calling capability.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
 <dd class="field-odd"><p>The instance of this person with the updated values</p>
