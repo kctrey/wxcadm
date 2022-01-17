@@ -1227,10 +1227,11 @@ class CallQueue:
         return self.id
 
     def get_queue_config(self):
-        """
-        Get the configuration of this Call Queue instance
+        """Get the configuration of this Call Queue instance
+
         Returns:
             CallQueue.config: The config dictionary of this Call Queue
+
         """
         r = requests.get(_url_base + "v1/telephony/config/locations/" + self.location_id + "/queues/" + self.id,
                          headers=self._parent._headers)
@@ -1239,11 +1240,11 @@ class CallQueue:
         return self.config
 
     def get_queue_forwarding(self):
-        """
-        Get the Call Forwarding settings for this Call Queue instance
+        """Get the Call Forwarding settings for this Call Queue instance
 
         Returns:
             CallQueue.call_forwarding: The Call Forwarding settings for the Person
+
         """
         # TODO: The rules within Call Forwarding are weird. The rules come back in this call, but they are
         #       different than the /selectiveRules response. It makes sense to aggregate them, but that probably
@@ -1256,10 +1257,11 @@ class CallQueue:
         return self.call_forwarding
 
     def push(self):
-        """
-        Push the contents of the CallQueue.config back to Webex
+        """Push the contents of the CallQueue.config back to Webex
+
         Returns:
             CallQueue.config: The updated config attribute pulled from Webex after pushing the change
+
         """
         # TODO: Right now this only pushes .config. It should also push .call_forwarding and .forwarding_rules
         logging.info(f"Pushing Call Queue config to Webex for {self.name}")
@@ -1274,12 +1276,13 @@ class CallQueue:
 
 class XSI:
     def __init__(self, parent, get_profile: bool = False, cache: bool = False):
-        """
-        The XSI class holds all of the relevant XSI data for a Person
+        """The XSI class holds all of the relevant XSI data for a Person
+
         Args:
             parent (Person): The Person who this XSI instance belongs to
             get_profile (bool): Whether or not to automatically get the XSI Profile
             cache (bool): Whether to cache the XSI data (True) or pull it "live" every time (**False**)
+
         """
         logging.info(f"Initializing XSI instance for {parent.email}")
         # First we need to get the XSI User ID for the Webex person we are working with
@@ -1323,12 +1326,14 @@ class XSI:
             self.get_profile()
 
     def new_call(self, address: str = None):
-        """
-        Create a new Call instance
+        """Create a new Call instance
+
         Args:
             address (str, optional): The address to originate a call to
+
         Returns:
             Call: The Call instance
+
         """
         # If we got an address, pass it to the new instance
         if address is not None:
@@ -1343,12 +1348,15 @@ class XSI:
         Crates a new Conference instance. A user can only have one Conference instance, so this will replace any
         previous Conference. At the moment, this **should not be called directly** and will be done dynamically by
         a Call.conference()
+
         Args:
             calls (list): A list of Call IDs involved in this conference. A conference is always started with only
                 two Call IDs. Call IDs after the first two will be ignored.
             comment (str, optional): An optional text comment for the conference
+
         Returns:
             The instance of the Conference class
+
         """
         self.conference = Conference(self, calls, comment)
         return self.conference
@@ -1358,8 +1366,10 @@ class XSI:
         """
         Get the list of active calls and creates Call instances. Also destroys any Call instances that are no longer
         valid.
+
         Returns:
             list[Call]: List of Call instances
+
         """
         # First wipe out all of the existing instances
         for call in self._calls:
@@ -1502,8 +1512,8 @@ class HuntGroup:
                  extension: str = None,
                  config: bool = True
                  ):
-        """
-        Initialize a HuntGroup instance
+        """Initialize a HuntGroup instance
+
         Args:
             parent (Org): The Org instance to which the Hunt Group belongs
             id (str): The Webex ID for the Hunt Group
@@ -1512,8 +1522,10 @@ class HuntGroup:
             enabled (bool): Boolean indicating whether the Hunt Group is enabled
             phone_number (str, optional): The DID for the Hunt Group
             extension (str, optional): The extension of the Hunt Group
+
         Returns:
             HuntGroup: The HuntGroup instance
+
         """
 
         # Instance attrs
@@ -1589,17 +1601,20 @@ class Call:
     the class supports both styles. When initialized, the parent instance is checked to see if it is a Person
     instance or an XSI instance. At the moment, the Webex API only supports user-scoped call control, so most of the
     development focus right now is the XSI API, which is more feature-rich
+
     """
 
     def __init__(self, parent, id: str = "", address: str = ""):
-        """
-        Inititalize a Call instance for a Person
+        """Inititalize a Call instance for a Person
+
         Args:
             parent (XSI): The Person or XSI instance that owns this Call
             id (str, optional): The Call ID of a known call. Usually only done during a XSI.calls method
             address (str, optional): The address to originate a call to when the instance is created
+
         Returns:
             Call: This Call instance
+
         """
         self._parent: XSI = parent
         """The Person or XSI instance that owns this Call"""
@@ -1630,13 +1645,15 @@ class Call:
             self.originate(address)
 
     def originate(self, address: str, comment: str = ""):
-        """
-        Originate a call on behalf of the Person
+        """Originate a call on behalf of the Person
+
         Args:
             address (str): The address (usually a phone number) to originate the call to
             comment (str, optional): Text comment to attach to the call
+
         Returns:
             bool: Whether the command was successful
+
         """
         logging.info(f"Originating a call to {address} for {self._userid}")
         params = {"address": address, "info": comment}
@@ -1650,10 +1667,11 @@ class Call:
             return False
 
     def hangup(self):
-        """
-        Hang up the call
+        """Hang up the call
+
         Returns:
             bool: Whether the command was successful
+
         """
         logging.info(f"Hanging up call ID: {self.id}")
         r = requests.delete(self._url + f"/{self.id}",

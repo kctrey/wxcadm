@@ -1,6 +1,7 @@
-wxcadm Module Documentation
-===========================
+Full Module Doc
+===============
 
 .. automodule:: wxcadm
    :members:
    :undoc-members:
+
