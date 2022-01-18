@@ -86,6 +86,7 @@ the two. Stay tuned...
    usage/installation
    usage/quickstart
    usage/documentation
+   usage/xsi
 
 .. toctree::
    :maxdepth: 2
@@ -95,6 +96,13 @@ the two. Stay tuned...
    reference/Org
    reference/Location
    reference/Person
+
+.. toctree::
+   :maxdepth: 2
+   :caption: XSI Reference
+
+   reference/XSI
+   reference/Call
 
 .. toctree::
    :maxdepth: 1

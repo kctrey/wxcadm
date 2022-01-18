@@ -212,142 +212,6 @@ populate the <code class="docutils literal notranslate"><span class="pre">Org.wo
 enhanced to provide capabilities, new methods will be added to <strong>wxcadm</strong>.</p>
 </section>
 </section>
-<section id="common-xsi-use-cases">
-<h3>Common XSI Use Cases<a class="headerlink" href="#common-xsi-use-cases" title="Permalink to this headline">¶</a></h3>
-<p>XSI can be used to accomplish a lot of things on behalf of the user. The following are examples of some commonly-used
-methods provided by the wxcadm module. <strong>Note that XSI must be enabled by Cisco before it is available to an
-Organization.</strong> Contact Cisco TAC to request that XSI be enabled.</p>
-<section id="get-the-user-s-profile-phone-number">
-<h4>Get the user’s profile (phone number)<a class="headerlink" href="#get-the-user-s-profile-phone-number" title="Permalink to this headline">¶</a></h4>
-<p>The XSI Profile is retrieved directly from the Call Control back-end, so it represents the actual user profile, rather
-than the Common Identity profile present in the <code class="docutils literal notranslate"><span class="pre">Org.people</span></code> attribute. A common use is to get the Webex Calling phone
-number for the user rather than what is received from Active Directory.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
-<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">get_xsi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="c1"># Get the person that we want to get the profile for</span>
-<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
-<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span>      <span class="c1"># Starts an XSI session for the Person and creates the XSI instance in Person.xsi</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">profile</span><span class="p">)</span>
-<span class="c1"># Get the phone number for the person</span>
-<span class="n">country_code</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">profile</span><span class="p">[</span><span class="s1">&#39;country_code&#39;</span><span class="p">]</span>
-<span class="n">phone_number</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">profile</span><span class="p">[</span><span class="s1">&#39;number&#39;</span><span class="p">]</span>
-<span class="n">e164_number</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;+</span><span class="si">{</span><span class="n">country_code</span><span class="si">}{</span><span class="n">phone_number</span><span class="si">}</span><span class="s2">&quot;</span>
-</pre></div>
-</div>
-</section>
-<section id="place-a-call">
-<h4>Place a call<a class="headerlink" href="#place-a-call" title="Permalink to this headline">¶</a></h4>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
-<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">get_xsi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="c1"># Get the person that we want to place the call from</span>
-<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
-<span class="c1"># Start a XSI session for the user</span>
-<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span>
-<span class="c1"># Start a new call</span>
-<span class="n">call</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">new_call</span><span class="p">()</span>
-<span class="c1"># Originate (dial) the call</span>
-<span class="n">call</span><span class="o">.</span><span class="n">originate</span><span class="p">(</span><span class="s2">&quot;17192662837&quot;</span><span class="p">)</span>
-
-<span class="c1"># Or create the new call and originate at the same time</span>
-<span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">new_call</span><span class="p">(</span><span class="n">address</span><span class="o">=</span><span class="s2">&quot;17192662837)</span>
-
-<span class="c1"># Or, for a simple click-to-dial where no further control is needed,</span>
-<span class="c1"># you can do it all in one line:</span>
-<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span><span class="o">.</span><span class="n">new_call</span><span class="p">()</span><span class="o">.</span><span class="n">originate</span><span class="p">(</span><span class="s2">&quot;17192662837&quot;</span><span class="p">)</span>
-
-<span class="c1"># When it is time to end the call, just call hangup()</span>
-<span class="n">call</span><span class="o">.</span><span class="n">hangup</span><span class="p">()</span>
-</pre></div>
-</div>
-</section>
-<section id="hold-resume">
-<h4>Hold/Resume<a class="headerlink" href="#hold-resume" title="Permalink to this headline">¶</a></h4>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
-<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">get_xsi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
-<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span>
-<span class="n">call</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">new_call</span><span class="p">()</span>
-<span class="n">call</span><span class="o">.</span><span class="n">originate</span><span class="p">(</span><span class="s2">&quot;17192662837&quot;</span><span class="p">)</span>
-
-<span class="c1"># Put the call on hold</span>
-<span class="n">call</span><span class="o">.</span><span class="n">hold</span><span class="p">()</span>
-
-<span class="c1"># Resume the call, taking it off hold</span>
-<span class="n">call</span><span class="o">.</span><span class="n">resume</span><span class="p">()</span>
-</pre></div>
-</div>
-</section>
-<section id="blind-transfer">
-<h4>Blind Transfer<a class="headerlink" href="#blind-transfer" title="Permalink to this headline">¶</a></h4>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
-<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">get_xsi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
-<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span>
-<span class="n">call</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">new_call</span><span class="p">()</span>
-<span class="n">call</span><span class="o">.</span><span class="n">originate</span><span class="p">(</span><span class="s2">&quot;17192662837&quot;</span><span class="p">)</span>
-
-<span class="c1"># Invoke the transfer method, with the target extension or phone number</span>
-<span class="n">target_user</span> <span class="o">=</span> <span class="s2">&quot;2345&quot;</span>
-<span class="n">call</span><span class="o">.</span><span class="n">transfer</span><span class="p">(</span><span class="n">target_user</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="attended-transfer">
-<h4>Attended Transfer<a class="headerlink" href="#attended-transfer" title="Permalink to this headline">¶</a></h4>
-<p>The attended transfer puts the current call on hold and initiates a new call (origination) to the target user. Once
-the users talk, a call to <code class="docutils literal notranslate"><span class="pre">finish_transfer()</span></code> will complete the transfer of the original call to the new user.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
-<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">get_xsi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
-<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span>
-<span class="n">call</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">new_call</span><span class="p">()</span>
-<span class="n">call</span><span class="o">.</span><span class="n">originate</span><span class="p">(</span><span class="s2">&quot;17192662837&quot;</span><span class="p">)</span>
-
-<span class="c1"># Invoke the transfer method, with the target extension or phone number</span>
-<span class="n">target_user</span> <span class="o">=</span> <span class="s2">&quot;2345&quot;</span>
-<span class="n">call</span><span class="o">.</span><span class="n">transfer</span><span class="p">(</span><span class="n">target_user</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;attended&quot;</span><span class="p">)</span>
-
-<span class="c1"># The original user and the target user will be connected. When ready, finish the transfer</span>
-<span class="n">call</span><span class="o">.</span><span class="n">finish_transfer</span><span class="p">()</span>
-</pre></div>
-</div>
-</section>
-<section id="attended-transfer-with-conference">
-<h4>Attended Transfer with Conference<a class="headerlink" href="#attended-transfer-with-conference" title="Permalink to this headline">¶</a></h4>
-<p>For a lot of cases, admins want to modify the Attended Transfer so that the transferer stays on the line with both
-the caller and the transferee, then dropping out once introductions hae been made.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
-<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">get_xsi</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
-<span class="n">person</span><span class="o">.</span><span class="n">start_xsi</span><span class="p">()</span>
-<span class="n">call</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">xsi</span><span class="o">.</span><span class="n">new_call</span><span class="p">()</span>
-<span class="n">call</span><span class="o">.</span><span class="n">originate</span><span class="p">(</span><span class="s2">&quot;17192662837&quot;</span><span class="p">)</span>
-
-<span class="c1"># Invoke the transfer method, with the target extension or phone number</span>
-<span class="n">target_user</span> <span class="o">=</span> <span class="s2">&quot;2345&quot;</span>
-<span class="n">call</span><span class="o">.</span><span class="n">transfer</span><span class="p">(</span><span class="n">target_user</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;attended&quot;</span><span class="p">)</span>
-
-<span class="c1"># When the transferer is ready to bring the caller on, create a conference</span>
-<span class="n">call</span><span class="o">.</span><span class="n">conference</span><span class="p">()</span>
-
-<span class="c1"># Once the transferer is ready to leave the other parties, simply finish the transfer</span>
-<span class="n">call</span><span class="o">.</span><span class="n">finish_transfer</span><span class="p">()</span>
-</pre></div>
-</div>
-</section>
-</section>
 </section>
 <section id="logging">
 <h2>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h2>
@@ -373,7 +237,11 @@ the two. Stay tuned…</p>
 <li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/documentation.html">Usage Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="usage/documentation.html#common-webex-use-cases">Common Webex Use Cases</a></li>
-<li class="toctree-l2"><a class="reference internal" href="usage/documentation.html#common-xsi-use-cases">Common XSI Use Cases</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage/xsi.html">XSI Usage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/xsi.html#getting-started-with-xsi">Getting Started with XSI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/xsi.html#common-xsi-use-cases">Common XSI Use Cases</a></li>
 </ul>
 </li>
 </ul>
@@ -385,6 +253,13 @@ the two. Stay tuned…</p>
 <li class="toctree-l1"><a class="reference internal" href="reference/Org.html">The Org class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Location.html">The Location class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Person.html">The Person class</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">XSI Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="reference/XSI.html">The XSI class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/Call.html">The Call class</a></li>
 </ul>
 </div>
 <div class="toctree-wrapper compound">
@@ -426,6 +301,7 @@ the two. Stay tuned…</p>
 <li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/documentation.html">Usage Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/xsi.html">XSI Usage</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Reference</span></p>
 <ul>
@@ -433,6 +309,11 @@ the two. Stay tuned…</p>
 <li class="toctree-l1"><a class="reference internal" href="reference/Org.html">The Org class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Location.html">The Location class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Person.html">The Person class</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">XSI Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="reference/XSI.html">The XSI class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/Call.html">The Call class</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Full Reference</span></p>
 <ul>
