@@ -1,8 +1,3 @@
-.. wxcadm documentation master file, created by
-   sphinx-quickstart on Thu Jan 13 13:49:27 2022.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 ====================
 wxcadm Documentation
 ====================
@@ -26,9 +21,9 @@ are already supported, with more being added regularly.
 Regarding Multiple Organizations
 ================================
 Most Webex admins only have access to a single Org, but Webex does allow a single admin to manage multiple Orgs. When
-the Webex instance is created, it creates the ``org`` attribute when only one Org is present. If there are mutliple, the
-``orgs`` attribute contains a list of all the Orgs. ``orgs`` is created whether there is one Org or multiple, so
-``Webex.org`` is equivalent to ``Webex.orgs[0]``. For example:
+the Webex instance is created, it creates the :attr:`Webex.org` attribute when only one Org is present. If there are
+mutliple, the :attr:`orgs` attribute contains a list of all the Orgs. ``orgs`` is created whether there is one Org or
+multiple, so :attr:`Webex.org` is equivalent to :attr:`Webex.orgs[0]`. For example:
 
 .. code-block:: python
 
@@ -49,7 +44,7 @@ example, to enable VM-to-Email across all users of every Org, the following is s
            person.enable_vm_to_email()
 
 
-The ``get_org_by_name()`` method is provided to allow the selection of the desired org by name.
+The :meth:`get_org_by_name()` method is provided to allow the selection of the desired org by name.
 
 .. code-block:: python
 

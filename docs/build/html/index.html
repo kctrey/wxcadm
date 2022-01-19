@@ -135,9 +135,9 @@ a while, but then all the People are stored as Person objects.</p>
 <section id="regarding-multiple-organizations">
 <h2>Regarding Multiple Organizations<a class="headerlink" href="#regarding-multiple-organizations" title="Permalink to this headline"></a></h2>
 <p>Most Webex admins only have access to a single Org, but Webex does allow a single admin to manage multiple Orgs. When
-the Webex instance is created, it creates the <code class="docutils literal notranslate"><span class="pre">org</span></code> attribute when only one Org is present. If there are mutliple, the
-<code class="docutils literal notranslate"><span class="pre">orgs</span></code> attribute contains a list of all the Orgs. <code class="docutils literal notranslate"><span class="pre">orgs</span></code> is created whether there is one Org or multiple, so
-<code class="docutils literal notranslate"><span class="pre">Webex.org</span></code> is equivalent to <code class="docutils literal notranslate"><span class="pre">Webex.orgs[0]</span></code>. For example:</p>
+the Webex instance is created, it creates the <code class="xref py py-attr docutils literal notranslate"><span class="pre">Webex.org</span></code> attribute when only one Org is present. If there are
+mutliple, the <code class="xref py py-attr docutils literal notranslate"><span class="pre">orgs</span></code> attribute contains a list of all the Orgs. <code class="docutils literal notranslate"><span class="pre">orgs</span></code> is created whether there is one Org or
+multiple, so <code class="xref py py-attr docutils literal notranslate"><span class="pre">Webex.org</span></code> is equivalent to <code class="xref py py-attr docutils literal notranslate"><span class="pre">Webex.orgs[0]</span></code>. For example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
 
 <span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
@@ -153,7 +153,7 @@ example, to enable VM-to-Email across all users of every Org, the following is s
         <span class="n">person</span><span class="o">.</span><span class="n">enable_vm_to_email</span><span class="p">()</span>
 </pre></div>
 </div>
-<p>The <code class="docutils literal notranslate"><span class="pre">get_org_by_name()</span></code> method is provided to allow the selection of the desired org by name.</p>
+<p>The <code class="xref py py-meth docutils literal notranslate"><span class="pre">get_org_by_name()</span></code> method is provided to allow the selection of the desired org by name.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">my_org</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">get_org_by_name</span><span class="p">(</span><span class="s2">&quot;My Company&quot;</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="n">my_org</span><span class="o">.</span><span class="n">people</span><span class="p">:</span>
     <span class="n">person</span><span class="o">.</span><span class="n">enable_vm_to_email</span><span class="p">()</span>

@@ -32,3 +32,7 @@ class XSIError(APIError):
         """Exception class for problems with the XSI API. Serves as a base class for other errors."""
         super().__init__(message)
 
+class NotAllowed(XSIError):
+    def __init__(self, message):
+        """Exception class for XSI actions that are not allowed by the platform due to user settings"""
+

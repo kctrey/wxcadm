@@ -193,3 +193,32 @@ the caller and the transferee, then dropping out once introductions hae been mad
 
    # Once the transferer is ready to leave the other parties, simply finish the transfer
    call.finish_transfer()
+
+Executive/Assistant Call Handling
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+When users are working in an Executive and Executive Assistant configuration, XSI supports a number of methods focused
+on the call flows that are unique to that configuration.
+
+To place a call from an Assistant on behalf of the Executive, the :meth:`originate()` method supports an optional
+``executive`` argument, which is set to the phone number or extension of the Executive. If the Assistant is associated
+with the Executive, the call will be placed on behalf of them.
+
+.. code-block:: python
+
+    from wxcadm import Webex
+    access_token = "Your API Access Token"
+    webex = Webex(access_token, get_xsi=True)
+
+    # Initiate an XSI session for the Assistant
+    assistant = webex.org.get_person_by_email("assistant@company.com")
+    assistant.start_xsi()
+    call = assistant.new_call()
+    # Call the originate() method with the optional executive param
+    # For this example, we will hard-code the Executive extension as "1234" but any of the Person attributes
+    #   related to phone numbers or extensions could be used to determine the Executive's number
+    call.originate("7192662837", executive="1234")
+
+    # The call will be placed and the Assistant will be on the call with the Called Address
+    # If the Assistant wants to "push" the call to the Executive, ringing their devices and allowing them to pick up
+    #   the call, the exec_push() method can be used
+    call.exec_push()

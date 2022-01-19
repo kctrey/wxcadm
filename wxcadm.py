@@ -3,7 +3,7 @@ import time
 import requests
 import logging
 import base64
-from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, XSIError)
+from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, XSIError, NotAllowed)
 
 # TODO: Eventually I would like to use dataclasses, but it will be a heavy lift, and doesn't save that much code
 
@@ -14,7 +14,7 @@ from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, 
 #       I end up with the same values in multiple attributes, which is a bad idea.
 
 # Set up logging
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                       filename="wxcadm.log",
                       format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
 # Some functions available to all classes and instances (optionally)
@@ -350,12 +350,18 @@ class Org(Webex):
             Person: The Person instance of the newly-created user.
 
         """
-        if (first_name or last_name) and not display_name:
+        logging.info(f"Creating new user: {email}")
+        if (first_name or last_name) and display_name is None:
+            logging.debug("No display_name provided. Setting default.")
             display_name = f"{first_name} {last_name}"
 
         # Find the license IDs for each requested service, unless licenses was passed
         if not licenses:
+            logging.debug("No licenses specified. Finding licenses.")
+            licenses = []
             if calling:
+                logging.debug("Calling requested. Finding Calling licenses.")
+                logging.debug(f"Licenses: {self.get_wxc_person_license()}")
                 licenses.append(self.get_wxc_person_license())
             if messaging:
                 pass
@@ -363,16 +369,23 @@ class Org(Webex):
                 pass
 
         # Build the payload to send to the API
-        payload = {"emails": [email],
-                   "phoneNumbers": [{"type": "work", "value": phone_number}],
-                   "extension": extension,
-                   "locationId": location,
-                   "displayName": display_name,
-                   "firstName": first_name,
-                   "lastName": last_name,
-                   "orgId": self.id,
-                   "licenses": licenses
-                   }
+        logging.debug("Building payload.")
+        payload = {}
+        payload["emails"] = [email]
+        payload["locationId"] = location
+        payload["orgId"] = self.id
+        payload["licenses"] = licenses
+        if phone_number is not None:
+            payload["phoneNumbers"] = [{"type": "work", "value": phone_number}]
+        if extension is not None:
+            payload["extension"] = extension
+        if first_name is not None:
+            payload["firstName"] = first_name
+        if last_name is not None:
+            payload["lastName"] = last_name
+        if display_name is not None:
+            payload["displayName"] = display_name
+        logging.debug(f"Payload: {payload}")
         r = requests.post(_url_base + "v1/people", headers=self._headers, params={"callingData": "true"},
                           json=payload)
         response = r.json()
@@ -381,7 +394,7 @@ class Org(Webex):
             self.people.append(person)
             return person
         else:
-            return f"{r.status_code} - {r.text}"
+            raise PutError(response['message'])
 
     def get_person_by_email(self, email):
         """Get the Person instance from an email address
@@ -795,14 +808,16 @@ class Person:
             return False
 
     def __put_webex_data(self, endpoint: str, payload: dict, params: dict = None):
-        """
-        Issue a PUT to the Webex API
+        """Issue a PUT to the Webex API
+
         Args:
             endpoint: The endpoint of the call (i.e. "v1/people" or "/v1/people/{Person.id}")
             payload: A dict to send as the JSON payload of the PUT
             params: Any additional params to be passed in the query (i.e. {"callingData":"true"}
+
         Returns:
             bool: True if successful, False if not
+
         """
         if params is None:
             params = {}
@@ -834,6 +849,7 @@ class Person:
 
         Returns:
             bool: True on success, False if otherwise
+
         """
         # To assign Webex Calling to a Person, we need to find the License ID for Webex Calling Professional
         license = self._parent.get_wxc_person_license()
@@ -853,22 +869,27 @@ class Person:
         return self.xsi
 
     def reset_vm_pin(self, pin: str = None):
-        """Resets the user's voicemail PIN. If no PIN is provided, the reset command is sent, and assumes that
-            a default PIN exists for the organization. Because of the operation of Webex, if a PIN is provided, the
-            method will temporarily set the Org-wide PIN to the chosen PIN, then does the reset, then un-sets the
-            Org default in Control Hub. ***This can cause unintended consequences if a PIN is provided and the Org
-            already has a default PIN** because that PIN will be un-set at the end of this method.
+        """Resets the user's voicemail PIN.
 
-            Args:
-                pin (str): The new temporary PIN to set for the Person
+        If no PIN is provided, the reset command is sent, and assumes that
+        a default PIN exists for the organization. Because of the operation of Webex, if a PIN is provided, the
+        method will temporarily set the Org-wide PIN to the chosen PIN, then does the reset, then un-sets the
+        Org default in Control Hub. ***This can cause unintended consequences if a PIN is provided and the Org
+        already has a default PIN** because that PIN will be un-set at the end of this method.
+
+        Args:
+            pin (str): The new temporary PIN to set for the Person
+
         """
         self._parent._cpapi.reset_vm_pin(self, pin=pin)
 
     def get_full_config(self):
-        """Fetches all of the Webex Calling settings for the Person. Due to the number of API calls, this
-            method is not performed automatically on Person init and should be called for each Person during
-            any subsequent processing. If you are only interested in one of the features, calling that method
-            directly can significantly improve the time to return data.
+        """
+        Fetches all of the Webex Calling settings for the Person. Due to the number of API calls, this
+        method is not performed automatically on Person init and should be called for each Person during
+        any subsequent processing. If you are only interested in one of the features, calling that method
+        directly can significantly improve the time to return data.
+
         """
         logging.info(f"Getting the full config for {self.email}")
         if self.wxc:
@@ -886,10 +907,11 @@ class Person:
 
     @property
     def hunt_groups(self):
-        """
-        The Hunt Groups that this user is an Agent for.
+        """The Hunt Groups that this user is an Agent for.
+
         Returns:
             list[HuntGroup]: A list of the `HuntGroup` instances the user belongs to
+
         """
         # First, we need to make sure we know about the Org's Hunt Groups. If not, pull them.
         if self._parent.hunt_groups is None:
@@ -905,10 +927,11 @@ class Person:
 
     @property
     def call_queues(self):
-        """
-        The Call Queues that this user is an Agent for.
+        """The Call Queues that this user is an Agent for.
+
         Returns:
             list[CallQueue]: A list of the `CallQueue` instances the user belongs to
+
         """
         # First, we need to make sure we know about the Org's Hunt Groups. If not, pull them.
         if self._parent.call_queues is None:
@@ -951,12 +974,15 @@ class Person:
     def enable_vm_to_email(self, email: str = None, push=True):
         """
         Change the Voicemail config to enable sending a copy of VMs to specified email address. If the email param
-            is not present, it will use the Person's email address as the default.
+        is not present, it will use the Person's email address as the default.
+
         Args:
             email (optional): The email address to send VMs to.
             push (optional): Whether to immediately push the change to Webex. Defaults to True.
+
         Returns:
             dict: The `Person.vm_config` attribute
+
         """
         if email is None:
             email = self.email
@@ -1000,10 +1026,11 @@ class Person:
         return self.calling_behavior
 
     def license_details(self):
-        """
-        Get the full details for all of the licenses assigned to the Person
+        """Get the full details for all of the licenses assigned to the Person
+
         Returns:
             list[dict]: List of the license dictionaries
+
         """
         license_list = []
         for license in self.licenses:
@@ -1015,12 +1042,15 @@ class Person:
     def refresh_person(self, raw: bool = False):
         """
         Pull a fresh copy of the Person details from the Webex API and update the instance. Useful when changes
-            are made outside of the script or changes have been pushed and need to get updated info.
+        are made outside of the script or changes have been pushed and need to get updated info.
+
         Args:
             raw (bool, optional): Return the "raw" config from the as a dict. Useful when making changes to
                 the user, because you have to send all of the values over again.
+
         Returns:
             bool: True if successful, False if not
+
         """
         response = self.__get_webex_data(f"v1/people/{self.id}")
         if response:
@@ -1042,12 +1072,14 @@ class Person:
                       last_name=None,
                       roles=None,
                       licenses=None):
-        """
-        Update the Person in Webex. Pass only the arguments that you want to change. Other attributes will be populated
-            with the existing values from the instance. *Note:* This allows changes directly to the instance attrs to
-            be pushed to Webex. For example, changing Person.extension and then calling `update_person()` with no
-            arguments will still push the extension change. This allows for a lot of flexibility if a method does not
-            exist to change the desired value. It is also the method other methods use to push their changes to Webex.
+        """Update the Person in Webex.
+
+        Pass only the arguments that you want to change. Other attributes will be populated
+        with the existing values from the instance. *Note:* This allows changes directly to the instance attrs to
+        be pushed to Webex. For example, changing Person.extension and then calling `update_person()` with no
+        arguments will still push the extension change. This allows for a lot of flexibility if a method does not
+        exist to change the desired value. It is also the method other methods use to push their changes to Webex.
+
         Args:
             email (str): The email address of the Person
             numbers (list): The list of number dicts ("type" and "value" keys)
@@ -1058,8 +1090,10 @@ class Person:
             last_name (str): The Person's last name
             roles (list): List of Role IDs
             licenses (list): List of License IDs
+
         Returns:
             bool: True if successful. False if not.
+
         """
         # Build the payload using the arguments and the instance attrs
         payload = {}
@@ -1134,13 +1168,15 @@ class Person:
         return self
 
     def change_phone_number(self, new_number: str, new_extension: str = None):
-        """
-        Change a person's phone number and extension
+        """"Change a person's phone number and extension
+
         Args:
             new_number (str): The new phone number for the person
             new_extension (str, optional): The new extension, if changing. Omit to leave the same value.
+
         Returns:
             Person: The instance of this person, with the new values
+
         """
         if not new_extension:
             if self.extension:
@@ -1188,8 +1224,10 @@ class PickupGroup:
 
     def get_config(self):
         """Gets the configuration of the Pickup Group from Webex
+
         Returns:
             dict: The configuration of the Pickup Group
+
         """
         config = {**self}
         return config
@@ -1275,7 +1313,7 @@ class CallQueue:
 
 
 class XSI:
-    def __init__(self, parent, get_profile: bool = False, cache: bool = False):
+    def __init__(self, parent: Person, get_profile: bool = False, cache: bool = False):
         """The XSI class holds all of the relevant XSI data for a Person
 
         Args:
@@ -1315,6 +1353,10 @@ class XSI:
         """The Alternate Numbers for the Person"""
         self._anonymous_call_rejection: dict = {}
         """The Anonymous Call Rejection settings for this Person"""
+        self._executive_assistant: dict = {}
+        """The Executive Assistant settings for this Person"""
+        self._executive: dict = {}
+        """The Executive settings for this Person"""
         self._single_number_reach: dict = {}
         """The SNR (Office Anywhere) settings for this Person"""
         self._monitoring: dict = {}
@@ -1400,7 +1442,23 @@ class XSI:
             return_data = response
         elif r.status_code == 404:
             return_data = False
+        else:
+            return_data = False
         return return_data
+
+    @property
+    def executive(self):
+        """The Exectuve Assistant settings for this Person"""
+        if not self._executive or not self._cache:
+            self._executive = self.__get_xsi_data(f"/v2.0/user/{self.id}/services/Executive")
+        return self._executive
+
+    @property
+    def executive_assistant(self):
+        """The Exectuve Assistant settings for this Person"""
+        if not self._executive_assistant or not self._cache:
+            self._executive_assistant = self.__get_xsi_data(f"/v2.0/user/{self.id}/services/ExecutiveAssistant")
+        return self._executive_assistant
 
     @property
     def monitoring(self):
@@ -1644,27 +1702,69 @@ class Call:
         if address:
             self.originate(address)
 
-    def originate(self, address: str, comment: str = ""):
+    def originate(self, address: str, comment: str = "", executive: str = None):
         """Originate a call on behalf of the Person
+
+        The optional ``executive`` argument takes an extension or phone number and allows the call to be placed
+        on behalf of an executive to which the Person is assigned as an executive assistant. If the Exectuve call is
+        not allowed by the system, an :exc:`NotAllowed` is raised.
 
         Args:
             address (str): The address (usually a phone number) to originate the call to
             comment (str, optional): Text comment to attach to the call
+            executive (str, optional): The phone number or extension of the Executive to place the call on behalf of
 
         Returns:
-            bool: Whether the command was successful
+            bool: True when the call was successful
+
+        Raises:
+            NotAllowed: Raised when the Person is not able to place the call for an Executive
 
         """
-        logging.info(f"Originating a call to {address} for {self._userid}")
-        params = {"address": address, "info": comment}
-        r = requests.post(self._url + "/new", headers=self._headers, params=params)
-        response = r.json()
-        self.id = response['CallStartInfo']['callId']['$']
-        self._external_tracking_id = response['CallStartInfo']['externalTrackingId']['$']
-        if r.status_code == 201:
+        if executive is not None:
+            logging.info(f"Originating a call to {address} for {self._userid} on behalf of Exec {executive}")
+            # TODO: The API call will fail if the Assistant can't place the call for the Exec, but we should
+            #   really check that first and not waste the API call (although those take API calls, too)
+            params = {"address": address, "executiveAddress": executive}
+            r = requests.post(self._url + "/ExecutiveAssistantInitiateCall", headers=self._headers, params=params)
+            if r.status_code == 201:
+                response = r.json()
+                self.id = response['CallStartInfo']['callId']['$']
+                self._external_tracking_id = response['CallStartInfo']['externalTrackingId']['$']
+                return True
+            else:
+                raise NotAllowed("Person is not allowed to place calls on behalf of this executive")
+        else:
+            logging.info(f"Originating a call to {address} for {self._userid}")
+            params = {"address": address, "info": comment}
+            r = requests.post(self._url + "/new", headers=self._headers, params=params)
+            if r.status_code == 201:
+                response = r.json()
+                self.id = response['CallStartInfo']['callId']['$']
+                self._external_tracking_id = response['CallStartInfo']['externalTrackingId']['$']
+                return True
+            else:
+                return False
+
+    def exec_push(self):
+        """Pushes the active Executive Assistant call to the Executive
+
+        This method will only complete if the following conditions are met:
+        * The user is an Assistant
+        * The call must be active and answered
+
+        Returns:
+            bool: True if the push was successful
+
+        Raises:
+            NotAllowed: Raised when the call does not meet the conditions to be pushed
+
+        """
+        r = requests.put(self._url + f"/{self.id}/ExecutiveAssistantCallPush", headers=self._headers)
+        if r.status_code == 200:
             return True
         else:
-            return False
+            raise NotAllowed("The call cannot be pushed")
 
     def hangup(self):
         """Hang up the call
@@ -1874,6 +1974,93 @@ class Call:
         else:
             return False
 
+    def park(self, extension: str = None):
+        """Park the call
+
+        When called with the ``extension`` argument, the call will be parked using the Call Park Extension feature at
+        the chosen extension. When called without ``extension``, the call will be parked with the Group Call Park
+        feature, which assigns an extension automatically. Note that Group Call Park requires the Person to be part
+        of the Park Group. If a Group Call Park is attemped for a user that isn't park of a Park Group, a
+        :exc:`NotAllowed` exception will be raised.
+
+        Args:
+            extension (str, optional): The extension to park the call against
+
+        Returns:
+            str: The extension that the call is parked against
+
+        Raises:
+            NotAllowed: Raised when the user is not part of a Park Group or the extension is already busy
+
+        """
+        if extension is None:
+            r = requests.put(self._url + f"/{self.id}/GroupCallPark", headers=self._headers)
+            if r.status_code == 200:
+                self._park_location = r.headers['Content-Location']
+                self._park_address = self._park_location.split("?")[-1]
+                self._park_extension = self._park_address.split(":")[-1]
+                return self._park_extension
+            else:
+                raise NotAllowed("The call cannot be parked")
+        else:
+            params = {"address": extension}
+            r = requests.put(self._url + f"/{self.id}/Park", headers=self._headers, params=params)
+            if r.status_code == 200:
+                self._park_location = r.headers['Content-Location']
+                self._park_address = self._park_location.split("?")[-1]
+                self._park_extension = self._park_address.split(":")[-1]
+                return self._park_extension
+            else:
+                raise NotAllowed("The call cannot be parked")
+
+    def reconnect(self):
+        """Retrieves the call from hold **and releases all other calls**"""
+        r = requests.put(self._url + f"{self.id}/Reconnect", headers=self._headers)
+        if r.ok:
+            return True
+        else:
+            return NotAllowed("The reconnect failed")
+
+    def recording(self, action: str):
+        """Control the recording of the call
+
+        For the recording() method to work, the user must have Call Recording enabled. Any unsuccessful attempt to
+        record a call for a user who is not enabled for Call Recording will raise a NotAllowed exception.
+
+        Args:
+            action (str): The action to perform.
+
+                start: Starts recording, if it isn't in process already
+                stop: Stops the recording. Only applies to On Demand call recording.
+                pause: Pauses the recording
+                result: Resume a paused recording
+
+        Returns:
+            bool: True if the recording command was accepted by the server
+
+        Raises:
+            NotAllowed: The action is not allowed. Normally it indicates that the user does not have the Call Recording
+                service assigned.
+            ValueError: Raised when the action is not recognized.
+
+        """
+
+        if action.lower() == "start":
+            r = requests.put(self._url + f"{self.id}/Record", headers=self._headers)
+        elif action.lower() == "resume":
+            r = requests.put(self._url + f"{self.id}/ResumeRecording", headers=self._headers)
+        elif action.lower() == "stop":
+            r = requests.put(self._url + f"{self.id}/StopRecording", headers=self._headers)
+        elif action.lower() == "resume":
+            r = requests.put(self._url + f"{self.id}/PauseRecording", headers=self._headers)
+        else:
+            raise ValueError(f"{action} is not a valid action")
+
+        if r.ok:
+            return True
+        else:
+            raise NotAllowed(f"The {action} action was not successful: {r.text}")
+
 
 class Conference:
     """The class for Conference Calls started by a Call.conference()"""
@@ -1895,7 +2082,7 @@ class Conference:
         self._calls: list = calls
         self._userid = self._parent.id
         self._headers = self._parent._headers
-        self._url = self._parent.xsi_endpoints['actions_endpoint'] + f"/v2.0/user/{self._userid}/calls/Conference"
+        self._url = self._parent.xsi_endpoints['actions_endpoint'] + f"/v2.0/user/{self._userid}/calls/Conference/"
         self.comment: str = comment
         """Text comment associated with the Conference"""
 
@@ -1903,13 +2090,39 @@ class Conference:
         """Stop audio and video from being sent to a participant. Audio and video from that participant are unaffected.
 
         Args:
-            call (str): The Call ID to make deaf
+            call (str): The Call ID to make deaf. The Call ID must be part of the Conference.
 
         Returns:
-            bool: Whether the command was successful
+            bool: True if the command was successful
+
+        Raises:
+            NotAllowed: Raised when the server rejects the command
 
         """
-        pass
+        r = requests.put(self._url + f"{call}/Deaf", headers=self._headers)
+        if r.ok:
+            return True
+        else:
+            raise NotAllowed(f"The deaf command was rejected by the server: {r.text}")
+
+    def mute(self, call: str):
+        """Mute a conference participant. Audio and video sent to the participant are unaffected.
+
+        Args:
+            call (str): The Call ID to mute. The Call ID must be part of the Conference
+
+        Returns:
+            bool: True if the command was successful
+
+        Raises:
+            NotAllowed: Raised when the server rejects the command
+
+        """
+        r = requests.put(self._url + f"{call}/Mute", headers=self._headers)
+        if r.ok:
+            return True
+        else:
+            raise NotAllowed(f"The mute command was rejected by the server: {r.text}")
 
 
 class Workspace:
@@ -2160,11 +2373,21 @@ class CPAPI:
 
     def get_numbers(self):
         numbers = []
-        r = requests.get(self._url_base + f"numbers", headers=self._headers)
-        if r.status_code == 200:
-            response = r.json()
-            for number in response['numbers']:
-                if "owner" in number:
+        params = {}
+        get_more = True     # Bool to let us know to keep pulling more numbers
+        while get_more:
+            r = requests.get(self._url_base + f"numbers", headers=self._headers, params=params)
+            if r.status_code == 200:
+                response = r.json()
+                numbers.extend(response['numbers'])
+                get_more = False
+            else:
+                get_more = False
+                return r.text
+
+        for number in numbers:
+            if "owner" in number:
+                if "type" in number['owner'] and number['owner']['type'] == "USER":
                     user_str = f"ciscospark://us/PEOPLE/{number['owner']['id']}"
                     user_bytes = user_str.encode("utf-8")
                     base64_bytes = base64.b64encode(user_bytes)
@@ -2172,9 +2395,4 @@ class CPAPI:
                     base64_id = base64_id.rstrip("=")
                     number['owner']['id'] = base64_id
 
-                numbers.append(number)
-            # Get the pagination for future use
-            pagination = response['paging']
-            return numbers
-        else:
-            return r.text
+        return numbers
