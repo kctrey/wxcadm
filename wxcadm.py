@@ -14,7 +14,7 @@ from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, 
 #       I end up with the same values in multiple attributes, which is a bad idea.
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                       filename="wxcadm.log",
                       format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
 # Some functions available to all classes and instances (optionally)
@@ -2381,6 +2381,7 @@ class CPAPI:
                 response = r.json()
                 numbers.extend(response['numbers'])
                 get_more = False
+                logging.info(f"Paging: {response['paging']}")
             else:
                 get_more = False
                 return r.text
