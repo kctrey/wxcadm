@@ -2323,6 +2323,7 @@ class CPAPI:
         self._customer = org_id_decoded.split("/")[-1]
 
         self._url_base = f"https://cpapi-a.wbx2.com/api/v1/customers/{self._customer}/"
+        self._server = "https://cpapi-a.wbx2.com"
 
     def set_global_vm_pin(self, pin: str):
         """Set the Org-wide default VM PIN
@@ -2373,15 +2374,23 @@ class CPAPI:
 
     def get_numbers(self):
         numbers = []
-        params = {}
+        params = {"limit": 2000, "offset": 0}   # Default values for the numbers pull
+
         get_more = True     # Bool to let us know to keep pulling more numbers
+        next_url = None
         while get_more:
-            r = requests.get(self._url_base + f"numbers", headers=self._headers, params=params)
+            if next_url is None:
+                r = requests.get(self._url_base + f"numbers", headers=self._headers, params=params)
+            else:
+                r = requests.get(next_url, headers=self._headers)
             if r.status_code == 200:
                 response = r.json()
                 numbers.extend(response['numbers'])
-                get_more = False
-                logging.info(f"Paging: {response['paging']}")
+                if "next" in response['paging']:
+                    get_more = True
+                    next_url = response['paging']['next']
+                else:
+                    get_more = False
             else:
                 get_more = False
                 return r.text
