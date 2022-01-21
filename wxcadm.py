@@ -2030,10 +2030,13 @@ class Call:
         Args:
             action (str): The action to perform.
 
-                start: Starts recording, if it isn't in process already
-                stop: Stops the recording. Only applies to On Demand call recording.
-                pause: Pauses the recording
-                result: Resume a paused recording
+                'start': Starts recording, if it isn't in process already
+
+                'stop': Stops the recording. Only applies to On Demand call recording.
+
+                'pause': Pauses the recording
+
+                'result': Resume a paused recording
 
         Returns:
             bool: True if the recording command was accepted by the server
