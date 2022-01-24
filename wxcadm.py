@@ -243,9 +243,10 @@ class Org(Webex):
         my_numbers = self._cpapi.get_numbers()
         for num in my_numbers:
             if "owner" in num:
-                person = self.get_person_by_id(num['owner']['id'])
-                if person is not None:
-                    num['owner'] = person
+                if "id" in num['owner']:
+                    person = self.get_person_by_id(num['owner']['id'])
+                    if person is not None:
+                        num['owner'] = person
             if "location" in num:
                 location = self.get_location_by_name(num['location']['name'])
                 if location is not None:
