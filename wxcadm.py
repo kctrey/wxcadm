@@ -23,12 +23,7 @@ _url_base = "https://webexapis.com/"
 
 
 class Webex:
-    # TODO List
-    #    Add token refresh, just for completeness. For now, we don't mess with tokens at all.
-    """The base class for working with wxcadm.
-
-    """
-
+    """The base class for working with wxcadm"""
     def __init__(self,
                  access_token: str,
                  create_org: bool = True,
@@ -120,6 +115,8 @@ class Webex:
             if name in org.name:
                 return org
         raise KeyError("Org not found")
+
+
 
 
 class Org(Webex):
@@ -2036,7 +2033,7 @@ class Call:
 
                 'pause': Pauses the recording
 
-                'result': Resume a paused recording
+                'resume': Resume a paused recording
 
         Returns:
             bool: True if the recording command was accepted by the server
