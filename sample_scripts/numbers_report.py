@@ -14,7 +14,7 @@ except IndexError:
     quit()
 
 
-webex = Webex(access_token)
+webex = Webex(access_token,fast_mode=True)
 
 for number in webex.org.numbers:
     if "number" in number:

@@ -569,8 +569,8 @@ class Org(Webex):
         start = time.time()
         s = requests.Session()
         s.headers.update(self._headers)
-        params = {"max": "100", "callingData": "true", **self._params}
-        # Fast Mode - callingData: flase is much faster
+        params = {"max": "1000", "callingData": "true", **self._params}
+        # Fast Mode - callingData: false is much faster
         if self._parent._fast_mode is True:
             params['callingData'] = "false"
         r = s.get(_url_base + "v1/people", params=params)
