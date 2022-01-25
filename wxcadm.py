@@ -31,7 +31,8 @@ class Webex:
                  get_locations: bool = True,
                  get_xsi: bool = False,
                  get_hunt_groups: bool = False,
-                 get_call_queues: bool = False
+                 get_call_queues: bool = False,
+                 fast_mode: bool = False
                  ) -> None:
         """Initialize a Webex instance to communicate with Webex and store data
 
@@ -44,6 +45,9 @@ class Webex:
                 not every Org has XSI capability
             get_hunt_groups (bool, optional): Whether to get the Hunt Groups for each Org. Defaults to False.
             get_call_queues (bool, optional): Whether to get the Call Queues for each Org. Defaults to False.
+            fast_mode (bool, optional): **BETA** When possible, optimize the API calls to Webex to work more quickly,
+                sometimes at the expense of not getting as much data. Use this option only if you have a script that
+                runs very slowly, especially during the Webex initialization when collecting people.
 
         Returns:
             Webex: The Webex instance
@@ -56,6 +60,9 @@ class Webex:
         # Might want to make it something global so we don't have to inherit it across all of the children
         self._headers: dict = {"Authorization": "Bearer " + access_token}
         logging.debug(f"Setting Org._headers to {self._headers}")
+
+        # Fast Mode flag when needed
+        self._fast_mode = fast_mode
 
         # Instance attrs
         self.orgs: list[Org] = []
@@ -115,8 +122,6 @@ class Webex:
             if name in org.name:
                 return org
         raise KeyError("Org not found")
-
-
 
 
 class Org(Webex):
@@ -406,7 +411,7 @@ class Org(Webex):
         """
         logging.info("get_person_by_email() started")
         for person in self.people:
-            if person.email == email:
+            if person.email.lower() == email.lower():
                 return person
         return None
 
@@ -561,28 +566,40 @@ class Org(Webex):
 
         """
         logging.info("get_people() started")
-        params = {"max": "1000", "callingData": "true", **self._params}
-        r = requests.get(_url_base + "v1/people", headers=self._headers, params=params)
+        start = time.time()
+        s = requests.Session()
+        s.headers.update(self._headers)
+        params = {"max": "100", "callingData": "true", **self._params}
+        # Fast Mode - callingData: flase is much faster
+        if self._parent._fast_mode is True:
+            params['callingData'] = "false"
+        r = s.get(_url_base + "v1/people", params=params)
         people_list = r.json()
+        logging.debug(f"Received {len(people_list['items'])} people")
 
         if "next" in r.links:
             keep_going = True
             next_url = r.links['next']['url']
             while keep_going:
-                r = requests.get(next_url, headers=self._headers)
+                logging.debug(f"Getting more rows from {next_url}")
+                r = s.get(next_url)
                 new_people = r.json()
                 if "items" not in new_people:
                     continue
+                logging.debug(f"Found {len(new_people['items'])} new people")
                 people_list['items'].extend(new_people['items'])
                 if "next" not in r.links:
                     keep_going = False
                 else:
                     next_url = r.links['next']['url']
-
+        s.close()
         self.wxc_licenses = self.__get_wxc_licenses()
+        logging.info(f"Found {len(people_list['items'])} people.")
         for person in people_list['items']:
             this_person = Person(person['id'], parent=self, config=person)
             self.people.append(this_person)
+        end = time.time()
+        logging.info(f"get_people() complete in {end - start}")
         return self.people
 
     def get_wxc_people(self):
@@ -2393,8 +2410,7 @@ class CPAPI:
                 else:
                     get_more = False
             else:
-                get_more = False
-                return r.text
+                raise APIError("The CPAPI numbers call did not return a successful value")
 
         for number in numbers:
             if "owner" in number:
