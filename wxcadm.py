@@ -14,12 +14,82 @@ from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, 
 #       I end up with the same values in multiple attributes, which is a bad idea.
 
 # Set up logging
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                       filename="wxcadm.log",
                       format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
 # Some functions available to all classes and instances (optionally)
 # TODO Lots of stuff probably could be moved here since there are common functions in most classes
 _url_base = "https://webexapis.com/"
+
+def webex_api_call(method: str, url: str, headers: dict, params: dict = None, payload: dict = None):
+    """ Generic handler for all Webex API requests
+
+    This function performs the Webex API call as a Session and handles processing the response. It has the ability
+    to recognize paginated responses from the API and make subsequent requests to get all of the data, regardless of
+    how many pages (calls) are needed.
+
+    Args:
+        method (str): The HTTP method to use. **get**, **post** and **put** are supported.
+        url (str): The endpoint part of the URL (after https://webexapis.com/)
+        headers (dict): HTTP headers to use with the request
+        params (dict): Any paramaters to be passed as part of an API call
+        payload: (dict): Payload that will be sent in a POST or PUT. Will be converted to JSON during the API call
+
+    Returns:
+        The return value will vary based on the API response. If a list of items are returned, a list will be returned.
+            If the details for a single entry are returned by the API, a dict will be returned.
+
+    Raises:
+        APIError: Raised when the API call fails to retrieve at least one response.
+
+    """
+    logging.debug("Webex API Call:")
+    logging.debug(f"\tMethod: {method}")
+    logging.debug(f"\tURL: {url}")
+
+    start = time.time()     # Tracking API execution time
+    session = requests.Session()
+    session.headers.update(headers)
+
+    if method.lower() == "get":
+        r = session.get(_url_base + url, params=params)
+        if r.ok:
+            response = r.json()
+            # With an 'items' array, we know we are getting multiple values. Without it, we are getting a singe entity
+            if "items" in response:
+                logging.debug(f"Webex returned {len(response['items'])} items")
+            else:
+                return response
+        else:
+            logging.debug("Webex API returned an error")
+            raise APIError(f"The Webex API returned an error: {r.text}")
+
+        # Now we look for pagination and get any additional pages as part of the same Session
+        if "next" in r.links:
+            keep_going = True
+            next_url = r.links['next']['url']
+            while keep_going:
+                logging.debug(f"Getting more items from {next_url}")
+                r = session.get(next_url)
+                if r.ok:
+                    new_items = r.json()
+                    if "items" not in new_items:
+                        continue        # This is here just to handle a weird case where the API responded with no data
+                    logging.debug(f"Webex returned {len(new_items['items'])} more items")
+                    response['items'].extend(new_items['items'])
+                    if "next" not in r.links:
+                        keep_going = False
+                    else:
+                        next_url = r.links['next']['url']
+                else:
+                    keep_going = False
+
+        session.close()
+        end = time.time()
+        logging.debug(f"__webex_api_call() completed in {end - start} seconds")
+        return response['items']
+    else:
+        return False
 
 
 class Webex:
@@ -212,9 +282,8 @@ class Org(Webex):
         """
         logging.info("__get_licenses() started for org")
         license_list = []
-        r = requests.get(_url_base + "v1/licenses", headers=self._headers, params=self._params)
-        response = r.json()
-        for item in response['items']:
+        api_resp = webex_api_call("get", "v1/licenses", headers=self._headers, params=self._params)
+        for item in api_resp:
             if "Webex Calling" in item['name']:
                 wxc_license = True
                 if "Professional" in item['name']:
@@ -425,8 +494,7 @@ class Org(Webex):
 
         """
         params = {"callingData": "true", **self._params}
-        r = requests.get(_url_base + "v1/organizations/" + self.id, headers=self._headers, params=params)
-        response = r.json()
+        response = webex_api_call("get", "v1/organizations/" + self.id, headers=self._headers, params=params)
         if "xsiActionsEndpoint" in response:
             self.xsi['actions_endpoint'] = response['xsiActionsEndpoint']
             self.xsi['events_endpoint'] = response['xsiEventsEndpoint']
@@ -445,30 +513,10 @@ class Org(Webex):
 
         """
         logging.info("get_locations() started")
-        r = requests.get(_url_base + "v1/locations", headers=self._headers, params=self._params)
-        response = r.json()
-        logging.debug(f"Received {len(response['items'])} locations")
-
-        if "next" in r.links:
-            keep_going = True
-            next_url = r.links['next']['url']
-            while keep_going:
-                logging.debug(f"Getting more locations from {next_url}")
-                r = requests.get(next_url, headers=self._headers)
-                new_locations = r.json()
-                if "items" not in new_locations:
-                    continue
-                logging.debug(f"Received {len(new_locations['items'])} more locations")
-                response['items'].extend(new_locations['items'])
-                if "next" not in r.links:
-                    keep_going = False
-                else:
-                    next_url = r.links['next']['url']
-
-        for location in response['items']:
+        api_resp = webex_api_call("get", "v1/locations", headers=self._headers, params=self._params)
+        for location in api_resp:
             this_location = Location(self, location['id'], location['name'], address=location['address'])
             self.locations.append(this_location)
-
         return self.locations
 
     def get_workspaces(self):
@@ -482,17 +530,15 @@ class Org(Webex):
         """
         logging.info("Getting Workspaces")
         self.workspaces = []
-        r = requests.get(_url_base + "v1/workspaces", headers=self._headers, params=self._params)
-        response = r.json()
-        for workspace in response['items']:
+        api_resp = webex_api_call("get", "v1/workspaces", headers=self._headers, params=self._params)
+        for workspace in api_resp:
             this_workspace = Workspace(self, workspace['id'], workspace)
             self.workspaces.append(this_workspace)
 
         logging.info("Getting Workspace Locations")
         self.workspace_locations = []
-        r = requests.get(_url_base + "v1/workspaceLocations", headers=self._headers, params=self._params)
-        response = r.json()
-        for location in response['items']:
+        api_resp = webex_api_call("get", "v1/workspaceLocations", headers=self._headers, params=self._params)
+        for location in api_resp:
             this_location = WorkspaceLocation(self, location['id'], location)
             self.workspace_locations.append(this_location)
 
@@ -517,10 +563,9 @@ class Org(Webex):
         # Loop through all of the locations and get their pickup groups
         # We will create a new instance of the PickupGroup class when we find one
         for location in self.locations:
-            r = requests.get(_url_base + "v1/telephony/config/locations/" + location.id + "/callPickups",
+            api_resp = webex_api_call("get", "v1/telephony/config/locations/" + location.id + "/callPickups",
                              headers=self._headers)
-            response = r.json()
-            for item in response['callPickups']:
+            for item in api_resp['callPickups']:
                 pg = PickupGroup(self, location.id, item['id'], item['name'])
                 self.pickup_groups.append(pg)
         return self.pickup_groups
@@ -538,9 +583,8 @@ class Org(Webex):
         self.call_queues = []
         if not self.locations:
             self.get_locations()
-        r = requests.get(_url_base + "v1/telephony/config/queues", headers=self._headers, params=self._params)
-        response = r.json()
-        for queue in response['queues']:
+        api_resp = webex_api_call("get", "v1/telephony/config/queues", headers=self._headers, params=self._params)
+        for queue in api_resp['queues']:
             id = queue.get("id")
             name = queue.get("name", None)
             location_id = queue.get("locationId")
@@ -565,9 +609,9 @@ class Org(Webex):
         self.hunt_groups = []
         if not self.locations:
             self.get_locations()
-        r = requests.get(_url_base + "v1/telephony/config/huntGroups", headers=self._headers, params=self._params)
-        response = r.json()
-        for hg in response['huntGroups']:
+
+        api_resp = webex_api_call("get", "v1/telephony/config/huntGroups", headers=self._headers, params=self._params)
+        for hg in api_resp['huntGroups']:
             hunt_group = HuntGroup(self, hg['id'], hg['name'], hg['locationId'], hg['enabled'],
                                    hg.get("phoneNumber", ""), hg.get("extension", ""))
             self.hunt_groups.append(hunt_group)
@@ -583,40 +627,18 @@ class Org(Webex):
 
         """
         logging.info("get_people() started")
-        start = time.time()
-        s = requests.Session()
-        s.headers.update(self._headers)
         params = {"max": "1000", "callingData": "true", **self._params}
         # Fast Mode - callingData: false is much faster
         if self._parent._fast_mode is True:
             params['callingData'] = "false"
-        r = s.get(_url_base + "v1/people", params=params)
-        people_list = r.json()
-        logging.debug(f"Received {len(people_list['items'])} people")
+        people = webex_api_call("get", "v1/people", headers=self._headers, params=params)
+        logging.info(f"Found {len(people)} people.")
 
-        if "next" in r.links:
-            keep_going = True
-            next_url = r.links['next']['url']
-            while keep_going:
-                logging.debug(f"Getting more rows from {next_url}")
-                r = s.get(next_url)
-                new_people = r.json()
-                if "items" not in new_people:
-                    continue
-                logging.debug(f"Found {len(new_people['items'])} new people")
-                people_list['items'].extend(new_people['items'])
-                if "next" not in r.links:
-                    keep_going = False
-                else:
-                    next_url = r.links['next']['url']
-        s.close()
         self.wxc_licenses = self.__get_wxc_licenses()
-        logging.info(f"Found {len(people_list['items'])} people.")
-        for person in people_list['items']:
+
+        for person in people:
             this_person = Person(person['id'], parent=self, config=person)
             self.people.append(this_person)
-        end = time.time()
-        logging.info(f"get_people() complete in {end - start}")
         return self.people
 
     def get_wxc_people(self):
