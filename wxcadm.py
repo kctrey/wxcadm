@@ -346,8 +346,8 @@ class Org(Webex):
             extension (str, optional): The extension to assign to the user
             first_name (str, optional): The user's first name. Defaults to empty string.
             last_name (str, optional): The users' last name. Defaults to empty string.
-            display_name (str, optional): The full name of the user as displayed in Webex. If first name and last name are passed
-                without display_name, the display name will be the concatenation of first and last name.
+            display_name (str, optional): The full name of the user as displayed in Webex. If first name and last name
+                are passed without display_name, the display name will be the concatenation of first and last name.
 
         Returns:
             Person: The Person instance of the newly-created user.
@@ -447,7 +447,24 @@ class Org(Webex):
         logging.info("get_locations() started")
         r = requests.get(_url_base + "v1/locations", headers=self._headers, params=self._params)
         response = r.json()
-        # I am aware that this doesn't support pagination, so there will be a limit on number of Locations returned
+        logging.debug(f"Received {len(response['items'])} locations")
+
+        if "next" in r.links:
+            keep_going = True
+            next_url = r.links['next']['url']
+            while keep_going:
+                logging.debug(f"Getting more locations from {next_url}")
+                r = requests.get(next_url, headers=self._headers)
+                new_locations = r.json()
+                if "items" not in new_locations:
+                    continue
+                logging.debug(f"Received {len(new_locations['items'])} more locations")
+                response['items'].extend(new_locations['items'])
+                if "next" not in r.links:
+                    keep_going = False
+                else:
+                    next_url = r.links['next']['url']
+
         for location in response['items']:
             this_location = Location(self, location['id'], location['name'], address=location['address'])
             self.locations.append(this_location)
