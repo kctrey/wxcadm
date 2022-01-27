@@ -52,6 +52,33 @@ number is assigned to a Person, then the person instance will be included.
          # The number is not assigned
          print(f"{number['number']} is not assigned")
 
+Assign Webex Calling to an Existing User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+In order to assign Webex Calling, you must know the Location instance and provide either the phone number, the
+extension, or both.
+
+.. code-block:: python
+
+    from wxcadm import Webex
+
+    access_token = "Your API Access Token"
+    user = "user@domain.com"
+    location_name = "Location Name"
+    phone_number = "+18185552345"
+
+    webex = Webex(access_token, fast_mode=True)
+
+    user_location = webex.org.get_location_by_name(location_name)
+    person = webex.org.get_person_by_email(user)
+    if person is None:
+        print(f"Could not find user {user}")
+    else:
+        success = person.assign_wxc(location=user_location, phone_number=phone_number)
+        if success:
+            print("Succeeded")
+        else:
+            print("Failed")
+
 Enable VM-to-Email
 ^^^^^^^^^^^^^^^^^^
 By default, the sending of VM as an email attachment is disabled, but most enterprises want this feature. The following

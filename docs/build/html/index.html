@@ -208,6 +208,32 @@ number is assigned to a Person, then the person instance will be included.</p>
 </pre></div>
 </div>
 </section>
+<section id="assign-webex-calling-to-an-existing-user">
+<h4>Assign Webex Calling to an Existing User<a class="headerlink" href="#assign-webex-calling-to-an-existing-user" title="Permalink to this headline"></a></h4>
+<p>In order to assign Webex Calling, you must know the Location instance and provide either the phone number, the
+extension, or both.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+
+<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
+<span class="n">user</span> <span class="o">=</span> <span class="s2">&quot;user@domain.com&quot;</span>
+<span class="n">location_name</span> <span class="o">=</span> <span class="s2">&quot;Location Name&quot;</span>
+<span class="n">phone_number</span> <span class="o">=</span> <span class="s2">&quot;+18185552345&quot;</span>
+
+<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">fast_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">user_location</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_location_by_name</span><span class="p">(</span><span class="n">location_name</span><span class="p">)</span>
+<span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">person</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not find user </span><span class="si">{</span><span class="n">user</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">success</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">assign_wxc</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="n">user_location</span><span class="p">,</span> <span class="n">phone_number</span><span class="o">=</span><span class="n">phone_number</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">success</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Succeeded&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Failed&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
 <section id="enable-vm-to-email">
 <h4>Enable VM-to-Email<a class="headerlink" href="#enable-vm-to-email" title="Permalink to this headline"></a></h4>
 <p>By default, the sending of VM as an email attachment is disabled, but most enterprises want this feature. The following

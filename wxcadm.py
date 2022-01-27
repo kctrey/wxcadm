@@ -1840,18 +1840,18 @@ class Call:
         """The status of the call
 
         Returns:
-            dict:
+            dict::
 
                 {
                 'network_call_id' (str): The unique identifier for the Network side of the call
-                'personality'(str): The user's personalty (Originator or Terminator)
+                'personality'(str): The user personalty (Originator or Terminator)
                 'state' (str): The state of the call
                 'remote_party' (dict): {
                     'address' (str): The address of the remote party
                     'call_type' (str): The call type
                     }
                 'endpoint' (dict): {
-                    'type' (str): The type of endpoint in use
+                    'type' (str): The type of endpoint being used
                     'AoR' (str): The Address of Record for the endpoint
                     }
                 'appearance' (str): The Call Appearance number
