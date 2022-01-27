@@ -2530,6 +2530,7 @@ class CSDM:
 class Device:
     """The Device class holds device information, currently only available with CSDM."""
     def __init__(self, parent: CSDM, config: dict):
+        self._parent = parent
         self.display_name: str = config.get("displayName", "")
         """The display name associated with the device"""
         self.uuid: str = config.get("cisUuid", "")
@@ -2568,3 +2569,12 @@ class Device:
 
     def __str__(self):
         return f"{self.product},{self.display_name}"
+
+    def refresh(self):
+        """Refresh the information about this device (including status) from CSDM"""
+        r = requests.get(self.url, headers=self._parent._headers)
+        if r.ok:
+            response = r.json()
+            return response
+        else:
+            raise CSDMError("Unable to refresh device status")
