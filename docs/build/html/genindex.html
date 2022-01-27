@@ -47,6 +47,7 @@
 <li class="toctree-l1"><a class="reference internal" href="reference/Org.html">The Org class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Location.html">The Location class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Person.html">The Person class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/Device.html">The Device class</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">XSI Reference</span></p>
 <ul>
@@ -120,6 +121,8 @@
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Device.html#wxcadm.Device.account_type">account_type (wxcadm.Device attribute)</a>
+</li>
       <li><a href="reference/Location.html#wxcadm.Location.address">address (wxcadm.Location attribute)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.XSI.alternate_numbers">alternate_numbers (wxcadm.XSI property)</a>
@@ -158,13 +161,17 @@
         <li><a href="reference/Person.html#wxcadm.Person.call_queues">(wxcadm.Person property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Person.html#wxcadm.Person.caller_id">caller_id (wxcadm.Person attribute)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.Person.calling_behavior">calling_behavior (wxcadm.Person attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Device.html#wxcadm.Device.calling_type">calling_type (wxcadm.Device attribute)</a>
+</li>
       <li><a href="reference/XSI.html#wxcadm.XSI.calls">calls (wxcadm.XSI property)</a>
+</li>
+      <li><a href="reference/Device.html#wxcadm.Device.category">category (wxcadm.Device attribute)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.Person.change_phone_number">change_phone_number() (wxcadm.Person method)</a>
 </li>
@@ -172,18 +179,28 @@
 </li>
       <li><a href="reference/Org.html#wxcadm.Org.create_person">create_person() (wxcadm.Org method)</a>
 </li>
+      <li><a href="reference/Device.html#wxcadm.Device.created">created (wxcadm.Device attribute)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Device.html#wxcadm.Device">Device (class in wxcadm)</a>
+</li>
+      <li><a href="reference/Org.html#wxcadm.Org.devices">devices (wxcadm.Org property)</a>
+</li>
       <li><a href="reference/Person.html#wxcadm.Person.disable_vm_to_email">disable_vm_to_email() (wxcadm.Person method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference/Person.html#wxcadm.Person.display_name">display_name (wxcadm.Person attribute)</a>
+      <li><a href="reference/Device.html#wxcadm.Device.display_name">display_name (wxcadm.Device attribute)</a>
+
+      <ul>
+        <li><a href="reference/Person.html#wxcadm.Person.display_name">(wxcadm.Person attribute)</a>
 </li>
+      </ul></li>
       <li><a href="reference/Person.html#wxcadm.Person.dnd">dnd (wxcadm.Person attribute)</a>
 </li>
   </ul></td>
@@ -326,6 +343,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Person.html#wxcadm.Person.last_name">last_name (wxcadm.Person attribute)</a>
 </li>
+      <li><a href="reference/Device.html#wxcadm.Device.last_seen">last_seen (wxcadm.Device attribute)</a>
+</li>
       <li><a href="reference/Person.html#wxcadm.Person.license_details">license_details() (wxcadm.Person method)</a>
 </li>
       <li><a href="reference/Org.html#wxcadm.Org.licenses">licenses (wxcadm.Org attribute)</a>
@@ -347,6 +366,10 @@
 
 <h2 id="M">M</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Device.html#wxcadm.Device.mac">mac (wxcadm.Device attribute)</a>
+</li>
+  </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/XSI.html#wxcadm.XSI.monitoring">monitoring (wxcadm.XSI property)</a>
 </li>
@@ -382,11 +405,15 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Org.html#wxcadm.Org">Org (class in wxcadm)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Webex.html#wxcadm.Webex.orgs">orgs (wxcadm.Webex attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Call.html#wxcadm.Call.originate">originate() (wxcadm.Call method)</a>
+</li>
+      <li><a href="reference/Device.html#wxcadm.Device.owner_id">owner_id (wxcadm.Device attribute)</a>
+</li>
+      <li><a href="reference/Device.html#wxcadm.Device.owner_name">owner_name (wxcadm.Device attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -400,9 +427,13 @@
 </li>
       <li><a href="reference/Person.html#wxcadm.Person">Person (class in wxcadm)</a>
 </li>
+      <li><a href="reference/Org.html#wxcadm.Org.pickup_groups">pickup_groups (wxcadm.Org attribute)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference/Org.html#wxcadm.Org.pickup_groups">pickup_groups (wxcadm.Org attribute)</a>
+      <li><a href="reference/Device.html#wxcadm.Device.product">product (wxcadm.Device attribute)</a>
+</li>
+      <li><a href="reference/Device.html#wxcadm.Device.product_family">product_family (wxcadm.Device attribute)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.XSI.profile">profile (wxcadm.XSI property)</a>
 </li>
@@ -420,10 +451,12 @@
 </li>
       <li><a href="reference/Call.html#wxcadm.Call.recording">recording() (wxcadm.Call method)</a>
 </li>
-      <li><a href="reference/Person.html#wxcadm.Person.refresh_person">refresh_person() (wxcadm.Person method)</a>
+      <li><a href="reference/Device.html#wxcadm.Device.refresh">refresh() (wxcadm.Device method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Person.html#wxcadm.Person.refresh_person">refresh_person() (wxcadm.Person method)</a>
+</li>
       <li><a href="reference/XSI.html#wxcadm.XSI.registrations">registrations (wxcadm.XSI property)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.Person.reset_vm_pin">reset_vm_pin() (wxcadm.Person method)</a>
@@ -440,6 +473,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Call.html#wxcadm.Call.send_dtmf">send_dtmf() (wxcadm.Call method)</a>
 </li>
+      <li><a href="reference/Device.html#wxcadm.Device.serial">serial (wxcadm.Device attribute)</a>
+</li>
       <li><a href="reference/Person.html#wxcadm.Person.set_calling_only">set_calling_only() (wxcadm.Person method)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.XSI.single_number_reach">single_number_reach (wxcadm.XSI property)</a>
@@ -455,7 +490,11 @@
       <li><a href="reference/Person.html#wxcadm.Person.start_xsi">start_xsi() (wxcadm.Person method)</a>
 </li>
       <li><a href="reference/Call.html#wxcadm.Call.status">status (wxcadm.Call property)</a>
+
+      <ul>
+        <li><a href="reference/Device.html#wxcadm.Device.status">(wxcadm.Device attribute)</a>
 </li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -465,12 +504,24 @@
       <li><a href="reference/Call.html#wxcadm.Call.transfer">transfer() (wxcadm.Call method)</a>
 </li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Device.html#wxcadm.Device.type">type (wxcadm.Device attribute)</a>
+</li>
+  </ul></td>
 </tr></table>
 
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Person.html#wxcadm.Person.update_person">update_person() (wxcadm.Person method)</a>
+</li>
+      <li><a href="reference/Device.html#wxcadm.Device.url">url (wxcadm.Device attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Device.html#wxcadm.Device.usage_mode">usage_mode (wxcadm.Device attribute)</a>
+</li>
+      <li><a href="reference/Device.html#wxcadm.Device.uuid">uuid (wxcadm.Device attribute)</a>
 </li>
   </ul></td>
 </tr></table>

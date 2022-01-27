@@ -14,7 +14,7 @@ from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, 
 #       I end up with the same values in multiple attributes, which is a bad idea.
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                       filename="wxcadm.log",
                       format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
 # Some functions available to all classes and instances (optionally)
@@ -247,6 +247,8 @@ class Org(Webex):
         """A list of the Workspace instances for this Org."""
         self.workspace_locations: list[WorkspaceLocation] = None
         """A list of the Workspace Location instanced for this Org."""
+        self._devices: list[Device] = None
+        """A list of the Devce instances for this Org"""
 
         # Set the Authorization header based on how the instance was built
         self._headers = parent.headers
@@ -254,6 +256,9 @@ class Org(Webex):
 
         # Create a CPAPI instance for CPAPI work
         self._cpapi = CPAPI(self, self._parent._access_token)
+
+        # Create a CSDM instance for CSDM work
+        self._csdm = CSDM(self, self._parent._access_token)
 
         # Get all of the people if we aren't told not to
         if people:
@@ -326,6 +331,16 @@ class Org(Webex):
                 if location is not None:
                     num['location'] = location
         return my_numbers
+
+    @property
+    def devices(self):
+        """All of the Device instances for the Org
+
+        Returns:
+            list[Device]: List of all Device instances
+        """
+        self._devices = self._csdm.get_devices()
+        return self._devices
 
     def get_location_by_name(self, name: str):
         """Get the Location instance associated with a given Location ID

@@ -91,6 +91,7 @@ the two. Stay tuned...
    reference/Org
    reference/Location
    reference/Person
+   reference/Device
 
 .. toctree::
    :maxdepth: 2
