@@ -3,7 +3,7 @@ import time
 import requests
 import logging
 import base64
-from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, XSIError, NotAllowed)
+from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, XSIError, NotAllowed, CSDMError)
 
 # TODO: Eventually I would like to use dataclasses, but it will be a heavy lift, and doesn't save that much code
 
@@ -2462,3 +2462,109 @@ class CPAPI:
                     number['owner']['id'] = base64_id
 
         return numbers
+
+class CSDM:
+    """The base class for dealing with devices"""
+    def __init__(self, org: Org, access_token: str):
+        logging.info("Initializing CSDM instance")
+        self._access_token = access_token
+        self._headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Calculate the CSDM "organization" ID from the Org ID
+        org_id_bytes = base64.b64decode(org.id + "===")
+        org_id_decoded = org_id_bytes.decode("utf-8")
+        self._organization = org_id_decoded.split("/")[-1]
+
+        self._url_base = f"https://csdm-a.wbx2.com/csdm/api/v1/organization/{self._organization}/devices/"
+        self._server = "https://csdm-a.wbx2.com"
+
+        self.devices: list[Device] = []
+
+    def get_devices(self):
+        logging.info("Getting devices from CSDM")
+        devices_from_csdm = []
+        payload =  {"query": None,
+                    "aggregates": ["connectionStatus",
+                                   "category",
+                                   "callingType"
+                                   ],
+                    "size": 2,
+                    "from": 0,
+                    "sortField": "category",
+                    "sortOrder": "asc",
+                    "initial": True,
+                    "translatedQueryString": ""
+                    }
+        r = requests.post(self._url_base + "_search", headers=self._headers, json=payload)
+        if r.ok:
+            response = r.json()
+            logging.debug(f"Received {len(response['hits']['hits'])} devices out of {response['hits']['total']}")
+            devices_from_csdm.extend(response['hits']['hits'])
+            # If the total number of devices is greater than what we received, we need to make the call again
+            keep_going = True
+            while keep_going:
+                if len(devices_from_csdm) < response['hits']['total']:
+                    logging.debug("Getting more devices")
+                    payload['from'] = len(devices_from_csdm)
+                    r = requests.post(self._url_base + "_search", headers=self._headers, json=payload)
+                    if r.ok:
+                        response = r.json()
+                        logging.debug(f"Received {len(response['hits']['hits'])} more devices")
+                        devices_from_csdm.extend(response['hits']['hits'])
+                    else:
+                        logging.error("Failed getting more devices")
+                        raise CSDMError("Error getting more devices")
+                else:
+                    keep_going = False
+        else:
+            logging.error(("Failed getting devices"))
+            raise CSDMError("Error getting devices")
+
+        self.devices = []
+        for device in devices_from_csdm:
+            self.devices.append(Device(self, device))
+
+        return self.devices
+
+
+class Device:
+    """The Device class holds device information, currently only available with CSDM."""
+    def __init__(self, parent: CSDM, config: dict):
+        self.display_name: str = config.get("displayName", "")
+        """The display name associated with the device"""
+        self.uuid: str = config.get("cisUuid", "")
+        """The Cisco UUID associated with the device"""
+        self.account_type = config.get("accountType", "UNKNOWN")
+        """The type of account the device is associated with"""
+        self.url: str = config.get("url", "")
+        """The URL to access the CSDM API for the device"""
+        self.created: str = config.get("createTime", "")
+        """The timestamp when the device was added"""
+        self.serial: str = config.get("serial", "")
+        """The serial number of the device"""
+        self.product: str = config.get("product", "")
+        """The product name"""
+        self.type: str = config.get("type", "")
+        """The type of device"""
+        self.last_seen: str = config.get("lastKnownOnline", "UNKNOWN")
+        """The last time the device was seen online"""
+        self.owner_id = config.get("ownerId", "UNKNOWN")
+        """The Spark ID of the device owner"""
+        self.owner_name = config.get("ownerDisplayName", "UNKNOWN")
+        """The display name of the device owner"""
+        self.calling_type: str = config.get("callingType", "UNKNOWN")
+        """The type of Calling the device is licensed for"""
+        self.usage_mode: str = config.get("usageMode", "UNKNOWN")
+        """The usage mode the device is operating in"""
+        self.status: str = config.get("connectionStatus", "UNKNONW")
+        """Real-time status information"""
+        self.category: str = config.get("category", "UNKNOWN")
+        """The device category"""
+        self.product_family = config.get("productFamily", "UNKNOWN")
+        """The product family to which the device belongs"""
+        self.mac: str = config.get("mac", "UNKNOWN")
+        """The MAC address of the device"""
+        self._image: str = config.get("imageFilename", None)
+
+    def __str__(self):
+        return f"{self.product},{self.display_name}"

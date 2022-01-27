@@ -35,4 +35,9 @@ class XSIError(APIError):
 class NotAllowed(XSIError):
     def __init__(self, message):
         """Exception class for XSI actions that are not allowed by the platform due to user settings"""
+        super().__init__(message)
+
+class CSDMError(APIError):
+    def __init__(self, message):
+        super().__init__(message)
 
