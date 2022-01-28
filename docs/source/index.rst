@@ -1,5 +1,5 @@
 ====================
-wxcadm Documentation
+wxcadm
 ====================
 Welcome to the documentation home of **wxcadm**, a Python 3 library to simplify the API calls to Webex in order to
 manage and report on users of Webex Calling.
@@ -10,11 +10,11 @@ provide that.
 
 Status
 ======
-The current version in this branch is mostly complete. All the Webex Calling related functions and classes work.
+The `main branch <https://github.com/kctrey/wxcadm>`_ version is stable and available for use.
 
-There are still some enhancements being made so pulling a fresh copy will likely give you some additional capabilities.
-The current focus is on the XSI API and the features that are available with that. Some of the most useful XSI methods
-are already supported, with more being added regularly.
+There are still enhancements being made and I am addressing any `issues <https://github.com/kctrey/wxcadm/issues>`_ as
+they are reported. New features can also be discussed in the `discussions <https://github.com/kctrey/wxcadm/discussions>`_
+page.
 
 .. include:: usage/quickstart.rst
 
