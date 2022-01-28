@@ -2404,7 +2404,7 @@ class CPAPI:
             pin (str): The PIN to set as the global default
 
         Returns:
-            bool: True is successful
+            bool: True if successful
 
         Raises:
             ValueError: Raised when the PIN value is rejected by Webex, usually because the PIN doesn't comply
