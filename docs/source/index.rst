@@ -8,6 +8,9 @@ Although the primary focus is Webex Calling, many of the other Webex admin funct
 meant to be an interface to the Meetings and Messaging capabilities of Webex....there are plenty of other modules that
 provide that.
 
+This project is not affiliated with or supported by Cisco, although the APIs that are used by the project are, for the
+most part, the public Webex APIs available at https://developer.webex.com.
+
 Status
 ======
 The `main branch <https://github.com/kctrey/wxcadm>`_ version is stable and available for use.

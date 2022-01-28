@@ -3,7 +3,7 @@
 from simple_term_menu import TerminalMenu
 from wxcadm import Webex
 #import time
-import globals
+from wxcadm_cli import globals
 import phonenumbers     # Needed for the Call Forwarding report
 import json
 import logging
@@ -163,7 +163,7 @@ def showCallForwardingAuditConfig():
     print("Audit Mode:", globals.config['forwarding_audit']['mode'])
     print("Countries:")
     print("\t", end='')
-    print(*globals.config['forwarding_audit']['countries'], sep = "\n\t")
+    print(*globals.config['forwarding_audit']['countries'], sep ="\n\t")
 
 
 def setCallForwardingAuditMode():
