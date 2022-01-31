@@ -13,6 +13,7 @@ access_token = "Your API Access Token"
 webex = Webex(access_token, fast_mode=True)
 
 for person in webex.org.get_wxc_people():
+    logging.info(f"Changing user: {person.email}")
     person.get_vm_config()
     person.vm_config['messageStorage']['storageType'] = "EXTERNAL"
     person.vm_config['messageStorage']['externalEmail'] = person.email

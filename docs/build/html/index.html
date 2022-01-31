@@ -63,6 +63,12 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="reference/wxcadm.html">Full Module Doc</a></li>
 </ul>
+<p class="caption" role="heading"><span class="caption-text">Example Scripts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/vm_cc_to_email.html">Voicemail - Enable Copy-to-Email</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/vm_external_storage.html">Voicemail - External Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/vm_pin_reset.html">Voicemail - PIN Reset</a></li>
+</ul>
 
         </div>
       </div>
@@ -240,20 +246,6 @@ extension, or both.</p>
 </pre></div>
 </div>
 </section>
-<section id="enable-vm-to-email">
-<h4>Enable VM-to-Email<a class="headerlink" href="#enable-vm-to-email" title="Permalink to this headline"></a></h4>
-<p>By default, the sending of VM as an email attachment is disabled, but most enterprises want this feature. The following
-will step through all the Webex Calling users within the Organization and make that change.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
-<span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
-<span class="c1"># Iterate over all of the People who have a Webex Calling license</span>
-<span class="k">for</span> <span class="n">person</span> <span class="ow">in</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_wxc_people</span><span class="p">():</span>
-    <span class="c1"># By leaving the email param out of the function call, the function will just use their Webex email</span>
-    <span class="n">person</span><span class="o">.</span><span class="n">enable_vm_to_email</span><span class="p">()</span>
-</pre></div>
-</div>
-</section>
 <section id="change-the-user-s-phone-number">
 <h4>Change the user’s phone number<a class="headerlink" href="#change-the-user-s-phone-number" title="Permalink to this headline"></a></h4>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
@@ -351,6 +343,14 @@ the two. Stay tuned…</p>
 <p class="caption" role="heading"><span class="caption-text">Full Reference</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="reference/wxcadm.html">Full Module Doc</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Example Scripts</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/vm_cc_to_email.html">Voicemail - Enable Copy-to-Email</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/vm_external_storage.html">Voicemail - External Storage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/vm_pin_reset.html">Voicemail - PIN Reset</a></li>
 </ul>
 </div>
 </section>

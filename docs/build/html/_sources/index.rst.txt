@@ -109,7 +109,12 @@ the two. Stay tuned...
 
    reference/wxcadm
 
+.. toctree::
+    :maxdepth: 1
+    :caption: Example Scripts
+    :glob:
 
+    examples/*
 
 Indexes and tables
 ==================
