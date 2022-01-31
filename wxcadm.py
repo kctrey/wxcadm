@@ -2550,7 +2550,7 @@ class Device:
         """The display name associated with the device"""
         self.uuid: str = config.get("cisUuid", "")
         """The Cisco UUID associated with the device"""
-        self.account_type = config.get("accountType", "UNKNOWN")
+        self.account_type:str = config.get("accountType", "UNKNOWN")
         """The type of account the device is associated with"""
         self.url: str = config.get("url", "")
         """The URL to access the CSDM API for the device"""
@@ -2564,9 +2564,9 @@ class Device:
         """The type of device"""
         self.last_seen: str = config.get("lastKnownOnline", "UNKNOWN")
         """The last time the device was seen online"""
-        self.owner_id = config.get("ownerId", "UNKNOWN")
+        self.owner_id: str = config.get("ownerId", "UNKNOWN")
         """The Spark ID of the device owner"""
-        self.owner_name = config.get("ownerDisplayName", "UNKNOWN")
+        self.owner_name: str = config.get("ownerDisplayName", "UNKNOWN")
         """The display name of the device owner"""
         self.calling_type: str = config.get("callingType", "UNKNOWN")
         """The type of Calling the device is licensed for"""
@@ -2576,7 +2576,7 @@ class Device:
         """Real-time status information"""
         self.category: str = config.get("category", "UNKNOWN")
         """The device category"""
-        self.product_family = config.get("productFamily", "UNKNOWN")
+        self.product_family: str = config.get("productFamily", "UNKNOWN")
         """The product family to which the device belongs"""
         self.mac: str = config.get("mac", "UNKNOWN")
         """The MAC address of the device"""
