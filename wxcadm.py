@@ -5,8 +5,6 @@ import logging
 import base64
 from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, XSIError, NotAllowed, CSDMError)
 
-# TODO: Eventually I would like to use dataclasses, but it will be a heavy lift, and doesn't save that much code
-
 # TODO: There is a package-wide problem where we have Webex-native data and instance attributes that we write
 #       to make the instances easier to work with. I have kept the native data because it is easier to push back
 #       to Webex and safer in case the API changes. Ideally, we should store all attributes in ways that a user
