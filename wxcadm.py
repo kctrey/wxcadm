@@ -2591,3 +2591,98 @@ class Device:
             return response
         else:
             raise CSDMError("Unable to refresh device status")
+
+
+class RedSky:
+    def __init__(self, username: str, password: str):
+        # Log into Horizon and get access token info
+        payload = {"username": username, "password": password}
+        r = requests.post("https://api.wxc.e911cloud.com/auth-service/login", json=payload)
+        if r.ok:
+            response = r.json()
+        else:
+            raise APIError("Cannot log into RedSky Horizon")
+        self._access_token = response['accessToken']
+        self.org_id = response['userProfileTO']['company']['id']
+        self._refresh_token = response['refreshTokenInfo']['id']
+        self._full_config = response
+        self._buildings = []
+
+    @property
+    def _headers(self):
+        headers = {"Authorization": "Bearer " + self._access_token}
+        return headers
+
+    def _token_refresh(self):
+        r = requests.post("https://api.wxc.e911cloud.com/auth-service/token/refresh",
+                          headers=self._headers,
+                          json=self._refresh_token)
+        if r.status_code == 200:
+            response = r.json()
+            self._access_token = response['accessToken']
+            self._refresh_token = response['refreshTokenInfo']['id']
+        else:
+            raise APIError("There was an error refreshing the RedSky token")
+
+    @property
+    def buildings(self):
+        params = {"page": 1,
+                  "pageSize": 100,
+                  "searchTerm": None,
+                  "origin": "default"}
+        r = requests.get(f"https://api.wxc.e911cloud.com/geography-service/buildings/parent/{self.org_id}",
+                         params=params, headers=self._headers)
+        if r.status_code == 401:
+            # This is where we need to get a new access token
+            pass
+        if r.status_code == 200:
+            response = r.json()
+            self._buildings = []
+            for building in response:
+                self._buildings.append(building)
+        else:
+            raise APIError("Something went wrong getting the list of buildings")
+
+        return self._buildings
+
+    @property
+    def held_devices(self):
+        params = {"page": 1,
+                  "pageSize": 100,
+                  "searchTerm": None,
+                  "type": None}
+        r = requests.get(f"https://api.wxc.e911cloud.com/admin-service/held/org/{self.org_id}",
+                         headers=self._headers, params=params)
+        if r.status_code == 401:
+            self._token_refresh()
+            r = requests.get(f"https://api.wxc.e911cloud.com/admin-service/held/org/{self.org_id}",
+                             headers=self._headers, params=params)
+        if r.status_code == 200:
+            self._held_devices = []
+            response = r.json()
+            print(response)
+            for device in response:
+                self._held_devices.append(device)
+        else:
+            raise APIError(f"Something went wrong getting the HELD devices {r.text}")
+
+        return self._held_devices
+
+    def phones_without_location(self):
+        devices = []
+        for device in self.held_devices:
+            if device['erl'] is None and device['deviceType'] == "HELD":
+                devices.append(device)
+        return devices
+
+    def clients_without_location(self):
+        devices = []
+        for device in self.held_devices:
+            if device['erl'] is None and device['deviceType'] == "HELD_PLUS":
+                devices.append(device)
+        return devices
+
+
+
+
+
