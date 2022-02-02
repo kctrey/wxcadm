@@ -2595,6 +2595,13 @@ class Device:
 
 class RedSky:
     def __init__(self, username: str, password: str):
+        """ Inititalize a connection to RedSky and obtain basic account info
+
+        Args:
+            username (str): The Horizon admin username
+            password (str): The Horizon admin password
+
+        """
         # Log into Horizon and get access token info
         payload = {"username": username, "password": password}
         r = requests.post("https://api.wxc.e911cloud.com/auth-service/login", json=payload)
@@ -2614,6 +2621,7 @@ class RedSky:
         return headers
 
     def _token_refresh(self):
+        """A method to refresh the access_toke using the stored refresh_token"""
         r = requests.post("https://api.wxc.e911cloud.com/auth-service/token/refresh",
                           headers=self._headers,
                           json=self._refresh_token)
@@ -2626,10 +2634,18 @@ class RedSky:
 
     @property
     def buildings(self):
+        """A list of all of the RedSkyBuilding instances within this RedSky account
+
+        Returns:
+            list[RedSkyBuilding]: The RedSkyBuilding instances
+
+        """
         params = {"page": 1,
                   "pageSize": 100,
                   "searchTerm": None,
                   "origin": "default"}
+        self._buildings = []
+
         r = requests.get(f"https://api.wxc.e911cloud.com/geography-service/buildings/parent/{self.org_id}",
                          params=params, headers=self._headers)
         if r.status_code == 401:
@@ -2637,8 +2653,8 @@ class RedSky:
             pass
         if r.status_code == 200:
             response = r.json()
-            self._buildings = []
-            for building in response:
+            for item in response:
+                building = RedSkyBuilding(self, item)
                 self._buildings.append(building)
         else:
             raise APIError("Something went wrong getting the list of buildings")
@@ -2647,6 +2663,7 @@ class RedSky:
 
     @property
     def held_devices(self):
+        """All of the HELD devices known to RedSky"""
         params = {"page": 1,
                   "pageSize": 100,
                   "searchTerm": None,
@@ -2682,7 +2699,80 @@ class RedSky:
                 devices.append(device)
         return devices
 
+class RedSkyBuilding:
+    """A RedSky Horizon Building"""
+    def __init__(self, parent: RedSky, config: dict):
+        """Initialize a RedSkyBuilding instance.
 
+        Args:
+            parent (RedSky): The RedSky instance that this Building belongs to
+            config: (dict): The dict returned by the RedSky API containing the Building information
 
+        """
+        self._parent:RedSky = parent
+        self._raw_config:dict = config
+        self.id:str = config.get("id")
+        """The ID of the Building"""
+        self.name:str = config.get("Name")
+        """The name of the Building"""
+        self.supplemental_data:str = config.get("supplementalData", None)
+        """Supplemental data for the Building"""
+        self.type:str = config.get("type", "unknown")
+        """The type of Building"""
+        self.address:dict = config.get("address")
+        """The physical address of the building"""
+        self._locations: list = None
 
+    def __str__(self):
+        return self.name
 
+    def __repr__(self):
+        return self.id
+
+    @property
+    def locations(self):
+        """A list of RedSkyLocation instances associated with this Building
+
+        Returns:
+            list[RedSkyLocation]: List of RedSkyLocation instances
+
+        """
+        self._locations = []
+        r = requests.get(f"https://api.wxc.e911cloud.com/geography-service/locations/parent/{self.id}",
+                         headers=self._parent._headers)
+        if r.status_code == 200:
+            response = r.json()
+            for item in response:
+                location = RedSkyLocation(self, item)
+                self._locations.append(location)
+        else:
+            raise APIError(f"There was a problem getting the Locations for Building {self.name}")
+        return self._locations
+
+class RedSkyLocation:
+    """A RedSky Horizon Location"""
+    def __init__(self, parent: RedSkyBuilding, config: dict):
+        """Initialize a RedSkyLocation instance
+
+        Args:
+            parent (RedSkyBuilding): The RedSkyBuilding instance that this Location belongs to
+            config (dict): The dict returned by the RedSky API containing the Location information
+
+        """
+        self._parent = parent
+        self._raw_config = config
+        self.id = config.get("id")
+        self.name = config.get("name")
+        self.address = config.get("address")
+        self.type = config.get("type", "unknown")
+        self.suppplemental_data = config.get("supplementalData", None)
+        self.org_name_override = config.get("orgNameOverride")
+        self.info = config.get("info")
+        self.address_entity_name:str = config.get("addressEntityName")
+        self.elin:dict = config.get("elin", None)
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.id
