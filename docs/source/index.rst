@@ -104,6 +104,15 @@ the two. Stay tuned...
    reference/Call
 
 .. toctree::
+    :maxdepth: 2
+    :caption: RedSky
+
+    usage/redsky
+    reference/RedSky
+    reference/RedSkyBuilding
+    reference/RedSkyLocation
+
+.. toctree::
    :maxdepth: 1
    :caption: Full Reference
 

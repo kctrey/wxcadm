@@ -6,7 +6,6 @@
   <title>Index &mdash; wxcadm 1.0.0 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -15,8 +14,6 @@
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/clipboard.min.js"></script>
-        <script src="_static/copybutton.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="#" />
     <link rel="search" title="Search" href="search.html" /> 
@@ -56,6 +53,13 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="reference/XSI.html">The XSI class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Call.html">The Call class</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">RedSky</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="usage/redsky.html">Working with RedSky</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/RedSky.html">The RedSky class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/RedSkyBuilding.html">The RedSkyBuilding class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/RedSkyLocation.html">The RedSkyLocation class</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Full Reference</span></p>
 <ul>
@@ -132,12 +136,26 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Device.html#wxcadm.Device.account_type">account_type (wxcadm.Device attribute)</a>
 </li>
-      <li><a href="reference/Location.html#wxcadm.Location.address">address (wxcadm.Location attribute)</a>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.add_bssid_discovery">add_bssid_discovery() (wxcadm.RedSky method)</a>
 </li>
-      <li><a href="reference/XSI.html#wxcadm.XSI.alternate_numbers">alternate_numbers (wxcadm.XSI property)</a>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.add_building">add_building() (wxcadm.RedSky method)</a>
+</li>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.add_ip_range_discovery">add_ip_range_discovery() (wxcadm.RedSky method)</a>
+</li>
+      <li><a href="reference/RedSkyBuilding.html#wxcadm.RedSkyBuilding.add_location">add_location() (wxcadm.RedSkyBuilding method)</a>
+</li>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.add_mac_discovery">add_mac_discovery() (wxcadm.RedSky method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Location.html#wxcadm.Location.address">address (wxcadm.Location attribute)</a>
+
+      <ul>
+        <li><a href="reference/RedSkyBuilding.html#wxcadm.RedSkyBuilding.address">(wxcadm.RedSkyBuilding attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="reference/XSI.html#wxcadm.XSI.alternate_numbers">alternate_numbers (wxcadm.XSI property)</a>
+</li>
       <li><a href="reference/XSI.html#wxcadm.XSI.anonymous_call_rejection">anonymous_call_rejection (wxcadm.XSI property)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.Person.assign_wxc">assign_wxc() (wxcadm.Person method)</a>
@@ -151,6 +169,10 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Person.html#wxcadm.Person.barge_in">barge_in (wxcadm.Person attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.buildings">buildings (wxcadm.RedSky property)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -183,6 +205,8 @@
       <li><a href="reference/Device.html#wxcadm.Device.category">category (wxcadm.Device attribute)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.Person.change_phone_number">change_phone_number() (wxcadm.Person method)</a>
+</li>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.clients_without_location">clients_without_location() (wxcadm.RedSky method)</a>
 </li>
       <li><a href="reference/Call.html#wxcadm.Call.conference">conference() (wxcadm.Call method)</a>
 </li>
@@ -252,6 +276,12 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Person.html#wxcadm.Person.get_barge_in">get_barge_in() (wxcadm.Person method)</a>
 </li>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.get_bssid_discovery">get_bssid_discovery() (wxcadm.RedSky method)</a>
+</li>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.get_building_by_name">get_building_by_name() (wxcadm.RedSky method)</a>
+</li>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.get_building_by_webex_location">get_building_by_webex_location() (wxcadm.RedSky method)</a>
+</li>
       <li><a href="reference/Person.html#wxcadm.Person.get_call_forwarding">get_call_forwarding() (wxcadm.Person method)</a>
 </li>
       <li><a href="reference/Org.html#wxcadm.Org.get_call_queues">get_call_queues() (wxcadm.Org method)</a>
@@ -272,13 +302,19 @@
 </li>
       <li><a href="reference/Person.html#wxcadm.Person.get_intercept">get_intercept() (wxcadm.Person method)</a>
 </li>
-      <li><a href="reference/Org.html#wxcadm.Org.get_license_name">get_license_name() (wxcadm.Org method)</a>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.get_ip_range_discovery">get_ip_range_discovery() (wxcadm.RedSky method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Org.html#wxcadm.Org.get_license_name">get_license_name() (wxcadm.Org method)</a>
+</li>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.get_lldp_discovery">get_lldp_discovery() (wxcadm.RedSky method)</a>
+</li>
       <li><a href="reference/Org.html#wxcadm.Org.get_location_by_name">get_location_by_name() (wxcadm.Org method)</a>
 </li>
       <li><a href="reference/Org.html#wxcadm.Org.get_locations">get_locations() (wxcadm.Org method)</a>
+</li>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.get_mac_discovery">get_mac_discovery() (wxcadm.RedSky method)</a>
 </li>
       <li><a href="reference/Webex.html#wxcadm.Webex.get_org_by_name">get_org_by_name() (wxcadm.Webex method)</a>
 </li>
@@ -312,10 +348,12 @@
 </li>
       <li><a href="reference/Webex.html#wxcadm.Webex.headers">headers (wxcadm.Webex property)</a>
 </li>
-      <li><a href="reference/Call.html#wxcadm.Call.hold">hold() (wxcadm.Call method)</a>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.held_devices">held_devices (wxcadm.RedSky property)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Call.html#wxcadm.Call.hold">hold() (wxcadm.Call method)</a>
+</li>
       <li><a href="reference/Location.html#wxcadm.Location.hunt_groups">hunt_groups (wxcadm.Location property)</a>
 
       <ul>
@@ -338,6 +376,8 @@
         <li><a href="reference/Org.html#wxcadm.Org.id">(wxcadm.Org attribute)</a>
 </li>
         <li><a href="reference/Person.html#wxcadm.Person.id">(wxcadm.Person attribute)</a>
+</li>
+        <li><a href="reference/RedSkyBuilding.html#wxcadm.RedSkyBuilding.id">(wxcadm.RedSkyBuilding attribute)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -369,7 +409,11 @@
       <li><a href="reference/Person.html#wxcadm.Person.location">location (wxcadm.Person attribute)</a>
 </li>
       <li><a href="reference/Org.html#wxcadm.Org.locations">locations (wxcadm.Org attribute)</a>
+
+      <ul>
+        <li><a href="reference/RedSkyBuilding.html#wxcadm.RedSkyBuilding.locations">(wxcadm.RedSkyBuilding property)</a>
 </li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -380,6 +424,8 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Location.html#wxcadm.Location.main_number">main_number (wxcadm.Location property)</a>
+</li>
       <li><a href="reference/XSI.html#wxcadm.XSI.monitoring">monitoring (wxcadm.XSI property)</a>
 </li>
   </ul></td>
@@ -393,11 +439,13 @@
       <ul>
         <li><a href="reference/Org.html#wxcadm.Org.name">(wxcadm.Org attribute)</a>
 </li>
-      </ul></li>
-      <li><a href="reference/XSI.html#wxcadm.XSI.new_call">new_call() (wxcadm.XSI method)</a>
+        <li><a href="reference/RedSkyBuilding.html#wxcadm.RedSkyBuilding.name">(wxcadm.RedSkyBuilding attribute)</a>
 </li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/XSI.html#wxcadm.XSI.new_call">new_call() (wxcadm.XSI method)</a>
+</li>
       <li><a href="reference/XSI.html#wxcadm.XSI.new_conference">new_conference() (wxcadm.XSI method)</a>
 </li>
       <li><a href="reference/Org.html#wxcadm.Org.numbers">numbers (wxcadm.Org property)</a>
@@ -436,10 +484,12 @@
 </li>
       <li><a href="reference/Person.html#wxcadm.Person">Person (class in wxcadm)</a>
 </li>
-      <li><a href="reference/Org.html#wxcadm.Org.pickup_groups">pickup_groups (wxcadm.Org attribute)</a>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky.phones_without_location">phones_without_location() (wxcadm.RedSky method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Org.html#wxcadm.Org.pickup_groups">pickup_groups (wxcadm.Org attribute)</a>
+</li>
       <li><a href="reference/Device.html#wxcadm.Device.product">product (wxcadm.Device attribute)</a>
 </li>
       <li><a href="reference/Device.html#wxcadm.Device.product_family">product_family (wxcadm.Device attribute)</a>
@@ -460,10 +510,16 @@
 </li>
       <li><a href="reference/Call.html#wxcadm.Call.recording">recording() (wxcadm.Call method)</a>
 </li>
-      <li><a href="reference/Device.html#wxcadm.Device.refresh">refresh() (wxcadm.Device method)</a>
+      <li><a href="reference/RedSky.html#wxcadm.RedSky">RedSky (class in wxcadm)</a>
+</li>
+      <li><a href="reference/RedSkyBuilding.html#wxcadm.RedSkyBuilding">RedSkyBuilding (class in wxcadm)</a>
+</li>
+      <li><a href="reference/RedSkyLocation.html#wxcadm.RedSkyLocation">RedSkyLocation (class in wxcadm)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Device.html#wxcadm.Device.refresh">refresh() (wxcadm.Device method)</a>
+</li>
       <li><a href="reference/Person.html#wxcadm.Person.refresh_person">refresh_person() (wxcadm.Person method)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.XSI.registrations">registrations (wxcadm.XSI property)</a>
@@ -488,14 +544,14 @@
 </li>
       <li><a href="reference/XSI.html#wxcadm.XSI.single_number_reach">single_number_reach (wxcadm.XSI property)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Location.html#wxcadm.Location.spark_id">spark_id (wxcadm.Location property)</a>
 
       <ul>
         <li><a href="reference/Person.html#wxcadm.Person.spark_id">(wxcadm.Person property)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Person.html#wxcadm.Person.start_xsi">start_xsi() (wxcadm.Person method)</a>
 </li>
       <li><a href="reference/Call.html#wxcadm.Call.status">status (wxcadm.Call property)</a>
@@ -504,6 +560,8 @@
         <li><a href="reference/Device.html#wxcadm.Device.status">(wxcadm.Device attribute)</a>
 </li>
       </ul></li>
+      <li><a href="reference/RedSkyBuilding.html#wxcadm.RedSkyBuilding.supplemental_data">supplemental_data (wxcadm.RedSkyBuilding attribute)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -515,7 +573,11 @@
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Device.html#wxcadm.Device.type">type (wxcadm.Device attribute)</a>
+
+      <ul>
+        <li><a href="reference/RedSkyBuilding.html#wxcadm.RedSkyBuilding.type">(wxcadm.RedSkyBuilding attribute)</a>
 </li>
+      </ul></li>
   </ul></td>
 </tr></table>
 

@@ -753,6 +753,18 @@ class Location:
                 available_numbers.append(number)
         return available_numbers
 
+    @property
+    def main_number(self):
+        """Returns the Main Number for this Location, if defined
+
+        Returns:
+            str: The main number for the Location. None is returned if a main number cannot be found.
+
+        """
+        for number in self._parent.numbers:
+            if number['location'].name == self.name and number['mainNumber'] is True:
+                return number['number']
+        return None
 
 class Person:
     def __init__(self, user_id, parent: Org = None, config: dict = None):
@@ -2649,8 +2661,10 @@ class RedSky:
         r = requests.get(f"https://api.wxc.e911cloud.com/geography-service/buildings/parent/{self.org_id}",
                          params=params, headers=self._headers)
         if r.status_code == 401:
-            # This is where we need to get a new access token
-            pass
+            if r.status_code == 401:
+                self._token_refresh()
+                r = requests.get(f"https://api.wxc.e911cloud.com/geography-service/buildings/parent/{self.org_id}",
+                                 headers=self._headers, params=params)
         if r.status_code == 200:
             response = r.json()
             for item in response:
@@ -2660,6 +2674,77 @@ class RedSky:
             raise APIError("Something went wrong getting the list of buildings")
 
         return self._buildings
+
+    def get_building_by_name(self, name: str):
+        """Get the RedSkyBuilding instance for a given name
+
+        Args:
+            name (str): The name of the Building to return. Not case sensitive.
+
+        Returns:
+            RedSkyBuilding: The instance of the RedSkyBuilding class. None is returned if no match is found.
+
+        """
+        for building in self.buildings:
+            if building.name.lower() == name.lower():
+                return building
+
+        return None
+
+    def get_building_by_webex_location(self, location: Location):
+        """Get the RedSkyBuilding instance for a given Location instance.
+
+        This method will first try to match on the Location ID in Webex, which will work if the Building was created
+        by ***wxcadm**. If no match is found, it will attempt to match on the Location Name. The Webex Location name and
+        the RedSky Building name must match exactly, although case is ignored.
+
+        Args:
+            location (Location): The Location instance to search against.
+
+        Returns:
+            RedSkyBuilding: The instance of the RedSkyBuilding class. None is returned if no match is found.
+
+        """
+        buildings = self.buildings
+        for building in buildings:
+            if building.supplemental_data == location.id[-20:]:
+                return building
+        for building in buildings:
+            if building.name.lower() == location.name.lower():
+                return building
+        return None
+
+    def add_building(self, webex_location: Location, create_location: bool = True):
+        if webex_location.address['country'] != "US":
+            raise ValueError("Cannot create Buildng for non-US location")
+
+        a1 = webex_location.address['address1']
+        a2 = webex_location.address.get("address2", "")
+        city = webex_location.address['city']
+        state = webex_location.address['state']
+        zip = webex_location.address['postalCode']
+        full_address = f"{a1} {a2}, {city}, {state} {zip}"
+
+        payload = {"name": webex_location.name,
+                   "supplementalData": webex_location.id[-20:],
+                   "parentOrganizationUnitId": self.org_id,
+                   "fullAddress": full_address,
+                   "origin": "default"
+                   }
+        print(payload)
+        r = requests.post("https://api.wxc.e911cloud.com/geography-service/buildings",
+                          headers=self._headers, json=payload)
+        if r.ok:
+            building = self.get_building_by_webex_location(webex_location)
+            if create_location is True:
+                building = self.get_building_by_webex_location(webex_location)
+                if building is not None:
+                    building.add_location("Default", ecbn=webex_location.main_number.replace("+1", ""))
+                else:
+                    raise APIError("The created Building cannot be located. Location not created.")
+            return building
+        else:
+            raise APIError(f"Something went wrong adding Building: {r.text}")
 
     @property
     def held_devices(self):
@@ -2686,6 +2771,12 @@ class RedSky:
         return self._held_devices
 
     def phones_without_location(self):
+        """Get a list of phone (HELD) devices that don't have a RedSkyLocation associated
+
+        Returns:
+            list[dist]: A list of the device properties from RedSky
+
+        """
         devices = []
         for device in self.held_devices:
             if device['erl'] is None and device['deviceType'] == "HELD":
@@ -2693,11 +2784,174 @@ class RedSky:
         return devices
 
     def clients_without_location(self):
+        """Get a list of soft client (HELD+) devices that don't have a RedSkyLocation associated
+
+        Returns:
+            list[dict]: A list of the device properties from RedSky
+
+        """
         devices = []
         for device in self.held_devices:
             if device['erl'] is None and device['deviceType'] == "HELD_PLUS":
                 devices.append(device)
         return devices
+
+    def get_mac_discovery(self):
+        """ Get the current MAC address mapping defined in RedSky Horizon
+
+        Returns:
+            list[dict]: A list of all the MAC address mappings
+
+        """
+        mappings = []
+        r = requests.get(f"https://api.wxc.e911cloud.com/networking-service/macAddress/company/{self.org_id}",
+                         headers=self._headers)
+        if r.ok:
+            response = r.json()
+            for item in response:
+                mappings.append(item)
+        else:
+            raise APIError(f"There was a problem getting MAC mapping: {r.text}")
+        return mappings
+
+    def add_mac_discovery(self, mac: str, location: "RedSkyLocation", description: str = ""):
+        """ Add a new MAC address mapping to RedSky Horizon
+
+        Args:
+            mac (str): The MAC address to add. RedSky isn't picky about formatting or case, so any MAC format should work
+            location (RedSkyLocation): The RedSkyLocation instance to add the mapping to
+            description (str, optional): A description of the device or any other information to store
+
+        Returns:
+            dict: The configuration of the mapping after processing by RedSky
+
+        """
+        payload = {"macAddress": mac,
+                   "locationId": location.id,
+                   "orgId": self.org_id,
+                   "description": description}
+        r = requests.post(f"https://api.wxc.e911cloud.com/networking-service/macAddress",
+                          headers=self._headers, json=payload)
+        if r.ok:
+            added_mapping = r.json()
+        else:
+            raise APIError(f"There was a problem adding the mapping: {r.text}")
+        return added_mapping
+
+    def get_lldp_discovery(self):
+        """ Get the current LLDP chassis and port mappings defined in RedSky Horizon
+
+        Returns:
+            list[dict]: A list of all the LLDP mappings
+
+        """
+        mappings = []
+        r = requests.get(f"https://api.wxc.e911cloud.com/networking-service/networkSwitch/company/{self.org_id}",
+                         headers=self._headers)
+        if r.ok:
+            response = r.json()
+            for item in response:
+                item['ports'] = []
+                r = requests.get(f"https://api.wxc.e911cloud.com/networking-service/networkSwitchPort/networkSwitch/{item['id']}",
+                                 headers=self._headers)
+                if r.ok:
+                    ports = r.json()
+                    for port in ports:
+                        item['ports'].append(port)
+                else:
+                    raise APIError(f"There was a problem getting Chassis Ports: {r.text}")
+                mappings.append(item)
+        else:
+            raise APIError(f"There was a problem getting Chassis mapping: {r.text}")
+        return mappings
+
+    def get_bssid_discovery(self):
+        """ Get the current BSSID mappings defined in RedSky Horizon
+
+        Returns:
+            list[dict]: A list of all the BSSID mappings
+
+        """
+        mappings = []
+        r = requests.get(f"https://api.wxc.e911cloud.com/networking-service/bssid/company/{self.org_id}",
+                         headers=self._headers)
+        if r.ok:
+            response = r.json()
+            for item in response:
+                mappings.append(item)
+        else:
+            raise APIError(f"There was a problem getting BSSID mapping: {r.text}")
+        return mappings
+
+    def add_bssid_discovery(self, bssid:str, location:"RedSkyLocation", description:str = ""):
+        """ Add a new BSSID mapping to RedSky Horizon
+
+        Args:
+            bssid (str): The BSSID to add. RedSky isn't picky about formatting or case, so any MAC format should work
+            location (RedSkyLocation): The RedSkyLocation instance to add the mapping to
+            description (str, optional): A description of the device or any other information to store
+
+        Returns:
+            dict: The configuration of the mapping after processing by RedSky
+
+        """
+        payload = {"bssid": bssid,
+                   "locationId": location.id,
+                   "orgId": self.org_id,
+                   "description": description}
+        r = requests.post(f"https://api.wxc.e911cloud.com/networking-service/bssid",
+                          headers=self._headers, json=payload)
+        if r.ok:
+            added_mapping = r.json()
+        else:
+            raise APIError(f"There was a problem adding the mapping: {r.text}")
+        return added_mapping
+
+    def get_ip_range_discovery(self):
+        """ Get the current IP Range mappings defined inRedSky Horizon
+
+        Returns:
+            list[dict]: A list of all the IP Range mappings
+
+        """
+        mappings = []
+        r = requests.get(f"https://api.wxc.e911cloud.com/networking-service/ipRange/company/{self.org_id}",
+                         headers=self._headers)
+        if r.ok:
+            response = r.json()
+            for item in response:
+                mappings.append(item)
+        else:
+            raise APIError(f"There was a problem getting IP Range mapping: {r.text}")
+        return mappings
+
+    def add_ip_range_discovery(self, ip_start:str, ip_end:str, location:"RedSkyLocation", description:str = ""):
+        """ Add a new IP Range mapping to RedSky Horizon
+
+        Args:
+            ip_start (str): The first IP in the range to add
+            ip_end (str): The last IP in the range to add
+            location (RedSkyLocation): The RedSkyLocation instance to add the mapping to
+            description (str, optional): A description of the device or any other information to store
+
+        Returns:
+            dict: The configuration of the mapping after processing by RedSky
+
+        """
+        payload = {"ipAddressLow": ip_start,
+                   "ipAddressHigh": ip_end,
+                   "locationId": location.id,
+                   "orgId": self.org_id,
+                   "description": description}
+        r = requests.post(f"https://api.wxc.e911cloud.com/networking-service/ipRange",
+                          headers=self._headers, json=payload)
+        if r.ok:
+            added_mapping = r.json()
+        else:
+            raise APIError(f"There was a problem adding the mapping: {r.text}")
+        return added_mapping
+
+
 
 class RedSkyBuilding:
     """A RedSky Horizon Building"""
@@ -2748,6 +3002,19 @@ class RedSkyBuilding:
         else:
             raise APIError(f"There was a problem getting the Locations for Building {self.name}")
         return self._locations
+
+    def add_location(self, location_name:str, ecbn:str = "", location_info: str = ""):
+        payload = {"name": location_name,
+                   "elin": ecbn,
+                   "info": location_info,
+                   "organizationUnitId": self.id}
+        r = requests.post("https://api.wxc.e911cloud.com/geography-service/locations",
+                          headers=self._parent._headers, json=payload)
+        if r.ok:
+            return True
+        else:
+            raise APIError("Something went wrong adding the Location: {r.text}")
+
 
 class RedSkyLocation:
     """A RedSky Horizon Location"""
