@@ -15,6 +15,27 @@ Since the RedSky portal and Webex do not share user accounts, you will need a Re
 "Organization Administrator" in RedSky Horizon. Starting a connection to RedSky with the :class:`RedSky` class
 requires the username and password for the administrator.
 
+Buildings and Locations
+-----------------------
+Before doing any work in RedSky, it is important to understand how RedSky deals with locations. From a RedSky
+perspective, a Building is a physical building with an address. Within a Building are one or more Locations, which
+identify the location within the Building. Based on local 911 laws, some Public Safety Answering Points (PSAPs) require
+various levels of granularity to define a "dispatchable address". For example, one city may require that the correct
+floor is presented as part of the address, while another city may require only the building address.
+
+RedSky's Building/Location design is flexible enough to use for any level of granularity, however Webex Locations are
+more abstract. A company may define a Location as a physical location, equivalent to a RedSky Building, or they may
+define a Location to be larger, such as an entire campus of buildings. It is for this reason that the :class:`Webex`
+class of **wxcadm** does not map directly to the :class:`RedSkyBuilding` or :class:`RedSkyLocation` classes. It is up
+to the developer of the tools to handle that correlation, if needed.
+
+**wxcadm** does provide the :meth:`RedSky.add_building()` method, which accepts a Webex :class:`Location` instance and
+creates the building from the Location information. This should only be used if the desire is to make a Webex
+:class:`Location` correlate directly to a :class:`RedSkyLocation`. When called with the ``create_location=True``
+parameter, **wxcadm** will add both the Building and a Location named "Default", which can be used for building-level
+Network Discovery. If further locations are needed the :meth:`RedSkyBuilding.add_location()` method can be used, which
+does not accept Webex :class:`Location` data.
+
 Getting Connected
 =================
 To connect to RedSky, make sure you import the :class:`RedSky` class from **wxcadm**. Then initialize a

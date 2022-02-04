@@ -768,16 +768,19 @@ class Location:
 
 class Person:
     def __init__(self, user_id, parent: Org = None, config: dict = None):
-        """
-        Initialize a new Person instance. If only the `user_id` is provided, the API calls will be made to get
-            the config from Webex. To save on API calls, the config can be provided which will set the attributes
-            without an API call.
+        """ Initialize a new Person instance.
+
+        If only the `user_id` is provided, the API calls will be made to get
+        the config from Webex. To save on API calls, the config can be provided which will set the attributes
+        without an API call.
+
         Args:
             user_id (str): The Webex ID of the person
             parent (object, optional): The parent object that created the Person instance. Used when the Person
                 is created within the Org instance
             config (dict, optional): A dictionary of raw values from the `GET v1/people` items. Not normally used
                 except for automated people population from the Org init.
+
         """
         self.id = user_id
         """The Webex ID of the Person"""
@@ -2209,12 +2212,16 @@ class Conference:
 
 class Workspace:
     def __init__(self, parent: Org, id: str, config: dict = None):
-        """Initialize a Workspace instance. If only the `id` is provided, the configuration will be fetched from
-            the Webex API. To save API calls, the config dict can be passed using the `config` argument
+        """Initialize a Workspace instance
+
+        If only the `id` is provided, the configuration will be fetched from
+        the Webex API. To save API calls, the config dict can be passed using the `config` argument
+
         Args:
             parent (Org): The Organization to which this workspace belongs
             id (str): The Webex ID of the Workspace
             config (dict): The configuration of the Workspace as returned by the Webex API
+
         """
         self.id: str = id
         """The Webex ID of the Workspace"""
