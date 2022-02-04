@@ -2865,6 +2865,76 @@ class RedSky:
             raise APIError(f"There was a problem getting Chassis mapping: {r.text}")
         return mappings
 
+    def add_lldp_discovery(self, chassis: str, location: "RedSkyLocation", ports: list = None, description: str = ""):
+        """ Add a new LLDP mapping to RedSky Horizon
+
+        If only a chassis identifier is provided, the chassis will be added. If a list of ports are provided, the method
+        will determine if the chassis already exists. If it does, the ports will be added and the chassis mapping will
+        not be changed. If the chassis does not exist, it will be added and mapped to the provided RedSkyLocation, and
+        the list of ports will be added, mapped to the same RedSkyLocation.
+
+        Args:
+            chassis (str): The chassis identifier
+            location (RedSkyLocation): The RedSkyLocation instance to add the mapping to
+            ports (list, optional): A list of ports (i.e. ['1','2','3'] or ['B000B4BB1BF4:P1'] to add mapping for
+            description (str, optional): A description of the device or any other information to store
+
+        Returns:
+            dict: The configuration of the mapping after processing by RedSky
+
+        """
+        if ports is not None:
+            # Determine if the chassis already exists
+            chassis_exists = False
+            chassis_id = ""
+            current_lldp = self.get_lldp_discovery()
+            for entry in current_lldp:
+                if entry['chassisId'].lower() == chassis.lower():
+                    chassis_id = entry['id']
+                    chassis_exists = True
+            if chassis_exists is False:
+                new_chassis = self._add_chassis_discovery(chassis, location, description)
+                chassis_id = new_chassis['id']
+            for port in ports:
+                self._add_port_discovery(chassis_id, port, location, description)
+
+            # Now that we added everything, let's get the details of the new chassis and its ports
+            current_lldp = self.get_lldp_discovery()
+            for entry in current_lldp:
+                if entry['chassisId'].lower == chassis.lower():
+                    return entry
+            raise APIError("Something went wrong addind the LLDP mapping")
+        else:
+            new_chassis = self._add_chassis_discovery(chassis, location, description)
+            return new_chassis
+
+    def _add_chassis_discovery(self, chassis, location, description=""):
+        payload = {"chassisId": chassis,
+                   "companyId": self.org_id,
+                   "locationId": location.id,
+                   "description": description}
+        r = requests.post("https://api.wxc.e911cloud.com/networking-service/networkSwitch",
+                          headers=self._headers, json=payload)
+        if r.ok:
+            response = r.json()
+        else:
+            raise APIError(f"There was a problem adding the chassis: {r.text}")
+        return response
+
+    def _add_port_discovery(self, chassis_id, port, location, description=""):
+        payload = {"erlId": location.id,
+                   "portId": port,
+                   "description": description,
+                   "networkSwitchId": chassis_id}
+        r = requests.post(f"https://api.wxc.e911cloud.com/networking-service/networkSwitchPort",
+                          headers=self._headers, json=payload)
+        if r.ok:
+            respose = r.json()
+        else:
+            raise APIError(f"There was a problem adding the port to the chassis: {r.text}")
+        return respose
+
+
     def get_bssid_discovery(self):
         """ Get the current BSSID mappings defined in RedSky Horizon
 
@@ -2967,7 +3037,7 @@ class RedSkyBuilding:
         self._raw_config:dict = config
         self.id:str = config.get("id")
         """The ID of the Building"""
-        self.name:str = config.get("Name")
+        self.name:str = config.get("name")
         """The name of the Building"""
         self.supplemental_data:str = config.get("supplementalData", None)
         """Supplemental data for the Building"""
@@ -3002,6 +3072,22 @@ class RedSkyBuilding:
         else:
             raise APIError(f"There was a problem getting the Locations for Building {self.name}")
         return self._locations
+
+    def get_location_by_name(self, name: str):
+        """ Return the RedSkyLocation instance that matches the name provided.
+
+        Args:
+            name (str): The name of the location to search for. Not case-sensitive
+
+        Returns:
+            RedSkyLocation: The instance of the RedSkyLocation class. None is returned if no match can be found
+
+        """
+        for location in self.locations:
+            if location.name.lower() == name.lower():
+                return location
+        return None
+
 
     def add_location(self, location_name:str, ecbn:str = "", location_info: str = ""):
         payload = {"name": location_name,
