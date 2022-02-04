@@ -58,7 +58,7 @@ The following shows how to retrieve all of the mapping:
 
 Adding Network Discovery Mappings
 ---------------------------------
-The :meth:`RedSky.add_mac_discover()`, :meth:`RedSky.add_lldp_discovery()`, :meth:`RedSky.add_bssid_discovery()` and
+The :meth:`RedSky.add_mac_discovery()`, :meth:`RedSky.add_lldp_discovery()`, :meth:`RedSky.add_bssid_discovery()` and
 :meth:`RedSky.add_ip_range_discovery()` methods are provided to allow a mapping of each type to be added to RedSky. See
 the method reference for each in the :class:`RedSky` class to determine the parameters needed for each type. The
 following is an example of how to add a MAC address mapping. Other mapping types can be done in a similar way.
