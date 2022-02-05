@@ -2722,6 +2722,23 @@ class RedSky:
         return None
 
     def add_building(self, webex_location: Location, create_location: bool = True):
+        """ Add a new Building to RedSky
+
+        The ``create_location`` arg defaults to True, which will automatically create a RedSkyLocation called "Default".
+        If you want to prevent a Location from being created, pass ``create_location=False``.
+
+        Args:
+            webex_location (Location): The Webex Location instance to create the building for
+            create_location (bool. optional: Whether to create a RedSkyLocation called "Default" in the RedSkyBuilding
+
+        Returns:
+            RedSkyBuilding: The RedSkyBulding instance that was created
+
+        Raises:
+            ValueError: Raised when trying to create a RedSkyBuilding for a Location that is not in the U.S.
+            APIError: Raised on all API failures
+
+        """
         if webex_location.address['country'] != "US":
             raise ValueError("Cannot create Buildng for non-US location")
 
@@ -2809,6 +2826,9 @@ class RedSky:
         Returns:
             list[dict]: A list of all the MAC address mappings
 
+        Raises:
+            APIError: Raised on any error from the RedSKy API
+
         """
         mappings = []
         r = requests.get(f"https://api.wxc.e911cloud.com/networking-service/macAddress/company/{self.org_id}",
@@ -2832,6 +2852,9 @@ class RedSky:
         Returns:
             dict: The configuration of the mapping after processing by RedSky
 
+        Raises:
+            APIError: Raised on any error from the RedSKy API
+
         """
         payload = {"macAddress": mac,
                    "locationId": location.id,
@@ -2850,6 +2873,9 @@ class RedSky:
 
         Returns:
             list[dict]: A list of all the LLDP mappings
+
+        Raises:
+            APIError: Raised on any error from the RedSKy API
 
         """
         mappings = []
@@ -2888,6 +2914,9 @@ class RedSky:
 
         Returns:
             dict: The configuration of the mapping after processing by RedSky
+
+        Raises:
+            APIError: Raised on any error from the RedSKy API
 
         """
         if ports is not None:
@@ -2948,6 +2977,9 @@ class RedSky:
         Returns:
             list[dict]: A list of all the BSSID mappings
 
+        Raises:
+            APIError: Raised on any error from the RedSKy API
+
         """
         mappings = []
         r = requests.get(f"https://api.wxc.e911cloud.com/networking-service/bssid/company/{self.org_id}",
@@ -2971,6 +3003,9 @@ class RedSky:
         Returns:
             dict: The configuration of the mapping after processing by RedSky
 
+        Raises:
+            APIError: Raised on any error from the RedSKy API
+
         """
         payload = {"bssid": bssid,
                    "locationId": location.id,
@@ -2989,6 +3024,9 @@ class RedSky:
 
         Returns:
             list[dict]: A list of all the IP Range mappings
+
+        Raises:
+            APIError: Raised on any error from the RedSKy API
 
         """
         mappings = []
@@ -3013,6 +3051,9 @@ class RedSky:
 
         Returns:
             dict: The configuration of the mapping after processing by RedSky
+
+        Raises:
+            APIError: Raised on any error from the RedSKy API
 
         """
         payload = {"ipAddressLow": ip_start,
