@@ -2543,6 +2543,7 @@ class CPAPI:
             APIError: Raised when there is a problem getting data from the API
 
         """
+        logging.info("CPAPI - Getting Calling Location")
         r = requests.get(self._url_base + f"places/{workspace_id}", headers=self._headers)
         if r.status_code == 200:
             response = r.json()
@@ -2682,12 +2683,25 @@ class Device:
         """The product family to which the device belongs"""
         self.mac: str = config.get("mac", "UNKNOWN")
         """The MAC address of the device"""
-        self.calling_location: Location = ""
+        self._calling_location: Location = ""
         """The Webex Calling :class:`Location`"""
         self._image: str = config.get("imageFilename", None)
 
     def __str__(self):
         return f"{self.product},{self.display_name}"
+
+    @property
+    def calling_location(self):
+        """ The :class:`Location` instance that the device is assigned to"""
+        if not self._calling_location:
+            location = self._parent._parent._cpapi.get_workspace_calling_location(self.owner_id)
+            self._calling_location = location
+        return self._calling_location
+
+    @calling_location.setter
+    def calling_location(self, location: Location):
+        if isinstance(location, Location):
+            self._calling_location = location
 
     def refresh(self):
         """Refresh the information about this device (including status) from CSDM"""
@@ -2699,7 +2713,19 @@ class Device:
             raise CSDMError("Unable to refresh device status")
 
     def change_workspace_caller_id(self, name: str, number: str):
-        # This is just quick and dirty. Need to clean up
+        """ Change the Caller ID for a Workspace
+
+        For most cases, the ``name`` and ``number`` arguments will be special keywords to specify either the DID
+        (Direct Line) or the Location Number as the Caller ID.
+
+        Args:
+            name (str): Acceptable values are 'DIRECT_LINE' and 'LOCATION'
+            number (str): Acceptable values are 'DIRECT_LINE' and 'LOCATION_NUMBER'
+
+        Returns:
+            bool: True if successful. False otherwise
+
+        """
         cpapi = self._parent._parent._cpapi
         if cpapi.change_workspace_caller_id(self.owner_id, name=name, number=number):
             return True
@@ -2709,7 +2735,7 @@ class Device:
 
 class RedSky:
     def __init__(self, username: str, password: str):
-        """ Inititalize a connection to RedSky and obtain basic account info
+        """ Initialize a connection to RedSky and obtain basic account info
 
         Args:
             username (str): The Horizon admin username
