@@ -2495,10 +2495,22 @@ class CPAPI:
 
         return numbers
 
+    def change_workspace_caller_id(self, workspace: str, name: str, number: str):
+        payload = {"externalCallerIdNamePolicy": name,
+                   "selected": number}
+        r = requests.patch(self._url_base + f"places/{workspace}/features/callerid",
+                           headers=self._headers, json=payload)
+        if r.ok:
+            return True
+        else:
+            raise APIError("CPAPI failed to update Caller ID for Workspace")
+
+
 class CSDM:
     """The base class for dealing with devices"""
     def __init__(self, org: Org, access_token: str):
         logging.info("Initializing CSDM instance")
+        self._parent = org
         self._access_token = access_token
         self._headers = {"Authorization": f"Bearer {access_token}"}
 
@@ -2512,7 +2524,7 @@ class CSDM:
 
         self.devices: list[Device] = []
 
-    def get_devices(self):
+    def get_devices(self, with_location: bool = False):
         logging.info("Getting devices from CSDM")
         devices_from_csdm = []
         payload =  {"query": None,
@@ -2554,6 +2566,10 @@ class CSDM:
 
         self.devices = []
         for device in devices_from_csdm:
+            if with_location is True:
+                # Get the device location with another search
+                #TODO Finish this before we go too far
+                pass
             self.devices.append(Device(self, device))
 
         return self.devices
@@ -2610,6 +2626,14 @@ class Device:
             return response
         else:
             raise CSDMError("Unable to refresh device status")
+
+    def change_workspace_caller_id(self, name: str, number: str):
+        # This is just quick and dirty. Need to clean up
+        cpapi = self._parent._parent._cpapi
+        if cpapi.change_workspace_caller_id(self.owner_id, name=name, number=number):
+            return True
+        else:
+            return CSDMError("Not able to set Caller ID for Workspace")
 
 
 class RedSky:

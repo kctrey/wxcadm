@@ -33,8 +33,7 @@ release = '1.0.0'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
-    'sphinx_rtd_theme',
-    'sphinx_copybutton'
+    'sphinx_rtd_theme'
 ]
 
 autoclass_content = 'both'
