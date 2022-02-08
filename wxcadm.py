@@ -12,12 +12,18 @@ from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, 
 #       I end up with the same values in multiple attributes, which is a bad idea.
 
 # Set up logging
-logging.basicConfig(level=logging.INFO,
-                      filename="wxcadm.log",
-                      format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
+logging.basicConfig(level=logging.DEBUG,
+                    filename="wxcadm.log",
+                    format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
+# Since requests is so chatty at Debug, turn off logging propagation
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("connectionpool").setLevel(logging.WARNING)
+
 # Some functions available to all classes and instances (optionally)
 # TODO Lots of stuff probably could be moved here since there are common functions in most classes
 _url_base = "https://webexapis.com/"
+
 
 def webex_api_call(method: str, url: str, headers: dict, params: dict = None, payload: dict = None):
     """ Generic handler for all Webex API requests
@@ -192,7 +198,7 @@ class Webex:
         raise KeyError("Org not found")
 
 
-class Org(Webex):
+class Org:
     def __init__(self,
                  name: str,
                  id: str,
@@ -370,7 +376,6 @@ class Org(Webex):
                 return person
         return None
 
-
     def __get_wxc_licenses(self):
         """Get only the Webex Calling licenses from the Org.licenses attribute
 
@@ -455,11 +460,7 @@ class Org(Webex):
 
         # Build the payload to send to the API
         logging.debug("Building payload.")
-        payload = {}
-        payload["emails"] = [email]
-        payload["locationId"] = location
-        payload["orgId"] = self.id
-        payload["licenses"] = licenses
+        payload = {"emails": [email], "locationId": location, "orgId": self.id, "licenses": licenses}
         if phone_number is not None:
             payload["phoneNumbers"] = [{"type": "work", "value": phone_number}]
         if extension is not None:
@@ -577,7 +578,7 @@ class Org(Webex):
         # We will create a new instance of the PickupGroup class when we find one
         for location in self.locations:
             api_resp = webex_api_call("get", "v1/telephony/config/locations/" + location.id + "/callPickups",
-                             headers=self._headers)
+                                      headers=self._headers)
             for item in api_resp['callPickups']:
                 pg = PickupGroup(self, location.id, item['id'], item['name'])
                 self.pickup_groups.append(pg)
@@ -765,6 +766,7 @@ class Location:
             if number['location'].name == self.name and number['mainNumber'] is True:
                 return number['number']
         return None
+
 
 class Person:
     def __init__(self, user_id, parent: Org = None, config: dict = None):
@@ -2403,6 +2405,7 @@ class CPAPI:
     """The CPAPI class handles API calls using the CP-API, which is the native API used by Webex Control Hub."""
 
     def __init__(self, org: Org, access_token: str):
+        self._parent = org
         self._access_token = access_token
         self._headers = {"Authorization": f"Bearer {access_token}"}
 
@@ -2495,20 +2498,71 @@ class CPAPI:
 
         return numbers
 
-    def change_workspace_caller_id(self, workspace: str, name: str, number: str):
+    def change_workspace_caller_id(self, workspace_id: str, name: str, number: str):
+        """ Changes the Caller ID for a Workspace using the CPAPI
+
+        Since Webex Calling uses a different Workspace ID than the CPAPI, this method requires the ID that is recognized
+        by CPAPI. The ``name`` and ``number`` arguments take the literal value to be written in the CPAPI payload. The
+        methods in other classes that call this method are responsible for sending the correct value to be used.
+
+        Args:
+            workspace_id (str): The CPAPI Workspace (Place) ID
+            name (str): The value to send to the CPAPI as the "externalCallerIdNamePolicy"
+            number (str): The value to send to the CPAPI as the "selected" value
+
+        Returns:
+            bool: True on success. False otherwise
+
+        Raises:
+            APIError: Raised when there is a problem with the API call
+
+        """
         payload = {"externalCallerIdNamePolicy": name,
                    "selected": number}
-        r = requests.patch(self._url_base + f"places/{workspace}/features/callerid",
+        r = requests.patch(self._url_base + f"places/{workspace_id}/features/callerid",
                            headers=self._headers, json=payload)
         if r.ok:
             return True
         else:
             raise APIError("CPAPI failed to update Caller ID for Workspace")
 
+    def get_workspace_calling_location(self, workspace_id: str):
+        """ Gets the Location instance associated with a Workspace
+
+        Because Webex Calling uses a different Location than th WorkspaceLocation, sometimes an admin needs to take
+        action based on the Calling Location instead. This method takes the ID of the Workspace (from the Device
+        instance held in the Webex.Org.devices list) and returns the :class:`Location` instance.
+
+        Args:
+            workspace_id (str): The Workspace ID (Device.owner_id) to match on
+
+        Returns:
+            Location: The Location instance for the Workspace. None is returned if there is no match.
+
+        Raises:
+            APIError: Raised when there is a problem getting data from the API
+
+        """
+        r = requests.get(self._url_base + f"places/{workspace_id}", headers=self._headers)
+        if r.status_code == 200:
+            response = r.json()
+            location = self._parent.get_location_by_name(response['location']['name'])
+        else:
+            raise APIError("Something went wrong getting the Workspace Calling Location")
+        return location
+
 
 class CSDM:
     """The base class for dealing with devices"""
     def __init__(self, org: Org, access_token: str):
+        """ Initialize a CSDM instance for an :class:`Org`
+
+        Args:
+            org (Org): The Org instance which is the parent of this CSDM instance
+            access_token (str): The API Access Token that is used to access the CSDM API. Usually the same access
+                token that is used by the Org
+        """
+
         logging.info("Initializing CSDM instance")
         self._parent = org
         self._access_token = access_token
@@ -2522,9 +2576,19 @@ class CSDM:
         self._url_base = f"https://csdm-a.wbx2.com/csdm/api/v1/organization/{self._organization}/devices/"
         self._server = "https://csdm-a.wbx2.com"
 
-        self.devices: list[Device] = []
+        self._devices: list[Device] = []
 
     def get_devices(self, with_location: bool = False):
+        """ Get a list of all the Device instances from CSDM
+
+        Args:
+            with_location (bool, optional): Whether to populate the .location attribute with the Webex Calling
+                :class:`Location` instance. The API calls to do this take some time, so it defaults to **False**.
+
+        Returns:
+            list[Device]: A list of all the :class:`Device` instances
+
+        """
         logging.info("Getting devices from CSDM")
         devices_from_csdm = []
         payload =  {"query": None,
@@ -2532,7 +2596,7 @@ class CSDM:
                                    "category",
                                    "callingType"
                                    ],
-                    "size": 2,
+                    "size": 100,
                     "from": 0,
                     "sortField": "category",
                     "sortOrder": "asc",
@@ -2564,15 +2628,20 @@ class CSDM:
             logging.error(("Failed getting devices"))
             raise CSDMError("Error getting devices")
 
-        self.devices = []
+        self._devices = []
+        logging.debug("Creating Device instances")
         for device in devices_from_csdm:
+            this_device = Device(self, device)
             if with_location is True:
-                # Get the device location with another search
-                #TODO Finish this before we go too far
-                pass
-            self.devices.append(Device(self, device))
+                # Get the device location with another search via CPAPI
+                logging.debug(f"Getting Device Location via CPAPI: {this_device.display_name}")
+                if "ownerId" in device:
+                    device_location: Location = self._parent._cpapi.get_workspace_calling_location(device['ownerId'])
+                    logging.debug(f"\tLocation: {device_location.name}")
+                    this_device.calling_location = device_location
+            self._devices.append(this_device)
 
-        return self.devices
+        return self._devices
 
 
 class Device:
@@ -2583,7 +2652,7 @@ class Device:
         """The display name associated with the device"""
         self.uuid: str = config.get("cisUuid", "")
         """The Cisco UUID associated with the device"""
-        self.account_type:str = config.get("accountType", "UNKNOWN")
+        self.account_type: str = config.get("accountType", "UNKNOWN")
         """The type of account the device is associated with"""
         self.url: str = config.get("url", "")
         """The URL to access the CSDM API for the device"""
@@ -2613,6 +2682,8 @@ class Device:
         """The product family to which the device belongs"""
         self.mac: str = config.get("mac", "UNKNOWN")
         """The MAC address of the device"""
+        self.calling_location: Location = ""
+        """The Webex Calling :class:`Location`"""
         self._image: str = config.get("imageFilename", None)
 
     def __str__(self):
