@@ -113,7 +113,7 @@ the two. Stay tuned...
     reference/RedSkyLocation
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 3
    :caption: Full Reference
 
    reference/wxcadm
