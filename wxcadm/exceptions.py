@@ -1,16 +1,21 @@
 from builtins import Exception
 
 class OrgError(Exception):
-    pass
+    """The base error class for Org-related exceptions"""
+    def __init__(self, message):
+        super(OrgError, self).__init__(message)
 
 
 class LicenseError(OrgError):
     """Exceptions dealing with License problems within the Org"""
-    pass
+    def __init__(self, message):
+        super(LicenseError, self).__init__(message)
 
 
 class APIError(Exception):
     """The base class for any exceptions dealing with the API"""
+    def __init__(self, message):
+        super(APIError, self).__init__(message)
 
 class TokenError(APIError):
     """Exceptions dealing with the Access Token itself"""

@@ -6,17 +6,17 @@ added.
 
 .. code-block:: python
 
-    from wxcadm import Webex, RedSky
+    import wxcadm
 
     webex_access_token = "Your Webex API Access Token"
     redsky_user = "Your RedSky Horizon admin username"
     redsky_pass = "Your RedSky Horizon admin password"
 
     # Connect to Webex. You can use fast_mode=True since we won't be dealing with user phone numbers
-    webex = Webex(webex_access_token, fast_mode=True)
+    webex = wxcadm.Webex(webex_access_token, fast_mode=True)
 
     # Connect to RedSky
-    redsky = RedSky(redsky_user, redsky_pass)
+    redsky = wxcadm.RedSky(redsky_user, redsky_pass)
 
     # Loop through the Locations and add them via RedSky
     # You can store each of the new buldings in a list if needed

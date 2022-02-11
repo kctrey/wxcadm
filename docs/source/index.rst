@@ -13,7 +13,8 @@ most part, the public Webex APIs available at https://developer.webex.com.
 
 Status
 ======
-The `main branch <https://github.com/kctrey/wxcadm>`_ version is stable and available for use.
+The `main branch <https://github.com/kctrey/wxcadm>`_ version is stable and available for use and the current `PyPI PIP
+Package <https://pypi.org/project/wxcadm/>`_ is built from that branch.
 
 There are still enhancements being made and I am addressing any `issues <https://github.com/kctrey/wxcadm/issues>`_ as
 they are reported. New features can also be discussed in the `discussions <https://github.com/kctrey/wxcadm/discussions>`_
@@ -32,10 +33,10 @@ multiple, so :attr:`Webex.org` is equivalent to :attr:`Webex.orgs[0]`. For examp
 
 .. code-block:: python
 
-   from wxcadm import Webex
+   import wxcadm
 
    access_token = "Your API Access Token"
-   webex = Webex(access_token)
+   webex = wxcadm.Webex(access_token)
    for org in webex.orgs:
        print(org.name)
 

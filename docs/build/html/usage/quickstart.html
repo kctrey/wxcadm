@@ -110,10 +110,10 @@ Webex Calling.</p>
 <p>You can obtain a 12-hour access token by logging into <a class="reference external" href="https://developer.webex.com">https://developer.webex.com</a> and visiting the <strong>Getting Started</strong>
 page.</p>
 <p>Once you have the access token, the following will initialize the API connection and pull data</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">wxcadm</span>
 
 <span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">wxcadm</span><span class="o">.</span><span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Since most administrators only have access to a single Webex Organization, you can access that Organization with the

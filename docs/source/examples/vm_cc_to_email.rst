@@ -5,10 +5,10 @@ will step through all the Webex Calling users within the Organization and make t
 
 .. code-block:: python
 
-   from wxcadm import Webex
-   access_token = "Your API Access Token"
+   import wxcadm
 
-   webex = Webex(access_token)
+   access_token = "Your API Access Token"
+   webex = wxcadm.Webex(access_token)
 
    # Iterate over all of the People who have a Webex Calling license
    for person in webex.org.get_wxc_people():

@@ -11,11 +11,11 @@ Change All Workspaces Across the Webex Org
 ------------------------------------------
 .. code-block:: python
 
-    from wxcadm import Webex
+    import wxcadm
 
     access_token = "Your API Access Token"
 
-    webex = Webex(access_token, fast_mode=True)     # fast_mode can be used since we aren't dealing with People
+    webex = wxcadm.Webex(access_token, fast_mode=True)     # fast_mode can be used since we aren't dealing with People
     devices = webex.org.devices
     changed_count = 0
 
@@ -34,13 +34,13 @@ Change Workspaces in Specified Calling Locations
 ------------------------------------------------
 .. code-block:: python
 
-    from wxcadm import Webex
+    import wxcadm
 
     access_token = "Your API Access Token"
     # Define the Webex Calling Location names that you want devices changed in
     locations_to_change = ["Headquarters", "Location 1", "Location X"]
 
-    webex = Webex(access_token, fast_mode=True)     # fast_mode can be used since we aren't dealing with People
+    webex = wxcadm.Webex(access_token, fast_mode=True)     # fast_mode can be used since we aren't dealing with People
     devices = webex.org.devices
     changed_count = 0
 

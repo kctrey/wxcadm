@@ -5,5 +5,5 @@ Installation
 
 .. code-block::
 
-    $ python -m pip install wxcadm
+    $ python3 -m pip install wxcadm
 

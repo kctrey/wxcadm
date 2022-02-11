@@ -7,13 +7,14 @@ as it is ran.
 
 .. code-block:: python
 
-    from wxcadm import Webex
+    import wxcadm
+
     access_token = "Your API Access Token"
     user_list = ['user1@domains.com',
                  'user2@domain.com',
                  'user3@domain.com']
 
-    webex = Webex(access_token)
+    webex = wxcadm.Webex(access_token)
 
     for user in user_list:
         person = webex.org.get_person_by_email(user)

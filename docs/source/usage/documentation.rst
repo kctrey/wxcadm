@@ -4,9 +4,10 @@ The following examples show many of the common use cases supported by **wxcadm**
 
 .. code-block:: python
 
-   from wxcadm import Webex
+   import wxcadm
+
    access_token = "Your API Access Token"
-   webex = Webex(access_token)
+   webex = wxcadm.Webex(access_token)
 
    # Get all of the Locations within the org
    locations = webex.org.get_locations()
@@ -41,9 +42,11 @@ number is assigned to a Person, then the person instance will be included.
 
 .. code-block:: python
 
-   from wxcadm import Webex
+   import wxcadm
+
    access_token = "Your API Access Token"
-   webex = Webex(access_token)
+   webex = wxcadm.Webex(access_token)
+
    for number in webex.org.numbers:
       if "owner" in number:
          # The number is assigned
@@ -59,14 +62,14 @@ extension, or both.
 
 .. code-block:: python
 
-    from wxcadm import Webex
+    import wxcadm
 
     access_token = "Your API Access Token"
     user = "user@domain.com"
     location_name = "Location Name"
     phone_number = "+18185552345"
 
-    webex = Webex(access_token, fast_mode=True)
+    webex = wxcadm.Webex(access_token, fast_mode=True)
 
     user_location = webex.org.get_location_by_name(location_name)
     person = webex.org.get_person_by_email(user)
@@ -85,9 +88,10 @@ Change the user's phone number
 
 .. code-block:: python
 
-   from wxcadm import Webex
+   import wxcadm
+
    access_token = "Your API Access Token"
-   webex = Webex(access_token)
+   webex = wxcadm.Webex(access_token)
    # Find the Person that you want to change
    person = webex.org.get_person_by_email("user@domain.com")
    # Call the `change_phone_number()` method for the user
@@ -104,9 +108,10 @@ it makes it easy to find all of the places the user is being used.
 
 .. code-block:: python
 
-   from wxcadm import Webex
+   import wxcadm
+
    access_token = "Your API Access Token"
-   webex = Webex(access_token)
+   webex = wxcadm.Webex(access_token)
    # Find the person you want the details for
    person = webex.org.get_person_by_email("user@domain.com")
    for hunt_group in person.hunt_groups:

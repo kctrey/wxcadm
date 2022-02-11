@@ -3,22 +3,13 @@ import time
 import requests
 import logging
 import base64
-from .exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, XSIError, NotAllowed, CSDMError)
+from .exceptions import *
 
 # TODO: There is a package-wide problem where we have Webex-native data and instance attributes that we write
 #       to make the instances easier to work with. I have kept the native data because it is easier to push back
 #       to Webex and safer in case the API changes. Ideally, we should store all attributes in ways that a user
 #       would want them and pack them back into JSON as needed. In the meantime, like in the CallQueues object
 #       I end up with the same values in multiple attributes, which is a bad idea.
-
-# Set up logging
-logging.basicConfig(level=logging.INFO,
-                    filename="./wxcadm.log",
-                    format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
-# Since requests is so chatty at Debug, turn off logging propagation
-logging.getLogger("requests").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("connectionpool").setLevel(logging.WARNING)
 
 # Some functions available to all classes and instances (optionally)
 # TODO Lots of stuff probably could be moved here since there are common functions in most classes
@@ -44,7 +35,7 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
             If the details for a single entry are returned by the API, a dict will be returned.
 
     Raises:
-        APIError: Raised when the API call fails to retrieve at least one response.
+        wxcadm.exceptions.APIError: Raised when the API call fails to retrieve at least one response.
 
     """
     logging.debug("Webex API Call:")
@@ -146,10 +137,12 @@ class Webex:
         r = requests.get(_url_base + "v1/organizations", headers=self._headers)
         # Handle an invalid access token
         if r.status_code != 200:
+            logging.critical("The Access Token was not accepted by Webex")
             raise TokenError("The Access Token was not accepted by Webex")
         response = r.json()
         # Handle when no Orgs are returned. This is pretty rare
         if len(response['items']) == 0:
+            logging.warning("No Orgs were retuend by the Webex API")
             raise OrgError
         # If a token can manage a lot of orgs, you might not want to create them all, because
         # it can take some time to do all of the API calls and get the data back
@@ -189,7 +182,7 @@ class Webex:
             Org: The Org instance of the matching Org
 
         Raises:
-            KeyError: Raised when no match is made
+            wxcadm.exceptions.KeyError: Raised when no match is made
 
         """
         for org in self.orgs:
@@ -845,10 +838,11 @@ class Person:
             self.__process_api_data(response)
 
     def __process_api_data(self, data: dict):
-        """
-        Takes the API data passed as the `data` argument and parses it to the instance attributes.
+        """Takes the API data passed as the `data` argument and parses it to the instance attributes.
+
         Args:
             data (dict): A dictionary of the raw data returned by the `v1/people` API call
+
         """
         self.email = data['emails'][0]
         self.extension = data.get("extension", "")
@@ -872,13 +866,15 @@ class Person:
     # The following is to simplify the API call. Eventually I may open this as a public method to
     # allow arbitrary API calls
     def __get_webex_data(self, endpoint: str, params: dict = None):
-        """
-        Issue a GET to the Webex API
+        """ Issue a GET to the Webex API
+
         Args:
             endpoint (str): The endpoint of the call (i.e. "v1/people" or "/v1/people/{Person.id}")
             params (dict): Any additional params to be passed in the query (i.e. {"callingData":"true"}
+
         Returns:
             dict: The response from the Webex API
+
         """
         if params is None:
             params = {}
@@ -923,8 +919,7 @@ class Person:
         return spark_id
 
     def assign_wxc(self, location: Location, phone_number: str = None, extension: str = None):
-        """
-        Assign Webex Calling to the user, along with a phone number and/or an extension.
+        """ Assign Webex Calling to the user, along with a phone number and/or an extension.
 
         Args:
             location (Location): The Location instance to assign the Person to.
@@ -1532,14 +1527,14 @@ class XSI:
 
     @property
     def executive(self):
-        """The Exectuve Assistant settings for this Person"""
+        """The Executive Assistant settings for this Person"""
         if not self._executive or not self._cache:
             self._executive = self.__get_xsi_data(f"/v2.0/user/{self.id}/services/Executive")
         return self._executive
 
     @property
     def executive_assistant(self):
-        """The Exectuve Assistant settings for this Person"""
+        """The Executive Assistant settings for this Person"""
         if not self._executive_assistant or not self._cache:
             self._executive_assistant = self.__get_xsi_data(f"/v2.0/user/{self.id}/services/ExecutiveAssistant")
         return self._executive_assistant
@@ -1802,7 +1797,7 @@ class Call:
             bool: True when the call was successful
 
         Raises:
-            NotAllowed: Raised when the Person is not able to place the call for an Executive
+            wxcadm.exceptions.NotAllowed: Raised when the Person is not able to place the call for an Executive
 
         """
         if executive is not None:
@@ -1841,7 +1836,7 @@ class Call:
             bool: True if the push was successful
 
         Raises:
-            NotAllowed: Raised when the call does not meet the conditions to be pushed
+            wxcadm.exceptions.NotAllowed: Raised when the call does not meet the conditions to be pushed
 
         """
         r = requests.put(self._url + f"/{self.id}/ExecutiveAssistantCallPush", headers=self._headers)
@@ -2074,7 +2069,7 @@ class Call:
             str: The extension that the call is parked against
 
         Raises:
-            NotAllowed: Raised when the user is not part of a Park Group or the extension is already busy
+            wxcadm.exceptions.NotAllowed: Raised when the user is not part of a Park Group or the extension is already busy
 
         """
         if extension is None:
@@ -2126,8 +2121,8 @@ class Call:
             bool: True if the recording command was accepted by the server
 
         Raises:
-            NotAllowed: The action is not allowed. Normally it indicates that the user does not have the Call Recording
-                service assigned.
+            wxcadm.exceptions.NotAllowed: The action is not allowed. Normally it indicates that the user does not have
+                the Call Recording service assigned.
             ValueError: Raised when the action is not recognized.
 
         """
@@ -2183,7 +2178,7 @@ class Conference:
             bool: True if the command was successful
 
         Raises:
-            NotAllowed: Raised when the server rejects the command
+            wxcadm.exceptions.NotAllowed: Raised when the server rejects the command
 
         """
         r = requests.put(self._url + f"{call}/Deaf", headers=self._headers)
@@ -2202,7 +2197,7 @@ class Conference:
             bool: True if the command was successful
 
         Raises:
-            NotAllowed: Raised when the server rejects the command
+            wxcadm.exceptions.NotAllowed: Raised when the server rejects the command
 
         """
         r = requests.put(self._url + f"{call}/Mute", headers=self._headers)
@@ -2514,7 +2509,7 @@ class CPAPI:
             bool: True on success. False otherwise
 
         Raises:
-            APIError: Raised when there is a problem with the API call
+            wxcadm.exceptions.APIError: Raised when there is a problem with the API call
 
         """
         payload = {"externalCallerIdNamePolicy": name,
@@ -2540,7 +2535,7 @@ class CPAPI:
             Location: The Location instance for the Workspace. None is returned if there is no match.
 
         Raises:
-            APIError: Raised when there is a problem getting data from the API
+            wxcadm.exceptions.APIError: Raised when there is a problem getting data from the API
 
         """
         logging.info("CPAPI - Getting Calling Location")
@@ -2857,7 +2852,7 @@ class RedSky:
 
         Raises:
             ValueError: Raised when trying to create a RedSkyBuilding for a Location that is not in the U.S.
-            APIError: Raised on all API failures
+            wxcadm.exceptions.APIError: Raised on all API failures
 
         """
         if webex_location.address['country'] != "US":
@@ -2948,7 +2943,7 @@ class RedSky:
             list[dict]: A list of all the MAC address mappings
 
         Raises:
-            APIError: Raised on any error from the RedSKy API
+            wxcadm.exceptions.APIError: Raised on any error from the RedSKy API
 
         """
         mappings = []
@@ -2974,7 +2969,7 @@ class RedSky:
             dict: The configuration of the mapping after processing by RedSky
 
         Raises:
-            APIError: Raised on any error from the RedSKy API
+            wxcadm.exceptions.APIError: Raised on any error from the RedSKy API
 
         """
         payload = {"macAddress": mac,
@@ -3037,7 +3032,7 @@ class RedSky:
             dict: The configuration of the mapping after processing by RedSky
 
         Raises:
-            APIError: Raised on any error from the RedSKy API
+            wxcadm.exceptions.APIError: Raised on any error from the RedSKy API
 
         """
         if ports is not None:
@@ -3099,7 +3094,7 @@ class RedSky:
             list[dict]: A list of all the BSSID mappings
 
         Raises:
-            APIError: Raised on any error from the RedSKy API
+            wxcadm.exceptions.APIError: Raised on any error from the RedSKy API
 
         """
         mappings = []
@@ -3125,7 +3120,7 @@ class RedSky:
             dict: The configuration of the mapping after processing by RedSky
 
         Raises:
-            APIError: Raised on any error from the RedSKy API
+            wxcadm.exceptions.APIError: Raised on any error from the RedSKy API
 
         """
         payload = {"bssid": bssid,
@@ -3147,7 +3142,7 @@ class RedSky:
             list[dict]: A list of all the IP Range mappings
 
         Raises:
-            APIError: Raised on any error from the RedSKy API
+            wxcadm.exceptions.APIError: Raised on any error from the RedSKy API
 
         """
         mappings = []
@@ -3174,7 +3169,7 @@ class RedSky:
             dict: The configuration of the mapping after processing by RedSky
 
         Raises:
-            APIError: Raised on any error from the RedSKy API
+            wxcadm.exceptions.APIError: Raised on any error from the RedSKy API
 
         """
         payload = {"ipAddressLow": ip_start,

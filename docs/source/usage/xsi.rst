@@ -28,17 +28,19 @@ created by passing the ``get_xsi=True`` argument to the Webex class.
 
 .. code-block:: python
 
-    from wxcadm import Webex
+    import wxcadm
+
     access_token = "Your API Access Token"
-    webex = Webex(access_token, get_xsi=True)
+    webex = wxcadm.Webex(access_token, get_xsi=True)
 
 Or you can call the ``get_xsi_endpoints()`` method on the Org instance
 
 .. code-block:: python
 
-    from wxcadm import Webex
+    import wxcadm
+
     access_token = "Your API Access Token"
-    webex = Webex(access_token)
+    webex = wxcadm.Webex(access_token)
     webex.org.get_xsi_endpoints()
 
 Once the XSI endpoints are known by the Org instance, an XSI instance needs to be started for each Person, which sets
@@ -47,9 +49,10 @@ of the Person instance.
 
 .. code-block:: python
 
-   from wxcadm import Webex
+   import wxcadm
+
    access_token = "Your API Access Token"
-   webex = Webex(access_token, get_xsi=True)
+   webex = wxcadm.Webex(access_token, get_xsi=True)
 
    # Get the person that we want to use XSI with
    person = webex.org.get_person_by_email("user@domain.com")
@@ -69,9 +72,10 @@ number for the user rather than what is received from Active Directory.
 
 .. code-block:: python
 
-   from wxcadm import Webex
+   import wxcadm
+
    access_token = "Your API Access Token"
-   webex = Webex(access_token, get_xsi=True)
+   webex = wxcadm.Webex(access_token, get_xsi=True)
 
    # Get the person that we want to get the profile for
    person = webex.org.get_person_by_email("user@domain.com")
@@ -86,9 +90,10 @@ Place a call
 ^^^^^^^^^^^^
 .. code-block:: python
 
-   from wxcadm import Webex
+   import wxcadm
+
    access_token = "Your API Access Token"
-   webex = Webex(access_token, get_xsi=True)
+   webex = wxcadm.Webex(access_token, get_xsi=True)
 
    # Get the person that we want to place the call from
    person = webex.org.get_person_by_email("user@domain.com")
@@ -113,9 +118,10 @@ Hold/Resume
 ^^^^^^^^^^^
 .. code-block:: python
 
-   from wxcadm import Webex
+   import wxcadm
+
    access_token = "Your API Access Token"
-   webex = Webex(access_token, get_xsi=True)
+   webex = wxcadm.Webex(access_token, get_xsi=True)
 
    person = webex.org.get_person_by_email("user@domain.com")
    person.start_xsi()
@@ -132,9 +138,10 @@ Blind Transfer
 ^^^^^^^^^^^^^^
 .. code-block:: python
 
-   from wxcadm import Webex
+   import wxcadm
+
    access_token = "Your API Access Token"
-   webex = Webex(access_token, get_xsi=True)
+   webex = wxcadm.Webex(access_token, get_xsi=True)
 
    person = webex.org.get_person_by_email("user@domain.com")
    person.start_xsi()
@@ -152,9 +159,10 @@ the users talk, a call to ``finish_transfer()`` will complete the transfer of th
 
 .. code-block:: python
 
-   from wxcadm import Webex
+   import wxcadm
+
    access_token = "Your API Access Token"
-   webex = Webex(access_token, get_xsi=True)
+   webex = wxcadm.Webex(access_token, get_xsi=True)
 
    person = webex.org.get_person_by_email("user@domain.com")
    person.start_xsi()
@@ -175,9 +183,10 @@ the caller and the transferee, then dropping out once introductions hae been mad
 
 .. code-block:: python
 
-   from wxcadm import Webex
+   import wxcadm
+
    access_token = "Your API Access Token"
-   webex = Webex(access_token, get_xsi=True)
+   webex = wxcadm.Webex(access_token, get_xsi=True)
 
    person = webex.org.get_person_by_email("user@domain.com")
    person.start_xsi()
@@ -205,9 +214,9 @@ with the Executive, the call will be placed on behalf of them.
 
 .. code-block:: python
 
-    from wxcadm import Webex
+    import wxcadm
     access_token = "Your API Access Token"
-    webex = Webex(access_token, get_xsi=True)
+    webex = wxcadm.Webex(access_token, get_xsi=True)
 
     # Initiate an XSI session for the Assistant
     assistant = webex.org.get_person_by_email("assistant@company.com")

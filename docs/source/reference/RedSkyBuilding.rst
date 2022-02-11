@@ -1,6 +1,6 @@
 The RedSkyBuilding class
 ========================
 
-.. autoclass:: wxcadm.RedSkyBuilding
+.. autoclass:: wxcadm.wxcadm.RedSkyBuilding
     :members:
     :undoc-members:

@@ -43,12 +43,12 @@ To connect to RedSky, make sure you import the :class:`RedSky` class from **wxca
 
 .. code-block:: python
 
-    from wxcadm import Webex, RedSky
+    import wxcadm
 
     username = "admin@domain.com"
     password = "Your admin password"
 
-    redsky = RedSky(username, password)
+    redsky = wxcadm.RedSky(username, password)
 
 At that point, you are ready to use the methods within the :class:`RedSky` class. Some methods will automatically
 create :class:`RedSkyBuilding` and :class:`RedSkyLocation` instances, which have their own properties and methods.
@@ -68,8 +68,9 @@ The following shows how to retrieve all of the mapping:
 
 .. code-block:: python
 
-    from wxcadm import RedSky
-    redsky = RedSky("admin@domain.com", "Your admin password")
+    import wxcadm
+
+    redsky = wxcadm.RedSky("admin@domain.com", "Your admin password")
 
     mac_mapping = redsky.get_mac_discovery()
     lldp_mapping = redsky.get_lldp_discovbery()
@@ -86,8 +87,9 @@ following is an example of how to add a MAC address mapping. Other mapping types
 
 .. code-block:: python
 
-    from wxcadm import RedSky
-    redsky = RedSky("admin@domain.com", "Your admin password")
+    import wxcadm
+
+    redsky = wxcadm.RedSky("admin@domain.com", "Your admin password")
 
     # First, you will need to get the RedSkyLocation instance you want to add to
     # Start by finding the building

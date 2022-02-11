@@ -1,6 +1,6 @@
 The Org class
 ===============
 
-.. autoclass:: wxcadm.Org
+.. autoclass:: wxcadm.wxcadm.Org
     :members:
     :undoc-members:

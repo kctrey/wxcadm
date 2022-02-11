@@ -8,10 +8,10 @@ utilize this functionality, using their Webex email as the email to send the voi
 
 .. code-block:: python
 
-    from wxcadm import Webex
-    access_token = "Your API Access Token"
+    import wxcadm
 
-    webex = Webex(access_token)
+    access_token = "Your API Access Token"
+    webex = wxcadm.Webex(access_token)
 
     for person in webex.org.get_wxc_people():
         logging.info(f"Changing user: {person.email}")

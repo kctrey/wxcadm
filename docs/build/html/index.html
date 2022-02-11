@@ -111,11 +111,19 @@ provide that.</p>
 most part, the public Webex APIs available at <a class="reference external" href="https://developer.webex.com">https://developer.webex.com</a>.</p>
 <section id="status">
 <h2>Status<a class="headerlink" href="#status" title="Permalink to this headline"></a></h2>
-<p>The <a class="reference external" href="https://github.com/kctrey/wxcadm">main branch</a> version is stable and available for use.</p>
+<p>The <a class="reference external" href="https://github.com/kctrey/wxcadm">main branch</a> version is stable and available for use and the current <a class="reference external" href="https://pypi.org/project/wxcadm/">PyPI PIP
+Package</a> is built from that branch.</p>
 <p>There are still enhancements being made and I am addressing any <a class="reference external" href="https://github.com/kctrey/wxcadm/issues">issues</a> as
 they are reported. New features can also be discussed in the <a class="reference external" href="https://github.com/kctrey/wxcadm/discussions">discussions</a>
 page.</p>
 </section>
+</section>
+<section id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h1>
+<p><strong>wxcadm</strong> is available as a <a class="reference external" href="https://pypi.org/project/wxcadm/">PIP package</a>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python3 -m pip install wxcadm
+</pre></div>
+</div>
 <section id="quickstart">
 <h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline"></a></h2>
 <p>By creating a Webex instance with a valid API Access Token, the module will pull the Webex Organization information as
@@ -125,10 +133,10 @@ Webex Calling.</p>
 <p>You can obtain a 12-hour access token by logging into <a class="reference external" href="https://developer.webex.com">https://developer.webex.com</a> and visiting the <strong>Getting Started</strong>
 page.</p>
 <p>Once you have the access token, the following will initialize the API connection and pull data</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">wxcadm</span>
 
 <span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">wxcadm</span><span class="o">.</span><span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Since most administrators only have access to a single Webex Organization, you can access that Organization with the
@@ -156,10 +164,10 @@ a while, but then all the People are stored as Person objects.</p>
 the Webex instance is created, it creates the <code class="xref py py-attr docutils literal notranslate"><span class="pre">Webex.org</span></code> attribute when only one Org is present. If there are
 mutliple, the <code class="xref py py-attr docutils literal notranslate"><span class="pre">orgs</span></code> attribute contains a list of all the Orgs. <code class="docutils literal notranslate"><span class="pre">orgs</span></code> is created whether there is one Org or
 multiple, so <code class="xref py py-attr docutils literal notranslate"><span class="pre">Webex.org</span></code> is equivalent to <code class="xref py py-attr docutils literal notranslate"><span class="pre">Webex.orgs[0]</span></code>. For example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">wxcadm</span>
 
 <span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">wxcadm</span><span class="o">.</span><span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">org</span> <span class="ow">in</span> <span class="n">webex</span><span class="o">.</span><span class="n">orgs</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">org</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
 </pre></div>
@@ -181,9 +189,10 @@ example, to enable VM-to-Email across all users of every Org, the following is s
 <section id="usage-reference">
 <h2>Usage Reference<a class="headerlink" href="#usage-reference" title="Permalink to this headline"></a></h2>
 <p>The following examples show many of the common use cases supported by <strong>wxcadm</strong>:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">wxcadm</span>
+
 <span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">wxcadm</span><span class="o">.</span><span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
 
 <span class="c1"># Get all of the Locations within the org</span>
 <span class="n">locations</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_locations</span><span class="p">()</span>
@@ -213,9 +222,11 @@ processing.</p>
 <p>In order to create users, or sometimes to report on them, it is useful to pull the numbers associated with an
 Org. The <code class="docutils literal notranslate"><span class="pre">Org.numbers</span></code> attribute provides a list of numbers, along with the Location each is assigned to. If a
 number is assigned to a Person, then the person instance will be included.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">wxcadm</span>
+
 <span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">wxcadm</span><span class="o">.</span><span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+
 <span class="k">for</span> <span class="n">number</span> <span class="ow">in</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">numbers</span><span class="p">:</span>
    <span class="k">if</span> <span class="s2">&quot;owner&quot;</span> <span class="ow">in</span> <span class="n">number</span><span class="p">:</span>
       <span class="c1"># The number is assigned</span>
@@ -230,14 +241,14 @@ number is assigned to a Person, then the person instance will be included.</p>
 <h4>Assign Webex Calling to an Existing User<a class="headerlink" href="#assign-webex-calling-to-an-existing-user" title="Permalink to this headline"></a></h4>
 <p>In order to assign Webex Calling, you must know the Location instance and provide either the phone number, the
 extension, or both.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">wxcadm</span>
 
 <span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
 <span class="n">user</span> <span class="o">=</span> <span class="s2">&quot;user@domain.com&quot;</span>
 <span class="n">location_name</span> <span class="o">=</span> <span class="s2">&quot;Location Name&quot;</span>
 <span class="n">phone_number</span> <span class="o">=</span> <span class="s2">&quot;+18185552345&quot;</span>
 
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">fast_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">wxcadm</span><span class="o">.</span><span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">,</span> <span class="n">fast_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">user_location</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_location_by_name</span><span class="p">(</span><span class="n">location_name</span><span class="p">)</span>
 <span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
@@ -254,9 +265,10 @@ extension, or both.</p>
 </section>
 <section id="change-the-user-s-phone-number">
 <h4>Change the user’s phone number<a class="headerlink" href="#change-the-user-s-phone-number" title="Permalink to this headline"></a></h4>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">wxcadm</span>
+
 <span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">wxcadm</span><span class="o">.</span><span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
 <span class="c1"># Find the Person that you want to change</span>
 <span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
 <span class="c1"># Call the `change_phone_number()` method for the user</span>
@@ -272,9 +284,10 @@ extension, or both.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">hunt_groups</span></code> and <code class="docutils literal notranslate"><span class="pre">call_queues</span></code> attributes hold all of the instances of each that the user is assigned to as an
 “agent”. Of course, this would be more useful if there were methods for those Classes, but that’s coming soon. For now,
 it makes it easy to find all of the places the user is being used.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">wxcadm</span> <span class="kn">import</span> <span class="n">Webex</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">wxcadm</span>
+
 <span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
-<span class="n">webex</span> <span class="o">=</span> <span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
+<span class="n">webex</span> <span class="o">=</span> <span class="n">wxcadm</span><span class="o">.</span><span class="n">Webex</span><span class="p">(</span><span class="n">access_token</span><span class="p">)</span>
 <span class="c1"># Find the person you want the details for</span>
 <span class="n">person</span> <span class="o">=</span> <span class="n">webex</span><span class="o">.</span><span class="n">org</span><span class="o">.</span><span class="n">get_person_by_email</span><span class="p">(</span><span class="s2">&quot;user@domain.com&quot;</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">hunt_group</span> <span class="ow">in</span> <span class="n">person</span><span class="o">.</span><span class="n">hunt_groups</span><span class="p">:</span>

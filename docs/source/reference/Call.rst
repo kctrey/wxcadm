@@ -1,6 +1,6 @@
 The Call class
 ===============
 
-.. autoclass:: wxcadm.Call
+.. autoclass:: wxcadm.wxcadm.Call
     :members:
     :undoc-members:

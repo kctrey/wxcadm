@@ -1,6 +1,6 @@
 The XSI class
 ===============
 
-.. autoclass:: wxcadm.XSI
+.. autoclass:: wxcadm.wxcadm.XSI
     :members:
     :undoc-members:
