@@ -12,8 +12,8 @@ from .exceptions import (OrgError, LicenseError, APIError, TokenError, PutError,
 #       I end up with the same values in multiple attributes, which is a bad idea.
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG,
-                    filename="../wxcadm.log",
+logging.basicConfig(level=logging.INFO,
+                    filename="./wxcadm.log",
                     format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
 # Since requests is so chatty at Debug, turn off logging propagation
 logging.getLogger("requests").setLevel(logging.WARNING)
