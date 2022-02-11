@@ -25,8 +25,9 @@ You can obtain a 12-hour access token by logging into https://developer.webex.co
 page.
 
 Once you have the access token, the following will initialize the API connection and pull data
+
 ```python
-from wxcadm import Webex
+from wxcadm.wxcadm import Webex
 
 access_token = "Your API Access Token"
 webex = Webex(access_token)

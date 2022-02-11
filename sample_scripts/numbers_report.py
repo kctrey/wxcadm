@@ -5,7 +5,7 @@
 
 import sys
 sys.path.append('../')
-from wxcadm import Webex, Person
+from wxcadm.wxcadm import Webex, Person
 
 try:
     access_token = sys.argv[1]

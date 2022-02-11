@@ -3,7 +3,7 @@ import time
 import requests
 import logging
 import base64
-from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, XSIError, NotAllowed, CSDMError)
+from .exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, XSIError, NotAllowed, CSDMError)
 
 # TODO: There is a package-wide problem where we have Webex-native data and instance attributes that we write
 #       to make the instances easier to work with. I have kept the native data because it is easier to push back
@@ -13,7 +13,7 @@ from exceptions import (OrgError, LicenseError, APIError, TokenError, PutError, 
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG,
-                    filename="wxcadm.log",
+                    filename="../wxcadm.log",
                     format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
 # Since requests is so chatty at Debug, turn off logging propagation
 logging.getLogger("requests").setLevel(logging.WARNING)

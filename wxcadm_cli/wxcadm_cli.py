@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from simple_term_menu import TerminalMenu
-from wxcadm import Webex
+from wxcadm.wxcadm import Webex
 #import time
 from wxcadm_cli import globals
 import phonenumbers     # Needed for the Call Forwarding report

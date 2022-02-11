@@ -6,7 +6,7 @@
 
 import sys
 sys.path.append('../')
-from wxcadm import Webex
+from wxcadm.wxcadm import Webex
 
 access_token = "Your API Access Token"
 
