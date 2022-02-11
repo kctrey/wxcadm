@@ -60,10 +60,7 @@ The :meth:`get_org_by_name()` method is provided to allow the selection of the d
 
 .. include:: usage/documentation.rst
 
-Logging
-=======
-By default, the module logs to ``wxcadm.log``. At the moment, the logs just show the various methods that are invoked
-for API calls to the Webex API.
+.. include:: usage/logging.rst
 
 Data Structure Note
 ===================
