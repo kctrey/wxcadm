@@ -7,14 +7,12 @@ Although the primary focus is Webex Calling, many of the other Webex admin funct
 meant to be an interface to the Meetings and Messaging capabilities of Webex....there are plenty of other modules that
 provide that.
 
-# Status
-The current version in this branch is mostly complete. All the Webex Calling related functions and classes work.
+# Installation
+**wxcadm** is available as a [PIP Package](https://pypi.org/project/wxcadm/)
 
-There are still some enhancements being made directly in the main branch
-so pulling a fresh copy will likely give you some additional capabilities.
-The current focus is on the XSI API and the features that are available with that. Some of the most useful XSI methods
-are already supported, with more being added regularly.
-
+```
+$ python -m pip install wxcadm
+```
 # Quickstart
 By creating a Webex instance with a valid API Access Token, the module will pull the Webex Organization information as
 well as all the People within the Organization. The Org instance will contain all People, whether they have the 

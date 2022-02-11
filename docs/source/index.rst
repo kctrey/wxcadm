@@ -19,6 +19,8 @@ There are still enhancements being made and I am addressing any `issues <https:/
 they are reported. New features can also be discussed in the `discussions <https://github.com/kctrey/wxcadm/discussions>`_
 page.
 
+.. include:: usage/installation.rst
+
 .. include:: usage/quickstart.rst
 
 Regarding Multiple Organizations
