@@ -25,10 +25,10 @@ page.
 Once you have the access token, the following will initialize the API connection and pull data
 
 ```python
-from wxcadm.wxcadm import Webex
+import wxcadm
 
 access_token = "Your API Access Token"
-webex = Webex(access_token)
+webex = wxcadm.Webex(access_token)
 ```
 Since most administrators only have access to a single Webex Organization, you can access that Organization with the
 **org** attribute. If the administrator has access to more than one Organization, they can be accessed using the
