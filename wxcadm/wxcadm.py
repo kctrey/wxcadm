@@ -661,14 +661,17 @@ class Org:
 
     def _get_person(self, match):
         logging.info(f"Getting person: {match}")
+        self.wxc_licenses = self.__get_wxc_licenses()
         if "@" in match:
             params = {"max": "1000", "callingData": "true", "email": match, **self._params}
+            url = "v1/people"
+            response = webex_api_call("get", url, headers=self._headers, params=params)
+            this_person = Person(response[0]['id'], parent=self, config=response[0])
         else:
-            params = {"callingData": "true", "id": match}
-
-        response = webex_api_call("get", "v1/people", headers=self._headers, params=params)
-        self.wxc_licenses = self.__get_wxc_licenses()
-        this_person = Person(response[0]['id'], parent=self, config=response[0])
+            params = {"callingData": "true"}
+            url = f"v1/people/{match}"
+            response = webex_api_call("get", url, headers=self._headers, params=params)
+            this_person = Person(response['id'], parent=self, config=response)
         self.people.append(this_person)
         return this_person
 
