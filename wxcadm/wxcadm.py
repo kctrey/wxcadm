@@ -664,7 +664,7 @@ class Org:
         if "@" in match:
             params = {"max": "1000", "callingData": "true", "email": match, **self._params}
         else:
-            params = {"max": "1000", "callingData": "true", "id": match, **self._params}
+            params = {"callingData": "true", "id": match}
 
         response = webex_api_call("get", "v1/people", headers=self._headers, params=params)
         self.wxc_licenses = self.__get_wxc_licenses()
