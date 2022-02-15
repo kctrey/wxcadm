@@ -12,7 +12,6 @@ from .exceptions import *
 #       I end up with the same values in multiple attributes, which is a bad idea.
 
 # Some functions available to all classes and instances (optionally)
-# TODO Lots of stuff probably could be moved here since there are common functions in most classes
 _url_base = "https://webexapis.com/"
 
 
@@ -97,7 +96,8 @@ class Webex:
                  get_xsi: bool = False,
                  get_hunt_groups: bool = False,
                  get_call_queues: bool = False,
-                 fast_mode: bool = False
+                 fast_mode: bool = False,
+                 people_list: list = None
                  ) -> None:
         """Initialize a Webex instance to communicate with Webex and store data
 
@@ -113,6 +113,8 @@ class Webex:
             fast_mode (bool, optional): **BETA** When possible, optimize the API calls to Webex to work more quickly,
                 sometimes at the expense of not getting as much data. Use this option only if you have a script that
                 runs very slowly, especially during the Webex initialization when collecting people.
+            people_list (list, optional): A list of people, by ID or email, to get instead of getting all People.
+                **Note that this ovverrides the ``get_people`` argument, only fetching the people in ``people_list``
 
         Returns:
             Webex: The Webex instance
@@ -156,9 +158,12 @@ class Webex:
                 # This builds an Org instance for every Org, so be careful
                 # if the user manages multiple orgs
                 logging.debug(f"Processing org: {org['displayName']}")
+                # If we were given a list of people, don't have the Org get all people
+                if people_list is not None:
+                    get_people = False
                 org = Org(org['displayName'], org['id'],
                           people=get_people, locations=get_locations, xsi=get_xsi, parent=self,
-                          call_queues=get_call_queues, hunt_groups=get_hunt_groups)
+                          call_queues=get_call_queues, hunt_groups=get_hunt_groups, people_list=people_list)
                 self.orgs.append(org)
             # Most users have only one org, so to make that easier for them to work with
             # we are also going to put the orgs[0] instance in the org attr
@@ -201,6 +206,7 @@ class Org:
                  hunt_groups: bool = False,
                  call_queues: bool = False,
                  xsi: bool = False,
+                 people_list: list = None
                  ):
         """Initialize an Org instance
 
@@ -213,6 +219,7 @@ class Org:
             hunt_groups (bool, optional): Whether to get all Hunt Groups for the Org. Default False.
             call_queues (bool, optional): Whether to get all Call Queues for the Org. Default False.
             xsi (bool, optional): Whether to get the XSI Endpoints for the Org. Default False.
+            people_list (list, optional): List of people, by ID or email to get instances for.
 
         Returns:
             Org: This instance of the Org class
@@ -268,6 +275,10 @@ class Org:
             self.get_call_queues()
         if hunt_groups:
             self.get_hunt_groups()
+        if people_list:
+            for person in people_list:
+                self._get_person(person)
+
 
     def __str__(self):
         return self.name
@@ -647,6 +658,20 @@ class Org:
             this_person = Person(person['id'], parent=self, config=person)
             self.people.append(this_person)
         return self.people
+
+    def _get_person(self, match):
+        logging.info(f"Getting person: {match}")
+        if "@" in match:
+            params = {"max": "1000", "callingData": "true", "email": match, **self._params}
+        else:
+            params = {"max": "1000", "callingData": "true", "id": match, **self._params}
+
+        response = webex_api_call("get", "v1/people", headers=self._headers, params=params)
+        self.wxc_licenses = self.__get_wxc_licenses()
+        this_person = Person(response[0]['id'], parent=self, config=response[0])
+        self.people.append(this_person)
+        return this_person
+
 
     def get_wxc_people(self):
         """Get all of the people within the Organization **who have Webex Calling**
