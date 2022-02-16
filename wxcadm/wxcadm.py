@@ -1801,7 +1801,7 @@ class HuntGroup:
 
         # Get the config unless we are asked not to
         if config:
-            logging.info(f"Getting config for Hunt Group {self.id} in Location {self.location}")
+            logging.info(f"Getting config for Hunt Group {self.id} in Location {self.location_id}")
             self.get_config()
 
     def __str__(self):
