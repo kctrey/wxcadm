@@ -614,6 +614,34 @@ class Org:
             self.call_queues.append(queue)
         return self.call_queues
 
+    def get_call_queue_by_id(self, id: str):
+        """ Get the :class:`CallQueue` instance with the requested ID
+        Args:
+            id (str): The CallQueue ID
+
+        Returns:
+            HuntGroup: The :class:`CallQueue` instance
+
+        """
+        for cq in self.call_queues:
+            if cq.id == id:
+                return cq
+        return None
+
+    def get_hunt_group_by_id(self, id: str):
+        """ Get the :class:`HuntGroup` instance with the requested ID
+        Args:
+            id (str): The HuntGroup ID
+
+        Returns:
+            HuntGroup: The :class:`HuntGroup` instance
+
+        """
+        for hg in self.hunt_groups:
+            if hg.id == id:
+                return hg
+        return None
+
     def get_hunt_groups(self):
         """Get the Hunt Groups for an Organization.
 
