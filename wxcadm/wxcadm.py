@@ -265,8 +265,6 @@ class Org:
         self._csdm = CSDM(self, self._parent._access_token)
 
         # Get all of the people if we aren't told not to
-        if people:
-            self.get_people()
         if locations:
             self.get_locations()
         if xsi:
@@ -275,6 +273,8 @@ class Org:
             self.get_call_queues()
         if hunt_groups:
             self.get_hunt_groups()
+        if people:
+            self.get_people()
         if people_list:
             for person in people_list:
                 self._get_person(person)
@@ -902,7 +902,7 @@ class Person:
         """
         self.email = data['emails'][0]
         self.extension = data.get("extension", "")
-        self.location = data.get("location", "")
+        self.location = data.get("locationId", "")
         self.display_name = data.get("displayName", "")
         self.first_name = data.get("firstName", "")
         self.last_name = data.get("lastName", "")
@@ -1768,7 +1768,7 @@ class HuntGroup:
         """The Webex ID of the Hunt Group"""
         self.name: str = name
         """The name of the Hunt Group"""
-        self.location: str = location
+        self.location_id: str = location
         """The Location ID associated with the Hunt Group"""
         self.enabled: bool = enabled
         """Whether the Hunt Group is enabled or not"""
