@@ -1122,6 +1122,47 @@ class Person:
         self.caller_id = self.__get_webex_data(f"v1/people/{self.id}/features/callerId")
         return self.caller_id
 
+    def set_caller_id(self, name: str, number: str):
+        """ Change the Caller ID for a Person
+
+        Args:
+            name (str): The name to set as the Caller ID Name. Also accepts keywords: ``direct`` sets the name to the
+                user's name in Webex. ``location`` sets the name to the name of the Location.
+            number (str): The number to set as the Caller ID.  Also accepts keywords: ``direct`` sets the number to the
+                user's DID in Webex. ``location`` sets the name to the main number of the Location.
+
+        Returns:
+            bool: True on success
+
+        Raises:
+            wxcadm.exceptions.APIError: Raised when there is a problem with the API call
+
+        """
+        payload = {}
+        # Handle the possible number values
+        if number.lower() == "direct":
+            payload['selected'] = "DIRECT_LINE"
+        elif number.lower() == "location":
+            payload['selected'] = "LOCATION_NUMBER"
+        else:
+            payload['selected'] = "CUSTOM"
+            payload['customNumber'] = number
+        # Then deal with possible name values
+        if name.lower() == "direct":
+            payload['externalCallerIdNamePolicy'] = "DIRECT_LINE"
+        elif name.lower() == "location":
+            payload['externalCallerIdNamePolicy'] = "LOCATION"
+        else:
+            payload['externalCallerIdNamePolicy'] = "OTHER"
+            payload['customExternalCallerIdName'] = name
+
+        r = requests.put(_url_base + f"v1/people/{self.id}/features/callerId",
+                           headers=self._headers, json=payload)
+        if r.ok:
+            return True
+        else:
+            raise APIError(f"CPAPI failed to update Caller ID for Person: {r.text}")
+
     def get_dnd(self):
         logging.info(f"Getting DND for {self.email}")
         self.dnd = self.__get_webex_data(f"v1/people/{self.id}/features/doNotDisturb")
@@ -2548,6 +2589,7 @@ class CPAPI:
             return True
         else:
             raise APIError("CPAPI failed to update Caller ID for Workspace")
+
 
     def get_workspace_calling_location(self, workspace_id: str):
         """ Gets the Location instance associated with a Workspace
