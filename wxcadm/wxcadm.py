@@ -1812,7 +1812,7 @@ class HuntGroup:
 
     def get_config(self):
         """Get the Hunt Group config, including agents"""
-        r = requests.get(_url_base + f"v1/telephony/config/locations/{self.location}/huntGroups/{self.id}",
+        r = requests.get(_url_base + f"v1/telephony/config/locations/{self.location_id}/huntGroups/{self.id}",
                          headers=self.parent._headers)
         response = r.json()
         self.raw_config = response
