@@ -2530,7 +2530,12 @@ class CPAPI:
         }
         r = requests.patch(self._url_base + "features/voicemail/rules",
                            headers=self._headers, json=payload)
-        return r.text
+        if r.ok:
+            return True
+        if r.status_code == 403:
+            raise TokenError("Your API Access Token doesn't have permission to use this API call")
+        else:
+            raise ValueError
 
     def clear_global_vm_pin(self):
         logging.info("Clearing Org-wide default VM PIN")
@@ -2548,8 +2553,10 @@ class CPAPI:
         if pin is not None:
             self.set_global_vm_pin(pin)
 
-        requests.post(self._url_base + f"users/{user_id}/features/voicemail/actions/resetpin/invoke",
+        r = requests.post(self._url_base + f"users/{user_id}/features/voicemail/actions/resetpin/invoke",
                       headers=self._headers)
+        if r.status_code == 403:
+            raise TokenError("Your API Access Token doesn't have permission to use this API call")
 
         if pin is not None:
             self.clear_global_vm_pin()
@@ -2575,8 +2582,10 @@ class CPAPI:
                     next_url = response['paging']['next']
                 else:
                     get_more = False
+            elif r.status_code == 403:
+                raise TokenError("Your API Access Token doesn't have permission to use this API call")
             else:
-                raise APIError("The CPAPI numbers call did not return a successful value")
+                raise APIError(f"The CPAPI numbers call did not return a successful value")
 
         for number in numbers:
             if "owner" in number:
@@ -2615,6 +2624,8 @@ class CPAPI:
                            headers=self._headers, json=payload)
         if r.ok:
             return True
+        elif r.status_code == 403:
+            raise TokenError("Your API Access Token doesn't have permission to use this API call")
         else:
             raise APIError("CPAPI failed to update Caller ID for Workspace")
 
@@ -2641,6 +2652,8 @@ class CPAPI:
         if r.status_code == 200:
             response = r.json()
             location = self._parent.get_location_by_name(response['location']['name'])
+        elif r.status_code == 403:
+            raise TokenError("Your API Access Token doesn't have permission to use this API call")
         else:
             raise APIError("Something went wrong getting the Workspace Calling Location")
         return location
