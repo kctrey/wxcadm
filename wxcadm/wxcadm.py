@@ -1579,6 +1579,26 @@ class XSI:
         self.conference = Conference(self, calls, comment)
         return self.conference
 
+    def answer_call(self, call_id: str = None):
+        """ Answer an incoming call
+
+        If the call_id is not provided, the method will try and answer the latest/only call for the user.
+
+        Args:
+            call_id (str, optional): The call_id to answer
+
+        Returns:
+            Call: The :class:`Call` instance of the answered call. None is returned if no calls can be found.
+
+        """
+        call = self.calls[-1]
+        if call is not None:
+            call.resume()
+            return call
+        else:
+            return None
+
+
     @property
     def calls(self):
         """
