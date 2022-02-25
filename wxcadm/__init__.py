@@ -2,7 +2,7 @@ name = 'wxcadm'
 
 import logging
 
-from .wxcadm import Webex, RedSky
+from .wxcadm import Webex, RedSky, XSIEvents
 from .exceptions import (
     OrgError, LicenseError, APIError, TokenError,
     PutError, XSIError, NotAllowed, CSDMError

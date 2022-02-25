@@ -83,6 +83,7 @@ the two. Stay tuned...
 
    usage/installation
    usage/quickstart
+   whatsnew
    usage/documentation
    usage/xsi
 

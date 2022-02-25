@@ -4,18 +4,18 @@ XSI is an additional set of APIs provided by Webex, specifically related to Webe
 integration to access and control the Call Control platform directly. Some things than can be done with the XSI APIs
 include:
 
-* Embedding a Webex Calling interface into your own Web apps or desktop software
-    * Click-to-dial within your app
-    * Real-time notification of call events
-        * Call Logging
-        * Popup call notifications with custom data from your CRM
-    * Management of in-progress calls
-        * Conference call management
-        * Call Transfer
-        * Hold/Resume/Park
-* Monitor user services and calls in real-time
-    * Advanced CDR generation, tied to business data
-    * Compliance audit
+- Embedding a Webex Calling interface into your own Web apps or desktop software
+    - Click-to-dial within your app
+    - Real-time notification of call events
+        - Call Logging
+        - Popup call notifications with custom data from your CRM
+    - Management of in-progress calls
+        - Conference call management
+        - Call Transfer
+        - Hold/Resume/Park
+- Monitor user services and calls in real-time
+    - Advanced CDR generation, tied to business data
+    - Compliance audit
 
 Getting Started with XSI
 ------------------------
@@ -231,3 +231,62 @@ with the Executive, the call will be placed on behalf of them.
     # If the Assistant wants to "push" the call to the Executive, ringing their devices and allowing them to pick up
     #   the call, the exec_push() method can be used
     call.exec_push()
+
+XSI-Events
+----------
+**wxcadm** now supports XSI-Events! XSI-Events are what allows an external program to monitor everything that happens
+on Webex Calling. Every time a call is placed, received, held, resumes, transferred, etc, generates an XSI Event, which
+can be monitored using **wxcadm**, using the :class:`XSIEvents` class. Behind, the scenes, **wxcadm** creates an Event
+Channel to Webex, which is run in its own thread, to monitor all incoming messages, as well as heartbeat mechanism to
+keep the channel alive. the :meth:`XSIEvents.subscribe()` method allows subscription to various Event Packages provided
+by XSI.
+
+The XSI Events themselves are received by **wxcadm** and converted into Python OrderedDicts, to make them easier to
+access. The content of these events, and what to do with the data received, is not determined by **wxcadm** and is up to
+you to understand. The XSI Interface Spec and the XSI Schema, found
+`here <https://developer.cisco.com/docs/webex-calling/#!developer-docs>`_ provide a better understanding of the Event
+messages themselves. **wxcadm** just takes care of the Channels, Channel Sets, and Subscriptions for you.
+
+Because XSI Events can be delivered asynchronously, the :meth:`XSIEvents.open_channel()` method requires a Python Queue
+as an argument. All messages received will be placed in the Queue where they can be accessed. The size of this Queue is
+defined prior to opening the channel, so you need to think about how often you will be getting the queue entries verusus
+the amount of messages that will be generated. For reference, a single outbound call from a Webex Calling desk phone
+will generate five (6) events:
+
+- xsi:HookStatusEvent
+- xsi:CallOriginatedEvent
+- xsi:CallUpdatedEvent
+- xsi:CallAnsweredEvent
+- xsi:CallReleasedEvent
+- xsi:HookStatusEvent
+
+As you can see, the number of messages in the Queue can grow very quickly, so defining a Queue large enough, and
+processing the Queue data quickly, are important things to consider. Placing a "Queue Processor" in its own thread is
+the recommended approach to processing the Queue data in a timely manner. If your script is only responsible for
+receiving and processing event data, you can simplify with a ```while True:``` loop:
+
+.. code-block:: python
+
+    import queue
+    import wxcadm
+
+    access_token = "Your API Access Token"
+    webex = wxcadm.Webex(access_token, get_xsi=True)
+    # Set up the XSIEvents instance, passing webex.org to it
+    events = wxcadm.XSIEvents(webex.org)
+
+    # Create a queue with an appropriate maxsize.
+    # If you leave the maxsize out, it will be infinite and may consume all of your memory
+    events_queue = queue.Queue(maxsize=100)
+
+    # Open an Events Channel, passing the Queue instance so it knows where to write data
+    events.open_channel(events_queue)
+    # Subscribe to an Event Package. "Advanced Call" gets all of the call-related events
+    events.subscribe("Advanced Call")
+
+    # Start an infinite loop to get the messages as they are placed in Queue
+    while True:
+        event = events_queue.get()
+        print(event['xsi:Event']['xsi:eventData']['@xsi1:type'])
+        # Plus whatever else you want to do with the event message
+

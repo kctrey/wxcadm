@@ -40,6 +40,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="whatsnew.html">What’s New</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/documentation.html">Usage Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/xsi.html">XSI Usage</a></li>
 </ul>
@@ -131,7 +132,7 @@ well as all the People within the Organization. The Org instance will contain al
 Webex Calling service or not. An Org method <code class="docutils literal notranslate"><span class="pre">get_webex_people()</span></code> makes it easy to get only the People that have
 Webex Calling.</p>
 <p>You can obtain a 12-hour access token by logging into <a class="reference external" href="https://developer.webex.com">https://developer.webex.com</a> and visiting the <strong>Getting Started</strong>
-page.</p>
+page. If you want a more permanent access method, you can create a Webex Integration.</p>
 <p>Once you have the access token, the following will initialize the API connection and pull data</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">wxcadm</span>
 
@@ -310,8 +311,20 @@ enhanced to provide capabilities, new methods will be added to <strong>wxcadm</s
 </section>
 <section id="logging">
 <h2>Logging<a class="headerlink" href="#logging" title="Permalink to this headline"></a></h2>
-<p>By default, the module logs to <code class="docutils literal notranslate"><span class="pre">wxcadm.log</span></code>. At the moment, the logs just show the various methods that are invoked
-for API calls to the Webex API.</p>
+<p>By default, the module logs to <code class="docutils literal notranslate"><span class="pre">wxcadm.log</span></code>. Logging defaults to the <code class="docutils literal notranslate"><span class="pre">INFO</span></code> level, which shows API call summary
+information. To change the logging level, call the <code class="xref py py-meth docutils literal notranslate"><span class="pre">wxcadm.set_logging_level()</span></code> method with the desired logging
+level. The <code class="docutils literal notranslate"><span class="pre">DEBUG</span></code> level is useful for seeing detailed API processing, or the logs can be disabled with the <code class="docutils literal notranslate"><span class="pre">NONE</span></code>
+level.</p>
+<section id="set-debug-logging">
+<h3>Set Debug Logging<a class="headerlink" href="#set-debug-logging" title="Permalink to this headline"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">wxcadm</span>
+
+<span class="n">wxcadm</span><span class="o">.</span><span class="n">set_logging_level</span><span class="p">(</span><span class="s2">&quot;debug&quot;</span><span class="p">)</span>
+<span class="c1"># or #</span>
+<span class="n">wxcadm</span><span class="o">.</span><span class="n">set_logging_level</span><span class="p">(</span><span class="s2">&quot;none&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
 </section>
 <section id="data-structure-note">
 <h2>Data Structure Note<a class="headerlink" href="#data-structure-note" title="Permalink to this headline"></a></h2>
@@ -330,6 +343,10 @@ the two. Stay tuned…</p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="whatsnew.html">What’s New</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="whatsnew.html#v2-0-0">v2.0.0</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="usage/documentation.html">Usage Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="usage/documentation.html#common-webex-use-cases">Common Webex Use Cases</a></li>
 </ul>
@@ -337,6 +354,7 @@ the two. Stay tuned…</p>
 <li class="toctree-l1"><a class="reference internal" href="usage/xsi.html">XSI Usage</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="usage/xsi.html#getting-started-with-xsi">Getting Started with XSI</a></li>
 <li class="toctree-l2"><a class="reference internal" href="usage/xsi.html#common-xsi-use-cases">Common XSI Use Cases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/xsi.html#xsi-events">XSI-Events</a></li>
 </ul>
 </li>
 </ul>

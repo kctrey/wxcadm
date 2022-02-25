@@ -1,8 +1,15 @@
 import json.decoder
 import time
+import uuid
+import re
+
 import requests
 import logging
 import base64
+from threading import Thread, Event
+
+import xmltodict
+
 from .exceptions import *
 
 # TODO: There is a package-wide problem where we have Webex-native data and instance attributes that we write
@@ -110,11 +117,11 @@ class Webex:
                 not every Org has XSI capability
             get_hunt_groups (bool, optional): Whether to get the Hunt Groups for each Org. Defaults to False.
             get_call_queues (bool, optional): Whether to get the Call Queues for each Org. Defaults to False.
-            fast_mode (bool, optional): **BETA** When possible, optimize the API calls to Webex to work more quickly,
+            fast_mode (bool, optional): When possible, optimize the API calls to Webex to work more quickly,
                 sometimes at the expense of not getting as much data. Use this option only if you have a script that
                 runs very slowly, especially during the Webex initialization when collecting people.
             people_list (list, optional): A list of people, by ID or email, to get instead of getting all People.
-                **Note that this ovverrides the ``get_people`` argument, only fetching the people in ``people_list``
+                **Note** that this ovverrides the ``get_people`` argument, only fetching the people in ``people_list``
 
         Returns:
             Webex: The Webex instance
@@ -1119,6 +1126,8 @@ class Person:
             dict: The `Person.vm_config` attribute
 
         """
+        if not self.vm_config:
+            self.get_vm_config()
         if email is None:
             email = self.email
         self.vm_config['emailCopyOfMessage']['enabled'] = True
@@ -1129,7 +1138,37 @@ class Person:
             return self.vm_config
 
     def disable_vm_to_email(self, push=True):
+        """ Change the Voicemail config to disable sending a copy of VMs to specified email address.
+
+        Args:
+            push (bool, optional): Whether to immediately push the change to Webex. Defaults to True.
+
+        Returns:
+            dict: The `Person.vm_config` attribute
+
+        """
+        if not self.vm_config:
+            self.get_vm_config()
         self.vm_config['emailCopyOfMessage']['enabled'] = False
+        if push:
+            return self.push_vm_config()
+        else:
+            return self.vm_config
+
+    def set_voicemail_rings(self, rings: int, push=True):
+        """ Set the number of rings before an Unanswered call is sent to Voicemail
+
+        Args:
+            rings (int): The number of rings
+            push (bool, optional): Whether to immediately push the change to Webex. Defaults to True.
+
+        Returns:
+            dict: The `Person.vm_config` attribute
+
+        """
+        if not self.vm_config:
+            self.get_vm_config()
+        self.vm_config['sendUnansweredCalls']['numberOfRings'] = rings
         if push:
             return self.push_vm_config()
         else:
@@ -1754,6 +1793,174 @@ class XSI:
             else:
                 self.services[service['name']['$']] = True
         return self.services
+
+class XSIEvents:
+    def __init__(self, parent: Org):
+        """ Initialize an XSIEvents instance to provide access to XSI-Events
+
+        Args:
+            parent (Org): The Webex.Org instance that these Events are associated with. Currently, only Org-level
+                events can be monitored. User-level subscriptions will be added later.
+        """
+        self._parent = parent
+        self._headers = parent._headers
+        self.events_endpoint = parent.xsi['events_endpoint']
+        self.channel_endpoint = parent.xsi['events_channel_endpoint']
+        self.channel_set_id = ""
+        self.channel_id = None
+        self.xsp_ip = ""
+        self.subscriptions = []
+
+    def open_channel(self, queue):
+        """ Open an EXI Events channel and start pushing Events into the queue.
+
+        For now, this only accepts a Queue instance as the queue argument.
+
+        Args:
+            queue (Queue): The Queue instance to place events into
+
+        Returns:
+            bool: True on successful channel creation
+
+        """
+        channel_thread = Thread(target=self._channel, args=[queue], daemon=True)
+        channel_thread.start()
+        # Wait for the channel to set up before starting heartbeats
+        time.sleep(2)
+        # Start sending heartbeats on another thread
+        heartbeats_thread = Thread(target=self._heartbeats, args=[self.channel_id], daemon=True)
+        heartbeats_thread.start()
+        return True
+
+    def subscribe(self, event_package):
+        """ Subscribe to an Event Package over the channel opened with :meth:`open_channel()`
+
+        Args:
+            event_package (str): The name of the Event Package to subscribe to.
+
+        Returns:
+            str: The Subscription ID. False is returned if the subscription fails.
+
+        """
+        #TODO Must figure out where I can get the Enterprise identifier for subscriptions
+        enterprise = 'WMYWE170606'
+        logging.info(f"Subscribing to: {event_package} for {enterprise} on channel set {self.channel_set_id}")
+        payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
+                  '<Subscription xmlns=\"http://schema.broadsoft.com/xsi\">' \
+                  f'<event>{event_package}</event>' \
+                  f'<expires>7200</expires><channelSetId>{self.channel_set_id}</channelSetId>' \
+                  '<applicationId>wxcadm</applicationId></Subscription>'
+        r = requests.post(self.events_endpoint + f"/v2.0/serviceprovider/{enterprise}",
+                          headers=self._headers, data=payload)
+        if r.ok:
+            response_dict = xmltodict.parse(r.text)
+            subscription_id = response_dict['Subscription']['subscriptionId']
+            logging.debug(f"Subscription ID: {subscription_id}")
+            # Add a "refresh_time" to the subscription to keep it alive latee
+            response_dict['last_refresh'] = time.time()
+            self.subscriptions.append(response_dict)
+            return subscription_id
+        else:
+            return False
+
+    def _channel(self, queue):
+        self.channel_set_id = uuid.uuid4()
+        logging.debug(f"Channel Set ID: {self.channel_set_id}")
+        payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
+                  '<Channel xmlns=\"http://schema.broadsoft.com/xsi\">' \
+                  f'<channelSetId>{self.channel_set_id}</channelSetId>' \
+                  '<priority>1</priority>' \
+                  '<weight>50</weight>' \
+                  '<expires>7200</expires>' \
+                  '</Channel>'
+
+        logging.debug("Sending request")
+
+        r = requests.post(self.channel_endpoint + "/v2.0/channel", headers=self._headers, data=payload, stream=True)
+        # Get the real IP of the remote server so we can send subsequent messages to that
+        ip, port = r.raw._connection.sock.getpeername()
+        logging.debug(f"Received response from {ip}. Caching for future requests.")
+        self.xsp_ip = str(ip)
+        #self.events_endpoint = f"https://{ip}/com.broadsoft.xsi-events"
+        chars = ""
+        last_refresh = time.time()
+        for char in r.iter_content():
+            decoded_char = char.decode('utf-8')
+            chars += decoded_char
+            # logging.info(chars)
+            if "</Channel>" in chars:
+                m = re.search("<channelId>(.+)<\/channelId>", chars)
+                self.channel_id = m.group(1)
+                chars = ""
+            if "<ChannelHeartBeat xmlns=\"http://schema.broadsoft.com/xsi\"/>" in chars:
+                logging.debug("Heartbeat received on channel")
+                # Check how long since a channel refresh and refresh if needed
+                time_now = time.time()
+                if time_now - last_refresh >= 3600:
+                    logging.debug("Refreshing channel expiration for 7200 seconds")
+                    self._refresh_channel()
+                    last_refresh = time.time()
+                # Check any subscriptions and refresh them while we are at it
+                for subscription in self.subscriptions:
+                    if time_now - subscription['last_refresh'] >= 3600:
+                        subscription_id = subscription['Subscription']['subscriptionId']
+                        logging.debug(f"Refreshing subscription: {subscription_id}")
+                        self._refresh_subscription(subscription_id)
+                        subscription['last_refresh'] = time.time()
+                chars = ""
+            if "</xsi:Event>" in chars:
+                event = chars
+                logging.debug(f"Full Event: {event}")
+                message_dict = xmltodict.parse(event)
+                queue.put(message_dict)
+                # Reset ready for new message
+                chars = ""
+                self._ack_event(message_dict['xsi:Event']['xsi:eventID'], r.cookies)
+            if decoded_char == "\n":
+                # Discard this for now
+                #logging.debug(f"Discard Line: {chars}")
+                chars = ""
+        logging.debug("Channel loop ended")
+
+    def _refresh_subscription(self, subscription_id):
+        payload = "<Subscription xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Subscription>"
+        r = requests.put(self.events_endpoint + f"/v2.0/subscription/{subscription_id}",
+                         headers=self._headers, data=payload)
+
+    def _refresh_channel(self):
+        payload = "<Channel xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Channel>"
+        r = requests.put(self.events_endpoint + f"/v2.0/channel/{self.channel_id}",
+                         headers=self._headers, data=payload)
+
+    def _ack_event(self, event_id, cookies):
+        payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
+                  '<EventResponse xmlns=\"http://schema.broadsoft.com/xsi\">' \
+                  f'<eventID>{event_id}</eventID>' \
+                  '<statusCode>200</statusCode>' \
+                  '<reason>OK</reason>' \
+                  '</EventResponse>'
+        logging.debug(f"Acking event: {event_id}")
+        r = requests.post(self.events_endpoint + "/v2.0/channel/eventresponse",
+                          headers=self._headers, data=payload, cookies=cookies)
+        return True
+
+    def _heartbeats(self, channel_id):
+        from forcediphttpsadapter.adapters import ForcedIPHTTPSAdapter
+        url = self.events_endpoint
+        session = requests.Session()
+        session.mount(url, ForcedIPHTTPSAdapter(dest_ip=str(self.xsp_ip)))
+        while channel_id:
+            logging.debug(f"Sending heartbeat for channel: {channel_id}")
+            r = session.put(self.events_endpoint + f"/v2.0/channel/{channel_id}/heartbeat",
+                             headers=self._headers, stream=True)
+            ip, port = r.raw._connection.sock.getpeername()
+            if r.ok:
+                logging.debug(f"{ip} - Heartbeat successful")
+            else:
+                logging.debug(f"{ip} - Heartbeat failed: {r.text} [{r.status_code}]")
+            # Send a heartbeat every 15 seconds
+            time.sleep(15)
+        return True
 
 
 class HuntGroup:
@@ -2677,6 +2884,90 @@ class CPAPI:
         else:
             raise APIError("Something went wrong getting the Workspace Calling Location")
         return location
+
+
+class Terminus:
+    """The Terminus class handles API calls using the Terminus API."""
+
+    def __init__(self, org: Org, access_token: str):
+        self._parent = org
+        self._access_token = access_token
+        self._headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Calculate the "customer" ID from the Org ID
+        org_id_bytes = base64.b64decode(org.id + "===")
+        org_id_decoded = org_id_bytes.decode("utf-8")
+        self._customer = org_id_decoded.split("/")[-1]
+
+        self._url_base = f"https://terminus.huron-dev.com/api/v2/customers/{self._customer}/"
+        self._server = "https://terminus.huron-dev.com"
+
+    def get_locations(self):
+        logging.info("Getting locations from Terminus")
+        r = requests.get(self._url_base + "locations", headers=self._headers)
+        if r.ok:
+            locations = r.json()
+            for location in locations:
+                webex_location = self._parent.get_location_by_name(location['name'])
+                webex_location.terminus_config = location
+            return locations
+        else:
+            raise APIError("Your API Access Token does not have permission to get the locations from Terminus.")
+
+
+class Bifrost:
+    """The Bifrost class handles API calls using the Bifrost API."""
+
+    def __init__(self, org: Org, access_token: str):
+        self._parent = org
+        self._access_token = access_token
+        self._headers = {"Authorization": f"Bearer {access_token}"}
+
+        # Calculate the "customer" ID from the Org ID
+        org_id_bytes = base64.b64decode(org.id + "===")
+        org_id_decoded = org_id_bytes.decode("utf-8")
+        self._customer = org_id_decoded.split("/")[-1]
+
+        self._url_base = f"https://bifrost-a.wbx2.com/api/v2/customers/{self._customer}/"
+        self._server = "https://bifrost-a.wbx2.com"
+
+    def get_location(self):
+        locations = []
+        params = {"limit": 2000, "offset": 0}   # Default values for the numbers pull
+
+        get_more = True     # Bool to let us know to keep pulling more numbers
+        next_url = None
+        while get_more:
+            if next_url is None:
+                r = requests.get(self._url_base + f"locations", headers=self._headers, params=params)
+            else:
+                r = requests.get(next_url, headers=self._headers)
+            if r.status_code == 200:
+                response = r.json()
+                locations.extend(response['locations'])
+                if "next" in response['paging']:
+                    get_more = True
+                    next_url = response['paging']['next']
+                else:
+                    get_more = False
+            elif r.status_code == 403:
+                raise TokenError("Your API Access Token doesn't have permission to use this API call")
+            else:
+                raise APIError(f"The Bifrost locations call did not return a successful value")
+
+        for location in locations:
+            if "owner" in number:
+                webex
+                if "type" in number['owner'] and number['owner']['type'] == "USER":
+                    user_str = f"ciscospark://us/PEOPLE/{number['owner']['id']}"
+                    user_bytes = user_str.encode("utf-8")
+                    base64_bytes = base64.b64encode(user_bytes)
+                    base64_id = base64_bytes.decode('utf-8')
+                    base64_id = base64_id.rstrip("=")
+                    number['owner']['id'] = base64_id
+
+        return numbers
+
 
 
 class CSDM:

@@ -6,7 +6,7 @@ Webex Calling service or not. An Org method ``get_webex_people()`` makes it easy
 Webex Calling.
 
 You can obtain a 12-hour access token by logging into https://developer.webex.com and visiting the **Getting Started**
-page.
+page. If you want a more permanent access method, you can create a Webex Integration.
 
 Once you have the access token, the following will initialize the API connection and pull data
 

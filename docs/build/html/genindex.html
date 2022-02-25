@@ -38,6 +38,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="whatsnew.html">What’s New</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/documentation.html">Usage Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/xsi.html">XSI Usage</a></li>
 </ul>
@@ -139,10 +140,10 @@
 </li>
       <li><a href="reference/RedSkyBuilding.html#wxcadm.wxcadm.RedSkyBuilding.add_location">add_location() (wxcadm.wxcadm.RedSkyBuilding method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/RedSky.html#wxcadm.wxcadm.RedSky.add_mac_discovery">add_mac_discovery() (wxcadm.wxcadm.RedSky method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Location.html#wxcadm.wxcadm.Location.address">address (wxcadm.wxcadm.Location attribute)</a>
 
       <ul>
@@ -152,6 +153,8 @@
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.alternate_numbers">alternate_numbers (wxcadm.wxcadm.XSI property)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.anonymous_call_rejection">anonymous_call_rejection (wxcadm.wxcadm.XSI property)</a>
+</li>
+      <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.answer_call">answer_call() (wxcadm.wxcadm.XSI method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.assign_wxc">assign_wxc() (wxcadm.wxcadm.Person method)</a>
 </li>
@@ -283,6 +286,8 @@
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.get_call_forwarding">get_call_forwarding() (wxcadm.wxcadm.Person method)</a>
 </li>
+      <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_call_queue_by_id">get_call_queue_by_id() (wxcadm.wxcadm.Org method)</a>
+</li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_call_queues">get_call_queues() (wxcadm.wxcadm.Org method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.get_call_recording">get_call_recording() (wxcadm.wxcadm.Person method)</a>
@@ -297,16 +302,18 @@
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.get_full_config">get_full_config() (wxcadm.wxcadm.Person method)</a>
 </li>
+      <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_hunt_group_by_id">get_hunt_group_by_id() (wxcadm.wxcadm.Org method)</a>
+</li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_hunt_groups">get_hunt_groups() (wxcadm.wxcadm.Org method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.get_intercept">get_intercept() (wxcadm.wxcadm.Person method)</a>
 </li>
       <li><a href="reference/RedSky.html#wxcadm.wxcadm.RedSky.get_ip_range_discovery">get_ip_range_discovery() (wxcadm.wxcadm.RedSky method)</a>
 </li>
-      <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_license_name">get_license_name() (wxcadm.wxcadm.Org method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_license_name">get_license_name() (wxcadm.wxcadm.Org method)</a>
+</li>
       <li><a href="reference/RedSky.html#wxcadm.wxcadm.RedSky.get_lldp_discovery">get_lldp_discovery() (wxcadm.wxcadm.RedSky method)</a>
 </li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_location_by_name">get_location_by_name() (wxcadm.wxcadm.Org method)</a>
@@ -543,18 +550,22 @@
 </li>
       <li><a href="reference/Device.html#wxcadm.wxcadm.Device.serial">serial (wxcadm.wxcadm.Device attribute)</a>
 </li>
+      <li><a href="reference/Person.html#wxcadm.wxcadm.Person.set_caller_id">set_caller_id() (wxcadm.wxcadm.Person method)</a>
+</li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.set_calling_only">set_calling_only() (wxcadm.wxcadm.Person method)</a>
+</li>
+      <li><a href="reference/Person.html#wxcadm.wxcadm.Person.set_voicemail_rings">set_voicemail_rings() (wxcadm.wxcadm.Person method)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.single_number_reach">single_number_reach (wxcadm.wxcadm.XSI property)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Location.html#wxcadm.wxcadm.Location.spark_id">spark_id (wxcadm.wxcadm.Location property)</a>
 
       <ul>
         <li><a href="reference/Person.html#wxcadm.wxcadm.Person.spark_id">(wxcadm.wxcadm.Person property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.start_xsi">start_xsi() (wxcadm.wxcadm.Person method)</a>
 </li>
       <li><a href="reference/Call.html#wxcadm.wxcadm.Call.status">status (wxcadm.wxcadm.Call property)</a>
