@@ -286,6 +286,11 @@ class Org:
             for person in people_list:
                 self._get_person(person)
 
+    @property
+    def spark_id(self):
+        org_id_bytes = base64.b64decode(self.id + "===")
+        spark_id = org_id_bytes.decode("utf-8")
+        return spark_id
 
     def __str__(self):
         return self.name
@@ -1806,6 +1811,7 @@ class XSIEvents:
         self._headers = parent._headers
         self.events_endpoint = parent.xsi['events_endpoint']
         self.channel_endpoint = parent.xsi['events_channel_endpoint']
+        self.application_id = uuid.uuid4()
         self.channel_set_id = ""
         self.channel_id = None
         self.xsp_ip = ""
@@ -1842,14 +1848,13 @@ class XSIEvents:
             str: The Subscription ID. False is returned if the subscription fails.
 
         """
-        #TODO Must figure out where I can get the Enterprise identifier for subscriptions
-        enterprise = 'WMYWE170606'
-        logging.info(f"Subscribing to: {event_package} for {enterprise} on channel set {self.channel_set_id}")
+        enterprise = self._parent.spark_id.split("/")[-1]
+        logging.info(f"Subscribing to: {event_package} for {self._parent.name} on channel set {self.channel_set_id}")
         payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
                   '<Subscription xmlns=\"http://schema.broadsoft.com/xsi\">' \
                   f'<event>{event_package}</event>' \
                   f'<expires>7200</expires><channelSetId>{self.channel_set_id}</channelSetId>' \
-                  '<applicationId>wxcadm</applicationId></Subscription>'
+                  f'<applicationId>{self.application_id}</applicationId></Subscription>'
         r = requests.post(self.events_endpoint + f"/v2.0/serviceprovider/{enterprise}",
                           headers=self._headers, data=payload)
         if r.ok:
@@ -1872,6 +1877,7 @@ class XSIEvents:
                   '<priority>1</priority>' \
                   '<weight>50</weight>' \
                   '<expires>7200</expires>' \
+                  f'<applicationId>{self.application_id}</applicationId>' \
                   '</Channel>'
 
         logging.debug("Sending request")
@@ -1881,7 +1887,6 @@ class XSIEvents:
         ip, port = r.raw._connection.sock.getpeername()
         logging.debug(f"Received response from {ip}. Caching for future requests.")
         self.xsp_ip = str(ip)
-        #self.events_endpoint = f"https://{ip}/com.broadsoft.xsi-events"
         chars = ""
         last_refresh = time.time()
         for char in r.iter_content():
@@ -2956,17 +2961,10 @@ class Bifrost:
                 raise APIError(f"The Bifrost locations call did not return a successful value")
 
         for location in locations:
-            if "owner" in number:
-                webex
-                if "type" in number['owner'] and number['owner']['type'] == "USER":
-                    user_str = f"ciscospark://us/PEOPLE/{number['owner']['id']}"
-                    user_bytes = user_str.encode("utf-8")
-                    base64_bytes = base64.b64encode(user_bytes)
-                    base64_id = base64_bytes.decode('utf-8')
-                    base64_id = base64_id.rstrip("=")
-                    number['owner']['id'] = base64_id
-
-        return numbers
+            if "name" in location:
+                webex_location = self._parent.get_location_by_name(location['name'])
+                webex_location.bifrost_config = location
+        return locations
 
 
 

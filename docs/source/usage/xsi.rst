@@ -235,11 +235,11 @@ with the Executive, the call will be placed on behalf of them.
 XSI-Events
 ----------
 **wxcadm** now supports XSI-Events! XSI-Events are what allows an external program to monitor everything that happens
-on Webex Calling. Every time a call is placed, received, held, resumes, transferred, etc, generates an XSI Event, which
-can be monitored using **wxcadm**, using the :class:`XSIEvents` class. Behind, the scenes, **wxcadm** creates an Event
-Channel to Webex, which is run in its own thread, to monitor all incoming messages, as well as heartbeat mechanism to
-keep the channel alive. the :meth:`XSIEvents.subscribe()` method allows subscription to various Event Packages provided
-by XSI.
+on Webex Calling. Every time a call is placed, received, held, resumed, transferred, etc, and XSI Event is generated,
+which can be monitored using **wxcadm**, using the :class:`XSIEvents` class. Behind, the scenes, **wxcadm** creates an
+Event Channel to Webex, which is run in its own thread, to monitor all incoming messages, as well as heartbeat mechanism
+to keep the channel alive. the :meth:`XSIEvents.subscribe()` method allows subscription to various Event Packages
+provided by XSI.
 
 The XSI Events themselves are received by **wxcadm** and converted into Python OrderedDicts, to make them easier to
 access. The content of these events, and what to do with the data received, is not determined by **wxcadm** and is up to
@@ -282,7 +282,7 @@ receiving and processing event data, you can simplify with a ```while True:``` l
     # Open an Events Channel, passing the Queue instance so it knows where to write data
     events.open_channel(events_queue)
     # Subscribe to an Event Package. "Advanced Call" gets all of the call-related events
-    events.subscribe("Advanced Call")
+    events.subscribe(["Advanced Call"])
 
     # Start an infinite loop to get the messages as they are placed in Queue
     while True:
