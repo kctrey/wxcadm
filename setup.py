@@ -15,7 +15,9 @@ packages = ['wxcadm']
 
 requires = [
     'requests>=2.26.0',
-    'aiocometd==0.4.5'
+    'srvlookup>=2.0.0',
+    'forcediphttpsadapter>=1.0.2',
+    'xmltodict>=0.12.0'
 ]
 
 with open('README.md', 'r', encoding='utf-8') as f:
@@ -23,7 +25,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='wxcadm',
-    version='1.1.3',
+    version='2.0.0',
     packages=packages,
     url='https://github.com/kctrey/wxcadm',
     license='GPL-3.0',

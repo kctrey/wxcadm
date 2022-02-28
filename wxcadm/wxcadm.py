@@ -9,6 +9,7 @@ import base64
 from threading import Thread, Event
 
 import xmltodict
+import srvlookup
 
 from .exceptions import *
 
@@ -526,6 +527,7 @@ class Org:
         params = {"callingData": "true", **self._params}
         response = webex_api_call("get", "v1/organizations/" + self.id, headers=self._headers, params=params)
         if "xsiActionsEndpoint" in response:
+            self.xsi['xsi_domain'] = response['xsiDomain']
             self.xsi['actions_endpoint'] = response['xsiActionsEndpoint']
             self.xsi['events_endpoint'] = response['xsiEventsEndpoint']
             self.xsi['events_channel_endpoint'] = response['xsiEventsChannelEndpoint']
@@ -1811,9 +1813,11 @@ class XSIEvents:
         self._headers = parent._headers
         self.events_endpoint = parent.xsi['events_endpoint']
         self.channel_endpoint = parent.xsi['events_channel_endpoint']
+        self.xsi_domain = parent.xsi['xsi_domain']
         self.application_id = uuid.uuid4()
         self.enterprise = self._parent.spark_id.split("/")[-1]
         self.channel_set_id = ""
+        self.channels = []
         self.channel_id = None
         self.xsp_ip = ""
         self.subscriptions = []
@@ -1830,7 +1834,11 @@ class XSIEvents:
             bool: True on successful channel creation
 
         """
-        channel_thread = Thread(target=self._channel, args=[queue], daemon=True)
+        logging.debug(f"Getting SRV records for {self.xsi_domain}")
+
+        #srv_records = srvlookup.lookup("xsi-client", "TCP", self.xsi_domain)
+        # TODO - Eventually I want to use the SRV records to create multiple channels
+        channel_thread = Thread(target=self._channel_daemon, args=[queue], daemon=True)
         channel_thread.start()
         # Wait for the channel to set up before starting heartbeats
         time.sleep(2)
@@ -1868,7 +1876,7 @@ class XSIEvents:
         else:
             return False
 
-    def _channel(self, queue):
+    def _channel_daemon(self, queue):
         self.channel_set_id = uuid.uuid4()
         logging.debug(f"Channel Set ID: {self.channel_set_id}")
         payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
@@ -1882,7 +1890,9 @@ class XSIEvents:
 
         logging.debug("Sending request")
 
-        r = requests.post(self.channel_endpoint + "/v2.0/channel", headers=self._headers, data=payload, stream=True)
+        #r = requests.post(self.channel_endpoint + "/v2.0/channel", headers=self._headers, data=payload, stream=True)
+        r = requests.post(f"https://api-rialto.broadcloudpbx.com/com.broadsoft.async/com.broadsoft.xsi-events/v2.0/channel",
+                          headers=self._headers, data=payload, stream=True)
         # Get the real IP of the remote server so we can send subsequent messages to that
         ip, port = r.raw._connection.sock.getpeername()
         logging.debug(f"Received response from {ip}. Caching for future requests.")
