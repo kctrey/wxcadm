@@ -103,6 +103,8 @@ the two. Stay tuned...
 
    reference/XSI
    reference/Call
+   reference/XSIEvents
+   reference/XSIEventsChannelSet
 
 .. toctree::
     :maxdepth: 2

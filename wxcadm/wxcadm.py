@@ -1828,7 +1828,7 @@ class XSIEvents:
             queue (Queue): The Queue instance to place events into
 
         Returns:
-            bool: True on successful channel creation
+            XSIEventsChannelSet: The :class:`XSIEventsChannelSet` instance that was opened
 
         """
         self.queue = queue
@@ -1840,6 +1840,14 @@ class XSIEvents:
 
 class XSIEventsChannelSet:
     def __init__(self, parent: XSIEvents):
+        """ Inititalize an XSIEventsChannelSet instance to manage channels and subscriptions.
+
+        Calling this method, which is normally done with the :meth:`XSIEvents.open_channel()` method, automatically
+        creates the channels to each XSP in the region and begins send heartbeat messages on them.
+
+        Args:
+            parent (XSIEvents): The XSIEvents instance to which this ChanelSet belongs.
+        """
         self.parent = parent
         self._headers = self.parent._headers
         self.id = uuid.uuid4()
@@ -1867,13 +1875,13 @@ class XSIEventsChannelSet:
             heartbeat_thread.start()
 
     def subscribe(self, event_package):
-        """ Subscribe to an Event Package over the channel opened with :meth:`open_channel()`
+        """ Subscribe to an Event Package over the channel opened with :meth:`XSIEvents.open_channel()`
 
         Args:
             event_package (str): The name of the Event Package to subscribe to.
 
         Returns:
-            str: The Subscription ID. False is returned if the subscription fails.
+            XSIEventsSubscription: The Subscription instance. False is returned if the subscription fails.
 
         """
         subscription = XSIEventsSubscription(self, event_package)
@@ -2008,8 +2016,6 @@ class XSIEventsChannel:
         payload = "<Channel xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Channel>"
         r = requests.put(self.events_endpoint + f"/v2.0/channel/{self.id}",
                          headers=self._headers, data=payload)
-
-
 
 
 class HuntGroup:

@@ -251,7 +251,7 @@ Because XSI Events can be delivered asynchronously, the :meth:`XSIEvents.open_ch
 as an argument. All messages received will be placed in the Queue where they can be accessed. The size of this Queue is
 defined prior to opening the channel, so you need to think about how often you will be getting the queue entries verusus
 the amount of messages that will be generated. For reference, a single outbound call from a Webex Calling desk phone
-will generate five (6) events:
+will generate six (6) events:
 
 - xsi:HookStatusEvent
 - xsi:CallOriginatedEvent
@@ -280,9 +280,9 @@ receiving and processing event data, you can simplify with a ```while True:``` l
     events_queue = queue.Queue(maxsize=100)
 
     # Open an Events Channel, passing the Queue instance so it knows where to write data
-    events.open_channel(events_queue)
+    channel = events.open_channel(events_queue)
     # Subscribe to an Event Package. "Advanced Call" gets all of the call-related events
-    events.subscribe(["Advanced Call"])
+    subscription = channel.subscribe(["Advanced Call"])
 
     # Start an infinite loop to get the messages as they are placed in Queue
     while True:
