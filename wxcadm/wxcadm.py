@@ -1816,14 +1816,11 @@ class XSIEvents:
         self.xsi_domain = parent.xsi['xsi_domain']
         self.application_id = uuid.uuid4()
         self.enterprise = self._parent.spark_id.split("/")[-1]
-        self.channel_set_id = ""
-        self.channels = []
-        self.channel_id = None
-        self.xsp_ip = ""
-        self.subscriptions = []
+        self.channel_sets = []
+        self.queue = None
 
     def open_channel(self, queue):
-        """ Open an EXI Events channel and start pushing Events into the queue.
+        """ Open an XSI Events channel and start pushing Events into the queue.
 
         For now, this only accepts a Queue instance as the queue argument.
 
@@ -1834,18 +1831,40 @@ class XSIEvents:
             bool: True on successful channel creation
 
         """
-        logging.debug(f"Getting SRV records for {self.xsi_domain}")
+        self.queue = queue
+        logging.debug("Initializing Channel Set")
+        channel_set = XSIEventsChannelSet(self)
+        self.channel_sets.append(channel_set)
+        return channel_set
 
-        #srv_records = srvlookup.lookup("xsi-client", "TCP", self.xsi_domain)
-        # TODO - Eventually I want to use the SRV records to create multiple channels
-        channel_thread = Thread(target=self._channel_daemon, args=[queue], daemon=True)
-        channel_thread.start()
-        # Wait for the channel to set up before starting heartbeats
-        time.sleep(2)
-        # Start sending heartbeats on another thread
-        heartbeats_thread = Thread(target=self._heartbeats, args=[self.channel_id], daemon=True)
-        heartbeats_thread.start()
-        return True
+
+class XSIEventsChannelSet:
+    def __init__(self, parent: XSIEvents):
+        self.parent = parent
+        self._headers = self.parent._headers
+        self.id = uuid.uuid4()
+        logging.debug(f"Channel Set ID: {self.id}")
+        self.channels = []
+        self.subscriptions = []
+        self.queue = self.parent.queue
+
+        # Now init the channels. Get the SRV records to ensure they get opended with each XSP
+        srv_records = srvlookup.lookup("xsi-client", "TCP", self.parent.xsi_domain)
+        for record in srv_records:
+            my_endpoint = re.sub(self.parent.xsi_domain, record.host, self.parent.channel_endpoint)
+            my_events_endpoint = re.sub(self.parent.xsi_domain, record.host, self.parent.events_endpoint)
+            logging.debug(f"Establishing channel with endpoint: {record.host}")
+            channel = XSIEventsChannel(self, my_endpoint, my_events_endpoint)
+            self.channels.append(channel)
+
+        # Now that we have the channels build, start the daemons (threads) for each
+        for channel in self.channels:
+            channel_thread = Thread(target=channel.channel_daemon, daemon=True)
+            channel_thread.start()
+            # Wait a few seconds to start the heartbeats
+            time.sleep(2)
+            heartbeat_thread = Thread(target=channel.heartbeat_daemon, daemon=True)
+            heartbeat_thread.start()
 
     def subscribe(self, event_package):
         """ Subscribe to an Event Package over the channel opened with :meth:`open_channel()`
@@ -1857,95 +1876,121 @@ class XSIEvents:
             str: The Subscription ID. False is returned if the subscription fails.
 
         """
-        logging.info(f"Subscribing to: {event_package} for {self._parent.name} on channel set {self.channel_set_id}")
-        payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
-                  '<Subscription xmlns=\"http://schema.broadsoft.com/xsi\">' \
-                  f'<event>{event_package}</event>' \
-                  f'<expires>7200</expires><channelSetId>{self.channel_set_id}</channelSetId>' \
-                  f'<applicationId>{self.application_id}</applicationId></Subscription>'
-        r = requests.post(self.events_endpoint + f"/v2.0/serviceprovider/{self.enterprise}",
-                          headers=self._headers, data=payload)
-        if r.ok:
-            response_dict = xmltodict.parse(r.text)
-            subscription_id = response_dict['Subscription']['subscriptionId']
-            logging.debug(f"Subscription ID: {subscription_id}")
-            # Add a "refresh_time" to the subscription to keep it alive latee
-            response_dict['last_refresh'] = time.time()
-            self.subscriptions.append(response_dict)
-            return subscription_id
+        subscription = XSIEventsSubscription(self, event_package)
+        if subscription:
+            self.subscriptions.append(subscription)
+            return subscription
         else:
             return False
 
-    def _channel_daemon(self, queue):
-        self.channel_set_id = uuid.uuid4()
-        logging.debug(f"Channel Set ID: {self.channel_set_id}")
+class XSIEventsSubscription:
+    def __init__(self, parent: XSIEventsChannelSet, event_package: str):
+        self.id = ""
+        self.parent = parent
+        self.events_endpoint = self.parent.parent.events_endpoint
+        self._headers = self.parent._headers
+        self.last_refresh = time.time()
+        self.event_package = event_package
+        logging.info(f"Subscribing to: {self.event_package}")
+        payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
+                  '<Subscription xmlns=\"http://schema.broadsoft.com/xsi\">' \
+                  f'<event>{self.event_package}</event>' \
+                  f'<expires>7200</expires><channelSetId>{self.parent.id}</channelSetId>' \
+                  f'<applicationId>{self.parent.parent.application_id}</applicationId></Subscription>'
+        r = requests.post(self.events_endpoint + f"/v2.0/serviceprovider/{self.parent.parent.enterprise}",
+                          headers=self._headers, data=payload)
+        if r.ok:
+            response_dict = xmltodict.parse(r.text)
+            self.id = response_dict['Subscription']['subscriptionId']
+            logging.debug(f"Subscription ID: {self.id}")
+
+    def _refresh_subscription(self):
+        payload = "<Subscription xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Subscription>"
+        r = requests.put(self.events_endpoint + f"/v2.0/subscription/{self.id}",
+                         headers=self._headers, data=payload)
+
+
+class XSIEventsChannel:
+    def __init__(self, parent: XSIEventsChannelSet, endpoint: str, events_endpoint: str):
+        self.parent = parent
+        self._headers = self.parent.parent._headers
+        self.id = ""
+        self.endpoint = endpoint
+        self.events_endpoint = events_endpoint
+        self.queue = self.parent.queue
+        self.active = True
+
+    def channel_daemon(self):
         payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
                   '<Channel xmlns=\"http://schema.broadsoft.com/xsi\">' \
-                  f'<channelSetId>{self.channel_set_id}</channelSetId>' \
+                  f'<channelSetId>{self.parent.id}</channelSetId>' \
                   '<priority>1</priority>' \
                   '<weight>50</weight>' \
                   '<expires>7200</expires>' \
-                  f'<applicationId>{self.application_id}</applicationId>' \
+                  f'<applicationId>{self.parent.parent.application_id}</applicationId>' \
                   '</Channel>'
 
-        logging.debug("Sending request")
-
-        #r = requests.post(self.channel_endpoint + "/v2.0/channel", headers=self._headers, data=payload, stream=True)
-        r = requests.post(f"https://api-rialto.broadcloudpbx.com/com.broadsoft.async/com.broadsoft.xsi-events/v2.0/channel",
-                          headers=self._headers, data=payload, stream=True)
+        logging.debug("Sending Channel Start Request (Streaming)")
+        r = requests.post(
+            f"{self.endpoint}/v2.0/channel",
+            headers=self._headers, data=payload, stream=True)
         # Get the real IP of the remote server so we can send subsequent messages to that
         ip, port = r.raw._connection.sock.getpeername()
-        logging.debug(f"Received response from {ip}. Caching for future requests.")
+        logging.debug(f"Received response from {ip}.")
         self.xsp_ip = str(ip)
         chars = ""
-        last_refresh = time.time()
+        self.last_refresh = time.time()
         for char in r.iter_content():
             decoded_char = char.decode('utf-8')
             chars += decoded_char
             # logging.info(chars)
             if "</Channel>" in chars:
                 m = re.search("<channelId>(.+)<\/channelId>", chars)
-                self.channel_id = m.group(1)
+                self.id = m.group(1)
                 chars = ""
             if "<ChannelHeartBeat xmlns=\"http://schema.broadsoft.com/xsi\"/>" in chars:
                 logging.debug("Heartbeat received on channel")
                 # Check how long since a channel refresh and refresh if needed
                 time_now = time.time()
-                if time_now - last_refresh >= 3600:
+                if time_now - self.last_refresh >= 3600:
                     logging.debug("Refreshing channel expiration for 7200 seconds")
                     self._refresh_channel()
-                    last_refresh = time.time()
+                    self.last_refresh = time.time()
                 # Check any subscriptions and refresh them while we are at it
-                for subscription in self.subscriptions:
-                    if time_now - subscription['last_refresh'] >= 3600:
-                        subscription_id = subscription['Subscription']['subscriptionId']
-                        logging.debug(f"Refreshing subscription: {subscription_id}")
-                        self._refresh_subscription(subscription_id)
-                        subscription['last_refresh'] = time.time()
+                for subscription in self.parent.subscriptions:
+                    if time_now - subscription.last_refresh >= 3600:
+                        logging.debug(f"Refreshing subscription: {subscription.id}")
+                        subscription._refresh_subscription()
+                        subscription.last_refresh = time.time()
                 chars = ""
             if "</xsi:Event>" in chars:
                 event = chars
                 logging.debug(f"Full Event: {event}")
                 message_dict = xmltodict.parse(event)
-                queue.put(message_dict)
+                self.parent.queue.put(message_dict)
                 # Reset ready for new message
                 chars = ""
                 self._ack_event(message_dict['xsi:Event']['xsi:eventID'], r.cookies)
             if decoded_char == "\n":
                 # Discard this for now
-                #logging.debug(f"Discard Line: {chars}")
+                # logging.debug(f"Discard Line: {chars}")
                 chars = ""
         logging.debug("Channel loop ended")
 
-    def _refresh_subscription(self, subscription_id):
-        payload = "<Subscription xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Subscription>"
-        r = requests.put(self.events_endpoint + f"/v2.0/subscription/{subscription_id}",
-                         headers=self._headers, data=payload)
-
-    def _refresh_channel(self):
-        payload = "<Channel xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Channel>"
-        r = requests.put(self.events_endpoint + f"/v2.0/channel/{self.channel_id}",
-                         headers=self._headers, data=payload)
+    def heartbeat_daemon(self):
+        session = requests.Session()
+        while self.active:
+            logging.debug(f"Sending heartbeat for channel: {self.id}")
+            r = session.put(self.events_endpoint + f"/v2.0/channel/{self.id}/heartbeat",
+                            headers=self._headers, stream=True)
+            ip, port = r.raw._connection.sock.getpeername()
+            if r.ok:
+                logging.debug(f"{ip} - Heartbeat successful")
+            else:
+                logging.debug(f"{ip} - Heartbeat failed: {r.text} [{r.status_code}]")
+            # Send a heartbeat every 15 seconds
+            time.sleep(15)
+        return True
 
     def _ack_event(self, event_id, cookies):
         payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
@@ -1959,23 +2004,12 @@ class XSIEvents:
                           headers=self._headers, data=payload, cookies=cookies)
         return True
 
-    def _heartbeats(self, channel_id):
-        from forcediphttpsadapter.adapters import ForcedIPHTTPSAdapter
-        url = self.events_endpoint
-        session = requests.Session()
-        session.mount(url, ForcedIPHTTPSAdapter(dest_ip=str(self.xsp_ip)))
-        while channel_id:
-            logging.debug(f"Sending heartbeat for channel: {channel_id}")
-            r = session.put(self.events_endpoint + f"/v2.0/channel/{channel_id}/heartbeat",
-                             headers=self._headers, stream=True)
-            ip, port = r.raw._connection.sock.getpeername()
-            if r.ok:
-                logging.debug(f"{ip} - Heartbeat successful")
-            else:
-                logging.debug(f"{ip} - Heartbeat failed: {r.text} [{r.status_code}]")
-            # Send a heartbeat every 15 seconds
-            time.sleep(15)
-        return True
+    def _refresh_channel(self):
+        payload = "<Channel xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Channel>"
+        r = requests.put(self.events_endpoint + f"/v2.0/channel/{self.id}",
+                         headers=self._headers, data=payload)
+
+
 
 
 class HuntGroup:
