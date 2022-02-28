@@ -1812,6 +1812,7 @@ class XSIEvents:
         self.events_endpoint = parent.xsi['events_endpoint']
         self.channel_endpoint = parent.xsi['events_channel_endpoint']
         self.application_id = uuid.uuid4()
+        self.enterprise = self._parent.spark_id.split("/")[-1]
         self.channel_set_id = ""
         self.channel_id = None
         self.xsp_ip = ""
@@ -1848,14 +1849,13 @@ class XSIEvents:
             str: The Subscription ID. False is returned if the subscription fails.
 
         """
-        enterprise = self._parent.spark_id.split("/")[-1]
         logging.info(f"Subscribing to: {event_package} for {self._parent.name} on channel set {self.channel_set_id}")
         payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
                   '<Subscription xmlns=\"http://schema.broadsoft.com/xsi\">' \
                   f'<event>{event_package}</event>' \
                   f'<expires>7200</expires><channelSetId>{self.channel_set_id}</channelSetId>' \
                   f'<applicationId>{self.application_id}</applicationId></Subscription>'
-        r = requests.post(self.events_endpoint + f"/v2.0/serviceprovider/{enterprise}",
+        r = requests.post(self.events_endpoint + f"/v2.0/serviceprovider/{self.enterprise}",
                           headers=self._headers, data=payload)
         if r.ok:
             response_dict = xmltodict.parse(r.text)
