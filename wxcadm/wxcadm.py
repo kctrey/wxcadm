@@ -1893,6 +1893,14 @@ class XSIEventsChannelSet:
 
 class XSIEventsSubscription:
     def __init__(self, parent: XSIEventsChannelSet, event_package: str):
+        """ Initialize an XSIEventsSubscription
+
+        Initializing the subscription also sends the subscription to the XSI API over the events_endpoint.
+
+        Args:
+            parent (XSIEventsChannelSet): The XSIEventsChannelSet instance to issue the subscription for.
+            event_package (str): The XSI Event Package to subscribe to.
+        """
         self.id = ""
         self.parent = parent
         self.events_endpoint = self.parent.parent.events_endpoint
@@ -1916,6 +1924,12 @@ class XSIEventsSubscription:
         payload = "<Subscription xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Subscription>"
         r = requests.put(self.events_endpoint + f"/v2.0/subscription/{self.id}",
                          headers=self._headers, data=payload)
+        if r.ok:
+            logging.debug("Subscription refresh succeeded")
+            return True
+        else:
+            logging.debug(f"Subscription refresh failed: {r.text}")
+            return False
 
 
 class XSIEventsChannel:
@@ -1927,6 +1941,7 @@ class XSIEventsChannel:
         self.events_endpoint = events_endpoint
         self.queue = self.parent.queue
         self.active = True
+        self.last_refresh = ""
 
     def channel_daemon(self):
         payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
@@ -1961,7 +1976,7 @@ class XSIEventsChannel:
                 # Check how long since a channel refresh and refresh if needed
                 time_now = time.time()
                 if time_now - self.last_refresh >= 3600:
-                    logging.debug("Refreshing channel expiration for 7200 seconds")
+                    logging.debug(f"Refreshing channel: {self.id}")
                     self._refresh_channel()
                     self.last_refresh = time.time()
                 # Check any subscriptions and refresh them while we are at it
@@ -2016,6 +2031,12 @@ class XSIEventsChannel:
         payload = "<Channel xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Channel>"
         r = requests.put(self.events_endpoint + f"/v2.0/channel/{self.id}",
                          headers=self._headers, data=payload)
+        if r.ok:
+            logging.debug("Channel refresh succeeded")
+            return True
+        else:
+            logging.debug(f"Channel refresh failed: {r.text}")
+            return False
 
 
 class HuntGroup:
@@ -3326,7 +3347,7 @@ class RedSky:
 
         """
         if webex_location.address['country'] != "US":
-            raise ValueError("Cannot create Buildng for non-US location")
+            raise ValueError("Cannot create Building for non-US location")
 
         a1 = webex_location.address['address1']
         a2 = webex_location.address.get("address2", "")
