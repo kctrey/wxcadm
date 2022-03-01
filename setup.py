@@ -16,7 +16,6 @@ packages = ['wxcadm']
 requires = [
     'requests>=2.26.0',
     'srvlookup>=2.0.0',
-    'forcediphttpsadapter>=1.0.2',
     'xmltodict>=0.12.0'
 ]
 
