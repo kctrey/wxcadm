@@ -1533,9 +1533,46 @@ class CallQueue:
         self.get_queue_config()
         return self.config
 
+class XSICallQueue:
+    def __init__(self, call_queue_id: str, org: Org):
+        """ Initialize an instance to control calls within a Webex Calling Call Queue.
+
+        This class is used primarily when monitoring XSI Events where there is a need to control calls that come
+        into a Call Queue. Since Call Queues are "virtual" users within the call control, there are special methods
+        required to deal with those calls.
+
+        Args:
+            call_queue_id (str): The ID of the Call Queue as shown in the ``xsi:targetId`` of an XSI Event
+            org (Org): The instance of the wxcadm.Org class (i.e. "webex.org"). This is needed to provide the right
+                authentication and URLs for the XSI service.
+        """
+        logging.info(f"Starting XSICallCenter for {call_queue_id}")
+        self.id = call_queue_id
+        self.org = org
+        self._calls = []
+        self._headers = org._headers
+        self._params = org._params
+
+    def attach_call(self, call_id: str):
+        """ Attach an active call to the XSICallQueue instance
+
+        Attaching a call provides a :class:`wxcadm.Call` instance that can be used to control the call. Note that not
+        all call controls are available to a Call Queue call, but the basic ones, including Transfer, are available.
+
+        Args:
+            call_id (str): The callId from the XSI Events message
+
+        Returns:
+            Call: The :class:`wxcadm.Call` instance that was attached
+
+        """
+        call = Call(self, id = call_id)
+        self._calls.append(call)
+        return call
+
 
 class XSI:
-    def __init__(self, parent: Person, get_profile: bool = False, cache: bool = False):
+    def __init__(self, parent, get_profile: bool = False, cache: bool = False):
         """The XSI class holds all of the relevant XSI data for a Person
 
         Args:
@@ -2153,7 +2190,7 @@ class Call:
             Call: This Call instance
 
         """
-        self._parent: XSI = parent
+        self._parent = parent
         """The Person or XSI instance that owns this Call"""
         self._userid: str = self._parent.id
         """The Person or XSI ID inherited from the parent"""
@@ -2170,13 +2207,19 @@ class Call:
         if type(self._parent) is Person:
             # This is where we set things based on whether the parent is a Person
             self._url = _url_base
+            self.type = "Person"
             pass
+        elif type(self._parent) is XSICallQueue:
+            self._url = self._parent.org.xsi['actions_endpoint'] + f"/v2.0/callcenter/{self._userid}/calls"
+            self.type = "CallQueue"
         elif type(self._parent) is XSI:
             # The Call parent is XSI
             self._url = self._parent.xsi_endpoints['actions_endpoint'] + f"/v2.0/user/{self._userid}/calls"
+            self.type = "XSI"
         elif type(self._parent) is Call:
             # Another Call created this Call instance (probably for a transfer or conference
             self._url = self._parent.xsi_endpoints['actions_endpoint'] + f"/v2.0/user/{self._parent._userid}/calls"
+            self.type = "Call"
 
         if address:
             self.originate(address)
@@ -2332,7 +2375,10 @@ class Call:
         """
         logging.info(f"Transferring call {self.id} to {address} for {self._userid}")
         # Set the address param to be passed to XSI
-        params = {"address": address}
+        if self.type == "CallQueue":
+            params = {"phoneno": address}
+        else:
+            params = {"address": address}
         # Handle an attended transfer first. Anything else is assumed to be blind
         if type.lower() == "attended":
             # Attended transfer requires the first call to be put on hold and the second call to be
@@ -2353,7 +2399,8 @@ class Call:
             if r.status_code in [200, 201, 204]:
                 return True
             else:
-                return False
+                logging.debug(f"Transfer request {r.request.url}")
+                raise APIError(f"The Transfer call failed: {r.text}")
 
     def finish_transfer(self):
         """
