@@ -1120,6 +1120,32 @@ class Person:
             self.get_vm_config()
             return self.vm_config
 
+    def push_cf_config(self, cf_config: dict = None):
+        """ Pushes the Call Forwarding config back to Webex
+
+        If the cf_config dict is provided, it will be sent as the POST payload. If it is omitted, the current
+        Person.call_forwarding attributes will be sent
+
+        Args:
+            cf_config (dict, optional): The cf_config dictionary to push to Webex
+
+        Returns:
+            dict: The new config that was sent back by Webex
+
+        """
+        logging.info(f"Pushing CF Config for {self.email}")
+        if cf_config is not None:
+            payload = cf_config
+        else:
+            payload = self.call_forwarding
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/callForwarding", payload)
+        if success:
+            self.get_call_forwarding()
+            return self.call_forwarding
+        else:
+            return False
+
+
     def enable_vm_to_email(self, email: str = None, push=True):
         """
         Change the Voicemail config to enable sending a copy of VMs to specified email address. If the email param
