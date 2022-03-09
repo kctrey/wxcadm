@@ -27,7 +27,7 @@ processing.
 
    email_list = ['user1@company.com', 'user2@company.com', 'user3@company.com']
    for email in email_list:
-       person = webex.org.get_person_by_email(email)
+       person = webex.get_person_by_email(email)
        print(person.display_name)
 
 Common Webex Use Cases

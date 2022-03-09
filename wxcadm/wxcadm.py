@@ -203,6 +203,25 @@ class Webex:
                 return org
         raise KeyError("Org not found")
 
+    def get_person_by_email(self, email: str):
+        """ Get the person instance  of a user with the given email address
+
+        Unlike the :class:`Org` method of the same name, this method searches across all the Orgs that the token
+        has access to, so it can find a user in any :class:`Org`
+
+        Args:
+            email (str): The email address to search for
+
+        Returns:
+            :class:`Person`: The Person instance. None is returned if no match is found
+
+        """
+        for org in self.orgs:
+            person = org.get_person_by_email(email)
+            if person is not None:
+                return person
+        return None
+
 
 class Org:
     def __init__(self,
