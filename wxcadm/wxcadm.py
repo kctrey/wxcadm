@@ -980,7 +980,7 @@ class Person:
             return True
         else:
             logging.info("Push failed")
-            raise PutError(r.text)
+            return False
 
     @property
     def spark_id(self):
@@ -1123,7 +1123,7 @@ class Person:
     def push_cf_config(self, cf_config: dict = None):
         """ Pushes the Call Forwarding config back to Webex
 
-        If the cf_config dict is provided, it will be sent as the POST payload. If it is omitted, the current
+        If the cf_config dict is provided, it will be sent as the PUT payload. If it is omitted, the current
         Person.call_forwarding attributes will be sent
 
         Args:
