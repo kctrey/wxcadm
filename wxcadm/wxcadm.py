@@ -22,7 +22,6 @@ from .exceptions import *
 # Some functions available to all classes and instances (optionally)
 _url_base = "https://webexapis.com/"
 
-
 def webex_api_call(method: str, url: str, headers: dict, params: dict = None, payload: dict = None):
     """ Generic handler for all Webex API requests
 
@@ -1131,13 +1130,30 @@ class Person:
         self.vm_config = self.__get_webex_data(f"v1/people/{self.id}/features/voicemail")
         return self.vm_config
 
-    def push_vm_config(self):
-        """Pushes the current Person.vm_config attributes back to Webex"""
+    def push_vm_config(self, vm_config: dict = None):
+        """ Push the Voicemail config back to Webex
+
+        If the vm_config dict is provided, it will be sent as the payload to Webex. If it is omitted, the current
+        Person.call_forwarding attributes will be sent.
+
+        Args:
+            vm_config (dict, optional: The vm_config dictionary to push to Webex
+
+        Returns:
+            dict: The new config that was sent back by Webex. False is returned if the API call fails.
+
+        """
         logging.info(f"Pushing VM Config for {self.email}")
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/voicemail", self.vm_config)
+        if vm_config is not None:
+            payload = vm_config
+        else:
+            payload = self.vm_config
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/voicemail", payload)
         if success:
             self.get_vm_config()
             return self.vm_config
+        else:
+            return False
 
     def push_cf_config(self, cf_config: dict = None):
         """ Pushes the Call Forwarding config back to Webex
