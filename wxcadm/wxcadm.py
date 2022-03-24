@@ -1771,6 +1771,23 @@ class XSI:
                 self._calls.append(this_call)
         return self._calls
 
+    def attach_call(self, call_id: str):
+        """ Attach an active call to the XSICallQueue instance
+
+        Attaching a call provides a :class:`wxcadm.Call` instance that can be used to control the call. Note that not
+        all call controls are available to a Call Queue call, but the basic ones, including Transfer, are available.
+
+        Args:
+            call_id (str): The callId from the XSI Events message
+
+        Returns:
+            Call: The :class:`wxcadm.Call` instance that was attached
+
+        """
+        call = Call(self, id = call_id)
+        self._calls.append(call)
+        return call
+
     def __get_xsi_data(self, url, params: dict = {}):
         params = {**params, **self._params}
         r = requests.get(self.xsi_endpoints['actions_endpoint'] + url, headers=self._headers, params=params)
