@@ -2,6 +2,7 @@ import json.decoder
 import time
 import uuid
 import re
+from dataclasses import dataclass, field
 
 import requests
 import logging
@@ -12,6 +13,7 @@ import xmltodict
 import srvlookup
 
 from .exceptions import *
+
 
 # TODO: There is a package-wide problem where we have Webex-native data and instance attributes that we write
 #       to make the instances easier to work with. I have kept the native data because it is easier to push back
@@ -645,6 +647,33 @@ class Org:
             queue = CallQueue(self, id, name, location_id, phone_number, extension, enabled, get_config=True)
             self.call_queues.append(queue)
         return self.call_queues
+
+    def get_auto_attendants(self):
+        """ Get the Auto Attendants for an Organization
+
+        Also stores them in the Org.auto_attendants attribute.
+
+        Returns:
+            list[AutoAttendant]: List of AutoAttendant instances for the Organization
+        """
+        logging.info("get_auto_attendants() started")
+        self.auto_attendants = []
+        if not self.locations:
+            self.get_locations()
+        api_resp = webex_api_call("get", "v1/telephony/config/autoAttendants",
+                                  headers=self._headers, params=self._params)
+        for aa in api_resp['autoAttendants']:
+            id = aa.get("id")
+            name = aa.get("name")
+            location = self.get_location_by_name(aa['locationName'])
+            phone_number = aa.get("phoneNumber", "")
+            extension = aa.get("extension", "")
+            toll_free = aa.get("tollFreeNumber", False)
+
+            auto_attendant = AutoAttendant(self, location, id)
+            self.auto_attendants.append(auto_attendant)
+        return self.auto_attendants
+
 
     def get_call_queue_by_id(self, id: str):
         """ Get the :class:`CallQueue` instance with the requested ID
@@ -2256,7 +2285,7 @@ class Call:
 
     """
 
-    def __init__(self, parent, id: str = "", address: str = ""):
+    def __init__(self, parent, id: str = "", address: str = "", user_id: str = ""):
         """Inititalize a Call instance for a Person
 
         Args:
@@ -2270,7 +2299,10 @@ class Call:
         """
         self._parent = parent
         """The Person or XSI instance that owns this Call"""
-        self._userid: str = self._parent.id
+        if user_id:
+            self._userid = user_id
+        else:
+            self._userid: str = self._parent.id
         """The Person or XSI ID inherited from the parent"""
         self._headers = self._parent._headers
         self._params = self._parent._params
@@ -2298,6 +2330,11 @@ class Call:
             # Another Call created this Call instance (probably for a transfer or conference
             self._url = self._parent.xsi_endpoints['actions_endpoint'] + f"/v2.0/user/{self._parent._userid}/calls"
             self.type = "Call"
+        elif type(self._parent) is Org:
+            # Basically manually creating a call instance, probably based on an XSI Event or some other way
+            # that we determined the call ID and the user it was for
+            self._url = self._parent.xsi['actions_endpoint'] + f"/v2.0/user/{self._userid}/calls"
+            self.type = "Org/Other"
 
         if address:
             self.originate(address)
@@ -2366,16 +2403,20 @@ class Call:
         else:
             raise NotAllowed("The call cannot be pushed")
 
-    def hangup(self):
+    def hangup(self, decline: bool = False):
         """Hang up the call
 
         Returns:
             bool: Whether the command was successful
 
         """
+        if decline is True:
+            params = {"decline": decline}
+        else:
+            params = {}
         logging.info(f"Hanging up call ID: {self.id}")
         r = requests.delete(self._url + f"/{self.id}",
-                            headers=self._headers)
+                            headers=self._headers, params=params)
         if r.status_code == 200:
             return True
         else:
@@ -3909,3 +3950,23 @@ class RedSkyLocation:
 
     def __repr__(self):
         return self.id
+
+# Playing around with the idea of using dataclasses, so the AutoAttendant class is different from others
+@dataclass
+class AutoAttendant:
+    parent: object
+    location: object
+    id: str
+
+    def __post_init__(self):
+        api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.location.id}/autoAttendants/{self.id}",
+                                  headers=self.parent._headers)
+        self.config = api_resp
+
+    #def copy_menu_from_template(self, source: AutoAttendant, menu_type: str = "both"):
+    #    if menu_type.lower() == "both":
+    #        pass
+    #    elif menu_type.lower() == "business_hours":
+    #        pass
+    #    elif menu_type.lower() == "after_hours":
+    #        pass

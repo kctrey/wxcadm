@@ -7,6 +7,7 @@ v2.1.0
 - New method :meth:`wxcadm.Webex.get_person_by_email()` which does what the Org-level method does, but searches across all Orgs that the user can manage.
 - Failed "pushes" to Webex for user data no longer raise an exception. They now return False to prevent blocking in scripts.
 - :meth:`wxcadm.Person.push_vm_config()` now supports a vm_config dict rather than modifying the :attr:`Person.vm_config` attribute directly.
+- Added :meth:`wxcadm.XSI.attach_call()` to allow known Call IDs to be attached to a Person's XSI instance for call control.
 
 v2.0.0
 ------
