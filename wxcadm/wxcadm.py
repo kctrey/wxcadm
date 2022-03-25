@@ -91,6 +91,17 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
         end = time.time()
         logging.debug(f"__webex_api_call() completed in {end - start} seconds")
         return response['items']
+    elif method.lower() == "put":
+        r = session.put(_url_base + url, params=params, json=payload)
+        if r.ok:
+            response = r.json()
+            if response:
+                return response
+            else:
+                return True
+        else:
+            logging.info("Webex API returned an error")
+            raise APIError(f"The Webex API returned an error: {r.text}")
     else:
         return False
 
@@ -648,7 +659,7 @@ class Org:
             self.call_queues.append(queue)
         return self.call_queues
 
-    def get_auto_attendants(self):
+    def get_auto_attendants(self, **kwargs):
         """ Get the Auto Attendants for an Organization
 
         Also stores them in the Org.auto_attendants attribute.
@@ -657,7 +668,9 @@ class Org:
             list[AutoAttendant]: List of AutoAttendant instances for the Organization
         """
         logging.info("get_auto_attendants() started")
-        self.auto_attendants = []
+        if not kwargs:
+            # Since we are grabbing all AutoAttendants, clear the existing list of known AAs
+            self.auto_attendants = []
         if not self.locations:
             self.get_locations()
         api_resp = webex_api_call("get", "v1/telephony/config/autoAttendants",
@@ -666,11 +679,8 @@ class Org:
             id = aa.get("id")
             name = aa.get("name")
             location = self.get_location_by_name(aa['locationName'])
-            phone_number = aa.get("phoneNumber", "")
-            extension = aa.get("extension", "")
-            toll_free = aa.get("tollFreeNumber", False)
 
-            auto_attendant = AutoAttendant(self, location, id)
+            auto_attendant = AutoAttendant(self, location=location, id=id, name=name)
             self.auto_attendants.append(auto_attendant)
         return self.auto_attendants
 
@@ -810,6 +820,7 @@ class Location:
 
         """
         self._parent = parent
+        self._headers = parent._headers
         self.id: str = location_id
         """The Webex ID of the Location"""
         self.name: str = name
@@ -876,6 +887,16 @@ class Location:
             if number['location'].name == self.name and number['mainNumber'] is True:
                 return number['number']
         return None
+
+    @property
+    def schedules(self):
+        response = []
+        api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.id}/schedules", headers=self._headers)
+        for schedule in api_resp['schedules']:
+            this_schedule = LocationSchedule(self, schedule['id'], schedule['name'], schedule['type'])
+            response.append(this_schedule)
+        return response
+
 
 
 class Person:
@@ -2513,6 +2534,12 @@ class Call:
                 return True
             else:
                 return False
+        elif type.lower() == "mute":
+            r = requests.put(self._url + f"/{self.id}/MuteTransfer", headers=self._headers, params=params)
+            if r.status_code in [200, 201, 204]:
+                return True
+            else:
+                return False
         else:
             r = requests.put(self._url + f"/{self.id}/BlindTransfer", headers=self._headers, params=params)
             if r.status_code in [200, 201, 204]:
@@ -3951,22 +3978,75 @@ class RedSkyLocation:
     def __repr__(self):
         return self.id
 
-# Playing around with the idea of using dataclasses, so the AutoAttendant class is different from others
+# Playing around with the idea of using dataclasses, so the following classes are different from others
 @dataclass
 class AutoAttendant:
     parent: object
     location: object
     id: str
+    name: str
 
     def __post_init__(self):
         api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.location.id}/autoAttendants/{self.id}",
                                   headers=self.parent._headers)
         self.config = api_resp
+        api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.location.id}/autoAttendants/{self.id}"
+                                         f"/callForwarding",
+                                  headers=self.parent._headers)
+        self.call_forwarding = api_resp
+        for rule in self.call_forwarding['callForwarding']['rules']:
+            api_resp = webex_api_call("get",
+                                      f"v1/telephony/config/locations/{self.location.id}/autoAttendants/{self.id}/"
+                                      f"callForwarding/selectiveRules/{rule['id']}",
+                                      headers=self.parent._headers)
+            self.cf_rules = api_resp
 
-    #def copy_menu_from_template(self, source: AutoAttendant, menu_type: str = "both"):
-    #    if menu_type.lower() == "both":
-    #        pass
-    #    elif menu_type.lower() == "business_hours":
-    #        pass
-    #    elif menu_type.lower() == "after_hours":
-    #        pass
+
+    def copy_menu_from_template(self, source: object, menu_type: str = "both"):
+        """ Copy the Business Hours, After Hours, or both menus from another :class:`AutoAttendant` instance.
+
+        Note that this copy functionality will not work (yet) if the source Auto Attendant uses a CUSTOM announcement,
+        which, unfortunately, is most of them. The Webex API should support this soon, but, until them, the method's
+        usefulness is limited.
+
+        Args:
+            source (AutoAttendant): The source :class:`AutoAttendant` instance to copy from
+            menu_type (str, optional): The menu to copy. 'business_hours', 'after_hours' or 'both' are valid. Defaults
+                to 'both'.
+
+        Returns:
+            bool: True on success. False otherwise.
+
+        Raises:
+            ValueError: Raised when the menu_type value is not one of the accepted values.
+
+        """
+        if menu_type.lower() == "both":
+            self.config['businessHoursMenu'] = source.config['businessHoursMenu']
+            self.config['afterHoursMenu'] = source.config['afterHoursMenu']
+        elif menu_type.lower() == "business_hours":
+            self.config['businessHoursMenu'] = source.config['businessHoursMenu']
+        elif menu_type.lower() == "after_hours":
+            self.config['afterHoursMenu'] = source.config['afterHoursMenu']
+        else:
+            raise ValueError(f"{menu_type} must be 'business_hours', 'after_hours' or 'both'")
+
+        resp = webex_api_call("put", f"v1/telephony/config/locations/{self.location.id}/autoAttendants/{self.id}",
+                              headers=self.parent._headers, payload=self.config)
+        if resp:
+            return True
+        else:
+            return False
+
+@dataclass
+class LocationSchedule:
+    parent: Location
+    id: str
+    name: str
+    type: str
+
+    def __post_init__(self):
+        api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.parent.id}/schedules/{self.type}/{self.id}",
+                                  headers=self.parent._headers)
+        self.config = api_resp
+
