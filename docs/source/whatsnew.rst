@@ -8,6 +8,7 @@ v2.1.0
 - Failed "pushes" to Webex for user data no longer raise an exception. They now return False to prevent blocking in scripts.
 - :meth:`wxcadm.Person.push_vm_config()` now supports a vm_config dict rather than modifying the :attr:`Person.vm_config` attribute directly.
 - Added :meth:`wxcadm.XSI.attach_call()` to allow known Call IDs to be attached to a Person's XSI instance for call control.
+- LocationSchedule class and new Location ```schedules``` attribute
 
 v2.0.0
 ------

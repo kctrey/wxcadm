@@ -3,6 +3,7 @@ import time
 import uuid
 import re
 from dataclasses import dataclass, field
+from datetime import datetime
 
 import requests
 import logging
@@ -99,6 +100,24 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
                 return response
             else:
                 return True
+        else:
+            logging.info("Webex API returned an error")
+            raise APIError(f"The Webex API returned an error: {r.text}")
+    elif method.lower() == "post":
+        r = session.post(_url_base + url, params=params, json=payload)
+        if r.ok:
+            response = r.json()
+            if response:
+                return response
+            else:
+                return True
+        else:
+            logging.info("Webex API returned an error")
+            raise APIError(f"The Webex API returned an error: {r.text}")
+    elif method.lower() == "delete":
+        r = session.delete(_url_base + url, params=params)
+        if r.ok:
+            return True
         else:
             logging.info("Webex API returned an error")
             raise APIError(f"The Webex API returned an error: {r.text}")
@@ -3981,10 +4000,32 @@ class RedSkyLocation:
 # Playing around with the idea of using dataclasses, so the following classes are different from others
 @dataclass
 class AutoAttendant:
+    """ Class for AutoAttedants within a :class:`wxcadm.Org`
+
+    Inititalizing the instance will automatically fetch the AutoAttendant details from Webex
+
+    Args:
+        parent (Org): The :class:`wxcadm.Org` instance to which the AutoAttendant belongs
+        locaton (Location): The :class:`Location` instance associated with the AutoAttendant
+        id (str): The Webex ID of the AutoAttendant
+        name (str): The name of the AutoAttendant
+
+    """
     parent: object
+    """ The Org instance that ows this AutoAttendant """
     location: object
+    """ The Location instance to which this AutoAttendant belongs"""
     id: str
+    """ The Webex ID of the AutoAttendant """
     name: str
+    """ The name of the AutoAttendant """
+
+    config: dict = field(init=False, repr=False)
+    """ The configuration dict returned by Webex """
+    call_forwarding: dict = field(init=False, repr=False)
+    """ The Call Forwarding config returned by Webex """
+    cf_rules: dict = field(init=False, repr=False)
+    """ The Call Forwarding rules returned by Webex """
 
     def __post_init__(self):
         api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.location.id}/autoAttendants/{self.id}",
@@ -4040,13 +4081,181 @@ class AutoAttendant:
 
 @dataclass
 class LocationSchedule:
+    """ The class for Location Schedules within a :class:`Location`
+
+    When the instance is initialized, it will fetch the configuration from Webex.
+
+    Args:
+        parent (Location): The `Location` instance to which the LocationSchedule is assigned.
+        id (str): The Webex ID of the LocationSchedule
+        name (str): The name of the LocationSchedule
+        type (str): The type of LocationShedule, either 'businessHours' or 'Holidays'
+
+    """
     parent: Location
+    """ The `Location` instance to which the LocationSchedule is assigned """
     id: str
+    """ The Webex ID of the LocationSchedule """
     name: str
+    """ The name of the LocationSchedule """
     type: str
+    """ The type of LocationSchedule, either 'businessHours' or 'Holidays' """
+    config: dict = field(init=False, repr=False)
+    """ The configuration returned by Webex """
 
     def __post_init__(self):
-        api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.parent.id}/schedules/{self.type}/{self.id}",
+        self.refresh_config()
+
+    def refresh_config(self):
+        """ Pull a fresh copy of the schedule configuration from Webex, in case it has changed. """
+        api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.parent.id}/schedules/"
+                                         f"{self.type}/{self.id}",
                                   headers=self.parent._headers)
         self.config = api_resp
+
+    def add_holiday(self, name: str, date: str, recur: bool = False, recurrence: dict = {}):
+        """ Add a new all-day event to a Holidays schedule
+
+        This method provides a quicker way to add an all-day event to a Holidays schedule than using
+        :py:meth:`add_event()`. When used on a businessHours schedule, a TypeError will be raised.
+
+        If :attr:`recur` is True and the :attr:`recurrence` dict is not present, the method will set the holiday to
+        repeat yearly on the same month and day, which works for holidays like Christmas that fall on the same date.
+        If you need to add a holiday, such as Thanksgiving, that recurs on the 4th Thursday of November,
+        the :attr:`recurrence` dictionary should be used. For example, Thanksgiving can be defined as follows::
+
+            recurrence = {
+                'recurForEver': True,
+                'recurYearlyByDay': {
+                    'day': 'THURSDAY',
+                    'week': 'FOURTH',
+                    'month': 'NOVEMBER'
+                }
+            }
+
+        The format of this dict, and accepted values can be found `here <https://developer.webex.com/docs/api/v1/webex-calling-organization-settings-with-location-scheduling/create-a-schedule-event>`_
+
+        Args:
+            name (str): The name of the holiday
+            date (str): The date the holiday occurs this year in the format YYYY-MM-DD.
+            recur (bool, optional): Whether the holiday recurs.
+            recurrence (dict, optional): A dict of the recurrence info.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        Raises:
+            TypeError: Raised when attempting to add a holiday to a businessHours schedule
+
+        """
+        logging.debug(f"add_holiday() started")
+        new_event = {"name": name,
+                     "startDate": date, "endDate": date, "allDayEnabled": True}
+        date_object = datetime.strptime(date, "%Y-%m-%d")
+        # If this isn't a Holidays schedule, we shouldn't accept a new holiday
+        if self.type.lower() != "holidays":
+            logging.debug("Trying to add a holiday to a non-holidays schedule. Raising exception.")
+            raise TypeError("Schedule is not of type 'holidays'. Cannot add holiday.")
+        if recur is True:
+            if recurrence:
+                new_event['recurrence'] = recurrence
+            else:
+                new_event['recurrence'] = {"recurForEver": True,
+                                           "recurYearlyByDate": {"dayOfMonth": date_object.strftime("%d"),
+                                                                 "month": date_object.strftime("%B").upper()
+                                                                 }
+                                           }
+            api_resp = webex_api_call("post", f"v1/telephony/config/locations/"
+                                             f"{self.parent.id}/schedules/{self.type}/{self.id}/events",
+                                      headers=self.parent._headers, payload=new_event)
+            if api_resp:
+                self.refresh_config()
+                return True
+            else:
+                return False
+
+    def delete_event(self, event: str):
+        """ Delete an event from within the LocationSchedule
+
+        The event can be passed by name or by ID since both are unique.
+
+        Args:
+            event (str): The event name or event ID
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        logging.debug("delete_event() started")
+        # Since we accept both the event name or ID, we need to loop through the events to find the one we need.
+        for e in self.config['events']:
+            if e['name'] == event or e['id'] == event:
+                api_resp = webex_api_call("delete", f"v1/telephony/config/locations/{self.parent.id}"
+                                                    f"/schedules/{self.type}/{self.id}/events/{e['id']}",
+                                          headers=self.parent._headers)
+                if api_resp is True:
+                    # Get a new copy of the config
+                    self.refresh_config()
+                    return True
+                else:
+                    self.refresh_config()
+                    return False
+        return False
+
+    def create_event(self, name: str, start_date: str, end_date: str, start_time: str = "",
+                     end_time: str = "", all_day: bool = False, recurrence: dict = {}):
+        """ Create a new event within the LocationSchedule instance
+
+        Due to the flexibility of the event recurrence needs to be provided as a dict. The format of this dict, and
+        accepted values can be found `here <https://developer.webex.com/docs/api/v1/webex-calling-organization-settings-with-location-scheduling/create-a-schedule-event>`_
+
+        For example, the following dict would define an event that recurs every weekday, from 9:00-5:00::
+
+            recurrence = {
+                'recurForEver': True,
+                'recurWeekly': {
+                    'monday': True
+                }
+            }
+
+
+        Args:
+            name (str): The name of the event
+            start_date (str): The start date of the event
+            end_date (str): The end date of the event
+            start_time (str, optional): If this is not an all-day event, the time the event starts
+            end_time (str, optional): If this is not an all-day event, the time the event ends
+            all_day (bool, optional): True if this is an all-day event. start_time and end_time will be ignored.
+            recurrence (dict, optional): Dict of recurrence configuration
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        logging.debug("create_event() started")
+        # Input validation
+        if all_day is False and (start_time == "" or end_time == ""):
+            raise ValueError("If all_day == False, both start_time and end_time are required.")
+
+        # Build the payload
+        payload = {}
+        payload['name'] = name
+        payload['startDate'] = start_date
+        payload['endDate'] = end_date
+        payload['allDay'] = all_day
+        if all_day is False:
+            payload['startTime'] = start_time
+            payload['endTime'] = end_time
+        if recurrence:
+            payload['recurrence'] = recurrence
+
+        api_resp = webex_api_call("post", f"v1/telephony/config/locations/{self.parent.id}/"
+                                          f"schedules/{self.type}/{self.id}/events",
+                                  headers=self.parent._headers, payload=payload)
+        if api_resp:
+            self.refresh_config()
+            return True
+        else:
+            self.refresh_config()
+            return False
 
