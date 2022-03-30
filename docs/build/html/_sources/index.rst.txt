@@ -94,6 +94,7 @@ the two. Stay tuned...
    reference/Webex
    reference/Org
    reference/Location
+   reference/LocationSchedule
    reference/Person
    reference/Device
 

@@ -1321,6 +1321,24 @@ class Person:
         self.recording = self.__get_webex_data(f"v1/people/{self.id}/features/callRecording")
         return self.recording
 
+    @property
+    def monitoring(self):
+        logging.debug("Getting monitoring config")
+        self._monitoring = self.__get_webex_data(f"v1/people/{self.id}/features/monitoring")
+        return self._monitoring
+
+    @property
+    def hoteling(self):
+        logging.debug("Getting hoteling config")
+        self._hoteling = self.__get_webex_data(f"v1/people/{self.id}/features/hoteling")
+        return self._hoteling
+
+    @hoteling.setter
+    def hoteling(self, enabled: bool):
+        logging.debug(f"Setting hoteling to {enabled}")
+        self.__put_webex_data(f"v1/people/{self.id}/features/hoteling", {"enabled": enabled})
+        return self.hoteling
+
     def get_caller_id(self):
         logging.info("get_caller_id() started")
         self.caller_id = self.__get_webex_data(f"v1/people/{self.id}/features/callerId")
@@ -1656,7 +1674,6 @@ class CallQueue:
         # TODO: Right now this only pushes .config. It should also push .call_forwarding and .forwarding_rules
         logging.info(f"Pushing Call Queue config to Webex for {self.name}")
         url = _url_base + "v1/telephony/config/locations/" + self.location_id + "/queues/" + self.id
-        print(url)
         r = requests.put(url,
                          headers=self._parent._headers, json=self.config)
         response = r.status_code
@@ -4258,4 +4275,50 @@ class LocationSchedule:
         else:
             self.refresh_config()
             return False
+
+    def update_event(self, id: str, name: str = None, start_date: str = None, end_date: str = None, start_time: str = None,
+                     end_time: str = None, all_day: bool = None, recurrence: dict = None):
+        logging.debug("update_event() started")
+        # Input validation
+        if all_day is False and (start_time == "" or end_time == ""):
+            raise ValueError("If all_day == False, both start_time and end_time are required.")
+
+        # Build the payload
+        payload = self.get_event_config_by_id(id)
+        if name is not None:
+            payload['name'] = name
+        if start_date is not None:
+            payload['startDate'] = start_date
+        if end_date is not None:
+            payload['endDate'] = end_date
+        if all_day is not None:
+            payload['allDay'] = all_day
+            if all_day is False:
+                if start_time is not None:
+                    payload['startTime'] = start_time
+                if end_time is not None:
+                    payload['endTime'] = end_time
+        if recurrence is not None:
+            payload['recurrence'] = recurrence
+
+        api_resp = webex_api_call("put", f"v1/telephony/config/")
+
+
+
+    def get_event_config_by_id(self, id: str):
+        """ Get the 'events' dict for a specific event.
+
+        This method is useful if you are modifying an event and want to provide the full config.
+
+        Args:
+            id (str): The Event ID
+
+        Returns:
+            dict: The config of the event as a dict. If the Event ID is not found, None is returned.
+
+        """
+        for e in self.config['events']:
+            if e['id'] == id:
+                return e
+        return None
 
