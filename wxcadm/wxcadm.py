@@ -571,7 +571,7 @@ class Org:
         Also stores them in the Org.xsi attribute.
 
         Returns:
-            dict: Org.xsi attribute dictionary with each endpoint as an entry.
+            dict: Org.xsi attribute dictionary with each endpoint as an entry. None is returned if no XSI isn't enabled.
 
         """
         params = {"callingData": "true", **self._params}
@@ -582,7 +582,7 @@ class Org:
             self.xsi['events_endpoint'] = response['xsiEventsEndpoint']
             self.xsi['events_channel_endpoint'] = response['xsiEventsChannelEndpoint']
         else:
-            raise XSIError("XSI requested but not present in Org. Contact Cisco TAC to enable XSI.")
+            return None
         return self.xsi
 
     def get_locations(self):

@@ -2,7 +2,7 @@ import time
 import wxcadm
 
 #TODO Change this to get the token dynamically
-access_token = "ZTgwODg2ZTYtNDY5Mi00ZDc4LWE5NjYtZTU5NmVhMGZhYzMwNjk2YWU0YjQtYWUz_PF84_3db310ec-63fa-4bc3-9438-1b5a35388b64"
+access_token = "ZjEwNDMxOWItZWM2OS00NGY3LThhOTEtMmQ4NWRjODhjMjFiMzc0YzBjMTMtZmI0_PF84_3db310ec-63fa-4bc3-9438-1b5a35388b64"
 
 passed_tests = []
 failed_tests = []
