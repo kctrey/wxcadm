@@ -1355,8 +1355,11 @@ class Person:
             if self._outgoing_permission is False:
                 self.outgoing_permission
             config = self._outgoing_permission
-        self.__put_webex_data(f"v1/people/{self.id}/features/outgoingPermission", payload=config)
-        self.outgoing_permission
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/outgoingPermission", payload=config)
+        if success:
+            return True
+        else:
+            return False
 
     def get_caller_id(self):
         logging.info("get_caller_id() started")
