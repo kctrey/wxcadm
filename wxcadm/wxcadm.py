@@ -1349,6 +1349,19 @@ class Person:
         return self._outgoing_permission
 
     def set_outgoing_permission(self, config: dict = None):
+        """ Sets the Outgoing Call Permission using the provided dict
+
+        The ```config``` dict should follow the formatting of the :attr:`Person.outgoing_permission` attribute. If
+        the ```config``` argument is not supplied, the exiting config will be re-pushed to Webex.
+
+        Args:
+            config (dict): The Outgoing Call Permission dictionary
+
+        Returns:
+            bool: True on success, False otherwise. When successful, the :attr:`Person.outgoing_permission` will be
+            the updated value as returned by the server.
+
+        """
         logging.debug(f"Setting outgoing call permission")
         # If they passed a config dict, use it, otherwise use the self._outgoing_permission value
         if config is None:
