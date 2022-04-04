@@ -1,5 +1,6 @@
 import time
 import wxcadm
+import queue
 
 #TODO Change this to get the token dynamically
 access_token = "ZjEwNDMxOWItZWM2OS00NGY3LThhOTEtMmQ4NWRjODhjMjFiMzc0YzBjMTMtZmI0_PF84_3db310ec-63fa-4bc3-9438-1b5a35388b64"
@@ -143,3 +144,36 @@ except:
     fail_test()
 else:
     pass_test()
+
+# XSI tests
+test = "XSI availability"
+start_test()
+endpoints = webex.org.get_xsi_endpoints()
+if endpoints is not None:
+    pass_test()
+    test = "XSI profile"
+    start_test()
+    person.start_xsi()
+    try:
+        person.xsi.profile
+    except:
+        fail_test()
+    else:
+        pass_test()
+    test = "XSI Events"
+    start_test()
+    events = wxcadm.XSIEvents(webex.org)
+    events_queue = queue.Queue()
+    channel = events.open_channel(events_queue)
+    channel.subscribe("Advanced Call")
+    channel.unsubscribe(channel.subscriptions[0].id)
+    try:
+        message = events_queue.get()
+        print(message['xsi:Event']['xsi:eventData']['@xsi1:type'] + "...", end="")
+    except:
+        fail_test()
+    else:
+        pass_test()
+else:
+    fail_test()
+    print("XSI not enabled. Skipping XSI tests.")

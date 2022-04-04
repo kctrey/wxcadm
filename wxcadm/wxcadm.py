@@ -982,6 +982,8 @@ class Person:
         """A list of the Hunt Group instances that this user is an Agent for"""
         self._call_queues: list = []
         """A list of the Call Queue instances that this user is an Agent for"""
+        self._outgoing_permission: dict = {}
+
 
         # API-related attributes
         self._headers = parent._headers
@@ -1337,7 +1339,24 @@ class Person:
     def hoteling(self, enabled: bool):
         logging.debug(f"Setting hoteling to {enabled}")
         self.__put_webex_data(f"v1/people/{self.id}/features/hoteling", {"enabled": enabled})
-        return self.hoteling
+        self._hoteling
+
+    @property
+    def outgoing_permission(self):
+        """Dict of the Outgoing Call Permissions for the Person"""
+        logging.debug(f"Getting outbound calling permissions")
+        self._outgoing_permission = self.__get_webex_data(f"v1/people/{self.id}/features/outgoingPermission")
+        return self._outgoing_permission
+
+    def set_outgoing_permission(self, config: dict = None):
+        logging.debug(f"Setting outgoing call permission")
+        # If they passed a config dict, use it, otherwise use the self._outgoing_permission value
+        if config is None:
+            if self._outgoing_permission is False:
+                self.outgoing_permission
+            config = self._outgoing_permission
+        self.__put_webex_data(f"v1/people/{self.id}/features/outgoingPermission", payload=config)
+        self.outgoing_permission
 
     def get_caller_id(self):
         logging.info("get_caller_id() started")
@@ -2092,6 +2111,28 @@ class XSIEventsChannelSet:
         else:
             return False
 
+    def unsubscribe(self, subscription_id: str):
+        """ Unsubscribe from an Event Package that was previously subscribed to with :meth:`subscribe()`
+
+        Args:
+            subscription_id (str): The ID of the XSIEventsSubscription instance
+
+        Returns:
+            bool: True if unsubscription was successful, False otherwise
+
+        """
+        logging.info(f"Unsubscribing subscription: {subscription_id}")
+        all_success = True
+        for subscription in self.subscriptions:
+            if subscription.id == subscription_id or subscription_id.lower() == "all":
+                success = subscription.delete()
+                if success:
+                    self.subscriptions.remove(subscription)
+                else:
+                    all_success = False
+        return all_success
+
+
 class XSIEventsSubscription:
     def __init__(self, parent: XSIEventsChannelSet, event_package: str):
         """ Initialize an XSIEventsSubscription
@@ -2130,6 +2171,17 @@ class XSIEventsSubscription:
             return True
         else:
             logging.debug(f"Subscription refresh failed: {r.text}")
+            return False
+
+    def delete(self):
+        logging.debug(f"Deleting XSIEventsSubscription: {self.id}, {self.event_package}")
+        r = requests.delete(self.events_endpoint + f"/v2.0/subscription/{self.id}",
+                            headers=self._headers)
+        if r.ok:
+            logging.debug("Subscription delete succeeded")
+            return True
+        else:
+            logging.debug(f"Subscription delete failed: {r.text}")
             return False
 
 
