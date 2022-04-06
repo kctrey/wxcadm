@@ -3,7 +3,7 @@ import wxcadm
 import queue
 
 #TODO Change this to get the token dynamically
-access_token = "ZjEwNDMxOWItZWM2OS00NGY3LThhOTEtMmQ4NWRjODhjMjFiMzc0YzBjMTMtZmI0_PF84_3db310ec-63fa-4bc3-9438-1b5a35388b64"
+access_token = "ZTk2NTc5ZjItZjg3ZS00MWYxLTkxOTctNjkxYzhkNTU0MWZkZjc2ZDJjYTEtNmRl_PF84_3db310ec-63fa-4bc3-9438-1b5a35388b64"
 
 passed_tests = []
 failed_tests = []
@@ -144,6 +144,32 @@ except:
     fail_test()
 else:
     pass_test()
+test = "Person get Outgoing Call Permissions"
+start_test()
+try:
+    ocp = person.outgoing_permission
+except:
+    fail_test()
+else:
+    if ocp is False:
+        fail_test()
+    else:
+        pass_test()
+test = "Person set Outgoing Call Permissions"
+start_test()
+try:
+    if ocp:
+        success = person.set_outgoing_permission(ocp)
+    else:
+        success = person.set_outgoing_permission()
+except:
+    fail_test()
+else:
+    if success:
+        pass_test()
+    else:
+        fail_test()
+
 
 # XSI tests
 test = "XSI availability"
@@ -177,3 +203,5 @@ if endpoints is not None:
 else:
     fail_test()
     print("XSI not enabled. Skipping XSI tests.")
+
+print(f"Failed Tests: {failed_tests}")

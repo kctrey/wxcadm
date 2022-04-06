@@ -206,7 +206,7 @@ class Webex:
                 self.orgs.append(org)
             # Most users have only one org, so to make that easier for them to work with
             # we are also going to put the orgs[0] instance in the org attr
-            # That way both .org and .orgs[0] are the same
+            # That way both .org and .orgs[0] are the same if they only have one Org
             if len(self.orgs) == 1:
                 logging.debug(f"Only one org found. Storing as Webex.org")
                 self.org = self.orgs[0]
@@ -4370,8 +4370,10 @@ class LocationSchedule:
             payload['recurrence'] = recurrence
 
         api_resp = webex_api_call("put", f"v1/telephony/config/")
-
-
+        if api_resp:
+            return True
+        else:
+            return False
 
     def get_event_config_by_id(self, id: str):
         """ Get the 'events' dict for a specific event.
