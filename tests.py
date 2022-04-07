@@ -1,23 +1,51 @@
+""" tests.py - Script to test wxcadm and the Webex APIs
+
+This script can be used to test wxcadm with a valid Webex API Access Token. It runs through basic GET/PUT tests without
+making any changes on Webex. Its primary use is to validate the API endpoints and JSON payloads used by wxcadm, but also
+provides some basic information about the Webex Org that the token has access to.
+
+To use the script, create a .env file with the WEBEX_ACCESS_TOKEN variable set to a valid API Access Token.
+See .env.example for a sample. env file. You can also set the WEBEX_ACCESS_TOKEN environment variable for your OS.
+
+"""
 import time
 import wxcadm
 import queue
+import os
+from dotenv import load_dotenv
+
+# A few variables used throughout the script
+test_start = time.time()
+
+# Load the .env file for the tests
+print("Getting WEBEX_ACCESS_TOKEN from environment")
+load_dotenv()
 
 #TODO Change this to get the token dynamically
-access_token = "ZTk2NTc5ZjItZjg3ZS00MWYxLTkxOTctNjkxYzhkNTU0MWZkZjc2ZDJjYTEtNmRl_PF84_3db310ec-63fa-4bc3-9438-1b5a35388b64"
+access_token = os.getenv("WEBEX_ACCESS_TOKEN")
+if not access_token:
+    print("No WEBEX_ACCESS_TOKEN found. Cannot continue.")
+    exit(1)
 
 passed_tests = []
 failed_tests = []
 
 def start_test():
     print(f"Testing {test}...", end="")
+    global test_start
+    test_start = time.time()
 
 def pass_test():
+    test_end = time.time()
+    test_duration = round(test_end - test_start, 2)
     passed_tests.append(test)
-    print("passed")
+    print(f"passed [{test_duration}s]")
 
 def fail_test():
+    test_end = time.time()
+    test_duration = round(test_end - test_start, 2)
     failed_tests.append(test)
-    print("failed")
+    print(f"failed [{test_duration}s]")
 
 # Test bad access token handling
 test = "TokenError"
