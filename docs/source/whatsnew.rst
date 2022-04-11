@@ -1,6 +1,10 @@
 What's New
 ==========
 
+v2.1.1
+------
+- :meth:`wxcadm.Org.numbers` now uses the Webex for Developers API rather than CP-API
+
 v2.1.0
 ------
 - The :class:`wxcadm.XSICallQueue` class was added for control of Call Queue calls

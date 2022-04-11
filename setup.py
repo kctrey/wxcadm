@@ -6,7 +6,7 @@ from setuptools import setup
 # 'setup.py publish' shortcut.
 if sys.argv[-1] == 'publish':
     for f in os.listdir('dist'):
-        os.remove(f)
+        os.remove("dist/" + f)
     os.system('python setup.py sdist bdist_wheel')
     os.system('twine upload dist/*')
     sys.exit()
@@ -24,7 +24,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='wxcadm',
-    version='2.1.0',
+    version='2.1.1',
     packages=packages,
     url='https://github.com/kctrey/wxcadm',
     license='GPL-3.0',
