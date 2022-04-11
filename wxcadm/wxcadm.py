@@ -384,14 +384,15 @@ class Org:
 
     @property
     def numbers(self):
-        """All of the Numbers for the Org
+        """ All the Numbers for the Org
 
         Returns:
             list[dict]: List of dict containing information about each number
 
         """
-        my_numbers = self._cpapi.get_numbers()
-        for num in my_numbers:
+        response = webex_api_call("get", "v1/telephony/config/numbers", headers=self._headers, params=self._params)
+        org_numbers = response['phoneNumbers']
+        for num in org_numbers:
             if "owner" in num:
                 if "id" in num['owner']:
                     person = self.get_person_by_id(num['owner']['id'])
@@ -401,7 +402,7 @@ class Org:
                 location = self.get_location_by_name(num['location']['name'])
                 if location is not None:
                     num['location'] = location
-        return my_numbers
+        return org_numbers
 
     @property
     def devices(self):
@@ -3164,6 +3165,7 @@ class CPAPI:
         return True
 
     def get_numbers(self):
+        # This method is deprecated and will likely be removed eventually. The Webex API now supports a Numbers GET
         numbers = []
         params = {"limit": 2000, "offset": 0}   # Default values for the numbers pull
 

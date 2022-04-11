@@ -21,7 +21,6 @@ test_start = time.time()
 print("Getting WEBEX_ACCESS_TOKEN from environment")
 load_dotenv()
 
-#TODO Change this to get the token dynamically
 access_token = os.getenv("WEBEX_ACCESS_TOKEN")
 if not access_token:
     print("No WEBEX_ACCESS_TOKEN found. Cannot continue.")
