@@ -415,7 +415,7 @@ class Org:
         return self._devices
 
     def get_location_by_name(self, name: str):
-        """Get the Location instance associated with a given Location ID
+        """Get the Location instance associated with a given Location name
 
         Args:
             name (str): The full name of the Location to look for. (Case sensitive)
@@ -426,6 +426,41 @@ class Org:
         """
         for location in self.locations:
             if location.name == name:
+                return location
+        return None
+
+    def get_location(self, id: str = None, name: str = None, spark_id: str = None):
+        """ Get the Location instance associated with a given ID, Name, or Spark ID
+
+        Only one parameter should be supplied in normal cases. If multiple arguments are provided, the Locations will be
+        searched in order by ID, Name, and finally Spark ID. If no arguments are provided, the method will raise an
+        Exception.
+
+        Args:
+            id (str, optional): The Location ID to find
+            name (str, optional): The Location Name to find
+            spark_id (str, optional): The Spark ID to find
+
+        Returns:
+            Location: The Location instance correlating to the given search argument. None is returned if no Location
+                is found.
+
+        Raises:
+            ValueError: Raised when the method is called with no arguments
+
+        """
+        if id is None and name is None and spark_id is None:
+            raise ValueError("A search argument must be provided")
+        if not self.locations:
+            self.get_locations()
+        for location in self.locations:
+            if location.id == id:
+                return location
+        for location in self.locations:
+            if location.name == name:
+                return location
+        for location in self.locations:
+            if location.spark_id == spark_id:
                 return location
         return None
 
@@ -4270,14 +4305,14 @@ class LocationSchedule:
                                                                  "month": date_object.strftime("%B").upper()
                                                                  }
                                            }
-            api_resp = webex_api_call("post", f"v1/telephony/config/locations/"
-                                             f"{self.parent.id}/schedules/{self.type}/{self.id}/events",
-                                      headers=self.parent._headers, payload=new_event)
-            if api_resp:
-                self.refresh_config()
-                return True
-            else:
-                return False
+        api_resp = webex_api_call("post", f"v1/telephony/config/locations/"
+                                         f"{self.parent.id}/schedules/{self.type}/{self.id}/events",
+                                  headers=self.parent._headers, payload=new_event)
+        if api_resp:
+            self.refresh_config()
+            return True
+        else:
+            return False
 
     def delete_event(self, event: str):
         """ Delete an event from within the LocationSchedule

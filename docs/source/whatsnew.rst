@@ -1,9 +1,13 @@
 What's New
 ==========
 
+v2.2.0
+------
+- :meth:`wxcadm.Org.get_location()` was added to search for Location by various keys
+- :meth:`wxcadm.Org.get_audit_events()` was added to support auditing of Control Hub changes
+
 v2.1.1
 ------
-- :meth:`wxcadm.Org.get_audit_events()` was added to support auditing of Control Hub changes
 - :meth:`wxcadm.Org.numbers` now uses the Webex for Developers API rather than CP-API
 
 v2.1.0
