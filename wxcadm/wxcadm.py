@@ -733,6 +733,24 @@ class Org:
                 return hg
         return None
 
+    def get_audit_events(self, start: str, end: str):
+        """ Get the Webex Admin Audit events within the given start and end times
+
+        Args:
+            start (str): Date/time to begin records in the format ```YYY-MM-DDTHH:MM:SS.XXXZ```
+            end (str): Date/time to begin records in the format ```YYY-MM-DDTHH:MM:SS.XXXZ```
+
+        Returns:
+            dict: The dict of the events is returned. If no events are found, None is returned.
+
+        """
+        params = {'from': start, 'to': end, **self._params}
+        response = webex_api_call("get", "v1/adminAudit/events", headers=self._headers, params=params)
+        if response:
+            return response
+        else:
+            return None
+
     def get_hunt_groups(self):
         """Get the Hunt Groups for an Organization.
 
