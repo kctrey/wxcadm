@@ -75,6 +75,15 @@ print(f"People Count: {people_count}")
 print(f"Locations Count: {locations_count}")
 
 # Location tests
+test = "Location Schedules get"
+start_test()
+location = webex.org.locations[0]
+try:
+    sched = location.schedules
+except:
+    fail_test()
+else:
+    pass_test()
 
 
 # Get Call Queues and make sure data is populated correctly

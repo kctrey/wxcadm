@@ -1,4 +1,5 @@
 import json.decoder
+import os.path
 import time
 import uuid
 import re
@@ -6,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 import requests
+from requests_toolbelt import MultipartEncoder
 import logging
 import base64
 from threading import Thread, Event
@@ -970,6 +972,36 @@ class Location:
             response.append(this_schedule)
         return response
 
+    def upload_moh_file(self, filename: str):
+        """ Upload and activate a custom Music On Hold audio file.
+
+        The audio file must be a WAV file that conforms with the Webex Calling requirements. It is recommended to test
+        any WAV file by manually uploading it to a Location in Control Hub. The method will return False if the WAV file
+        is rejected by Webex.
+
+        Args:
+            filename (str): The filename, including path, to the WAV file to upload.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        upload = self._parent._cpapi.upload_moh_file(self.id, filename)
+        if upload is True:
+            activate = self._parent._cpapi.set_custom_moh(self.id, filename)
+            if activate is True:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def set_default_moh(self):
+        activate = self._parent._cpapi.set_default_moh(self.id)
+        if activate is True:
+            return True
+        else:
+            return False
 
 
 class Person:
@@ -3312,6 +3344,67 @@ class CPAPI:
         else:
             raise APIError("Something went wrong getting the Workspace Calling Location")
         return location
+
+    def upload_moh_file(self, location_id: str, filename: str):
+        logging.info("CPAPI - Uploading MOH File")
+        # Calculate the "locations" ID from the Org ID
+        loc_id_bytes = base64.b64decode(location_id + "===")
+        loc_id_decoded = loc_id_bytes.decode("utf-8")
+        location_id = loc_id_decoded.split("/")[-1]
+        upload_as = os.path.basename(filename)
+        content = open(filename, "rb")
+        must_close = True
+
+        encoder = MultipartEncoder(fields={"file": (upload_as, content, 'audio/wav')})
+        logging.info(encoder)
+        r = requests.post(self._url_base + f"locations/{location_id}/features/musiconhold/actions/announcement",
+                          headers={"Content-Type": encoder.content_type, **self._headers},
+                          data=encoder)
+        if must_close is True:
+            content.close()
+        if r.ok:
+            return True
+        elif r.status_code == 403:
+            raise TokenError("Your API Access Token doesn't have permission to use this API call")
+        else:
+            raise APIError(f"Something went wrong uploading the MOH file: {r.text}")
+
+    def set_custom_moh(self, location_id: str, filename: str):
+        logging.info("CPAPI - Setting Custom MOH")
+        # Calculate the "locations" ID from the Org ID
+        loc_id_bytes = base64.b64decode(location_id + "===")
+        loc_id_decoded = loc_id_bytes.decode("utf-8")
+        location_id = loc_id_decoded.split("/")[-1]
+        payload = {"callHold": True, "callPark": True, "greeting": "CUSTOM", "description": filename}
+        r = requests.patch(self._url_base + f"locations/{location_id}/features/musiconhold",
+                           headers=self._headers, json=payload)
+        if r.ok:
+            return True
+        elif r.status_code == 403:
+            raise TokenError("Your API Access Token doesn't have permission to use this API call")
+        else:
+            raise APIError(f"Something went wrong setting the MOH: {r.text}")
+
+    def set_default_moh(self, location_id: str):
+        logging.info("CPAPI - Setting Default MOH")
+        # Calculate the "locations" ID from the Org ID
+        loc_id_bytes = base64.b64decode(location_id + "===")
+        loc_id_decoded = loc_id_bytes.decode("utf-8")
+        location_id = loc_id_decoded.split("/")[-1]
+        # The CPAPI PATCH needs the MOH filename, even for Default, so we need to get what's there already
+        r = requests.get(self._url_base + f"locations/{location_id}/features/musiconhold",
+                         headers=self._headers)
+        current_config = r.json()
+        payload = {"callHold": True, "callPark": True, "greeting": "SYSTEM", "description": current_config['description']}
+        r = requests.patch(self._url_base + f"locations/{location_id}/features/musiconhold",
+                           headers=self._headers, json=payload)
+        if r.ok:
+            return True
+        elif r.status_code == 403:
+            raise TokenError("Your API Access Token doesn't have permission to use this API call")
+        else:
+            raise APIError(f"Something went wrong setting the MOH: {r.text}")
+
 
 
 class Terminus:
