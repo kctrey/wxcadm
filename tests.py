@@ -13,6 +13,16 @@ import wxcadm
 import queue
 import os
 from dotenv import load_dotenv
+import logging
+
+# Set up a log file
+logging.basicConfig(level=logging.INFO,
+                    filename="./wxcadm_tests.log",
+                    format='%(asctime)s %(module)s:%(levelname)s:%(message)s')
+# Since requests is so chatty at Debug, turn off logging propagation
+logging.getLogger("requests").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("connectionpool").setLevel(logging.WARNING)
 
 # A few variables used throughout the script
 test_start = time.time()
@@ -60,7 +70,7 @@ except:
 test = "Webex instance"
 start_test()
 try:
-    webex = wxcadm.Webex(access_token, fast_mode=True)
+    webex = wxcadm.Webex(access_token, get_locations=False)
 except:
     fail_test()
     print("Cannot continue without valid token and Webex instance.")
@@ -75,60 +85,76 @@ print(f"People Count: {people_count}")
 print(f"Locations Count: {locations_count}")
 
 # Location tests
-test = "Location Schedules get"
-start_test()
-location = webex.org.locations[0]
-try:
-    sched = location.schedules
-except:
-    fail_test()
-else:
-    pass_test()
-
-
-# Get Call Queues and make sure data is populated correctly
-test = "CallQueue get"
+test = "Get Locations"
 start_test()
 try:
-    call_queues = webex.org.get_call_queues()
+    org_locations = webex.org.get_locations()
 except:
     fail_test()
+    print("Cannot get Locations. Skipping Location tests.")
 else:
     pass_test()
-    print(f"Call Queues: {len(call_queues)}")
-    test = "CallQueue size check"
+    test = "Location Schedules get"
     start_test()
-    if len(call_queues) == len(webex.org.call_queues):
-        pass_test()
-    else:
+    location = webex.org.locations[0]
+    try:
+        sched = location.schedules
+    except:
         fail_test()
-    if len(call_queues) > 0:
-        test = "CallQueue config"
-        start_test()
-        try:
-            call_queues[0].get_queue_config()
-        except:
-            fail_test()
-        else:
-            pass_test()
-        test = "CallQueue forwarding"
-        start_test()
-        try:
-            call_queues[0].get_queue_forwarding()
-        except:
-            fail_test()
-        else:
-            pass_test()
-        test = "CallQueue config push"
-        start_test()
-        try:
-            config = call_queues[0].push()
-        except:
-            fail_test()
-        else:
-            pass_test()
     else:
-        print("No Call Queues found. Skipping Call Queue config tests.")
+        pass_test()
+
+    test = "Location ID to User Location match"
+    start_test()
+    person = webex.org.get_wxc_people()[0]
+    person_location = webex.org.get_location(id=person.location)
+    if person_location is None:
+        fail_test()
+    else:
+        pass_test()
+    # Get Call Queues and make sure data is populated correctly
+    test = "CallQueue get"
+    start_test()
+    try:
+        call_queues = webex.org.get_call_queues()
+    except:
+        fail_test()
+    else:
+        pass_test()
+        print(f"Call Queues: {len(call_queues)}")
+        test = "CallQueue size check"
+        start_test()
+        if len(call_queues) == len(webex.org.call_queues):
+            pass_test()
+        else:
+            fail_test()
+        if len(call_queues) > 0:
+            test = "CallQueue config"
+            start_test()
+            try:
+                call_queues[0].get_queue_config()
+            except:
+                fail_test()
+            else:
+                pass_test()
+            test = "CallQueue forwarding"
+            start_test()
+            try:
+                call_queues[0].get_queue_forwarding()
+            except:
+                fail_test()
+            else:
+                pass_test()
+            test = "CallQueue config push"
+            start_test()
+            try:
+                config = call_queues[0].push()
+            except:
+                fail_test()
+            else:
+                pass_test()
+        else:
+            print("No Call Queues found. Skipping Call Queue config tests.")
 
 
 # Person tests

@@ -341,6 +341,7 @@ class Org:
 
     @property
     def spark_id(self):
+        """ The decoded "Spark ID" of the Org ID"""
         org_id_bytes = base64.b64decode(self.id + "===")
         spark_id = org_id_bytes.decode("utf-8")
         return spark_id
@@ -965,6 +966,7 @@ class Location:
 
     @property
     def schedules(self):
+        """ List of all of the :class:`wxcadm.LocationSchedule` instances for this Location"""
         response = []
         api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.id}/schedules", headers=self._headers)
         for schedule in api_resp['schedules']:
@@ -997,6 +999,11 @@ class Location:
             return False
 
     def set_default_moh(self):
+        """ Set the MOH to be the Webex Calling system default music.
+
+        Returns:
+            bool: True on success, False otherwise
+        """
         activate = self._parent._cpapi.set_default_moh(self.id)
         if activate is True:
             return True
