@@ -40,7 +40,10 @@ passed_tests = []
 failed_tests = []
 
 def start_test():
-    print(f"Testing {test}...", end="")
+    logstring = f"Testing {test}..."
+    print(logstring, end="")
+    logging.info(logstring)
+
     global test_start
     test_start = time.time()
 
@@ -49,12 +52,14 @@ def pass_test():
     test_duration = round(test_end - test_start, 2)
     passed_tests.append(test)
     print(f"passed [{test_duration}s]")
+    logging.info(f"{test} passed in {test_duration}s")
 
 def fail_test():
     test_end = time.time()
     test_duration = round(test_end - test_start, 2)
     failed_tests.append(test)
     print(f"failed [{test_duration}s]")
+    logging.info(f"{test} failed in {test_duration}s")
 
 # Test bad access token handling
 test = "TokenError"
@@ -266,4 +271,7 @@ else:
     fail_test()
     print("XSI not enabled. Skipping XSI tests.")
 
+logging.info("Tests Complete")
+logging.info(f"Passed Tests: {passed_tests}")
+logging.info(f"Failed Tests: {failed_tests}")
 print(f"Failed Tests: {failed_tests}")
