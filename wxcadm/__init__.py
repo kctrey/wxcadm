@@ -9,4 +9,4 @@ from .exceptions import (
 )
 
 # Set up NullHandler for logging
-logging.getLogger(name).addHandler(logging.NullHandler())
+logging.getLogger(__name__).addHandler(logging.NullHandler())

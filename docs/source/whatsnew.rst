@@ -1,6 +1,11 @@
 What's New
 ==========
 
+v2.x.x
+------
+- Improved :meth:`wxcadm.Org.number` to handle HuntGroup, PagingGroup, and CallQueue owners
+- Added support for Paging Groups with :meth:`wxcadm.Org.paging_groups`
+
 v2.2.0
 ------
 - Changed logging to ensure that we only log when enabled by the application

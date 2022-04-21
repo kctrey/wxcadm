@@ -17,6 +17,8 @@ import srvlookup
 
 from .exceptions import *
 
+log = logging.getLogger(__name__)
+
 
 # TODO: There is a package-wide problem where we have Webex-native data and instance attributes that we write
 #       to make the instances easier to work with. I have kept the native data because it is easier to push back
@@ -49,9 +51,9 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
         wxcadm.exceptions.APIError: Raised when the API call fails to retrieve at least one response.
 
     """
-    logging.debug("Webex API Call:")
-    logging.debug(f"\tMethod: {method}")
-    logging.debug(f"\tURL: {url}")
+    log.debug("Webex API Call:")
+    log.debug(f"\tMethod: {method}")
+    log.debug(f"\tURL: {url}")
 
     start = time.time()     # Tracking API execution time
     session = requests.Session()
@@ -63,11 +65,11 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
             response = r.json()
             # With an 'items' array, we know we are getting multiple values. Without it, we are getting a singe entity
             if "items" in response:
-                logging.debug(f"Webex returned {len(response['items'])} items")
+                log.debug(f"Webex returned {len(response['items'])} items")
             else:
                 return response
         else:
-            logging.debug("Webex API returned an error")
+            log.debug("Webex API returned an error")
             raise APIError(f"The Webex API returned an error: {r.text}")
 
         # Now we look for pagination and get any additional pages as part of the same Session
@@ -75,13 +77,13 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
             keep_going = True
             next_url = r.links['next']['url']
             while keep_going:
-                logging.debug(f"Getting more items from {next_url}")
+                log.debug(f"Getting more items from {next_url}")
                 r = session.get(next_url)
                 if r.ok:
                     new_items = r.json()
                     if "items" not in new_items:
                         continue        # This is here just to handle a weird case where the API responded with no data
-                    logging.debug(f"Webex returned {len(new_items['items'])} more items")
+                    log.debug(f"Webex returned {len(new_items['items'])} more items")
                     response['items'].extend(new_items['items'])
                     if "next" not in r.links:
                         keep_going = False
@@ -92,7 +94,7 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
 
         session.close()
         end = time.time()
-        logging.debug(f"__webex_api_call() completed in {end - start} seconds")
+        log.debug(f"__webex_api_call() completed in {end - start} seconds")
         return response['items']
     elif method.lower() == "put":
         r = session.put(_url_base + url, params=params, json=payload)
@@ -103,7 +105,7 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
             else:
                 return True
         else:
-            logging.info("Webex API returned an error")
+            log.info("Webex API returned an error")
             raise APIError(f"The Webex API returned an error: {r.text}")
     elif method.lower() == "post":
         r = session.post(_url_base + url, params=params, json=payload)
@@ -114,17 +116,31 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
             else:
                 return True
         else:
-            logging.info("Webex API returned an error")
+            log.info("Webex API returned an error")
             raise APIError(f"The Webex API returned an error: {r.text}")
     elif method.lower() == "delete":
         r = session.delete(_url_base + url, params=params)
         if r.ok:
             return True
         else:
-            logging.info("Webex API returned an error")
+            log.info("Webex API returned an error")
             raise APIError(f"The Webex API returned an error: {r.text}")
     else:
         return False
+
+def decode_spark_id(id: str):
+    """ Decode the Webex ID to obtain the Spark ID
+
+    Args:
+        id (str): The Webex ID (base64 encoded string)
+
+    Returns:
+        str: The Spark ID
+
+    """
+    id_bytes = base64.b64decode(id + "===")
+    spark_id: str = id_bytes.decode("utf-8")
+    return spark_id
 
 
 class Webex:
@@ -161,13 +177,13 @@ class Webex:
             Webex: The Webex instance
 
         """
-        logging.info("Webex instance initialized")
+        log.info("Webex instance initialized")
         # The access token is the only thing that we need to get started
         self._access_token: str = access_token
         # The Authorization header is going to be used by every API call in the package.
         # Might want to make it something global so we don't have to inherit it across all of the children
         self._headers: dict = {"Authorization": "Bearer " + access_token}
-        logging.debug(f"Setting Org._headers to {self._headers}")
+        log.debug(f"Setting Org._headers to {self._headers}")
 
         # Fast Mode flag when needed
         self._fast_mode = fast_mode
@@ -176,29 +192,29 @@ class Webex:
         self.orgs: list[Org] = []
         '''A list of the Org instances that this Webex instance can manage'''
         # Get the orgs that this token can manage
-        logging.debug(f"Making API call to v1/organizations")
+        log.debug(f"Making API call to v1/organizations")
         r = requests.get(_url_base + "v1/organizations", headers=self._headers)
         # Handle an invalid access token
         if r.status_code != 200:
-            logging.critical("The Access Token was not accepted by Webex")
+            log.critical("The Access Token was not accepted by Webex")
             raise TokenError("The Access Token was not accepted by Webex")
         response = r.json()
         # Handle when no Orgs are returned. This is pretty rare
         if len(response['items']) == 0:
-            logging.warning("No Orgs were retuend by the Webex API")
+            log.warning("No Orgs were retuend by the Webex API")
             raise OrgError
         # If a token can manage a lot of orgs, you might not want to create them all, because
         # it can take some time to do all of the API calls and get the data back
         if not create_org:
-            logging.info("Org initialization not requested. Storing orgs.")
+            log.info("Org initialization not requested. Storing orgs.")
             self.orgs = response['items']
             return
         else:
-            logging.info("Org initialization requested. Collecting orgs")
+            log.info("Org initialization requested. Collecting orgs")
             for org in response['items']:
                 # This builds an Org instance for every Org, so be careful
                 # if the user manages multiple orgs
-                logging.debug(f"Processing org: {org['displayName']}")
+                log.debug(f"Processing org: {org['displayName']}")
                 # If we were given a list of people, don't have the Org get all people
                 if people_list is not None:
                     get_people = False
@@ -210,7 +226,7 @@ class Webex:
             # we are also going to put the orgs[0] instance in the org attr
             # That way both .org and .orgs[0] are the same if they only have one Org
             if len(self.orgs) == 1:
-                logging.debug(f"Only one org found. Storing as Webex.org")
+                log.debug(f"Only one org found. Storing as Webex.org")
                 self.org = self.orgs[0]
 
     @property
@@ -313,6 +329,8 @@ class Org:
         """A list of the Workspace Location instanced for this Org."""
         self._devices: list[Device] = None
         """A list of the Devce instances for this Org"""
+        self.auto_attendants: list[AutoAttendant] = None
+        """A list of the AutoAttendant instances for this Org"""
 
         # Set the Authorization header based on how the instance was built
         self._headers = parent.headers
@@ -359,7 +377,7 @@ class Org:
             list: List of dictionaries containing the license name and ID
 
         """
-        logging.info("__get_licenses() started for org")
+        log.info("__get_licenses() started for org")
         license_list = []
         api_resp = webex_api_call("get", "v1/licenses", headers=self._headers, params=self._params)
         for item in api_resp:
@@ -386,7 +404,92 @@ class Org:
         return license_list
 
     @property
-    def numbers(self):
+    def paging_groups(self):
+        """ All of the PagingGroups for the Org
+
+        Returns:
+            list[PagingGroup]: The PagingGroup instances for this Org
+
+        """
+        paging_groups = []
+        response = webex_api_call("get", "v1/telephony/config/paging", headers=self._headers, params=self._params)
+        for entry in response['locationPaging']:
+            location = self.get_location(id=entry['locationId'])
+            this_pg = PagingGroup(location, entry['id'], entry['name'])
+            paging_groups.append(this_pg)
+        return paging_groups
+
+    def get_paging_group(self, id: str = None, name: str = None, spark_id: str = None):
+        """ Get the PagingGroup instance associated with a given ID, Name, or Spark ID
+
+        Only one parameter should be supplied in normal cases. If multiple arguments are provided, the Paging
+        Groups will be searched in order by ID, Name, and finally Spark ID. If no arguments are provided, the method
+        will raise an Exception.
+
+        Args:
+            id (str, optional): The PagingGroup ID to find
+            name (str, optional): The PagingGroup Name to find
+            spark_id (str, optional): The Spark ID to find
+
+        Returns:
+            PagingGroup: The PagingGroup instance correlating to the given search argument. None is returned if no Location
+                is found.
+
+        Raises:
+            ValueError: Raised when the method is called with no arguments
+
+        """
+        if id is None and name is None and spark_id is None:
+            raise ValueError("A search argument must be provided")
+        for pg in self.paging_groups:
+            if pg.id == id:
+                return pg
+        for pg in self.paging_groups:
+            if pg.name == name:
+                return pg
+        for pg in self.paging_groups:
+            if pg.spark_id == spark_id:
+                return pg
+        return None
+
+    def get_auto_attendant(self, id: str = None, name: str = None, spark_id: str = None):
+        """ Get the AutoAttendant instance associated with a given ID, Name, or Spark ID
+
+        Only one parameter should be supplied in normal cases. If multiple arguments are provided, the Auto
+        Attendants will be searched in order by ID, Name, and finally Spark ID. If no arguments are provided, the method
+        will raise an Exception.
+
+        Args:
+            id (str, optional): The AutoAttendant ID to find
+            name (str, optional): The AutoAttendant Name to find
+            spark_id (str, optional): The Spark ID to find
+
+        Returns:
+            AutoAttendant: The AutoAttendant instance correlating to the given search argument.
+                None is returned if no AutoAttendant is found.
+
+        Raises:
+            ValueError: Raised when the method is called with no arguments
+
+        """
+        if id is None and name is None and spark_id is None:
+            raise ValueError("A search argument must be provided")
+        if self.auto_attendants is None:
+            self.get_auto_attendants()
+        for aa in self.auto_attendants:
+            if aa.id == id:
+                return aa
+        for aa in self.auto_attendants:
+            if aa.name == name:
+                return aa
+        for aa in self.auto_attendants:
+            if aa.spark_id == spark_id:
+                return aa
+        return None
+
+
+    @property
+    def numbers(self, with_assignment: bool = True):
         """ All the Numbers for the Org
 
         Returns:
@@ -401,11 +504,34 @@ class Org:
                     person = self.get_person_by_id(num['owner']['id'])
                     if person is not None:
                         num['owner'] = person
+                    else:
+                        if num['owner']['type'].upper() == "HUNT_GROUP":
+                            hunt_group = self.get_hunt_group_by_id(num['owner']['id'])
+                            if hunt_group is not None:
+                                num['owner'] = hunt_group
+                        elif num['owner']['type'].upper() == "GROUP_PAGING":
+                            paging_group = self.get_paging_group(id=num['owner']['id'])
+                            if paging_group is not None:
+                                num['owner'] = paging_group
+                        elif num['owner']['type'].upper() == "CALL_CENTER":
+                            call_queue = self.get_call_queue_by_id(num['owner']['id'])
+                            if call_queue is not None:
+                                num['owner'] = call_queue
+                        elif num['owner']['type'].upper() == "AUTO_ATTENDANT":
+                            auto_attendant = self.get_auto_attendant(id=num['owner']['id'])
+                            if auto_attendant is not None:
+                                num['owner'] = auto_attendant
             if "location" in num:
                 location = self.get_location_by_name(num['location']['name'])
                 if location is not None:
                     num['location'] = location
         return org_numbers
+
+    def get_number_assignment(self, number: str):
+        for num in self.numbers:
+            if number in num['phoneNumber']:
+                return num
+        return None
 
     @property
     def devices(self):
@@ -489,7 +615,7 @@ class Org:
             list[str]:
 
         """
-        logging.info("__get_wxc_licenses started")
+        log.info("__get_wxc_licenses started")
         license_list = []
         for license in self.licenses:
             if license['wxc_license']:
@@ -503,7 +629,7 @@ class Org:
             str: The License ID
 
         """
-        logging.info("__get_wxc_person_license started to find available license")
+        log.info("__get_wxc_person_license started to find available license")
         for license in self.licenses:
             if license['wxc_type'] == "person":
                 return license['id']
@@ -546,18 +672,18 @@ class Org:
             Person: The Person instance of the newly-created user.
 
         """
-        logging.info(f"Creating new user: {email}")
+        log.info(f"Creating new user: {email}")
         if (first_name or last_name) and display_name is None:
-            logging.debug("No display_name provided. Setting default.")
+            log.debug("No display_name provided. Setting default.")
             display_name = f"{first_name} {last_name}"
 
         # Find the license IDs for each requested service, unless licenses was passed
         if not licenses:
-            logging.debug("No licenses specified. Finding licenses.")
+            log.debug("No licenses specified. Finding licenses.")
             licenses = []
             if calling:
-                logging.debug("Calling requested. Finding Calling licenses.")
-                logging.debug(f"Licenses: {self.get_wxc_person_license()}")
+                log.debug("Calling requested. Finding Calling licenses.")
+                log.debug(f"Licenses: {self.get_wxc_person_license()}")
                 licenses.append(self.get_wxc_person_license())
             if messaging:
                 pass
@@ -565,7 +691,7 @@ class Org:
                 pass
 
         # Build the payload to send to the API
-        logging.debug("Building payload.")
+        log.debug("Building payload.")
         payload = {"emails": [email], "locationId": location, "orgId": self.id, "licenses": licenses}
         if phone_number is not None:
             payload["phoneNumbers"] = [{"type": "work", "value": phone_number}]
@@ -577,7 +703,7 @@ class Org:
             payload["lastName"] = last_name
         if display_name is not None:
             payload["displayName"] = display_name
-        logging.debug(f"Payload: {payload}")
+        log.debug(f"Payload: {payload}")
         r = requests.post(_url_base + "v1/people", headers=self._headers, params={"callingData": "true"},
                           json=payload)
         response = r.json()
@@ -598,7 +724,7 @@ class Org:
             Person: Person instance object. None in returned when no Person is found
 
         """
-        logging.info("get_person_by_email() started")
+        log.info("get_person_by_email() started")
         for person in self.people:
             if person.email.lower() == email.lower():
                 return person
@@ -633,7 +759,7 @@ class Org:
             list[Location]: List of Location instance objects. See the Locations class for attributes.
 
         """
-        logging.info("get_locations() started")
+        log.info("get_locations() started")
         api_resp = webex_api_call("get", "v1/locations", headers=self._headers, params=self._params)
         for location in api_resp:
             this_location = Location(self, location['id'], location['name'], address=location['address'])
@@ -649,14 +775,14 @@ class Org:
             list[Workspace]: List of Workspace instance objects. See the Workspace class for attributes.
 
         """
-        logging.info("Getting Workspaces")
+        log.info("Getting Workspaces")
         self.workspaces = []
         api_resp = webex_api_call("get", "v1/workspaces", headers=self._headers, params=self._params)
         for workspace in api_resp:
             this_workspace = Workspace(self, workspace['id'], workspace)
             self.workspaces.append(this_workspace)
 
-        logging.info("Getting Workspace Locations")
+        log.info("Getting Workspace Locations")
         self.workspace_locations = []
         api_resp = webex_api_call("get", "v1/workspaceLocations", headers=self._headers, params=self._params)
         for location in api_resp:
@@ -675,7 +801,7 @@ class Org:
             See the PickupGroup class for attributes.
 
         """
-        logging.info("get_pickup_groups() started")
+        log.info("get_pickup_groups() started")
         self.pickup_groups = []
         # First we need to know if we already have locations, because they are needed
         # for the pickup groups call
@@ -700,7 +826,7 @@ class Org:
             list[CallQueue]: List of CallQueue instances for the Organization
 
         """
-        logging.info("get_call_queues() started")
+        log.info("get_call_queues() started")
         self.call_queues = []
         if not self.locations:
             self.get_locations()
@@ -725,7 +851,7 @@ class Org:
         Returns:
             list[AutoAttendant]: List of AutoAttendant instances for the Organization
         """
-        logging.info("get_auto_attendants() started")
+        log.info("get_auto_attendants() started")
         if not kwargs:
             # Since we are grabbing all AutoAttendants, clear the existing list of known AAs
             self.auto_attendants = []
@@ -752,6 +878,8 @@ class Org:
             HuntGroup: The :class:`CallQueue` instance
 
         """
+        if self.call_queues is None:
+            self.get_call_queues()
         for cq in self.call_queues:
             if cq.id == id:
                 return cq
@@ -766,6 +894,8 @@ class Org:
             HuntGroup: The :class:`HuntGroup` instance
 
         """
+        if self.hunt_groups is None:
+            self.get_hunt_groups()
         for hg in self.hunt_groups:
             if hg.id == id:
                 return hg
@@ -798,7 +928,7 @@ class Org:
             list[HuntGroup]: List of HuntGroup instances for the Organization
 
         """
-        logging.info("get_hunt_groups() started")
+        log.info("get_hunt_groups() started")
         self.hunt_groups = []
         if not self.locations:
             self.get_locations()
@@ -819,13 +949,13 @@ class Org:
             list[Person]: List of Person instances
 
         """
-        logging.info("get_people() started")
+        log.info("get_people() started")
         params = {"max": "1000", "callingData": "true", **self._params}
         # Fast Mode - callingData: false is much faster
         if self._parent._fast_mode is True:
             params['callingData'] = "false"
         people = webex_api_call("get", "v1/people", headers=self._headers, params=params)
-        logging.info(f"Found {len(people)} people.")
+        log.info(f"Found {len(people)} people.")
 
         self.wxc_licenses = self.__get_wxc_licenses()
 
@@ -835,7 +965,7 @@ class Org:
         return self.people
 
     def _get_person(self, match):
-        logging.info(f"Getting person: {match}")
+        log.info(f"Getting person: {match}")
         self.wxc_licenses = self.__get_wxc_licenses()
         if "@" in match:
             params = {"max": "1000", "callingData": "true", "email": match, **self._params}
@@ -1130,7 +1260,7 @@ class Person:
         """
         if params is None:
             params = {}
-        logging.info(f"__get_webex_data started for using {endpoint}")
+        log.info(f"__get_webex_data started for using {endpoint}")
         my_params = {**params, **self._params}
         r = requests.get(_url_base + endpoint, headers=self._headers, params=my_params)
         if r.status_code in [200]:
@@ -1153,15 +1283,15 @@ class Person:
         """
         if params is None:
             params = {}
-        logging.info(f"__put_webex_data started using {endpoint}")
+        log.info(f"__put_webex_data started using {endpoint}")
         my_params = {**params, **self._params}
         r = requests.put(_url_base + endpoint, headers=self._headers, params=my_params, json=payload)
         response_code = r.status_code
         if response_code == 200 or response_code == 204:
-            logging.info("Push successful")
+            log.info("Push successful")
             return True
         else:
-            logging.info("Push failed")
+            log.info("Push failed")
             return False
 
     @property
@@ -1222,7 +1352,7 @@ class Person:
         directly can significantly improve the time to return data.
 
         """
-        logging.info(f"Getting the full config for {self.email}")
+        log.info(f"Getting the full config for {self.email}")
         if self.wxc:
             self.get_call_forwarding()
             self.get_vm_config()
@@ -1234,7 +1364,7 @@ class Person:
             self.get_barge_in()
             return self
         else:
-            logging.info(f"{self.email} is not a Webex Calling user.")
+            log.info(f"{self.email} is not a Webex Calling user.")
 
     @property
     def hunt_groups(self):
@@ -1278,19 +1408,19 @@ class Person:
 
     def get_call_forwarding(self):
         """Fetch the Call Forwarding config for the Person from the Webex API"""
-        logging.info("get_call_forwarding() started")
+        log.info("get_call_forwarding() started")
         self.call_forwarding = self.__get_webex_data(f"v1/people/{self.id}/features/callForwarding")
         return self.call_forwarding
 
     def get_barge_in(self):
         """Fetch the Barge-In config for the Person from the Webex API"""
-        logging.info("get_barge_in() started")
+        log.info("get_barge_in() started")
         self.barge_in = self.__get_webex_data(f"v1/people/{self.id}/features/bargeIn")
         return self.barge_in
 
     def get_vm_config(self):
         """Fetch the Voicemail config for the Person from the Webex API"""
-        logging.info("get_vm_config() started")
+        log.info("get_vm_config() started")
         self.vm_config = self.__get_webex_data(f"v1/people/{self.id}/features/voicemail")
         return self.vm_config
 
@@ -1307,7 +1437,7 @@ class Person:
             dict: The new config that was sent back by Webex. False is returned if the API call fails.
 
         """
-        logging.info(f"Pushing VM Config for {self.email}")
+        log.info(f"Pushing VM Config for {self.email}")
         if vm_config is not None:
             payload = vm_config
         else:
@@ -1332,7 +1462,7 @@ class Person:
             dict: The new config that was sent back by Webex
 
         """
-        logging.info(f"Pushing CF Config for {self.email}")
+        log.info(f"Pushing CF Config for {self.email}")
         if cf_config is not None:
             payload = cf_config
         else:
@@ -1407,37 +1537,37 @@ class Person:
             return self.vm_config
 
     def get_intercept(self):
-        logging.info("get_intercept() started")
+        log.info("get_intercept() started")
         self.intercept = self.__get_webex_data(f"v1/people/{self.id}/features/intercept")
         return self.intercept
 
     def get_call_recording(self):
-        logging.info("get_call_recording() started")
+        log.info("get_call_recording() started")
         self.recording = self.__get_webex_data(f"v1/people/{self.id}/features/callRecording")
         return self.recording
 
     @property
     def monitoring(self):
-        logging.debug("Getting monitoring config")
+        log.debug("Getting monitoring config")
         self._monitoring = self.__get_webex_data(f"v1/people/{self.id}/features/monitoring")
         return self._monitoring
 
     @property
     def hoteling(self):
-        logging.debug("Getting hoteling config")
+        log.debug("Getting hoteling config")
         self._hoteling = self.__get_webex_data(f"v1/people/{self.id}/features/hoteling")
         return self._hoteling
 
     @hoteling.setter
     def hoteling(self, enabled: bool):
-        logging.debug(f"Setting hoteling to {enabled}")
+        log.debug(f"Setting hoteling to {enabled}")
         self.__put_webex_data(f"v1/people/{self.id}/features/hoteling", {"enabled": enabled})
         self._hoteling
 
     @property
     def outgoing_permission(self):
         """Dict of the Outgoing Call Permissions for the Person"""
-        logging.debug(f"Getting outbound calling permissions")
+        log.debug(f"Getting outbound calling permissions")
         self._outgoing_permission = self.__get_webex_data(f"v1/people/{self.id}/features/outgoingPermission")
         return self._outgoing_permission
 
@@ -1455,7 +1585,7 @@ class Person:
             the updated value as returned by the server.
 
         """
-        logging.debug(f"Setting outgoing call permission")
+        log.debug(f"Setting outgoing call permission")
         # If they passed a config dict, use it, otherwise use the self._outgoing_permission value
         if config is None:
             if self._outgoing_permission is False:
@@ -1468,7 +1598,7 @@ class Person:
             return False
 
     def get_caller_id(self):
-        logging.info("get_caller_id() started")
+        log.info("get_caller_id() started")
         self.caller_id = self.__get_webex_data(f"v1/people/{self.id}/features/callerId")
         return self.caller_id
 
@@ -1514,12 +1644,12 @@ class Person:
             raise APIError(f"CPAPI failed to update Caller ID for Person: {r.text}")
 
     def get_dnd(self):
-        logging.info(f"Getting DND for {self.email}")
+        log.info(f"Getting DND for {self.email}")
         self.dnd = self.__get_webex_data(f"v1/people/{self.id}/features/doNotDisturb")
         return self.dnd
 
     def get_calling_behavior(self):
-        logging.info(f"Getting Calling Behavior for {self.email}")
+        log.info(f"Getting Calling Behavior for {self.email}")
         self.calling_behavior = self.__get_webex_data(f"v1/people/{self.id}/features/callingBehavior")
         return self.calling_behavior
 
@@ -1640,7 +1770,7 @@ class Person:
             Person: The instance of this person with the updated values
 
         """
-        logging.info(f"Setting {self.email} to Calling-Only")
+        log.info(f"Setting {self.email} to Calling-Only")
         # First, iterate the existing licenses and remove the ones we don't want
         # Build a list that contains the values to match on to remove
         remove_matches = ["messaging",
@@ -1648,18 +1778,18 @@ class Person:
                           "free"]
         new_licenses = []
         for license in self.licenses:
-            logging.debug(f"Checking license: {license}")
+            log.debug(f"Checking license: {license}")
             lic_name = self._parent.get_license_name(license)
-            logging.debug(f"License Name: {lic_name}")
+            log.debug(f"License Name: {lic_name}")
             if any(match in lic_name.lower() for match in remove_matches):
                 if "screen share" in lic_name.lower():
-                    logging.debug(f"{lic_name} matches but is needed")
+                    log.debug(f"{lic_name} matches but is needed")
                     new_licenses.append(license)
                 else:
-                    logging.debug(f"License should be removed")
+                    log.debug(f"License should be removed")
                     continue
             else:
-                logging.debug(f"Keeping license")
+                log.debug(f"Keeping license")
                 new_licenses.append(license)
 
         success = self.update_person(licenses=new_licenses)
@@ -1751,6 +1881,8 @@ class CallQueue:
         """The Call Forwarding config for the Call Queue"""
         self.config: dict = {}
         """The configuration dictionary for the Call Queue"""
+        self.spark_id: str = decode_spark_id(self.id)
+        """ The Spark IS for the CallQueue"""
 
         if get_config:
             self.get_queue_config()
@@ -1800,7 +1932,7 @@ class CallQueue:
 
         """
         # TODO: Right now this only pushes .config. It should also push .call_forwarding and .forwarding_rules
-        logging.info(f"Pushing Call Queue config to Webex for {self.name}")
+        log.info(f"Pushing Call Queue config to Webex for {self.name}")
         url = _url_base + "v1/telephony/config/locations/" + self.location_id + "/queues/" + self.id
         r = requests.put(url,
                          headers=self._parent._headers, json=self.config)
@@ -1821,7 +1953,7 @@ class XSICallQueue:
             org (Org): The instance of the wxcadm.Org class (i.e. "webex.org"). This is needed to provide the right
                 authentication and URLs for the XSI service.
         """
-        logging.info(f"Starting XSICallCenter for {call_queue_id}")
+        log.info(f"Starting XSICallCenter for {call_queue_id}")
         self.id = call_queue_id
         self.org = org
         self._calls = []
@@ -1856,9 +1988,9 @@ class XSI:
             cache (bool): Whether to cache the XSI data (True) or pull it "live" every time (**False**)
 
         """
-        logging.info(f"Initializing XSI instance for {parent.email}")
+        log.info(f"Initializing XSI instance for {parent.email}")
         # First we need to get the XSI User ID for the Webex person we are working with
-        logging.info("Getting XSI identifiers")
+        log.info("Getting XSI identifiers")
         user_id_bytes = base64.b64decode(parent.id + "===")
         user_id_decoded = user_id_bytes.decode("utf-8")
         user_id_bwks = user_id_decoded.split("/")[-1]
@@ -1972,7 +2104,7 @@ class XSI:
             del call
         self._calls.clear()
         calls_data: list = self.__get_xsi_data(f"/v2.0/user/{self.id}/calls")
-        logging.debug(f"Calls Data: {calls_data}")
+        log.debug(f"Calls Data: {calls_data}")
         if "call" not in calls_data['Calls']:
             self._calls = []
             return self._calls
@@ -2161,7 +2293,7 @@ class XSIEvents:
 
         """
         self.queue = queue
-        logging.debug("Initializing Channel Set")
+        log.debug("Initializing Channel Set")
         channel_set = XSIEventsChannelSet(self)
         self.channel_sets.append(channel_set)
         return channel_set
@@ -2180,7 +2312,7 @@ class XSIEventsChannelSet:
         self.parent = parent
         self._headers = self.parent._headers
         self.id = uuid.uuid4()
-        logging.debug(f"Channel Set ID: {self.id}")
+        log.debug(f"Channel Set ID: {self.id}")
         self.channels = []
         self.subscriptions = []
         self.queue = self.parent.queue
@@ -2190,7 +2322,7 @@ class XSIEventsChannelSet:
         for record in srv_records:
             my_endpoint = re.sub(self.parent.xsi_domain, record.host, self.parent.channel_endpoint)
             my_events_endpoint = re.sub(self.parent.xsi_domain, record.host, self.parent.events_endpoint)
-            logging.debug(f"Establishing channel with endpoint: {record.host}")
+            log.debug(f"Establishing channel with endpoint: {record.host}")
             channel = XSIEventsChannel(self, my_endpoint, my_events_endpoint)
             self.channels.append(channel)
 
@@ -2230,7 +2362,7 @@ class XSIEventsChannelSet:
             bool: True if unsubscription was successful, False otherwise
 
         """
-        logging.info(f"Unsubscribing subscription: {subscription_id}")
+        log.info(f"Unsubscribing subscription: {subscription_id}")
         all_success = True
         for subscription in self.subscriptions:
             if subscription.id == subscription_id or subscription_id.lower() == "all":
@@ -2258,7 +2390,7 @@ class XSIEventsSubscription:
         self._headers = self.parent._headers
         self.last_refresh = time.time()
         self.event_package = event_package
-        logging.info(f"Subscribing to: {self.event_package}")
+        log.info(f"Subscribing to: {self.event_package}")
         payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
                   '<Subscription xmlns=\"http://schema.broadsoft.com/xsi\">' \
                   f'<event>{self.event_package}</event>' \
@@ -2269,28 +2401,28 @@ class XSIEventsSubscription:
         if r.ok:
             response_dict = xmltodict.parse(r.text)
             self.id = response_dict['Subscription']['subscriptionId']
-            logging.debug(f"Subscription ID: {self.id}")
+            log.debug(f"Subscription ID: {self.id}")
 
     def _refresh_subscription(self):
         payload = "<Subscription xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Subscription>"
         r = requests.put(self.events_endpoint + f"/v2.0/subscription/{self.id}",
                          headers=self._headers, data=payload)
         if r.ok:
-            logging.debug("Subscription refresh succeeded")
+            log.debug("Subscription refresh succeeded")
             return True
         else:
-            logging.debug(f"Subscription refresh failed: {r.text}")
+            log.debug(f"Subscription refresh failed: {r.text}")
             return False
 
     def delete(self):
-        logging.debug(f"Deleting XSIEventsSubscription: {self.id}, {self.event_package}")
+        log.debug(f"Deleting XSIEventsSubscription: {self.id}, {self.event_package}")
         r = requests.delete(self.events_endpoint + f"/v2.0/subscription/{self.id}",
                             headers=self._headers)
         if r.ok:
-            logging.debug("Subscription delete succeeded")
+            log.debug("Subscription delete succeeded")
             return True
         else:
-            logging.debug(f"Subscription delete failed: {r.text}")
+            log.debug(f"Subscription delete failed: {r.text}")
             return False
 
 
@@ -2315,42 +2447,42 @@ class XSIEventsChannel:
                   f'<applicationId>{self.parent.parent.application_id}</applicationId>' \
                   '</Channel>'
 
-        logging.debug("Sending Channel Start Request (Streaming)")
+        log.debug("Sending Channel Start Request (Streaming)")
         r = requests.post(
             f"{self.endpoint}/v2.0/channel",
             headers=self._headers, data=payload, stream=True)
         # Get the real IP of the remote server so we can send subsequent messages to that
         ip, port = r.raw._connection.sock.getpeername()
-        logging.debug(f"Received response from {ip}.")
+        log.debug(f"Received response from {ip}.")
         self.xsp_ip = str(ip)
         chars = ""
         self.last_refresh = time.time()
         for char in r.iter_content():
             decoded_char = char.decode('utf-8')
             chars += decoded_char
-            # logging.info(chars)
+            # log.info(chars)
             if "</Channel>" in chars:
                 m = re.search("<channelId>(.+)<\/channelId>", chars)
                 self.id = m.group(1)
                 chars = ""
             if "<ChannelHeartBeat xmlns=\"http://schema.broadsoft.com/xsi\"/>" in chars:
-                logging.debug("Heartbeat received on channel")
+                log.debug("Heartbeat received on channel")
                 # Check how long since a channel refresh and refresh if needed
                 time_now = time.time()
                 if time_now - self.last_refresh >= 3600:
-                    logging.debug(f"Refreshing channel: {self.id}")
+                    log.debug(f"Refreshing channel: {self.id}")
                     self._refresh_channel()
                     self.last_refresh = time.time()
                 # Check any subscriptions and refresh them while we are at it
                 for subscription in self.parent.subscriptions:
                     if time_now - subscription.last_refresh >= 3600:
-                        logging.debug(f"Refreshing subscription: {subscription.id}")
+                        log.debug(f"Refreshing subscription: {subscription.id}")
                         subscription._refresh_subscription()
                         subscription.last_refresh = time.time()
                 chars = ""
             if "</xsi:Event>" in chars:
                 event = chars
-                logging.debug(f"Full Event: {event}")
+                log.debug(f"Full Event: {event}")
                 message_dict = xmltodict.parse(event)
                 self.parent.queue.put(message_dict)
                 # Reset ready for new message
@@ -2358,21 +2490,21 @@ class XSIEventsChannel:
                 self._ack_event(message_dict['xsi:Event']['xsi:eventID'], r.cookies)
             if decoded_char == "\n":
                 # Discard this for now
-                # logging.debug(f"Discard Line: {chars}")
+                # log.debug(f"Discard Line: {chars}")
                 chars = ""
-        logging.debug("Channel loop ended")
+        log.debug("Channel loop ended")
 
     def heartbeat_daemon(self):
         session = requests.Session()
         while self.active:
-            logging.debug(f"Sending heartbeat for channel: {self.id}")
+            log.debug(f"Sending heartbeat for channel: {self.id}")
             r = session.put(self.events_endpoint + f"/v2.0/channel/{self.id}/heartbeat",
                             headers=self._headers, stream=True)
             ip, port = r.raw._connection.sock.getpeername()
             if r.ok:
-                logging.debug(f"{ip} - Heartbeat successful")
+                log.debug(f"{ip} - Heartbeat successful")
             else:
-                logging.debug(f"{ip} - Heartbeat failed: {r.text} [{r.status_code}]")
+                log.debug(f"{ip} - Heartbeat failed: {r.text} [{r.status_code}]")
             # Send a heartbeat every 15 seconds
             time.sleep(15)
         return True
@@ -2384,7 +2516,7 @@ class XSIEventsChannel:
                   '<statusCode>200</statusCode>' \
                   '<reason>OK</reason>' \
                   '</EventResponse>'
-        logging.debug(f"Acking event: {event_id}")
+        log.debug(f"Acking event: {event_id}")
         r = requests.post(self.events_endpoint + "/v2.0/channel/eventresponse",
                           headers=self._headers, data=payload, cookies=cookies)
         return True
@@ -2394,10 +2526,10 @@ class XSIEventsChannel:
         r = requests.put(self.events_endpoint + f"/v2.0/channel/{self.id}",
                          headers=self._headers, data=payload)
         if r.ok:
-            logging.debug("Channel refresh succeeded")
+            log.debug("Channel refresh succeeded")
             return True
         else:
-            logging.debug(f"Channel refresh failed: {r.text}")
+            log.debug(f"Channel refresh failed: {r.text}")
             return False
 
 
@@ -2466,7 +2598,7 @@ class HuntGroup:
 
         # Get the config unless we are asked not to
         if config:
-            logging.info(f"Getting config for Hunt Group {self.id} in Location {self.location_id}")
+            log.info(f"Getting config for Hunt Group {self.id} in Location {self.location_id}")
             self.get_config()
 
     def __str__(self):
@@ -2577,7 +2709,7 @@ class Call:
 
         """
         if executive is not None:
-            logging.info(f"Originating a call to {address} for {self._userid} on behalf of Exec {executive}")
+            log.info(f"Originating a call to {address} for {self._userid} on behalf of Exec {executive}")
             # TODO: The API call will fail if the Assistant can't place the call for the Exec, but we should
             #   really check that first and not waste the API call (although those take API calls, too)
             params = {"address": address, "executiveAddress": executive}
@@ -2590,7 +2722,7 @@ class Call:
             else:
                 raise NotAllowed("Person is not allowed to place calls on behalf of this executive")
         else:
-            logging.info(f"Originating a call to {address} for {self._userid}")
+            log.info(f"Originating a call to {address} for {self._userid}")
             params = {"address": address, "info": comment}
             r = requests.post(self._url + "/new", headers=self._headers, params=params)
             if r.status_code == 201:
@@ -2632,7 +2764,7 @@ class Call:
             params = {"decline": decline}
         else:
             params = {}
-        logging.info(f"Hanging up call ID: {self.id}")
+        log.info(f"Hanging up call ID: {self.id}")
         r = requests.delete(self._url + f"/{self.id}",
                             headers=self._headers, params=params)
         if r.status_code == 200:
@@ -2666,11 +2798,11 @@ class Call:
                 }
 
         """
-        logging.info(f"Getting call status")
+        log.info(f"Getting call status")
         r = requests.get(self._url + f"/{self.id}",
                          headers=self._headers)
         response = r.json()
-        logging.debug(f"Call Status response: {response}")
+        log.debug(f"Call Status response: {response}")
         if r.status_code == 200:
             return_data = {
                 "network_call_id": response['Call']['networkCallId']['$'],
@@ -2710,7 +2842,7 @@ class Call:
             bool: True if successful. False if unsuccessful
 
         """
-        logging.info(f"Transferring call {self.id} to {address} for {self._userid}")
+        log.info(f"Transferring call {self.id} to {address} for {self._userid}")
         # Set the address param to be passed to XSI
         if self.type == "CallQueue":
             params = {"phoneno": address}
@@ -2742,7 +2874,7 @@ class Call:
             if r.status_code in [200, 201, 204]:
                 return True
             else:
-                logging.debug(f"Transfer request {r.request.url}")
+                log.debug(f"Transfer request {r.request.url}")
                 raise APIError(f"The Transfer call failed: {r.text}")
 
     def finish_transfer(self):
@@ -2754,7 +2886,7 @@ class Call:
             bool: Whether or not the transfer completes
 
         """
-        logging.info("Completing transfer...")
+        log.info("Completing transfer...")
         r = requests.put(self._url + f"/{self.id}/ConsultTransfer/{self._transfer_call.id}", headers=self._headers)
         if r.status_code in [200, 201, 204]:
             return True
@@ -3074,7 +3206,7 @@ class Workspace:
 
     def get_config(self):
         """Get (or refresh) the confirmation of the Workspace from the Webex API"""
-        logging.info(f"Getting Workspace config for {self.id}")
+        log.info(f"Getting Workspace config for {self.id}")
         r = requests.get(_url_base + f"v1/workspaces/{self.id}", headers=self._headers, params=self._params)
         if r.status_code in [200]:
             response = r.json()
@@ -3143,7 +3275,7 @@ class WorkspaceLocation:
 
     def get_config(self):
         """Get (or refresh) the configuration of the WorkspaceLocations from the Webex API"""
-        logging.info(f"Getting Workspace config for {self.id}")
+        log.info(f"Getting Workspace config for {self.id}")
         r = requests.get(_url_base + f"v1/workspaceLocations/{self.id}", headers=self._headers, params=self._params)
         if r.status_code in [200]:
             response = r.json()
@@ -3153,7 +3285,7 @@ class WorkspaceLocation:
 
     def get_floors(self):
         """Get (or refresh) the WorkspaceLocationFloor instances for this WorkspaceLocation"""
-        logging.info(f"Getting Location Floors for {self.name}")
+        log.info(f"Getting Location Floors for {self.name}")
         self.floors = []
         r = requests.get(_url_base + f"v1/workspaceLocations/{self.id}/floors",
                          headers=self._headers, params=self._params)
@@ -3216,7 +3348,7 @@ class CPAPI:
                 with the security policy.
 
         """
-        logging.info("Setting Org-wide default VM PIN")
+        log.info("Setting Org-wide default VM PIN")
         payload = {
             "defaultVoicemailPinEnabled": True,
             "defaultVoicemailPin": str(pin)
@@ -3231,7 +3363,7 @@ class CPAPI:
             raise ValueError
 
     def clear_global_vm_pin(self):
-        logging.info("Clearing Org-wide default VM PIN")
+        log.info("Clearing Org-wide default VM PIN")
         payload = {
             "defaultVoicemailPinEnabled": False,
         }
@@ -3240,7 +3372,7 @@ class CPAPI:
         return r.text
 
     def reset_vm_pin(self, person: Person, pin: str = None):
-        logging.info(f"Resetting VM PIN for {person.email}")
+        log.info(f"Resetting VM PIN for {person.email}")
         user_id = person.spark_id.split("/")[-1]
 
         if pin is not None:
@@ -3341,7 +3473,7 @@ class CPAPI:
             wxcadm.exceptions.APIError: Raised when there is a problem getting data from the API
 
         """
-        logging.info("CPAPI - Getting Calling Location")
+        log.info("CPAPI - Getting Calling Location")
         r = requests.get(self._url_base + f"places/{workspace_id}", headers=self._headers)
         if r.status_code == 200:
             response = r.json()
@@ -3353,7 +3485,7 @@ class CPAPI:
         return location
 
     def upload_moh_file(self, location_id: str, filename: str):
-        logging.info("CPAPI - Uploading MOH File")
+        log.info("CPAPI - Uploading MOH File")
         # Calculate the "locations" ID from the Org ID
         loc_id_bytes = base64.b64decode(location_id + "===")
         loc_id_decoded = loc_id_bytes.decode("utf-8")
@@ -3363,7 +3495,7 @@ class CPAPI:
         must_close = True
 
         encoder = MultipartEncoder(fields={"file": (upload_as, content, 'audio/wav')})
-        logging.info(encoder)
+        log.info(encoder)
         r = requests.post(self._url_base + f"locations/{location_id}/features/musiconhold/actions/announcement",
                           headers={"Content-Type": encoder.content_type, **self._headers},
                           data=encoder)
@@ -3377,7 +3509,7 @@ class CPAPI:
             raise APIError(f"Something went wrong uploading the MOH file: {r.text}")
 
     def set_custom_moh(self, location_id: str, filename: str):
-        logging.info("CPAPI - Setting Custom MOH")
+        log.info("CPAPI - Setting Custom MOH")
         # Calculate the "locations" ID from the Org ID
         loc_id_bytes = base64.b64decode(location_id + "===")
         loc_id_decoded = loc_id_bytes.decode("utf-8")
@@ -3393,7 +3525,7 @@ class CPAPI:
             raise APIError(f"Something went wrong setting the MOH: {r.text}")
 
     def set_default_moh(self, location_id: str):
-        logging.info("CPAPI - Setting Default MOH")
+        log.info("CPAPI - Setting Default MOH")
         # Calculate the "locations" ID from the Org ID
         loc_id_bytes = base64.b64decode(location_id + "===")
         loc_id_decoded = loc_id_bytes.decode("utf-8")
@@ -3431,7 +3563,7 @@ class Terminus:
         self._server = "https://terminus.huron-dev.com"
 
     def get_locations(self):
-        logging.info("Getting locations from Terminus")
+        log.info("Getting locations from Terminus")
         r = requests.get(self._url_base + "locations", headers=self._headers)
         if r.ok:
             locations = r.json()
@@ -3502,7 +3634,7 @@ class CSDM:
                 token that is used by the Org
         """
 
-        logging.info("Initializing CSDM instance")
+        log.info("Initializing CSDM instance")
         self._parent = org
         self._access_token = access_token
         self._headers = {"Authorization": f"Bearer {access_token}"}
@@ -3528,7 +3660,7 @@ class CSDM:
             list[Device]: A list of all the :class:`Device` instances
 
         """
-        logging.info("Getting devices from CSDM")
+        log.info("Getting devices from CSDM")
         devices_from_csdm = []
         payload =  {"query": None,
                     "aggregates": ["connectionStatus",
@@ -3545,38 +3677,38 @@ class CSDM:
         r = requests.post(self._url_base + "_search", headers=self._headers, json=payload)
         if r.ok:
             response = r.json()
-            logging.debug(f"Received {len(response['hits']['hits'])} devices out of {response['hits']['total']}")
+            log.debug(f"Received {len(response['hits']['hits'])} devices out of {response['hits']['total']}")
             devices_from_csdm.extend(response['hits']['hits'])
             # If the total number of devices is greater than what we received, we need to make the call again
             keep_going = True
             while keep_going:
                 if len(devices_from_csdm) < response['hits']['total']:
-                    logging.debug("Getting more devices")
+                    log.debug("Getting more devices")
                     payload['from'] = len(devices_from_csdm)
                     r = requests.post(self._url_base + "_search", headers=self._headers, json=payload)
                     if r.ok:
                         response = r.json()
-                        logging.debug(f"Received {len(response['hits']['hits'])} more devices")
+                        log.debug(f"Received {len(response['hits']['hits'])} more devices")
                         devices_from_csdm.extend(response['hits']['hits'])
                     else:
-                        logging.error("Failed getting more devices")
+                        log.error("Failed getting more devices")
                         raise CSDMError("Error getting more devices")
                 else:
                     keep_going = False
         else:
-            logging.error(("Failed getting devices"))
+            log.error(("Failed getting devices"))
             raise CSDMError("Error getting devices")
 
         self._devices = []
-        logging.debug("Creating Device instances")
+        log.debug("Creating Device instances")
         for device in devices_from_csdm:
             this_device = Device(self, device)
             if with_location is True:
                 # Get the device location with another search via CPAPI
-                logging.debug(f"Getting Device Location via CPAPI: {this_device.display_name}")
+                log.debug(f"Getting Device Location via CPAPI: {this_device.display_name}")
                 if "ownerId" in device:
                     device_location: Location = self._parent._cpapi.get_workspace_calling_location(device['ownerId'])
-                    logging.debug(f"\tLocation: {device_location.name}")
+                    log.debug(f"\tLocation: {device_location.name}")
                     this_device.calling_location = device_location
             self._devices.append(this_device)
 
@@ -4319,6 +4451,27 @@ class AutoAttendant:
         else:
             return False
 
+
+@dataclass
+class PagingGroup:
+    parent: Location
+    id: str
+    name: str
+    spark_id: str = field(init=False, repr=False)
+    config: dict = field(init=False, repr=False)
+
+    def __post_init__(self):
+        self.spark_id = decode_spark_id(self.id)
+        self.refresh_config()
+
+    def refresh_config(self):
+        """ Pull a fresh copy of the Paging Group config from Webex, in case it has changed. """
+        api_resp: dict = webex_api_call("get", f"v1/telephony/config/locations/{self.parent.id}/paging/"
+                                        f"{self.id}",
+                                        headers=self.parent._headers)
+        self.config = api_resp
+
+
 @dataclass
 class LocationSchedule:
     """ The class for Location Schedules within a :class:`Location`
@@ -4388,13 +4541,13 @@ class LocationSchedule:
             TypeError: Raised when attempting to add a holiday to a businessHours schedule
 
         """
-        logging.debug(f"add_holiday() started")
+        log.debug(f"add_holiday() started")
         new_event = {"name": name,
                      "startDate": date, "endDate": date, "allDayEnabled": True}
         date_object = datetime.strptime(date, "%Y-%m-%d")
         # If this isn't a Holidays schedule, we shouldn't accept a new holiday
         if self.type.lower() != "holidays":
-            logging.debug("Trying to add a holiday to a non-holidays schedule. Raising exception.")
+            log.debug("Trying to add a holiday to a non-holidays schedule. Raising exception.")
             raise TypeError("Schedule is not of type 'holidays'. Cannot add holiday.")
         if recur is True:
             if recurrence:
@@ -4426,7 +4579,7 @@ class LocationSchedule:
             bool: True on success, False otherwise
 
         """
-        logging.debug("delete_event() started")
+        log.debug("delete_event() started")
         # Since we accept both the event name or ID, we need to loop through the events to find the one we need.
         for e in self.config['events']:
             if e['name'] == event or e['id'] == event:
@@ -4472,7 +4625,7 @@ class LocationSchedule:
             bool: True on success, False otherwise
 
         """
-        logging.debug("create_event() started")
+        log.debug("create_event() started")
         # Input validation
         if all_day is False and (start_time == "" or end_time == ""):
             raise ValueError("If all_day == False, both start_time and end_time are required.")
@@ -4501,7 +4654,7 @@ class LocationSchedule:
 
     def update_event(self, id: str, name: str = None, start_date: str = None, end_date: str = None, start_time: str = None,
                      end_time: str = None, all_day: bool = None, recurrence: dict = None):
-        logging.debug("update_event() started")
+        log.debug("update_event() started")
         # Input validation
         if all_day is False and (start_time == "" or end_time == ""):
             raise ValueError("If all_day == False, both start_time and end_time are required.")
