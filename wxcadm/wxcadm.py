@@ -2053,7 +2053,7 @@ class XSI:
 
         # Get the profile if we have been asked to
         if get_profile:
-            self.get_profile()
+            self.profile
 
     def new_call(self, address: str = None):
         """Create a new Call instance
