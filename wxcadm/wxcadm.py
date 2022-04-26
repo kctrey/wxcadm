@@ -2357,17 +2357,19 @@ class XSIEventsChannelSet:
             heartbeat_thread = Thread(target=channel.heartbeat_daemon, daemon=True)
             heartbeat_thread.start()
 
-    def subscribe(self, event_package):
+    def subscribe(self, event_package, person: Person = None):
         """ Subscribe to an Event Package over the channel opened with :meth:`XSIEvents.open_channel()`
 
         Args:
             event_package (str): The name of the Event Package to subscribe to.
+            person (Person, optonal): A Person instance to subscribe to the event package for. If not provided,
+                the entire Organization will be subscribed.
 
         Returns:
             XSIEventsSubscription: The Subscription instance. False is returned if the subscription fails.
 
         """
-        subscription = XSIEventsSubscription(self, event_package)
+        subscription = XSIEventsSubscription(self, event_package, person=person)
         if subscription:
             self.subscriptions.append(subscription)
             return subscription
@@ -2397,7 +2399,7 @@ class XSIEventsChannelSet:
 
 
 class XSIEventsSubscription:
-    def __init__(self, parent: XSIEventsChannelSet, event_package: str):
+    def __init__(self, parent: XSIEventsChannelSet, event_package: str, person: Person = None):
         """ Initialize an XSIEventsSubscription
 
         Initializing the subscription also sends the subscription to the XSI API over the events_endpoint.
@@ -2405,9 +2407,15 @@ class XSIEventsSubscription:
         Args:
             parent (XSIEventsChannelSet): The XSIEventsChannelSet instance to issue the subscription for.
             event_package (str): The XSI Event Package to subscribe to.
+            person (Person): A Person instance to subscribe to the event package for. If not provided,
+                the entire Organization will be subscribed.
         """
         self.id = ""
         self.parent = parent
+        if person is None:
+            self.target = "serviceprovider"
+        else:
+            self.target = person
         self.events_endpoint = self.parent.parent.events_endpoint
         self._headers = self.parent._headers
         self.last_refresh = time.time()
@@ -2418,8 +2426,17 @@ class XSIEventsSubscription:
                   f'<event>{self.event_package}</event>' \
                   f'<expires>7200</expires><channelSetId>{self.parent.id}</channelSetId>' \
                   f'<applicationId>{self.parent.parent.application_id}</applicationId></Subscription>'
-        r = requests.post(self.events_endpoint + f"/v2.0/serviceprovider/{self.parent.parent.enterprise}",
-                          headers=self._headers, data=payload)
+        if person is None:
+            r = requests.post(self.events_endpoint + f"/v2.0/serviceprovider/{self.parent.parent.enterprise}",
+                              headers=self._headers, data=payload)
+        else:
+            if isinstance(person, Person):
+                # Make sure we have the Person's XSI Profile
+                user_id = person.spark_id.split("/")[-1]
+                r = requests.post(self.events_endpoint + f"/v2.0/user/{user_id}",
+                                  headers=self._headers, data=payload)
+            else:
+                raise ValueError("The user argument requires a Person instance")
         if r.ok:
             response_dict = xmltodict.parse(r.text)
             self.id = response_dict['Subscription']['subscriptionId']

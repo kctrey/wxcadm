@@ -3,6 +3,7 @@ What's New
 
 v2.x.x
 ------
+- :meth:`wxcadm.XSIEventsChannelSet.subscribe()` now allows a Person target for subsciptions
 - Improved :meth:`wxcadm.Org.number` to handle HuntGroup, PagingGroup, and CallQueue owners
 - Added support for Paging Groups with :meth:`wxcadm.Org.paging_groups`
 

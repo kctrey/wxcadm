@@ -252,12 +252,26 @@ if endpoints is not None:
         fail_test()
     else:
         pass_test()
-    test = "XSI Events"
+    test = "XSI Events - Service Provider"
     start_test()
     events = wxcadm.XSIEvents(webex.org)
     events_queue = queue.Queue()
     channel = events.open_channel(events_queue)
     channel.subscribe("Advanced Call")
+    channel.unsubscribe(channel.subscriptions[0].id)
+    try:
+        message = events_queue.get()
+        print(message['xsi:Event']['xsi:eventData']['@xsi1:type'] + "...", end="")
+    except:
+        fail_test()
+    else:
+        pass_test()
+    test = "XSI Events - Person"
+    start_test()
+    events = wxcadm.XSIEvents(webex.org)
+    events_queue = queue.Queue()
+    channel = events.open_channel(events_queue)
+    channel.subscribe("Advanced Call", person=webex.org.get_wxc_people()[0])
     channel.unsubscribe(channel.subscriptions[0].id)
     try:
         message = events_queue.get()
