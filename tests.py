@@ -85,15 +85,14 @@ else:
 
 # Get the count of records, just for debugging purpose later
 people_count = len(webex.org.people)
-locations_count = len(webex.org.locations)
 print(f"People Count: {people_count}")
-print(f"Locations Count: {locations_count}")
-
 # Location tests
 test = "Get Locations"
 start_test()
 try:
     org_locations = webex.org.get_locations()
+    locations_count = len(webex.org.locations)
+    print(f"Locations Count: {locations_count}")
 except:
     fail_test()
     print("Cannot get Locations. Skipping Location tests.")

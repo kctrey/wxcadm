@@ -303,6 +303,8 @@ class Org:
         """
 
         # Instance attrs
+        self._numbers = None
+        self._paging_groups = None
         self._parent = parent
         self.call_queues: list[CallQueue] = None
         """The Call Queues for this Org"""
@@ -411,13 +413,15 @@ class Org:
             list[PagingGroup]: The PagingGroup instances for this Org
 
         """
-        paging_groups = []
-        response = webex_api_call("get", "v1/telephony/config/paging", headers=self._headers, params=self._params)
-        for entry in response['locationPaging']:
-            location = self.get_location(id=entry['locationId'])
-            this_pg = PagingGroup(location, entry['id'], entry['name'])
-            paging_groups.append(this_pg)
-        return paging_groups
+        if not self._paging_groups:
+            paging_groups = []
+            response = webex_api_call("get", "v1/telephony/config/paging", headers=self._headers, params=self._params)
+            for entry in response['locationPaging']:
+                location = self.get_location(id=entry['locationId'])
+                this_pg = PagingGroup(location, entry['id'], entry['name'])
+                paging_groups.append(this_pg)
+            self._paging_groups = paging_groups
+        return self._paging_groups
 
     def get_paging_group(self, id: str = None, name: str = None, spark_id: str = None):
         """ Get the PagingGroup instance associated with a given ID, Name, or Spark ID
@@ -489,13 +493,14 @@ class Org:
 
 
     @property
-    def numbers(self, with_assignment: bool = True):
+    def numbers(self):
         """ All the Numbers for the Org
 
         Returns:
             list[dict]: List of dict containing information about each number
 
         """
+        log.info("Getting Org numbers from Webex")
         response = webex_api_call("get", "v1/telephony/config/numbers", headers=self._headers, params=self._params)
         org_numbers = response['phoneNumbers']
         for num in org_numbers:
@@ -525,12 +530,18 @@ class Org:
                 location = self.get_location_by_name(num['location']['name'])
                 if location is not None:
                     num['location'] = location
+        self._numbers = org_numbers
         return org_numbers
 
     def get_number_assignment(self, number: str):
-        for num in self.numbers:
-            if number in num['phoneNumber']:
-                return num
+        log.info(f"get_number_assignment({number})")
+        if self._numbers is None:
+            self.numbers
+        for num in self._numbers:
+            if num.get("phoneNumber", "") is not None:
+                if number in num.get("phoneNumber", ""):
+                    log.debug(f"Found match: {num}")
+                    return num
         return None
 
     @property
@@ -790,6 +801,8 @@ class Org:
             self.workspace_locations.append(this_location)
 
         return self.workspaces
+
+    
 
     def get_pickup_groups(self):
         """Get all of the Call Pickup Groups for an Organization.
@@ -1324,9 +1337,18 @@ class Person:
         else:
             return False
 
-    def start_xsi(self):
-        """Starts an XSI session for the Person"""
-        self.xsi = XSI(self)
+    def start_xsi(self, get_profile: bool = False, cache: bool = False):
+        """Starts an XSI session for the Person
+
+        Args:
+            get_profile (bool, optional): Whether to automatically get the XSI profile for the Person. Defaults to False
+            cache (bool, optional): Whether to cache results so that the data doesn't need to be re-pulled from Webex.
+                Defaults to False.
+
+        Returns:
+            XSI: The XSI instance for this Person
+        """
+        self.xsi = XSI(self, get_profile=get_profile, cache=cache)
         return self.xsi
 
     def reset_vm_pin(self, pin: str = None):
