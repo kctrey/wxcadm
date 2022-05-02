@@ -3543,6 +3543,7 @@ class CPAPI:
         if r.ok:
             return True
         elif r.status_code == 403:
+            log.debug(f"Request headers: {r.request.headers}")
             raise TokenError("Your API Access Token doesn't have permission to use this API call")
         else:
             raise APIError(f"Something went wrong uploading the MOH file: {r.text}")
