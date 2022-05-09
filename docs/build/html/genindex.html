@@ -39,6 +39,9 @@
 <li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="whatsnew.html">What’s New</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html">About API Scopes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html#integrations">Integrations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html#the-cp-api">The CP-API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/documentation.html">Usage Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/xsi.html">XSI Usage</a></li>
 </ul>
@@ -48,6 +51,7 @@
 <li class="toctree-l1"><a class="reference internal" href="reference/Org.html">The Org class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Location.html">The Location class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/LocationSchedule.html">The LocationSchedule class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/AutoAttendant.html">The AutoAttendant class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Person.html">The Person class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Device.html">The Device class</a></li>
 </ul>
@@ -71,6 +75,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Example Scripts</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/care_facility.html">Alert When User Goes Off-Hook Without Dialing for Too Long</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples/queue_block_callers.html">Call Queue - Block Callers by Number</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples/redsky_add_webex_locations.html">RedSky - Add Webex Locations as Buildings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples/vm_cc_to_email.html">Voicemail - Enable Copy-to-Email</a></li>
@@ -148,14 +153,14 @@
 </li>
       <li><a href="reference/RedSky.html#wxcadm.wxcadm.RedSky.add_mac_discovery">add_mac_discovery() (wxcadm.wxcadm.RedSky method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Location.html#wxcadm.wxcadm.Location.address">address (wxcadm.wxcadm.Location attribute)</a>
 
       <ul>
         <li><a href="reference/RedSkyBuilding.html#wxcadm.wxcadm.RedSkyBuilding.address">(wxcadm.wxcadm.RedSkyBuilding attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.alternate_numbers">alternate_numbers (wxcadm.wxcadm.XSI property)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.anonymous_call_rejection">anonymous_call_rejection (wxcadm.wxcadm.XSI property)</a>
@@ -166,7 +171,9 @@
 </li>
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.attach_call">attach_call() (wxcadm.wxcadm.XSI method)</a>
 </li>
-      <li><a href="reference/Org.html#wxcadm.wxcadm.Org.auto_attendants">auto_attendants (wxcadm.wxcadm.Org attribute)</a>
+      <li><a href="reference/Org.html#wxcadm.wxcadm.Org.auto_attendants">auto_attendants (wxcadm.wxcadm.Org property)</a>
+</li>
+      <li><a href="reference/AutoAttendant.html#wxcadm.wxcadm.AutoAttendant">AutoAttendant (class in wxcadm.wxcadm)</a>
 </li>
       <li><a href="reference/Location.html#wxcadm.wxcadm.Location.available_numbers">available_numbers (wxcadm.wxcadm.Location property)</a>
 </li>
@@ -190,8 +197,12 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Call.html#wxcadm.wxcadm.Call">Call (class in wxcadm.wxcadm)</a>
 </li>
-      <li><a href="reference/Person.html#wxcadm.wxcadm.Person.call_forwarding">call_forwarding (wxcadm.wxcadm.Person attribute)</a>
+      <li><a href="reference/AutoAttendant.html#wxcadm.wxcadm.AutoAttendant.call_forwarding">call_forwarding (wxcadm.wxcadm.AutoAttendant attribute)</a>
+
+      <ul>
+        <li><a href="reference/Person.html#wxcadm.wxcadm.Person.call_forwarding">(wxcadm.wxcadm.Person attribute)</a>
 </li>
+      </ul></li>
       <li><a href="reference/Location.html#wxcadm.wxcadm.Location.call_queues">call_queues (wxcadm.wxcadm.Location property)</a>
 
       <ul>
@@ -208,11 +219,13 @@
 </li>
       <li><a href="reference/Device.html#wxcadm.wxcadm.Device.calling_type">calling_type (wxcadm.wxcadm.Device attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.calls">calls (wxcadm.wxcadm.XSI property)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Device.html#wxcadm.wxcadm.Device.category">category (wxcadm.wxcadm.Device attribute)</a>
+</li>
+      <li><a href="reference/AutoAttendant.html#wxcadm.wxcadm.AutoAttendant.cf_rules">cf_rules (wxcadm.wxcadm.AutoAttendant attribute)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.change_phone_number">change_phone_number() (wxcadm.wxcadm.Person method)</a>
 </li>
@@ -222,7 +235,13 @@
 </li>
       <li><a href="reference/Call.html#wxcadm.wxcadm.Call.conference">conference() (wxcadm.wxcadm.Call method)</a>
 </li>
-      <li><a href="reference/LocationSchedule.html#wxcadm.wxcadm.LocationSchedule.config">config (wxcadm.wxcadm.LocationSchedule attribute)</a>
+      <li><a href="reference/AutoAttendant.html#wxcadm.wxcadm.AutoAttendant.config">config (wxcadm.wxcadm.AutoAttendant attribute)</a>
+
+      <ul>
+        <li><a href="reference/LocationSchedule.html#wxcadm.wxcadm.LocationSchedule.config">(wxcadm.wxcadm.LocationSchedule attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="reference/AutoAttendant.html#wxcadm.wxcadm.AutoAttendant.copy_menu_from_template">copy_menu_from_template() (wxcadm.wxcadm.AutoAttendant method)</a>
 </li>
       <li><a href="reference/LocationSchedule.html#wxcadm.wxcadm.LocationSchedule.create_event">create_event() (wxcadm.wxcadm.LocationSchedule method)</a>
 </li>
@@ -295,8 +314,6 @@
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_audit_events">get_audit_events() (wxcadm.wxcadm.Org method)</a>
 </li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_auto_attendant">get_auto_attendant() (wxcadm.wxcadm.Org method)</a>
-</li>
-      <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_auto_attendants">get_auto_attendants() (wxcadm.wxcadm.Org method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.get_barge_in">get_barge_in() (wxcadm.wxcadm.Person method)</a>
 </li>
@@ -414,9 +431,11 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference/Call.html#wxcadm.wxcadm.Call.id">id (wxcadm.wxcadm.Call attribute)</a>
+      <li><a href="reference/AutoAttendant.html#wxcadm.wxcadm.AutoAttendant.id">id (wxcadm.wxcadm.AutoAttendant attribute)</a>
 
       <ul>
+        <li><a href="reference/Call.html#wxcadm.wxcadm.Call.id">(wxcadm.wxcadm.Call attribute)</a>
+</li>
         <li><a href="reference/Location.html#wxcadm.wxcadm.Location.id">(wxcadm.wxcadm.Location attribute)</a>
 </li>
         <li><a href="reference/LocationSchedule.html#wxcadm.wxcadm.LocationSchedule.id">(wxcadm.wxcadm.LocationSchedule attribute)</a>
@@ -454,8 +473,12 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Location.html#wxcadm.wxcadm.Location">Location (class in wxcadm.wxcadm)</a>
 </li>
-      <li><a href="reference/Person.html#wxcadm.wxcadm.Person.location">location (wxcadm.wxcadm.Person attribute)</a>
+      <li><a href="reference/AutoAttendant.html#wxcadm.wxcadm.AutoAttendant.location">location (wxcadm.wxcadm.AutoAttendant attribute)</a>
+
+      <ul>
+        <li><a href="reference/Person.html#wxcadm.wxcadm.Person.location">(wxcadm.wxcadm.Person attribute)</a>
 </li>
+      </ul></li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.locations">locations (wxcadm.wxcadm.Org attribute)</a>
 
       <ul>
@@ -488,9 +511,11 @@
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference/Location.html#wxcadm.wxcadm.Location.name">name (wxcadm.wxcadm.Location attribute)</a>
+      <li><a href="reference/AutoAttendant.html#wxcadm.wxcadm.AutoAttendant.name">name (wxcadm.wxcadm.AutoAttendant attribute)</a>
 
       <ul>
+        <li><a href="reference/Location.html#wxcadm.wxcadm.Location.name">(wxcadm.wxcadm.Location attribute)</a>
+</li>
         <li><a href="reference/LocationSchedule.html#wxcadm.wxcadm.LocationSchedule.name">(wxcadm.wxcadm.LocationSchedule attribute)</a>
 </li>
         <li><a href="reference/Org.html#wxcadm.wxcadm.Org.name">(wxcadm.wxcadm.Org attribute)</a>
@@ -540,18 +565,22 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.paging_groups">paging_groups (wxcadm.wxcadm.Org property)</a>
 </li>
-      <li><a href="reference/LocationSchedule.html#wxcadm.wxcadm.LocationSchedule.parent">parent (wxcadm.wxcadm.LocationSchedule attribute)</a>
+      <li><a href="reference/AutoAttendant.html#wxcadm.wxcadm.AutoAttendant.parent">parent (wxcadm.wxcadm.AutoAttendant attribute)</a>
+
+      <ul>
+        <li><a href="reference/LocationSchedule.html#wxcadm.wxcadm.LocationSchedule.parent">(wxcadm.wxcadm.LocationSchedule attribute)</a>
 </li>
+      </ul></li>
       <li><a href="reference/Call.html#wxcadm.wxcadm.Call.park">park() (wxcadm.wxcadm.Call method)</a>
 </li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.people">people (wxcadm.wxcadm.Org attribute)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person">Person (class in wxcadm.wxcadm)</a>
 </li>
-      <li><a href="reference/RedSky.html#wxcadm.wxcadm.RedSky.phones_without_location">phones_without_location() (wxcadm.wxcadm.RedSky method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/RedSky.html#wxcadm.wxcadm.RedSky.phones_without_location">phones_without_location() (wxcadm.wxcadm.RedSky method)</a>
+</li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.pickup_groups">pickup_groups (wxcadm.wxcadm.Org attribute)</a>
 </li>
       <li><a href="reference/Device.html#wxcadm.wxcadm.Device.product">product (wxcadm.wxcadm.Device attribute)</a>
@@ -620,13 +649,15 @@
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.set_voicemail_rings">set_voicemail_rings() (wxcadm.wxcadm.Person method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.single_number_reach">single_number_reach (wxcadm.wxcadm.XSI property)</a>
 </li>
-      <li><a href="reference/Location.html#wxcadm.wxcadm.Location.spark_id">spark_id (wxcadm.wxcadm.Location property)</a>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/AutoAttendant.html#wxcadm.wxcadm.AutoAttendant.spark_id">spark_id (wxcadm.wxcadm.AutoAttendant attribute)</a>
 
       <ul>
+        <li><a href="reference/Location.html#wxcadm.wxcadm.Location.spark_id">(wxcadm.wxcadm.Location property)</a>
+</li>
         <li><a href="reference/Org.html#wxcadm.wxcadm.Org.spark_id">(wxcadm.wxcadm.Org property)</a>
 </li>
         <li><a href="reference/Person.html#wxcadm.wxcadm.Person.spark_id">(wxcadm.wxcadm.Person property)</a>
@@ -671,6 +702,8 @@
       <li><a href="reference/LocationSchedule.html#wxcadm.wxcadm.LocationSchedule.update_event">update_event() (wxcadm.wxcadm.LocationSchedule method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.update_person">update_person() (wxcadm.wxcadm.Person method)</a>
+</li>
+      <li><a href="reference/AutoAttendant.html#wxcadm.wxcadm.AutoAttendant.upload_greeting">upload_greeting() (wxcadm.wxcadm.AutoAttendant method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>

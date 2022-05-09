@@ -15,6 +15,7 @@ from threading import Thread, Event
 import xmltodict
 import srvlookup
 
+import wxcadm.wxcadm
 from .exceptions import *
 
 log = logging.getLogger(__name__)
@@ -331,7 +332,7 @@ class Org:
         """A list of the Workspace Location instanced for this Org."""
         self._devices: list[Device] = None
         """A list of the Devce instances for this Org"""
-        self.auto_attendants: list[AutoAttendant] = None
+        self._auto_attendants: list[AutoAttendant] = []
         """A list of the AutoAttendant instances for this Org"""
 
         # Set the Authorization header based on how the instance was built
@@ -478,15 +479,15 @@ class Org:
         """
         if id is None and name is None and spark_id is None:
             raise ValueError("A search argument must be provided")
-        if self.auto_attendants is None:
-            self.get_auto_attendants()
-        for aa in self.auto_attendants:
+        if not self._auto_attendants:
+            self.auto_attendants
+        for aa in self._auto_attendants:
             if aa.id == id:
                 return aa
-        for aa in self.auto_attendants:
+        for aa in self._auto_attendants:
             if aa.name == name:
                 return aa
-        for aa in self.auto_attendants:
+        for aa in self._auto_attendants:
             if aa.spark_id == spark_id:
                 return aa
         return None
@@ -856,18 +857,14 @@ class Org:
             self.call_queues.append(queue)
         return self.call_queues
 
-    def get_auto_attendants(self, **kwargs):
-        """ Get the Auto Attendants for an Organization
-
-        Also stores them in the Org.auto_attendants attribute.
+    @property
+    def auto_attendants(self):
+        """ The Auto Attendants for an Organization
 
         Returns:
             list[AutoAttendant]: List of AutoAttendant instances for the Organization
         """
-        log.info("get_auto_attendants() started")
-        if not kwargs:
-            # Since we are grabbing all AutoAttendants, clear the existing list of known AAs
-            self.auto_attendants = []
+        log.info("auto_attendants() started")
         if not self.locations:
             self.get_locations()
         api_resp = webex_api_call("get", "v1/telephony/config/autoAttendants",
@@ -878,8 +875,8 @@ class Org:
             location = self.get_location_by_name(aa['locationName'])
 
             auto_attendant = AutoAttendant(self, location=location, id=id, name=name)
-            self.auto_attendants.append(auto_attendant)
-        return self.auto_attendants
+            self._auto_attendants.append(auto_attendant)
+        return self._auto_attendants
 
 
     def get_call_queue_by_id(self, id: str):
@@ -1130,6 +1127,10 @@ class Location:
         Returns:
             bool: True on success, False otherwise
 
+        .. warning::
+
+            This method requires the CP-API access scope.
+
         """
         upload = self._parent._cpapi.upload_moh_file(self.id, filename)
         if upload is True:
@@ -1146,6 +1147,10 @@ class Location:
 
         Returns:
             bool: True on success, False otherwise
+
+        .. warning::
+
+            This method requires the CP-API access scope.
         """
         activate = self._parent._cpapi.set_default_moh(self.id)
         if activate is True:
@@ -1362,6 +1367,10 @@ class Person:
 
         Args:
             pin (str): The new temporary PIN to set for the Person
+
+        .. warning::
+
+            This method requires the CP-API access scope.
 
         """
         self._parent._cpapi.reset_vm_pin(self, pin=pin)
@@ -3358,7 +3367,12 @@ class WorkspaceLocationFloor(WorkspaceLocation):
 
 
 class CPAPI:
-    """The CPAPI class handles API calls using the CP-API, which is the native API used by Webex Control Hub."""
+    """The CPAPI class handles API calls using the CP-API, which is the native API used by Webex Control Hub.
+
+    .. warning::
+
+            All the methods in this class require an API Access Token with the CP-API scope.
+    """
 
     def __init__(self, org: Org, access_token: str):
         self._parent = org
@@ -3548,6 +3562,63 @@ class CPAPI:
         else:
             raise APIError(f"Something went wrong uploading the MOH file: {r.text}")
 
+    def upload_aa_greeting(self, autoattendant, type: str, filename: str):
+        log.info("CPAPI - Uploading Auto Attendant Greeting")
+        aa_id = autoattendant.spark_id.split("/")[-1]
+        location_id = autoattendant.location.spark_id.split("/")[-1]
+        if type == "business_hours":
+            type = "businessgreetingupload"
+        elif type == "after_hours":
+            type = "afterhoursgreetingupload"
+        else:
+            raise ValueError("Valid type values are 'business_hours' and 'after_hours'")
+
+        upload_as = os.path.basename(filename)
+        content = open(filename, "rb")
+        must_close = True
+        encoder = MultipartEncoder(fields={"file": (upload_as, content, 'audio/wav')})
+        url = self._url_base + f"locations/{location_id}/features/autoattendants/{aa_id}/actions/{type}/invoke"
+        r = requests.post(url,
+                          params={"customGreetingEnabled": True},
+                          headers={"Content-Type": encoder.content_type, **self._headers},
+                          data=encoder)
+        if must_close is True:
+            content.close()
+        if r.ok:
+            return True
+        elif r.status_code == 403:
+            raise TokenError("Your API Access Token doesn't have permission to use this API call")
+        else:
+            raise APIError(f"Something went wrong uploading the Greeting file: {r.text}")
+
+    def set_custom_aa_greeting(self, autoattendant, type: str, filename: str):
+        log.info("CPAPI - Setting Custom AA Greeting")
+        aa_id = autoattendant.spark_id.split("/")[-1]
+        location_id = autoattendant.location.spark_id.split("/")[-1]
+        upload_as = os.path.basename(filename)
+        if type == "business_hours":
+            type = "businessHoursMenu"
+        elif type == "after_hours":
+            type = "afterHoursMenu"
+        else:
+            raise ValueError("Valid type values are 'business_hours' and 'after_hours'")
+        config_dict = autoattendant.config[type]
+        config_dict['greeting'] = "CUSTOM"
+        config_dict['audioFile']['name'] = upload_as
+        config_dict['audioFile']['mediaType'] = "WAV"
+
+        payload = {"enabled": autoattendant.config['enabled'], "name": autoattendant.config['name'], **config_dict}
+
+        r = requests.patch(self._url_base + f"locations/{location_id}/features/autoattendants/{aa_id}",
+                           headers=self._headers, json=payload)
+
+        if r.ok:
+            return True
+        elif r.status_code == 403:
+            raise TokenError("Your API Access Token doesn't have permission to use this API call")
+        else:
+            raise APIError(f"Something went wrong setting the Custom Greeting: {r.text}")
+
     def set_custom_moh(self, location_id: str, filename: str):
         log.info("CPAPI - Setting Custom MOH")
         # Calculate the "locations" ID from the Org ID
@@ -3699,6 +3770,10 @@ class CSDM:
         Returns:
             list[Device]: A list of all the :class:`Device` instances
 
+        .. warning::
+
+            This method requires the CP-API access scope.
+
         """
         log.info("Getting devices from CSDM")
         devices_from_csdm = []
@@ -3802,7 +3877,12 @@ class Device:
 
     @property
     def calling_location(self):
-        """ The :class:`Location` instance that the device is assigned to"""
+        """ The :class:`Location` instance that the device is assigned to
+
+        .. warning::
+
+            This attribute requires the CP-API access scope.
+        """
         if not self._calling_location:
             location = self._parent._parent._cpapi.get_workspace_calling_location(self.owner_id)
             self._calling_location = location
@@ -3834,6 +3914,10 @@ class Device:
 
         Returns:
             bool: True if successful. False otherwise
+
+        .. warning::
+
+            This method requires the CP-API access scope.
 
         """
         cpapi = self._parent._parent._cpapi
@@ -4423,9 +4507,9 @@ class AutoAttendant:
         name (str): The name of the AutoAttendant
 
     """
-    parent: object
+    parent: Org
     """ The Org instance that ows this AutoAttendant """
-    location: object
+    location: Location
     """ The Location instance to which this AutoAttendant belongs"""
     id: str
     """ The Webex ID of the AutoAttendant """
@@ -4438,8 +4522,10 @@ class AutoAttendant:
     """ The Call Forwarding config returned by Webex """
     cf_rules: dict = field(init=False, repr=False)
     """ The Call Forwarding rules returned by Webex """
+    spark_id: str = field(init=False, repr=False)
 
     def __post_init__(self):
+        self.spark_id = decode_spark_id(self.id)
         api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.location.id}/autoAttendants/{self.id}",
                                   headers=self.parent._headers)
         self.config = api_resp
@@ -4491,6 +4577,37 @@ class AutoAttendant:
         else:
             return False
 
+    def upload_greeting(self, type: str, filename: str) -> bool:
+        """ Upload a new greeting to the Auto Attendant
+
+        This method takes a WAV file name, including path, and uploads the file to the Auto Attendant. The file must be
+        in the correct format or it will be rejected by Webex.
+
+        Args:
+            type (str): The type of greeting. Valid values are 'business_hours' or 'after_hours'.
+            filename (str): The file name, including the path, to upload to Webex
+
+        Returns:
+            bool: True on success, False otherwise.
+
+        .. warning::
+
+            This method requires the CP-API access scope.
+
+        """
+        if type not in ['business_hours', 'after_hours']:
+            raise ValueError("Valid type values are 'business_hours' and 'after_hours'")
+
+        cpapi = self.parent._cpapi
+        success = cpapi.upload_aa_greeting(self, type, filename)
+        if success is True:
+            success = cpapi.set_custom_aa_greeting(self, type, filename)
+            if success is True:
+                return True
+            else:
+                return False
+        else:
+            return False
 
 @dataclass
 class PagingGroup:
@@ -4723,7 +4840,7 @@ class LocationSchedule:
         else:
             return False
 
-    def get_event_config_by_id(self, id: str):
+    def get_event_config_by_id(self, id: str) -> dict:
         """ Get the 'events' dict for a specific event.
 
         This method is useful if you are modifying an event and want to provide the full config.

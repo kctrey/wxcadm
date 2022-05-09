@@ -40,3 +40,4 @@ To iterate over the list of people, simply loop through the ``people`` attribute
         print(vars(person))
         # Or access the attributes directly
         email = person.email
+

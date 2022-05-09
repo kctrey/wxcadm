@@ -24,6 +24,8 @@ page.
 
 .. include:: usage/quickstart.rst
 
+.. include:: usage/api_scope.rst
+
 Regarding Multiple Organizations
 ================================
 Most Webex admins only have access to a single Org, but Webex does allow a single admin to manage multiple Orgs. When
@@ -84,6 +86,7 @@ the two. Stay tuned...
    usage/installation
    usage/quickstart
    whatsnew
+   usage/api_scope
    usage/documentation
    usage/xsi
 
@@ -95,6 +98,7 @@ the two. Stay tuned...
    reference/Org
    reference/Location
    reference/LocationSchedule
+   reference/AutoAttendant
    reference/Person
    reference/Device
 

@@ -41,6 +41,9 @@
 <li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="whatsnew.html">What’s New</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html">About API Scopes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html#integrations">Integrations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html#the-cp-api">The CP-API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/documentation.html">Usage Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/xsi.html">XSI Usage</a></li>
 </ul>
@@ -50,6 +53,7 @@
 <li class="toctree-l1"><a class="reference internal" href="reference/Org.html">The Org class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Location.html">The Location class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/LocationSchedule.html">The LocationSchedule class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/AutoAttendant.html">The AutoAttendant class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Person.html">The Person class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Device.html">The Device class</a></li>
 </ul>
@@ -73,6 +77,7 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Example Scripts</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/care_facility.html">Alert When User Goes Off-Hook Without Dialing for Too Long</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples/queue_block_callers.html">Call Queue - Block Callers by Number</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples/redsky_add_webex_locations.html">RedSky - Add Webex Locations as Buildings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples/vm_cc_to_email.html">Voicemail - Enable Copy-to-Email</a></li>
@@ -161,6 +166,69 @@ a while, but then all the People are stored as Person objects.</p>
     <span class="c1"># Or access the attributes directly</span>
     <span class="n">email</span> <span class="o">=</span> <span class="n">person</span><span class="o">.</span><span class="n">email</span>
 </pre></div>
+</div>
+</section>
+<section id="about-api-scopes">
+<h2>About API Scopes<a class="headerlink" href="#about-api-scopes" title="Permalink to this headline"></a></h2>
+<p>Most of the API calls that the <strong>wxcadm</strong> methods use are supported by the “public” Webex API found at
+<a class="reference external" href="https://developer.webex.com.">developer.webex.com</a>. The 12-hour token that can be obtained by logging in there
+includes all of the necessary scopes to perform all of the API calls that <strong>wxcadm</strong> supports. As mentioned in the
+Getting Started with XSI section, you need to have XSI enabled for your Org, however.</p>
+</section>
+<section id="integrations">
+<h2>Integrations<a class="headerlink" href="#integrations" title="Permalink to this headline"></a></h2>
+<p>The 12-hour token from <a class="reference external" href="https://developer.webex.com.">developer.webex.com</a> is useful for testing, and for running
+one-time scripts, but logging in every 12 hours isn’t feasible for a full-featured middleware that provides
+administrative access to Webex, such as a bot or management portal. To obtain a longer-lived token, which also
+includes a refresh token to make the access permanent, a developer should create an
+<a class="reference external" href="https://developer.webex.com/docs/integrations">Integration</a>. As specified in the developer documentation, an
+Integration must includes the authorization scopes that are required to perform all of the specified functions.
+Where possible, this documentation lists the required scopes for each method or property, however an Integration created
+with the following scopes should have access to nearly everything that <strong>wxcadm</strong> can do:</p>
+<ul class="simple">
+<li><p>spark-admin:resource_groups_read</p></li>
+<li><p>analytics:read_all</p></li>
+<li><p>spark-admin:people_write</p></li>
+<li><p>spark-admin:organizations_read</p></li>
+<li><p>spark-admin:workspace_metrics_read</p></li>
+<li><p>spark-admin:places_read</p></li>
+<li><p>spark-admin:devices_read</p></li>
+<li><p>spark-admin:workspace_locations_write</p></li>
+<li><p>spark-admin:telephony_config_read</p></li>
+<li><p>spark-admin:telephony_config_write</p></li>
+<li><p>spark-admin:devices_write</p></li>
+<li><p>spark-admin:workspaces_write</p></li>
+<li><p>spark:calls_write</p></li>
+<li><p>spark-admin:roles_read</p></li>
+<li><p>spark-admin:xsi</p></li>
+<li><p>spark-admin:workspace_locations_read</p></li>
+<li><p>spark-admin:workspaces_read</p></li>
+<li><p>spark-admin:resource_group_memberships_read</p></li>
+<li><p>spark-admin:resource_group_memberships_write</p></li>
+<li><p>spark-admin:call_qualities_read</p></li>
+<li><p>spark:kms</p></li>
+<li><p>audit:events_read</p></li>
+<li><p>spark-admin:places_write</p></li>
+<li><p>spark-admin:licenses_read</p></li>
+<li><p>spark-admin:people_read</p></li>
+<li><p>spark:xsi (if enabled)</p></li>
+</ul>
+<p>Note that not all of these are required for all functions, but this provides access to almost all of the functions
+that <strong>wxcadm</strong> supports.</p>
+</section>
+<section id="the-cp-api">
+<h2>The CP-API<a class="headerlink" href="#the-cp-api" title="Permalink to this headline"></a></h2>
+<p>In some cases, the public Webex API does not provide the full functionality available in Webex Control Hub. Cisco
+continues to enhance the Webex API, but, for operations that are not yet available via that API, <strong>wxcadm</strong> also takes
+advantage of the CP-API, which is the API that is used by Webex Control Hub directly.</p>
+<p>Unfortunately, the authorization
+scopes required by the CP-API are different than the scopes that can be defined for an Integration. In these cases, the
+only API Access Tokens that have the required scopes are the 12-hour token from developer.webex.com and the “native”
+Control Hub token that is used when signing into Control Hub.</p>
+<p>Methods that require a token with the CP-API scope are noted in the documentation with the following:</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This method or attribute requires the CP-API access scope.</p>
 </div>
 </section>
 <section id="regarding-multiple-organizations">
@@ -343,6 +411,9 @@ the two. Stay tuned…</p>
 <li class="toctree-l2"><a class="reference internal" href="whatsnew.html#v2-0-0">v2.0.0</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html">About API Scopes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html#integrations">Integrations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html#the-cp-api">The CP-API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/documentation.html">Usage Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="usage/documentation.html#common-webex-use-cases">Common Webex Use Cases</a></li>
 </ul>
@@ -362,6 +433,7 @@ the two. Stay tuned…</p>
 <li class="toctree-l1"><a class="reference internal" href="reference/Org.html">The Org class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Location.html">The Location class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/LocationSchedule.html">The LocationSchedule class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/AutoAttendant.html">The AutoAttendant class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Person.html">The Person class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Device.html">The Device class</a></li>
 </ul>
@@ -398,6 +470,7 @@ the two. Stay tuned…</p>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Example Scripts</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="examples/care_facility.html">Alert When User Goes Off-Hook Without Dialing for Too Long</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples/queue_block_callers.html">Call Queue - Block Callers by Number</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples/redsky_add_webex_locations.html">RedSky - Add Webex Locations as Buildings</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples/vm_cc_to_email.html">Voicemail - Enable Copy-to-Email</a></li>

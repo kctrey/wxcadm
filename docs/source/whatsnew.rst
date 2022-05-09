@@ -3,7 +3,9 @@ What's New
 
 v2.x.x
 ------
-- :meth:`wxcadm.XSIEventsChannelSet.subscribe()` now allows a Person target for subsciptions
+- **Breaking Change** - :meth:`Org.get_auto_attendants()` has been changed to a property :meth:`Org.auto_attednants` to match other classes.
+- :meth:`wxcadm.AutoAttendant.upload_greeting()` added to support uploading custom WAV files for Auto Attendants. Note that this requires an Access Token capable of utilizing the CP-API.
+- :meth:`wxcadm.XSIEventsChannelSet.subscribe()` now allows a Person target for subscriptions
 - Improved :meth:`wxcadm.Org.number` to handle HuntGroup, PagingGroup, and CallQueue owners
 - Added support for Paging Groups with :meth:`wxcadm.Org.paging_groups`
 
