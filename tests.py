@@ -83,15 +83,35 @@ except:
 else:
     pass_test()
 
+# Test with fast_mode=True to see the timing differences
+test = "Webex instance - Fast Mode"
+start_test()
+try:
+    webex_fast = wxcadm.Webex(access_token, get_locations=False, fast_mode=True)
+except:
+    fail_test()
+    print("Cannot continue without valid token and Webex instance.")
+    exit(1)
+else:
+    pass_test()
+    del webex_fast
+
+# Count of manageable orgs and org report
+print(f"This token can access {len(webex.orgs)} Orgs")
+for org in webex.orgs:
+    print(f"\t{org.name}\t{org.id}\t{wxcadm.wxcadm.decode_spark_id(org.id).split('/')[-1]}")
+if len(webex.orgs) > 1:
+    print(f"Using {webex.orgs[0].nane} for tests.")
+
 # Get the count of records, just for debugging purpose later
-people_count = len(webex.org.people)
+people_count = len(webex.orgs[0].people)
 print(f"People Count: {people_count}")
 # Location tests
 test = "Get Locations"
 start_test()
 try:
-    org_locations = webex.org.get_locations()
-    locations_count = len(webex.org.locations)
+    org_locations = webex.orgs[0].get_locations()
+    locations_count = len(webex.orgs[0].locations)
     print(f"Locations Count: {locations_count}")
 except:
     fail_test()
@@ -100,7 +120,7 @@ else:
     pass_test()
     test = "Location Schedules get"
     start_test()
-    location = webex.org.locations[0]
+    location = webex.orgs[0].locations[0]
     try:
         sched = location.schedules
     except:
@@ -110,8 +130,8 @@ else:
 
     test = "Location ID to User Location match"
     start_test()
-    person = webex.org.get_wxc_people()[0]
-    person_location = webex.org.get_location(id=person.location)
+    person = webex.orgs[0].get_wxc_people()[0]
+    person_location = webex.orgs[0].get_location(id=person.location)
     if person_location is None:
         fail_test()
     else:
@@ -120,7 +140,7 @@ else:
     test = "CallQueue get"
     start_test()
     try:
-        call_queues = webex.org.get_call_queues()
+        call_queues = webex.orgs[0].get_call_queues()
     except:
         fail_test()
     else:
@@ -128,7 +148,7 @@ else:
         print(f"Call Queues: {len(call_queues)}")
         test = "CallQueue size check"
         start_test()
-        if len(call_queues) == len(webex.org.call_queues):
+        if len(call_queues) == len(webex.orgs[0].call_queues):
             pass_test()
         else:
             fail_test()
@@ -164,7 +184,7 @@ else:
 # Person tests
 test = "Person full config"
 start_test()
-person = webex.org.get_wxc_people()[0]
+person = webex.orgs[0].get_wxc_people()[0]
 try:
     full_config = person.get_full_config()
 except:
@@ -173,7 +193,7 @@ else:
     pass_test()
 test = "Person by email"
 start_test()
-found_person = webex.org.get_person_by_email(person.email)
+found_person = webex.orgs[0].get_person_by_email(person.email)
 if person.id == found_person.id:
     pass_test()
 else:
@@ -240,7 +260,7 @@ else:
 # XSI tests
 test = "XSI availability"
 start_test()
-endpoints = webex.org.get_xsi_endpoints()
+endpoints = webex.orgs[0].get_xsi_endpoints()
 if endpoints is not None:
     pass_test()
     test = "XSI profile"
@@ -254,7 +274,7 @@ if endpoints is not None:
         pass_test()
     test = "XSI Events - Service Provider"
     start_test()
-    events = wxcadm.XSIEvents(webex.org)
+    events = wxcadm.XSIEvents(webex.orgs[0])
     events_queue = queue.Queue()
     channel = events.open_channel(events_queue)
     channel.subscribe("Advanced Call")
@@ -268,10 +288,10 @@ if endpoints is not None:
         pass_test()
     test = "XSI Events - Person"
     start_test()
-    events = wxcadm.XSIEvents(webex.org)
+    events = wxcadm.XSIEvents(webex.orgs[0])
     events_queue = queue.Queue()
     channel = events.open_channel(events_queue)
-    channel.subscribe("Advanced Call", person=webex.org.get_wxc_people()[0])
+    channel.subscribe("Advanced Call", person=webex.orgs[0].get_wxc_people()[0])
     channel.unsubscribe(channel.subscriptions[0].id)
     try:
         message = events_queue.get()

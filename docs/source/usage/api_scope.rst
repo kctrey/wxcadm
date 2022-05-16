@@ -6,7 +6,7 @@ includes all of the necessary scopes to perform all of the API calls that **wxca
 Getting Started with XSI section, you need to have XSI enabled for your Org, however.
 
 Integrations
-============
+------------
 The 12-hour token from `developer.webex.com`_ is useful for testing, and for running
 one-time scripts, but logging in every 12 hours isn't feasible for a full-featured middleware that provides
 administrative access to Webex, such as a bot or management portal. To obtain a longer-lived token, which also
@@ -47,7 +47,7 @@ Note that not all of these are required for all functions, but this provides acc
 that **wxcadm** supports.
 
 The CP-API
-==========
+----------
 In some cases, the public Webex API does not provide the full functionality available in Webex Control Hub. Cisco
 continues to enhance the Webex API, but, for operations that are not yet available via that API, **wxcadm** also takes
 advantage of the CP-API, which is the API that is used by Webex Control Hub directly.

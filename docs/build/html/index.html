@@ -42,8 +42,6 @@
 <li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="whatsnew.html">What’s New</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html">About API Scopes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html#integrations">Integrations</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html#the-cp-api">The CP-API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/documentation.html">Usage Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/xsi.html">XSI Usage</a></li>
 </ul>
@@ -174,9 +172,8 @@ a while, but then all the People are stored as Person objects.</p>
 <a class="reference external" href="https://developer.webex.com.">developer.webex.com</a>. The 12-hour token that can be obtained by logging in there
 includes all of the necessary scopes to perform all of the API calls that <strong>wxcadm</strong> supports. As mentioned in the
 Getting Started with XSI section, you need to have XSI enabled for your Org, however.</p>
-</section>
 <section id="integrations">
-<h2>Integrations<a class="headerlink" href="#integrations" title="Permalink to this headline"></a></h2>
+<h3>Integrations<a class="headerlink" href="#integrations" title="Permalink to this headline"></a></h3>
 <p>The 12-hour token from <a class="reference external" href="https://developer.webex.com.">developer.webex.com</a> is useful for testing, and for running
 one-time scripts, but logging in every 12 hours isn’t feasible for a full-featured middleware that provides
 administrative access to Webex, such as a bot or management portal. To obtain a longer-lived token, which also
@@ -217,7 +214,7 @@ with the following scopes should have access to nearly everything that <strong>w
 that <strong>wxcadm</strong> supports.</p>
 </section>
 <section id="the-cp-api">
-<h2>The CP-API<a class="headerlink" href="#the-cp-api" title="Permalink to this headline"></a></h2>
+<h3>The CP-API<a class="headerlink" href="#the-cp-api" title="Permalink to this headline"></a></h3>
 <p>In some cases, the public Webex API does not provide the full functionality available in Webex Control Hub. Cisco
 continues to enhance the Webex API, but, for operations that are not yet available via that API, <strong>wxcadm</strong> also takes
 advantage of the CP-API, which is the API that is used by Webex Control Hub directly.</p>
@@ -230,6 +227,7 @@ Control Hub token that is used when signing into Control Hub.</p>
 <p class="admonition-title">Warning</p>
 <p>This method or attribute requires the CP-API access scope.</p>
 </div>
+</section>
 </section>
 <section id="regarding-multiple-organizations">
 <h2>Regarding Multiple Organizations<a class="headerlink" href="#regarding-multiple-organizations" title="Permalink to this headline"></a></h2>
@@ -411,9 +409,11 @@ the two. Stay tuned…</p>
 <li class="toctree-l2"><a class="reference internal" href="whatsnew.html#v2-0-0">v2.0.0</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html">About API Scopes</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html#integrations">Integrations</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html#the-cp-api">The CP-API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html">About API Scopes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/api_scope.html#integrations">Integrations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/api_scope.html#the-cp-api">The CP-API</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="usage/documentation.html">Usage Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="usage/documentation.html#common-webex-use-cases">Common Webex Use Cases</a></li>
 </ul>

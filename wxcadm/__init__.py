@@ -8,5 +8,7 @@ from .exceptions import (
     PutError, XSIError, NotAllowed, CSDMError
 )
 
+from .wxcadm import decode_spark_id
+
 # Set up NullHandler for logging
 logging.getLogger(__name__).addHandler(logging.NullHandler())

@@ -15,7 +15,6 @@ from threading import Thread, Event
 import xmltodict
 import srvlookup
 
-import wxcadm.wxcadm
 from .exceptions import *
 
 log = logging.getLogger(__name__)
@@ -132,6 +131,10 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
 def decode_spark_id(id: str):
     """ Decode the Webex ID to obtain the Spark ID
 
+    Note that the returned string is the full URI, like
+        ```ciscospark://us/PEOPLE/5b7ddefe-cc47-496a-8df0-18d8e4182a99```. In most cases, you only care about the ID
+        at the end, so a ```.split('/')[-1]``` can be used to ontain that.
+
     Args:
         id (str): The Webex ID (base64 encoded string)
 
@@ -139,7 +142,7 @@ def decode_spark_id(id: str):
         str: The Spark ID
 
     """
-    id_bytes = base64.b64decode(id + "===")
+    id_bytes = base64.b64decode(id + "==")
     spark_id: str = id_bytes.decode("utf-8")
     return spark_id
 
@@ -205,7 +208,7 @@ class Webex:
             log.warning("No Orgs were retuend by the Webex API")
             raise OrgError
         # If a token can manage a lot of orgs, you might not want to create them all, because
-        # it can take some time to do all of the API calls and get the data back
+        # it can take some time to do all the API calls and get the data back
         if not create_org:
             log.info("Org initialization not requested. Storing orgs.")
             self.orgs = response['items']
@@ -300,7 +303,6 @@ class Org:
 
         Returns:
             Org: This instance of the Org class
-
         """
 
         # Instance attrs
@@ -325,7 +327,7 @@ class Org:
         self.licenses: list[dict] = []
         '''A list of all of the licenses for the Organization as a dictionary of names and IDs'''
         self.people: list[Person] = []
-        '''A list of all of the Person stances for the Organization'''
+        '''A list of all of the Person instances for the Organization'''
         self.workspaces: list[Workspace] = None
         """A list of the Workspace instances for this Org."""
         self.workspace_locations: list[WorkspaceLocation] = None
@@ -345,7 +347,7 @@ class Org:
         # Create a CSDM instance for CSDM work
         self._csdm = CSDM(self, self._parent._access_token)
 
-        # Get all of the people if we aren't told not to
+        # Get all the people if we aren't told not to
         if locations:
             self.get_locations()
         if xsi:
@@ -408,7 +410,7 @@ class Org:
 
     @property
     def paging_groups(self):
-        """ All of the PagingGroups for the Org
+        """ All the PagingGroups for the Org
 
         Returns:
             list[PagingGroup]: The PagingGroup instances for this Org
@@ -492,7 +494,6 @@ class Org:
                 return aa
         return None
 
-
     @property
     def numbers(self):
         """ All the Numbers for the Org
@@ -535,6 +536,20 @@ class Org:
         return org_numbers
 
     def get_number_assignment(self, number: str):
+        """ Get the object to which a phone number is assigned.
+
+        A number may be assigned to a Person, a Workspace, or any number of things. If the number is assigned to a
+        known class, that instance will be returned. If not, the `owner` value from the API will be returned.
+
+        .. note::
+            Since Webex sometimes uses E.164 formatting and other times uses the national format, the match is made
+            using a partial match. If the method is passed a national-format number, but stored in Webex as an E164
+            number, a match will be made.
+
+        Args:
+            number (str): The phone number to search for.
+
+        """
         log.info(f"get_number_assignment({number})")
         if self._numbers is None:
             self.numbers
@@ -557,6 +572,9 @@ class Org:
 
     def get_location_by_name(self, name: str):
         """Get the Location instance associated with a given Location name
+
+        .. deprecated:: 2.2.0
+            Use :meth:`get_location` using the ```name``` argument instead.
 
         Args:
             name (str): The full name of the Location to look for. (Case sensitive)
@@ -583,8 +601,7 @@ class Org:
             spark_id (str, optional): The Spark ID to find
 
         Returns:
-            Location: The Location instance correlating to the given search argument. None is returned if no Location
-                is found.
+            Location: The Location instance correlating to the given search argument.
 
         Raises:
             ValueError: Raised when the method is called with no arguments
@@ -594,15 +611,18 @@ class Org:
             raise ValueError("A search argument must be provided")
         if not self.locations:
             self.get_locations()
-        for location in self.locations:
-            if location.id == id:
-                return location
-        for location in self.locations:
-            if location.name == name:
-                return location
-        for location in self.locations:
-            if location.spark_id == spark_id:
-                return location
+        if id is not None:
+            for location in self.locations:
+                if location.id == id:
+                    return location
+        if name is not None:
+            for location in self.locations:
+                if location.name == name:
+                    return location
+        if spark_id is not None:
+            for location in self.locations:
+                if location.spark_id == spark_id:
+                    return location
         return None
 
     def get_person_by_id(self, id: str):
@@ -1026,6 +1046,10 @@ class Location:
     def __init__(self, parent: Org, location_id: str, name: str, address: dict = None):
         """Initialize a Location instance
 
+        .. note::
+            Location instances are normally not instantiated manually and are done automatically with the
+            :meth:`Org.get_locations` method.
+
         Args:
             location_id (str): The Webex ID of the Location
             name (str): The name of the Location
@@ -1053,9 +1077,8 @@ class Location:
     @property
     def spark_id(self):
         """The ID used by all of the underlying services."""
-        bytes = base64.b64decode(self.id + "===")
-        spark_id = bytes.decode("utf-8")
-        return spark_id
+        return decode_spark_id(self.id)
+
 
     @property
     def hunt_groups(self):
@@ -1894,6 +1917,12 @@ class PickupGroup:
 
 class CallQueue:
     def __init__(self, parent, id, name, location, phone_number, extension, enabled, get_config=True):
+        """
+        .. note::
+            CallQueue instances are normally not instantiated manually and are done automatically with the
+            :meth:`Org.get_call_queues` method.
+
+        """
         self._parent: Org = parent
         """The parent org of this Call Queue"""
         self.id: str = id
@@ -2592,6 +2621,10 @@ class HuntGroup:
                  config: bool = True
                  ):
         """Initialize a HuntGroup instance
+
+        .. note::
+            HuntGroup instances are normally not instantiated manually and are done automatically with the
+            :meth:`Org.get_hunt_groups` method.
 
         Args:
             parent (Org): The Org instance to which the Hunt Group belongs
@@ -3368,6 +3401,9 @@ class WorkspaceLocationFloor(WorkspaceLocation):
 
 class CPAPI:
     """The CPAPI class handles API calls using the CP-API, which is the native API used by Webex Control Hub.
+
+    .. note::
+            CPAPI instances are normally not instantiated manually and are done automatically with various Org methods.
 
     .. warning::
 
@@ -4500,6 +4536,10 @@ class AutoAttendant:
 
     Inititalizing the instance will automatically fetch the AutoAttendant details from Webex
 
+    .. note::
+            AutoAttendant instances are normally not instantiated manually and are done automatically with the
+            :meth:`Org.get_auto_attendants` method.
+
     Args:
         parent (Org): The :class:`wxcadm.Org` instance to which the AutoAttendant belongs
         locaton (Location): The :class:`Location` instance associated with the AutoAttendant
@@ -4634,6 +4674,10 @@ class LocationSchedule:
     """ The class for Location Schedules within a :class:`Location`
 
     When the instance is initialized, it will fetch the configuration from Webex.
+
+    .. note::
+            LocationSchedule instances are normally not instantiated manually and are done automatically with the
+            :attr:`Location.schedules` property.
 
     Args:
         parent (Location): The `Location` instance to which the LocationSchedule is assigned.
