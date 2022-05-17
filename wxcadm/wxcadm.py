@@ -4106,7 +4106,7 @@ class RedSky:
                    "fullAddress": full_address,
                    "origin": "default"
                    }
-        print(payload)
+        log.debug(payload)
         r = requests.post("https://api.wxc.e911cloud.com/geography-service/buildings",
                           headers=self._headers, json=payload)
         if r.ok:
@@ -4137,7 +4137,7 @@ class RedSky:
         if r.status_code == 200:
             self._held_devices = []
             response = r.json()
-            print(response)
+            log.debug(response)
             for device in response:
                 self._held_devices.append(device)
         else:
