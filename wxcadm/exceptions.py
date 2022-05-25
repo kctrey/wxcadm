@@ -1,5 +1,7 @@
 from builtins import Exception
 
+__all__ = ['OrgError', 'LicenseError', 'APIError', 'TokenError', 'PutError', 'XSIError', 'NotAllowed', 'CSDMError']
+
 class OrgError(Exception):
     """The base error class for Org-related exceptions"""
     def __init__(self, message):

@@ -1,6 +1,13 @@
 What's New
 ==========
 
+v2.3.0
+------
+- Lots of logging and method clean-up. Standardized getters as "get_xxxx()" and setters (which call the Webex API PUT) as "push_xxxx(config)"
+- :meth:`Org.recorded_people` property to return all users with Call Recording enabled
+- :meth:`Org.get_wxc_people()` deprecated in favor of :meth:`Org.wxc_people` property
+- Person recording config can be pushed with :meth:`Person.push_recording_config()`
+
 v2.2.1
 ------
 - Bug Fix: Removed print() statements from RedSky class

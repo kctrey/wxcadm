@@ -233,7 +233,7 @@ else:
 test = "Person get Outgoing Call Permissions"
 start_test()
 try:
-    ocp = person.outgoing_permission
+    ocp = person.get_outgoing_permission()
 except:
     fail_test()
 else:
@@ -245,9 +245,7 @@ test = "Person set Outgoing Call Permissions"
 start_test()
 try:
     if ocp:
-        success = person.set_outgoing_permission(ocp)
-    else:
-        success = person.set_outgoing_permission()
+        success = person.push_outgoing_permission(ocp)
 except:
     fail_test()
 else:

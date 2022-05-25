@@ -1,10 +1,12 @@
 import json.decoder
+import sys
 import os.path
 import time
 import uuid
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Union
 
 import requests
 from requests_toolbelt import MultipartEncoder
@@ -16,6 +18,7 @@ import xmltodict
 import srvlookup
 
 from .exceptions import *
+from .common import decode_spark_id
 
 log = logging.getLogger(__name__)
 
@@ -128,23 +131,16 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
     else:
         return False
 
-def decode_spark_id(id: str):
-    """ Decode the Webex ID to obtain the Spark ID
 
-    Note that the returned string is the full URI, like
-        ```ciscospark://us/PEOPLE/5b7ddefe-cc47-496a-8df0-18d8e4182a99```. In most cases, you only care about the ID
-        at the end, so a ```.split('/')[-1]``` can be used to ontain that.
+def console_logging():
+    """ Enable logging directly to STDOUT
 
-    Args:
-        id (str): The Webex ID (base64 encoded string)
-
-    Returns:
-        str: The Spark ID
-
+    This overrides any other logging and is really only useful when doing Python Console work.
     """
-    id_bytes = base64.b64decode(id + "==")
-    spark_id: str = id_bytes.decode("utf-8")
-    return spark_id
+    global log
+    log = logging.Logger("wxcadm", level=logging.DEBUG)
+    handler = logging.StreamHandler(sys.stdout)
+    log.addHandler(handler)
 
 
 class Webex:
@@ -1014,6 +1010,9 @@ class Org:
     def get_wxc_people(self):
         """Get all of the people within the Organization **who have Webex Calling**
 
+        .. deprecated:: 2.3.0
+            Use :meth:`wxc_people` instead
+
         Returns:
             list[Person]: List of Person instances of people who have a Webex Calling license
 
@@ -1025,6 +1024,37 @@ class Org:
             if person.wxc:
                 wxc_people.append(person)
         return wxc_people
+
+    @property
+    def wxc_people(self):
+        """Return all the people within the Organization **who have Webex Calling**
+
+        Returns:
+            list[Person]: List of Person instances of people who have a Webex Calling license
+
+        """
+        if not self.people:
+            self.get_people()
+        wxc_people = []
+        for person in self.people:
+            if person.wxc:
+                wxc_people.append(person)
+        return wxc_people
+
+    @property
+    def recorded_people(self):
+        """Return all the People within the Organization who have Call Recording enabled
+
+        Returns:
+            list[Person]: List of Person instances that have Call Recording enabled
+
+        """
+        recorded_people = []
+        for person in self.wxc_people:
+            rec_config = person.get_call_recording()
+            if rec_config['enabled'] is True:
+                recorded_people.append(person)
+        return recorded_people
 
     def get_license_name(self, license_id: str):
         """Gets the name of a license by its ID
@@ -1221,23 +1251,28 @@ class Person:
         self.roles: list = []
         """The roles assigned to this Person in Webex"""
         self.vm_config: dict = {}
-        '''Dictionary of the VM config as returned by Webex API'''
-        self.recording: dict = {}
-        """Dictionary of the Recording config as returned by Webex API"""
+        '''Dictionary of the VM config as returned by Webex API with :meth:`get_vm_config()`'''
+        self.call_recording: dict = {}
+        """Dictionary of the Recording config as returned by Webex API with :meth:`get_call_recording()`"""
         self.barge_in: dict = {}
-        """Dictionary of Barge-In config as returned by Webex API"""
+        """Dictionary of Barge-In config as returned by Webex API with :meth:`get_barge_in`"""
         self.call_forwarding: dict = {}
-        '''Dictionary of the Call Forwarding config as returned by Webex API'''
+        """Dictionary of the Call Forwarding config as returned by Webex API 
+        with :meth:`get_call_forwarding()`"""
         self.caller_id: dict = {}
-        """Dictionary of Caller ID config as returned by Webex API"""
+        """Dictionary of Caller ID config as returned by Webex API with :meth:`get_caller_id()`"""
         self.intercept: dict = {}
-        """Dictionary of Call Intercept config as returned by Webex API"""
+        """Dictionary of Call Intercept config as returned by Webex API with :meth:`get_intercept()`"""
         self.dnd: dict = {}
-        """Dictionary of DND settings as returned by Webex API"""
+        """Dictionary of DND settings as returned by Webex API with :meth:`get_dnd()`"""
         self.calling_behavior: dict = {}
-        """Dictionary of Calling Behavior as returned by Webex API"""
+        """Dictionary of Calling Behavior as returned by Webex API with :meth:`get_calling_behavior()`"""
+        self.monitoring: dict = {}
+        """Dictionary of Monitoring settings as returned by Webex API with :meth:`get_monitoring()`"""
+        self.hoteling: dict = {}
+        """Dictionary of Hoteling settings as returned by Webex API with :meth:`get_hoteling()`"""
         self.xsi = None
-        """Holds the XSI instance when created with the `start_xsi()` method."""
+        """Holds the XSI instance when created with the :meth:`start_xsi()` method."""
         self.numbers: list = []
         """The phone numbers for this person from Webex CI"""
         self.extension: str = None
@@ -1246,7 +1281,10 @@ class Person:
         """A list of the Hunt Group instances that this user is an Agent for"""
         self._call_queues: list = []
         """A list of the Call Queue instances that this user is an Agent for"""
-        self._outgoing_permission: dict = {}
+        self.outgoing_permission: dict = {}
+        """Dictionary of Outgoing Permission config returned by Webex API
+        with :meth:`get_outgoing_permission()`"""
+
 
 
         # API-related attributes
@@ -1301,7 +1339,7 @@ class Person:
         """
         if params is None:
             params = {}
-        log.info(f"__get_webex_data started for using {endpoint}")
+        log.debug(f"__get_webex_data started using {endpoint}")
         my_params = {**params, **self._params}
         r = requests.get(_url_base + endpoint, headers=self._headers, params=my_params)
         if r.status_code in [200]:
@@ -1324,19 +1362,22 @@ class Person:
         """
         if params is None:
             params = {}
-        log.info(f"__put_webex_data started using {endpoint}")
+        log.debug(f"__put_webex_data started using {endpoint}")
         my_params = {**params, **self._params}
+        log.debug(f"Params: {params}")
+        log.debug(f"Payload: {payload}")
         r = requests.put(_url_base + endpoint, headers=self._headers, params=my_params, json=payload)
-        response_code = r.status_code
-        if response_code == 200 or response_code == 204:
+        if r.ok:
             log.info("Push successful")
             return True
         else:
-            log.info("Push failed")
+            log.warning("__put_webex_data() failed")
+            log.debug(f"[{r.status_code}] {r.text}")
             return False
 
     @property
     def spark_id(self):
+        """ The internal identifier used within Webex """
         user_id_bytes = base64.b64decode(self.id + "===")
         spark_id = user_id_bytes.decode("utf-8")
         return spark_id
@@ -1396,6 +1437,7 @@ class Person:
             This method requires the CP-API access scope.
 
         """
+        log.info(f"Resetting VM PIN for {self.email}")
         self._parent._cpapi.reset_vm_pin(self, pin=pin)
 
     def get_full_config(self):
@@ -1410,11 +1452,11 @@ class Person:
         if self.wxc:
             self.get_call_forwarding()
             self.get_vm_config()
-            self.get_intercept()
-            self.get_call_recording()
             self.get_caller_id()
             self.get_dnd()
             self.get_calling_behavior()
+            self.get_caller_id()
+            self.get_hoteling()
             self.get_barge_in()
             return self
         else:
@@ -1428,6 +1470,7 @@ class Person:
             list[HuntGroup]: A list of the `HuntGroup` instances the user belongs to
 
         """
+        log.info(f"Getting Hunt Groups for {self.email}")
         # First, we need to make sure we know about the Org's Hunt Groups. If not, pull them.
         if self._parent.hunt_groups is None:
             self._parent.get_hunt_groups()
@@ -1448,6 +1491,7 @@ class Person:
             list[CallQueue]: A list of the `CallQueue` instances the user belongs to
 
         """
+        log.info(f"Getting Hunt Groups for {self.email}")
         # First, we need to make sure we know about the Org's Hunt Groups. If not, pull them.
         if self._parent.call_queues is None:
             self._parent.get_call_queues()
@@ -1461,20 +1505,43 @@ class Person:
         return self._call_queues
 
     def get_call_forwarding(self):
-        """Fetch the Call Forwarding config for the Person from the Webex API"""
-        log.info("get_call_forwarding() started")
+        """Get the Call Forwarding config for the Person
+
+        Returns:
+            dict: The Call Forwarding config for the Person instance
+        """
+        log.info(f"Getting Call Forwarding config for {self.email}")
         self.call_forwarding = self.__get_webex_data(f"v1/people/{self.id}/features/callForwarding")
         return self.call_forwarding
 
     def get_barge_in(self):
-        """Fetch the Barge-In config for the Person from the Webex API"""
-        log.info("get_barge_in() started")
+        """Get the Barge-In config for the Person
+
+        Returns:
+            dict: The Barge-In config for the Person instannce
+        """
+        log.info(f"Getting Barge-In config for {self.email}")
         self.barge_in = self.__get_webex_data(f"v1/people/{self.id}/features/bargeIn")
         return self.barge_in
 
+    def push_barge_in(self, config: dict):
+        """ Push the Barge-In config to Webex
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Pushing Barge-In config for {self.email}")
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/bargeIn", payload=config)
+        if success:
+            return True
+        else:
+            log.warning(f"The Barge-In config push failed")
+            return False
+
     def get_vm_config(self):
         """Fetch the Voicemail config for the Person from the Webex API"""
-        log.info("get_vm_config() started")
+        log.info(f"Getting VM config for {self.email}")
         self.vm_config = self.__get_webex_data(f"v1/people/{self.id}/features/voicemail")
         return self.vm_config
 
@@ -1528,7 +1595,6 @@ class Person:
         else:
             return False
 
-
     def enable_vm_to_email(self, email: str = None, push=True):
         """
         Change the Voicemail config to enable sending a copy of VMs to specified email address. If the email param
@@ -1563,6 +1629,7 @@ class Person:
             dict: The `Person.vm_config` attribute
 
         """
+        log.info(f"Disabling VM-to-email for {self.email}")
         if not self.vm_config:
             self.get_vm_config()
         self.vm_config['emailCopyOfMessage']['enabled'] = False
@@ -1591,70 +1658,183 @@ class Person:
             return self.vm_config
 
     def get_intercept(self):
+        """Gets the Intercept config for the Person
+
+        Returns:
+            dict: The Intercept config for the Person instance
+
+        """
         log.info("get_intercept() started")
         self.intercept = self.__get_webex_data(f"v1/people/{self.id}/features/intercept")
         return self.intercept
 
-    def get_call_recording(self):
-        log.info("get_call_recording() started")
-        self.recording = self.__get_webex_data(f"v1/people/{self.id}/features/callRecording")
-        return self.recording
-
-    @property
-    def monitoring(self):
-        log.debug("Getting monitoring config")
-        self._monitoring = self.__get_webex_data(f"v1/people/{self.id}/features/monitoring")
-        return self._monitoring
-
-    @property
-    def hoteling(self):
-        log.debug("Getting hoteling config")
-        self._hoteling = self.__get_webex_data(f"v1/people/{self.id}/features/hoteling")
-        return self._hoteling
-
-    @hoteling.setter
-    def hoteling(self, enabled: bool):
-        log.debug(f"Setting hoteling to {enabled}")
-        self.__put_webex_data(f"v1/people/{self.id}/features/hoteling", {"enabled": enabled})
-        self._hoteling
-
-    @property
-    def outgoing_permission(self):
-        """Dict of the Outgoing Call Permissions for the Person"""
-        log.debug(f"Getting outbound calling permissions")
-        self._outgoing_permission = self.__get_webex_data(f"v1/people/{self.id}/features/outgoingPermission")
-        return self._outgoing_permission
-
-    def set_outgoing_permission(self, config: dict = None):
-        """ Sets the Outgoing Call Permission using the provided dict
-
-        The ```config``` dict should follow the formatting of the :attr:`Person.outgoing_permission` attribute. If
-        the ```config``` argument is not supplied, the exiting config will be re-pushed to Webex.
-
-        Args:
-            config (dict): The Outgoing Call Permission dictionary
+    def push_intercept(self, config: dict):
+        """ Push the Intercept config to Webex
 
         Returns:
-            bool: True on success, False otherwise. When successful, the :attr:`Person.outgoing_permission` will be
-            the updated value as returned by the server.
+            bool: True on success, False otherwise
 
         """
-        log.debug(f"Setting outgoing call permission")
-        # If they passed a config dict, use it, otherwise use the self._outgoing_permission value
-        if config is None:
-            if self._outgoing_permission is False:
-                self.outgoing_permission
-            config = self._outgoing_permission
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/outgoingPermission", payload=config)
+        log.info(f"Pushing Intercept config for {self.email}")
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/intercept", payload=config)
         if success:
             return True
         else:
+            log.warning("The Intercept config push failed")
             return False
 
-    def get_caller_id(self):
-        log.info("get_caller_id() started")
+    def get_call_recording(self):
+        """The Call Recording config for the Person
+
+        Returns:
+            dict: The Call Recording config for the Person instance
+
+        """
+        log.info(f"Getting Call Recording config for {self.email}")
+        self.call_recording = self.__get_webex_data(f"v1/people/{self.id}/features/callRecording")
+        return self.call_recording
+
+    def push_call_recording(self, config: dict):
+        """ Push the Call Recording config to Webex
+
+        Args:
+            config (dict): The Call Recording config as defined by the Webex API specification
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Pushing Call Recording config for {self.email}")
+        # The payload from Webex has the Dubber Service Provider info, which isn't supported by the PUT
+        # We have to delete those keys if they exist before sending it
+        clean_config = config.copy()
+        clean_config.pop("serviceProvider", None)
+        clean_config.pop("externalGroup", None)
+        clean_config.pop("externalIdentifier", None)
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/callRecording", payload=clean_config)
+        if success:
+            return True
+        else:
+            log.warning("The Call Recording config push failed")
+            return False
+
+    def get_monitoring(self):
+        """ Get the Monitoring config for the Person
+
+        Returns:
+            dict: The Monitoring config for the Person instance
+
+        """
+        log.debug(f"Getting Monitoring config for {self.email}")
+        self.monitoring = self.__get_webex_data(f"v1/people/{self.id}/features/monitoring")
+        return self.monitoring
+
+    def push_monitoring(self, config: dict):
+        """ Push the Monitoring config to Webex
+
+        Args:
+            config (dict): The Monitoring config as defined by the Webex API specification.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Pushing Monitoring config for {self.email}")
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/monitoring", payload=config)
+        if success:
+            return True
+        else:
+            log.warning("The Monitoring config push failed")
+            return False
+
+    def get_hoteling(self) -> dict:
+        """ Get the Hoteling config for the Person
+
+        Returns:
+            dict: The Hoteling config for the Person instance
+
+        """
+        log.info(f"Getting Hoteling config for {self.email}")
+        self.hoteling = self.__get_webex_data(f"v1/people/{self.id}/features/hoteling")
+        return self.hoteling
+
+    def push_hoteling(self, config: dict) -> bool:
+        """ Push the Hoteling config to Webex
+
+        Args:
+            config (dict): The Hoteling config as defined by the Webex API specification
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Pushing Hoteling config for {self.email}")
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/hoteling", payload=config)
+        if success:
+            self.get_hoteling()
+            return True
+        else:
+            log.warning("The Hoteling config push failed")
+            return False
+
+    def get_outgoing_permission(self):
+        """ Get the Outgoing Calling Permission for the Person """
+        log.info(f"Getting Outbound Calling Permission config for {self.email}")
+        self._outgoing_permission = self.__get_webex_data(f"v1/people/{self.id}/features/outgoingPermission")
+        return self._outgoing_permission
+
+    def push_outgoing_permission(self, config: dict) -> bool:
+        """ Sets the Outgoing Call Permission using the provided dict
+
+        Args:
+            config (dict): The Outgoing Call Permission config as defined by the Webex API specification
+
+        Returns:
+            bool: True on success, False otherwise.
+
+        """
+        log.info(f"Pushing Outgoing Calling Permission config for {self.email}")
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/outgoingPermission", payload=config)
+        if success:
+            self.get_outgoing_permission()
+            return True
+        else:
+            log.warning("The Outgoing Permission push failed")
+            return False
+
+    def get_caller_id(self) -> dict:
+        """ Get the Caller ID config for the Person
+
+        Returns:
+            dict: The Called ID config for the Person instance
+
+        """
+        log.info(f"Getting Caller ID config for {self.email}")
         self.caller_id = self.__get_webex_data(f"v1/people/{self.id}/features/callerId")
         return self.caller_id
+
+    def push_caller_id(self, config: dict) -> bool:
+        """ Push the Caller ID config to Webex
+
+        This method differs from :meth:`Person.set_caller_id()`. It sends the config dict directly.
+        :meth:`Person.set_caller_id()` builds the config dict itself so that you don't have to know all of the
+        intricacies of the API specification. In most cases, that method is preferable.
+
+        Args:
+            config (dict): The Caller ID config as defined by the Webex API specification
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Pushing Caller Id config for {self.email}")
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/callerId", payload=config)
+        if success:
+            self.get_caller_id()
+            return True
+        else:
+            log.warning("The Caller ID config push failed")
+            return False
 
     def set_caller_id(self, name: str, number: str):
         """ Change the Caller ID for a Person
@@ -1672,6 +1852,8 @@ class Person:
             wxcadm.exceptions.APIError: Raised when there is a problem with the API call
 
         """
+        log.info(f"Settting Caller ID for {self.email}")
+        log.debug(f"\tNew Name: {name}\tNew Number: {number}")
         payload = {}
         # Handle the possible number values
         if number.lower() == "direct":
@@ -1690,22 +1872,71 @@ class Person:
             payload['externalCallerIdNamePolicy'] = "OTHER"
             payload['customExternalCallerIdName'] = name
 
-        r = requests.put(_url_base + f"v1/people/{self.id}/features/callerId",
-                           headers=self._headers, json=payload)
-        if r.ok:
+        success = self.push_caller_id(config=payload)
+        if success:
             return True
         else:
-            raise APIError(f"CPAPI failed to update Caller ID for Person: {r.text}")
+            return False
 
-    def get_dnd(self):
-        log.info(f"Getting DND for {self.email}")
+    def get_dnd(self) -> dict:
+        """ Get the Do Not Disturb (DND) config for the Person
+
+        Returns:
+            dict: The DND config for the Person instance
+
+        """
+        log.info(f"Getting DND config for {self.email}")
         self.dnd = self.__get_webex_data(f"v1/people/{self.id}/features/doNotDisturb")
         return self.dnd
 
-    def get_calling_behavior(self):
+    def push_dnd(self, config: dict) -> bool:
+        """ Push the Do Not Disturb (DND) config to Webex
+
+        Args:
+            config (dict): The DND confirguration to push
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Pushing DND config for {self.email}")
+        log.debug(f"\tConfig: {config}")
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/doNotDisturb", payload=config)
+        if success:
+            return True
+        else:
+            log.warning("The DND config push failed")
+            return False
+
+    def get_calling_behavior(self) -> dict:
+        """ Get the Calling Behavior config for the Person
+
+        Returns:
+            dict: The Calling Behavior config for the Person instance
+
+        """
         log.info(f"Getting Calling Behavior for {self.email}")
         self.calling_behavior = self.__get_webex_data(f"v1/people/{self.id}/features/callingBehavior")
         return self.calling_behavior
+
+    def push_calling_behavior(self, config: dict) -> bool:
+        """ Push the Calling Behavior config to Webex
+
+        Args:
+            config (dict): The Calling Behavior config
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info("Pushing Calling Behavior for {self.email")
+        log.debug(f"\tConfig: {config}")
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/callingBehavior", payload=config)
+        if success:
+            return True
+        else:
+            log.warning("The Calling Behavior config push failed")
+            return False
 
     def license_details(self):
         """Get the full details for all of the licenses assigned to the Person
@@ -1714,6 +1945,7 @@ class Person:
             list[dict]: List of the license dictionaries
 
         """
+        log.info(f"Getting license details for {self.email}")
         license_list = []
         for license in self.licenses:
             for org_lic in self._parent.licenses:
@@ -1816,12 +2048,12 @@ class Person:
         else:
             return False
 
-    def set_calling_only(self):
+    def set_calling_only(self) -> bool:
         """
         Removes the Messaging and Meetings licenses, leaving only the Calling capability.
 
         Returns:
-            Person: The instance of this person with the updated values
+            bool: True on success, False otherwise
 
         """
         log.info(f"Setting {self.email} to Calling-Only")
@@ -1847,17 +2079,22 @@ class Person:
                 new_licenses.append(license)
 
         success = self.update_person(licenses=new_licenses)
-        return self
+        if success:
+            return True
+        else:
+            log.warning("The Set Calling Only command failed")
+            return False
+
 
     def change_phone_number(self, new_number: str, new_extension: str = None):
-        """"Change a person's phone number and extension
+        """ Change a person's phone number and extension
 
         Args:
             new_number (str): The new phone number for the person
             new_extension (str, optional): The new extension, if changing. Omit to leave the same value.
 
         Returns:
-            Person: The instance of this person, with the new values
+            bool: True on success, False otherwise
 
         """
         if not new_extension:
@@ -1867,10 +2104,63 @@ class Person:
                 extension = None
         else:
             extension = new_extension
+        log.info(f"Changing phone number for {self.email} to {new_number} with extension: {str(new_extension)}")
 
         # Call the update_person() method
         success = self.update_person(numbers=[{"type": "work", "value": new_number}], extension=extension)
-        return self
+        if success:
+            self.refresh_person()
+            return True
+        else:
+            log.warning("Updating the phone number config failed")
+            return False
+
+
+    def disable_call_recording(self):
+        """ Disables Call Recording for the Person
+
+        This method will return True even if the Person did not have Call Recording enabled prior to calling
+        the method.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Disabling Call Recording for {self.email}")
+        recording_config = self.get_call_recording()
+        recording_config['enabled'] = False
+        self.call_recording = recording_config
+
+    def enable_call_recording(self, type: str,
+                              record_vm: bool = False,
+                              announcement_enabled: bool = False,
+                              reminder_tone: bool = False,
+                              reminder_interval: int = 30):
+
+        type_map = {"always": "Always",
+                    "never": "Never",
+                    "always_with_pause": "Always with Pause/Resume",
+                    "on_demand": "On Demand with User Initiated Start"}
+        if type not in type_map.keys():
+            raise ValueError("'type' must be 'always', 'never', 'always_with_pause' or 'on_demand'.")
+        payload = {"enabled": True,
+                   "record": type_map[type],
+                   "recordVoicemailEnabled": record_vm,
+                   "startStopAnnouncementEnabled": announcement_enabled,
+                   "notification": {
+                       "type": "beep",
+                       "enabled": reminder_tone,
+                       "repeat": {
+                           "enabled": reminder_tone,
+                           "interval": reminder_interval
+                           }
+                       }
+                  }
+        success = self.push_call_recording(payload)
+        if success:
+            return True
+        else:
+            return False
 
 
 class PickupGroup:
