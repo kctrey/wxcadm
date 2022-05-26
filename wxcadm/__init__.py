@@ -6,7 +6,8 @@ from .exceptions import (
     PutError, XSIError, NotAllowed, CSDMError
 )
 
-from .wxcadm import decode_spark_id, console_logging
+from .common import decode_spark_id
+from .wxcadm import console_logging
 
 # Set up NullHandler for logging
 logging.getLogger(__name__).addHandler(logging.NullHandler())

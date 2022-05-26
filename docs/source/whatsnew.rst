@@ -1,46 +1,50 @@
+.. currentmodule:: wxcadm.wxcadm
+
 What's New
 ==========
 
 v2.3.0
 ------
+- :meth:`Person.upload_busy_greeting()` and :meth:`Person.upload_no_answer_greeting()` for VM greeting uploads
+- New :meth:`wxcadm.console_logging()` added to support STDOUT logging for interactive development
 - Lots of logging and method clean-up. Standardized getters as "get_xxxx()" and setters (which call the Webex API PUT) as "push_xxxx(config)"
 - :meth:`Org.recorded_people` property to return all users with Call Recording enabled
 - :meth:`Org.get_wxc_people()` deprecated in favor of :meth:`Org.wxc_people` property
-- Person recording config can be pushed with :meth:`Person.push_recording_config()`
+- Person recording config can be pushed with :meth:`Person.push_call_recording()`
 
 v2.2.1
 ------
 - Bug Fix: Removed print() statements from RedSky class
 - **Breaking Change** - :meth:`Org.get_auto_attendants()` has been changed to a property :meth:`Org.auto_attednants` to match other classes.
-- :meth:`wxcadm.AutoAttendant.upload_greeting()` added to support uploading custom WAV files for Auto Attendants. Note that this requires an Access Token capable of utilizing the CP-API.
-- :meth:`wxcadm.XSIEventsChannelSet.subscribe()` now allows a Person target for subscriptions
-- Improved :meth:`wxcadm.Org.number` to handle HuntGroup, PagingGroup, and CallQueue owners
-- Added support for Paging Groups with :meth:`wxcadm.Org.paging_groups`
+- :meth:`AutoAttendant.upload_greeting()` added to support uploading custom WAV files for Auto Attendants. Note that this requires an Access Token capable of utilizing the CP-API.
+- :meth:`XSIEventsChannelSet.subscribe()` now allows a Person target for subscriptions
+- Improved :meth:`Org.number` to handle HuntGroup, PagingGroup, and CallQueue owners
+- Added support for Paging Groups with :meth:`Org.paging_groups`
 
 v2.2.0
 ------
 - Changed logging to ensure that we only log when enabled by the application
-- :meth:`wxcadm.Org.get_location()` was added to search for Location by various keys
-- :meth:`wxcadm.Org.get_audit_events()` was added to support auditing of Control Hub changes
+- :meth:`Org.get_location()` was added to search for Location by various keys
+- :meth:`Org.get_audit_events()` was added to support auditing of Control Hub changes
 
 v2.1.1
 ------
-- :meth:`wxcadm.Org.numbers` now uses the Webex for Developers API rather than CP-API
+- :meth:`Org.numbers` now uses the Webex for Developers API rather than CP-API
 
 v2.1.0
 ------
-- The :class:`wxcadm.XSICallQueue` class was added for control of Call Queue calls
-- New method :meth:`wxcadm.Webex.get_person_by_email()` which does what the Org-level method does, but searches across all Orgs that the user can manage.
+- The :class:`XSICallQueue` class was added for control of Call Queue calls
+- New method :meth:`Webex.get_person_by_email()` which does what the Org-level method does, but searches across all Orgs that the user can manage.
 - Failed "pushes" to Webex for user data no longer raise an exception. They now return False to prevent blocking in scripts.
-- :meth:`wxcadm.Person.push_vm_config()` now supports a vm_config dict rather than modifying the :attr:`Person.vm_config` attribute directly.
+- :meth:`Person.push_vm_config()` now supports a vm_config dict rather than modifying the :attr:`Person.vm_config` attribute directly.
 - Added :meth:`wxcadm.XSI.attach_call()` to allow known Call IDs to be attached to a Person's XSI instance for call control.
 - LocationSchedule class and new Location ```schedules``` attribute
 
 v2.0.0
 ------
 -  XSI-Events are now supported!
--  A new :meth:`wxcadm.Person.XSI.answer()` method has been added, which is very useful now that you can see XSI Events for incoming calls
+-  A new :meth:`Person.XSI.answer()` method has been added, which is very useful now that you can see XSI Events for incoming calls
 -  Better handling of Token Errors
--  :meth:`wxcadm.Person.set_caller_id()` method
+-  :meth:`Person.set_caller_id()` method
 -  Bot-friendly method changes
-- :meth:`wxcadm.Person.set_voicemail_rings()` method
+- :meth:`Person.set_voicemail_rings()` method

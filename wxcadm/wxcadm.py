@@ -131,17 +131,19 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
     else:
         return False
 
-
-def console_logging():
+def console_logging(level: str = "debug"):
     """ Enable logging directly to STDOUT
 
     This overrides any other logging and is really only useful when doing Python Console work.
     """
     global log
-    log = logging.Logger("wxcadm", level=logging.DEBUG)
+    level_map = {"info": logging.INFO,
+                 "warning": logging.WARNING,
+                 "debug": logging.DEBUG,
+                 "critical": logging.CRITICAL}
+    log = logging.Logger("wxcadm", level=level_map[level])
     handler = logging.StreamHandler(sys.stdout)
     log.addHandler(handler)
-
 
 class Webex:
     """The base class for working with wxcadm"""
@@ -1453,11 +1455,15 @@ class Person:
             self.get_call_forwarding()
             self.get_vm_config()
             self.get_caller_id()
+            self.get_call_recording()
             self.get_dnd()
             self.get_calling_behavior()
             self.get_caller_id()
             self.get_hoteling()
             self.get_barge_in()
+            self.get_intercept()
+            self.get_monitoring()
+            self.get_outgoing_permission()
             return self
         else:
             log.info(f"{self.email} is not a Webex Calling user.")
@@ -1569,6 +1575,75 @@ class Person:
             return self.vm_config
         else:
             return False
+
+    def upload_busy_greeting(self, filename: str, activate: bool = True):
+        """ Upload a WAV file to be used as the Person's Voicemail Busy Greeting
+
+        This method does not check the format of the WAV file or provide any media conversion. The file should be in
+        the correct format to be accepted by Webex. Files in the wrong format will fail and the method will return
+        False.
+
+        Args:
+            filename (str): The filename (and path, if needed) of the WAV file to upload
+            activate (bool, optional): Whether to activate this as the current Busy greeting. Defaults to True
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Uploading VB Busy Greeting for {self.email}")
+        upload_as = os.path.basename(filename)
+        content = open(filename, "rb")
+        encoder = MultipartEncoder(fields={"file": (upload_as, content, 'audio/wav')})
+        log.debug(f"File Encoder: {encoder}")
+        r = requests.post(_url_base + f"v1/people/{self.id}/features/voicemail/actions/uploadBusyGreeting/invoke",
+                          headers={"Content-Type": encoder.content_type, **self._headers},
+                          data=encoder)
+        content.close()
+        if r.ok:
+            if activate is True:
+                vm_config = self.get_vm_config()
+                vm_config['sendBusyCalls']['greeting'] = "CUSTOM"
+                self.push_vm_config(vm_config)
+            return True
+        else:
+            log.warning(f"The Greeting upload failed: {r.text}")
+            return False
+
+    def upload_no_answer_greeting(self, filename: str, activate: bool = True):
+        """ Upload a WAV file to be used as the Person's Voicemail No Answer Greeting
+
+        This method does not check the format of the WAV file or provide any media conversion. The file should be in
+        the correct format to be accepted by Webex. Files in the wrong format will fail and the method will return
+        False.
+
+        Args:
+            filename (str): The filename (and path, if needed) of the WAV file to upload
+            activate (bool, optional): Whether to activate this as the current No Answer greeting. Defaults to True
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Uploading VB No Answer Greeting for {self.email}")
+        upload_as = os.path.basename(filename)
+        content = open(filename, "rb")
+        encoder = MultipartEncoder(fields={"file": (upload_as, content, 'audio/wav')})
+        log.debug(f"File Encoder: {encoder}")
+        r = requests.post(_url_base + f"v1/people/{self.id}/features/voicemail/actions/uploadNoAnswerGreeting/invoke",
+                          headers={"Content-Type": encoder.content_type, **self._headers},
+                          data=encoder)
+        content.close()
+        if r.ok:
+            if activate is True:
+                vm_config = self.get_vm_config()
+                vm_config['sendUnansweredCalls']['greeting'] = "CUSTOM"
+                self.push_vm_config(vm_config)
+            return True
+        else:
+            log.warning(f"The Greeting upload failed: {r.text}")
+            return False
+
 
     def push_cf_config(self, cf_config: dict = None):
         """ Pushes the Call Forwarding config back to Webex
