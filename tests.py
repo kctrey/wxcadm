@@ -14,6 +14,7 @@ import queue
 import os
 from dotenv import load_dotenv
 import logging
+import random
 
 # Set up a log file
 logging.basicConfig(level=logging.INFO,
@@ -38,6 +39,7 @@ if not access_token:
 
 passed_tests = []
 failed_tests = []
+skipped_tests = []
 
 def start_test():
     logstring = f"Testing {test}..."
@@ -60,6 +62,11 @@ def fail_test():
     failed_tests.append(test)
     print(f"failed [{test_duration}s]")
     logging.info(f"{test} failed in {test_duration}s")
+
+def skip_test(why: str):
+    skipped_tests.append(test)
+    print(f"skipped [{why}]")
+    logging.info(f"{test} skipped: {why}")
 
 # Test bad access token handling
 test = "TokenError"
@@ -184,7 +191,7 @@ else:
 # Person tests
 test = "Person full config"
 start_test()
-person = webex.orgs[0].get_wxc_people()[0]
+person: wxcadm.wxcadm.Person = random.choice(webex.orgs[0].get_wxc_people())
 try:
     full_config = person.get_full_config()
 except:
@@ -253,6 +260,54 @@ else:
         pass_test()
     else:
         fail_test()
+#### Application Services Settings ####
+test = "Person Get Applications Settings"
+start_test()
+try:
+    app_config = person.get_applications_settings()
+except:
+    fail_test()
+else:
+    pass_test()
+test = "Person Set Applications Settings"
+start_test()
+if app_config is False or app_config is None:
+    skip_test("Applications Settings not available")
+else:
+    try:
+        success = person.push_applications_settings(app_config)
+    except:
+        fail_test()
+    else:
+        if success:
+            pass_test()
+        else:
+            fail_test()
+#### Executive Assistant Settings ####
+test = "Person get Executive Assistant configs"
+start_test()
+try:
+    ea_config = person.get_executive_assistant()
+except:
+    fail_test()
+else:
+    pass_test()
+test = "Person set Executive Assistant config"
+start_test()
+if ea_config is False or ea_config is None:
+    skip_test("Executive Assistant config not available")
+else:
+    try:
+        success = person.push_executive_assistant(ea_config)
+    except:
+        fail_test()
+    else:
+        if success:
+            pass_test()
+        else:
+            fail_test()
+
+
 
 
 # XSI tests
@@ -305,4 +360,5 @@ else:
 logging.info("Tests Complete")
 logging.info(f"Passed Tests: {passed_tests}")
 logging.info(f"Failed Tests: {failed_tests}")
+logging.info(f"Skipped Tests: {skipped_tests}")
 print(f"Failed Tests: {failed_tests}")

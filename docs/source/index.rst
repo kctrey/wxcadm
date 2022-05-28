@@ -86,6 +86,7 @@ the two. Stay tuned...
    usage/installation
    usage/quickstart
    whatsnew
+   usage/tests
    usage/api_scope
    usage/documentation
    usage/xsi

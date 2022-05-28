@@ -1234,7 +1234,6 @@ class Person:
         """The Webex ID of the Person"""
         self._parent = parent
         """The parent instance that created this Person"""
-
         # Attributes
         self.email: str = ""
         """The user's email address"""
@@ -1286,6 +1285,10 @@ class Person:
         self.outgoing_permission: dict = {}
         """Dictionary of Outgoing Permission config returned by Webex API
         with :meth:`get_outgoing_permission()`"""
+        self.applications_settings = None
+        """ The Application Services Settings for this Person"""
+        self.executive_assistant = None
+
 
 
 
@@ -1434,13 +1437,27 @@ class Person:
         Args:
             pin (str): The new temporary PIN to set for the Person
 
+        Returns:
+            bool: True on success, False otherwise
+
         .. warning::
 
-            This method requires the CP-API access scope.
+            This method requires the CP-API access scope if you are going to specify the PIN. A "reset only" does not
+            require any special access.
 
         """
         log.info(f"Resetting VM PIN for {self.email}")
-        self._parent._cpapi.reset_vm_pin(self, pin=pin)
+        if pin is not None:
+            self._parent._cpapi.reset_vm_pin(self, pin=pin)
+            return True
+        else:
+            r = requests.post(_url_base + f"v1/people/{self.id}/features/voicemail/actions/resetPin/invoke",
+                              headers=self._headers)
+            if r.ok:
+                return True
+            else:
+                log.warning("Reset VM PIN API call failed")
+                return False
 
     def get_full_config(self):
         """
@@ -2004,13 +2021,43 @@ class Person:
             bool: True on success, False otherwise
 
         """
-        log.info("Pushing Calling Behavior for {self.email")
+        log.info(f"Pushing Calling Behavior for {self.email}")
         log.debug(f"\tConfig: {config}")
         success = self.__put_webex_data(f"v1/people/{self.id}/features/callingBehavior", payload=config)
         if success:
             return True
         else:
             log.warning("The Calling Behavior config push failed")
+            return False
+
+    def get_applications_settings(self) -> dict:
+        """ Get the Application Services settings for the Person
+
+        Returns:
+            dict: The Application Services settings for the Person instance
+
+        """
+        log.info(f"Getting Applications Settings for {self.email}")
+        self.applications_settings = self.__get_webex_data(f"v1/people/{self.id}/features/applications")
+        return self.applications_settings
+
+    def push_applications_settings(self, config: dict) -> bool:
+        """ Push the Applications Services settings to Webex
+
+        Args:
+            config (dict): The Applications Services Settings config
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Pushing Applications Settings for {self.email}")
+        log.debug(f"\tConfig: {config}")
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/applications", payload=config)
+        if success:
+            return True
+        else:
+            log.warning("The Applications Settings config push failed")
             return False
 
     def license_details(self):
@@ -2236,6 +2283,37 @@ class Person:
             return True
         else:
             return False
+
+    def get_executive_assistant(self):
+        """ Get the Executive Assistant config for the Person
+
+        Returns:
+            dict: The Executive Assistant config for the Person instance
+
+        """
+        log.info(f"Getting Executive Assistant config for {self.email}")
+        self.executive_assistant = self.__get_webex_data(f"v1/people/{self.id}/features/executiveAssistant")
+        return self.executive_assistant
+
+    def push_executive_assistant(self, config: dict) -> bool:
+        """ Push the Exectuve Assistant config to Webex
+
+        Args:
+            config (dict): The Executive Assistant Config
+
+        Returns:
+             bool: True on success, False otherwise
+
+        """
+        log.info(f"Pushing Executive Assistant config for {self.email}")
+        log.debug(f"\tConfig: {config}")
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/executiveAssistant", payload=config)
+        if success:
+            return True
+        else:
+            log.warning("The Executive Assistant config push failed")
+            return False
+
 
 
 class PickupGroup:
