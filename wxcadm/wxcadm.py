@@ -273,6 +273,30 @@ class Webex:
                 return person
         return None
 
+    def get_person_by_id(self, id: str):
+        """ Get the Person instance for a user with the given ID
+
+        Unlike the :class:`Org` method of the same name, this method searches across all Orgs that the token has
+        access to, so it can find a user in any :class:`Org`
+
+        Args:
+            id (str): The ID to search for
+
+        Returns:
+            Person: The Person instance. None is returned if no match is found
+
+        """
+        for org in self.orgs:
+            person = org.get_person_by_id(id)
+            if person is not None:
+                return person
+        return None
+
+    @property
+    def me(self):
+        my_info = webex_api_call("get", "v1/people/me", headers=self.headers)
+        person = self.get_person_by_id(my_info['id'])
+        return person
 
 class Org:
     def __init__(self,
@@ -5327,7 +5351,7 @@ class LocationSchedule:
         else:
             return False
 
-    def get_event_config_by_id(self, id: str) -> dict:
+    def get_event_config_by_id(self, id: str) -> Union[dict, None]:
         """ Get the 'events' dict for a specific event.
 
         This method is useful if you are modifying an event and want to provide the full config.

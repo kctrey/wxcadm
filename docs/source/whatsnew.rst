@@ -5,6 +5,8 @@ What's New
 
 v2.3.0
 ------
+- :meth:`Webex.me` to return the Person instance of the token owner
+- :meth:`Webex.get_person_by_id` to search across Orgs
 - :meth:`Person.upload_busy_greeting()` and :meth:`Person.upload_no_answer_greeting()` for VM greeting uploads
 - New :meth:`wxcadm.console_logging()` added to support STDOUT logging for interactive development
 - Lots of logging and method clean-up. Standardized getters as "get_xxxx()" and setters (which call the Webex API PUT) as "push_xxxx(config)"
