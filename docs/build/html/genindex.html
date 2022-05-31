@@ -39,6 +39,7 @@
 <li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="whatsnew.html">What’s New</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/tests.html">The tests.py Script</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/api_scope.html">About API Scopes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/documentation.html">Usage Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/xsi.html">XSI Usage</a></li>
@@ -51,6 +52,7 @@
 <li class="toctree-l1"><a class="reference internal" href="reference/LocationSchedule.html">The LocationSchedule class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/AutoAttendant.html">The AutoAttendant class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Person.html">The Person class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/Me.html">The Me class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Device.html">The Device class</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">XSI Reference</span></p>
@@ -164,6 +166,8 @@
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.anonymous_call_rejection">anonymous_call_rejection (wxcadm.wxcadm.XSI property)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.answer_call">answer_call() (wxcadm.wxcadm.XSI method)</a>
+</li>
+      <li><a href="reference/Person.html#wxcadm.wxcadm.Person.applications_settings">applications_settings (wxcadm.wxcadm.Person attribute)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.assign_wxc">assign_wxc() (wxcadm.wxcadm.Person method)</a>
 </li>
@@ -315,6 +319,8 @@
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Person.html#wxcadm.wxcadm.Person.get_applications_settings">get_applications_settings() (wxcadm.wxcadm.Person method)</a>
+</li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_audit_events">get_audit_events() (wxcadm.wxcadm.Org method)</a>
 </li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_auto_attendant">get_auto_attendant() (wxcadm.wxcadm.Org method)</a>
@@ -342,6 +348,8 @@
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.get_dnd">get_dnd() (wxcadm.wxcadm.Person method)</a>
 </li>
       <li><a href="reference/LocationSchedule.html#wxcadm.wxcadm.LocationSchedule.get_event_config_by_id">get_event_config_by_id() (wxcadm.wxcadm.LocationSchedule method)</a>
+</li>
+      <li><a href="reference/Person.html#wxcadm.wxcadm.Person.get_executive_assistant">get_executive_assistant() (wxcadm.wxcadm.Person method)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.get_fac">get_fac() (wxcadm.wxcadm.XSI method)</a>
 </li>
@@ -379,6 +387,8 @@
 </li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_number_assignment">get_number_assignment() (wxcadm.wxcadm.Org method)</a>
 </li>
+      <li><a href="reference/Webex.html#wxcadm.wxcadm.Webex.get_org_by_id">get_org_by_id() (wxcadm.wxcadm.Webex method)</a>
+</li>
       <li><a href="reference/Webex.html#wxcadm.wxcadm.Webex.get_org_by_name">get_org_by_name() (wxcadm.wxcadm.Webex method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.get_outgoing_permission">get_outgoing_permission() (wxcadm.wxcadm.Person method)</a>
@@ -394,7 +404,11 @@
 </li>
       </ul></li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_person_by_id">get_person_by_id() (wxcadm.wxcadm.Org method)</a>
+
+      <ul>
+        <li><a href="reference/Webex.html#wxcadm.wxcadm.Webex.get_person_by_id">(wxcadm.wxcadm.Webex method)</a>
 </li>
+      </ul></li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_pickup_groups">get_pickup_groups() (wxcadm.wxcadm.Org method)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.get_services">get_services() (wxcadm.wxcadm.XSI method)</a>
@@ -507,8 +521,12 @@
 </li>
       <li><a href="reference/Location.html#wxcadm.wxcadm.Location.main_number">main_number (wxcadm.wxcadm.Location property)</a>
 </li>
+      <li><a href="reference/Me.html#wxcadm.wxcadm.Me">Me (class in wxcadm.wxcadm)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Webex.html#wxcadm.wxcadm.Webex.me">me (wxcadm.wxcadm.Webex property)</a>
+</li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.monitoring">monitoring (wxcadm.wxcadm.Person attribute)</a>
 
       <ul>
@@ -555,6 +573,8 @@
 </li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org">Org (class in wxcadm.wxcadm)</a>
 </li>
+      <li><a href="reference/Webex.html#wxcadm.wxcadm.Webex.org">org (wxcadm.wxcadm.Webex attribute)</a>
+</li>
       <li><a href="reference/Webex.html#wxcadm.wxcadm.Webex.orgs">orgs (wxcadm.wxcadm.Webex attribute)</a>
 </li>
   </ul></td>
@@ -597,6 +617,8 @@
 </li>
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.profile">profile (wxcadm.wxcadm.XSI property)</a>
 </li>
+      <li><a href="reference/Person.html#wxcadm.wxcadm.Person.push_applications_settings">push_applications_settings() (wxcadm.wxcadm.Person method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.push_barge_in">push_barge_in() (wxcadm.wxcadm.Person method)</a>
@@ -610,6 +632,8 @@
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.push_cf_config">push_cf_config() (wxcadm.wxcadm.Person method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.push_dnd">push_dnd() (wxcadm.wxcadm.Person method)</a>
+</li>
+      <li><a href="reference/Person.html#wxcadm.wxcadm.Person.push_executive_assistant">push_executive_assistant() (wxcadm.wxcadm.Person method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.push_hoteling">push_hoteling() (wxcadm.wxcadm.Person method)</a>
 </li>

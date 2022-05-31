@@ -5,7 +5,8 @@ What's New
 
 v2.3.0
 ------
-- :meth:`Webex.me` to return the Person instance of the token owner
+- Added Voice Message methods to the :py:class:`Me` class
+- :meth:`Webex.me` returns a :py:class:`Me` instance, which is a child of the Person instance, which has some unique methods.
 - :meth:`Webex.get_person_by_id` to search across Orgs
 - :meth:`Person.upload_busy_greeting()` and :meth:`Person.upload_no_answer_greeting()` for VM greeting uploads
 - New :meth:`wxcadm.console_logging()` added to support STDOUT logging for interactive development

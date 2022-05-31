@@ -101,6 +101,7 @@ the two. Stay tuned...
    reference/LocationSchedule
    reference/AutoAttendant
    reference/Person
+   reference/Me
    reference/Device
 
 .. toctree::

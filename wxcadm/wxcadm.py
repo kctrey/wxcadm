@@ -1,3 +1,4 @@
+import dataclasses
 import json.decoder
 import sys
 import os.path
@@ -26,13 +27,16 @@ log = logging.getLogger(__name__)
 # TODO: There is a package-wide problem where we have Webex-native data and instance attributes that we write
 #       to make the instances easier to work with. I have kept the native data because it is easier to push back
 #       to Webex and safer in case the API changes. Ideally, we should store all attributes in ways that a user
-#       would want them and pack them back into JSON as needed. In the meantime, like in the CallQueues object
-#       I end up with the same values in multiple attributes, which is a bad idea.
+#       would want them and pack them back into JSON as needed. You may notice that some classes use camelCase, like
+#       the API returns where others use Python-standard variable_naming.
 
 # Some functions available to all classes and instances (optionally)
 _url_base = "https://webexapis.com/"
+_webex_headers = {"Authorization": "",
+                  "Content-Type": "application/json",
+                  "Accept": "application/json"}
 
-def webex_api_call(method: str, url: str, headers: dict, params: dict = None, payload: dict = None):
+def webex_api_call(method: str, url: str, headers: dict = None, params: dict = None, payload: dict = None):
     """ Generic handler for all Webex API requests
 
     This function performs the Webex API call as a Session and handles processing the response. It has the ability
@@ -42,9 +46,11 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
     Args:
         method (str): The HTTP method to use. **get**, **post** and **put** are supported.
         url (str): The endpoint part of the URL (after https://webexapis.com/)
-        headers (dict): HTTP headers to use with the request
-        params (dict): Any paramaters to be passed as part of an API call
-        payload: (dict): Payload that will be sent in a POST or PUT. Will be converted to JSON during the API call
+        headers (dict, optional): HTTP headers to use with the request. If not provided, **wxcadm** will use the base
+            Authorization header from when the Webex instance was initialized.
+        params (dict, optional): Any paramaters to be passed as part of an API call
+        payload: (dict, optional): Payload that will be sent in a POST or PUT. Will be converted to JSON during the
+            API call
 
     Returns:
         The return value will vary based on the API response. If a list of items are returned, a list will be returned.
@@ -60,7 +66,10 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
 
     start = time.time()     # Tracking API execution time
     session = requests.Session()
-    session.headers.update(headers)
+    if headers is not None:
+        session.headers.update(headers)
+    else:
+        session.headers.update(_webex_headers)
 
     if method.lower() == "get":
         r = session.get(_url_base + url, params=params)
@@ -113,11 +122,12 @@ def webex_api_call(method: str, url: str, headers: dict, params: dict = None, pa
     elif method.lower() == "post":
         r = session.post(_url_base + url, params=params, json=payload)
         if r.ok:
-            response = r.json()
-            if response:
-                return response
-            else:
+            try:
+                response = r.json()
+            except requests.exceptions.JSONDecodeError:
                 return True
+            else:
+                return response
         else:
             log.info("Webex API returned an error")
             raise APIError(f"The Webex API returned an error: {r.text}")
@@ -135,6 +145,10 @@ def console_logging(level: str = "debug"):
     """ Enable logging directly to STDOUT
 
     This overrides any other logging and is really only useful when doing Python Console work.
+
+    Args:
+        level (str, optional): The logging level. Valid values are ``"debug"``, ``"info"``, ``"warning"`` and
+            ``"critical"``. Defaults to ``debug`` for full debug output.
     """
     global log
     level_map = {"info": logging.INFO,
@@ -186,6 +200,9 @@ class Webex:
         # Might want to make it something global so we don't have to inherit it across all of the children
         self._headers: dict = {"Authorization": "Bearer " + access_token}
         log.debug(f"Setting Org._headers to {self._headers}")
+        log.debug(f"Setting Global _webex_headers")
+        global _webex_headers
+        _webex_headers['Authorization'] = "Bearer " + access_token
 
         # Fast Mode flag when needed
         self._fast_mode = fast_mode
@@ -193,6 +210,13 @@ class Webex:
         # Instance attrs
         self.orgs: list[Org] = []
         '''A list of the Org instances that this Webex instance can manage'''
+        self.org: Union[Org, None] = None
+        """
+        If there is only one Org in :py:attr:`Webex.orgs`, this attribute is an alias for Webex.orgs[0]. This attribute
+        will be None if there are more than one Org accessible by the token, to prevent accidental changes to the
+        incorrect Org.
+        """
+        self._me: Union[Me, None] = None
         # Get the orgs that this token can manage
         log.debug(f"Making API call to v1/organizations")
         r = requests.get(_url_base + "v1/organizations", headers=self._headers)
@@ -254,6 +278,24 @@ class Webex:
                 return org
         raise KeyError("Org not found")
 
+    def get_org_by_id(self, id: str):
+        """Get the Org instance by Org ID.
+
+        Args:
+            id (str): The ID of the Org to find
+
+        Returns:
+            Org: The Org instance of the matching Org
+
+        Raises:
+            wxcadm.exceptions.KeyError: Raised when no match is made
+
+        """
+        for org in self.orgs:
+            if org.id == id:
+                return org
+        raise KeyError("Org not found")
+
     def get_person_by_email(self, email: str):
         """ Get the person instance  of a user with the given email address
 
@@ -294,9 +336,12 @@ class Webex:
 
     @property
     def me(self):
-        my_info = webex_api_call("get", "v1/people/me", headers=self.headers)
-        person = self.get_person_by_id(my_info['id'])
-        return person
+        """ An instance of the :py:class:`Me` class representing the token owner """
+        if self._me is None:
+            my_info = webex_api_call("get", "v1/people/me", headers=self.headers)
+            me = Me(my_info['id'], parent=self.get_org_by_id(my_info['orgId']), config=my_info)
+            self._me = me
+        return self._me
 
 class Org:
     def __init__(self,
@@ -584,7 +629,7 @@ class Org:
 
     @property
     def devices(self):
-        """All of the Device instances for the Org
+        """All the Device instances for the Org
 
         Returns:
             list[Device]: List of all Device instances
@@ -5368,3 +5413,77 @@ class LocationSchedule:
                 return e
         return None
 
+
+class Me(Person):
+    """ The class representing the token owner. Some methods are only available at an owner scope. """
+    def __init__(self, user_id, parent: Org = None, config: dict = None):
+        super().__init__(user_id, parent, config)
+
+    def get_voice_messages(self, unread: bool = False):
+        """ Get all the Voice Messages for the Me instance
+
+        Args:
+            unread (bool, optional): Whether to only return Unread messages. Default is False
+
+        Returns:
+            list[VoiceMessage]: A list of all of the :py:class:`VoiceMessage` instances
+
+        """
+        messages = []
+        # Something funky about this API call needing more headers
+        headers = {"Content-Type": "application/json", "Accept": "*/*", **self._headers}
+        data = webex_api_call("get", "v1/telephony/voiceMessages")
+        for item in data:
+            if item['read'] is True and unread is True:
+                continue
+            else:
+                m = VoiceMessage(**item)
+            messages.append(m)
+        return messages
+
+
+@dataclass
+class VoiceMessage:
+    id: str
+    duration: int
+    callingParty: dict
+    read: bool
+    created: str
+    personId: Union[str, None] = None
+    placeId: Union[str, None] = None
+    privacyEnabled: bool = False
+    urgent: bool = False
+    confidential: bool = False
+    faxPageCount: Union[int, None] = None
+
+    def mark_read(self) -> bool:
+        """ Mark the message as read within Webex
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Marking Voice Message as read: {self.id}")
+        payload = {"messageId": self.id}
+        success = webex_api_call("post", "v1/telephony/voiceMessages/markAsRead", payload=payload)
+        if success:
+            return True
+        else:
+            log.warning("Something went wrong marking the message read.")
+            return False
+
+    def mark_unread(self) -> bool:
+        """ Mark the message as unread within Webex
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Marking Voice Message as unread: {self.id}")
+        payload = {"messageId": self.id}
+        success = webex_api_call("post", "v1/telephony/voiceMessages/markAsUnread", payload=payload)
+        if success:
+            return True
+        else:
+            log.warning("Something went wrong marking the message unread.")
+            return False
