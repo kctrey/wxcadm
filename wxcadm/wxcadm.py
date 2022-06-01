@@ -1,4 +1,3 @@
-import dataclasses
 import json.decoder
 import sys
 import os.path
@@ -13,7 +12,7 @@ import requests
 from requests_toolbelt import MultipartEncoder
 import logging
 import base64
-from threading import Thread, Event
+from threading import Thread
 
 import xmltodict
 import srvlookup
@@ -35,6 +34,7 @@ _url_base = "https://webexapis.com/"
 _webex_headers = {"Authorization": "",
                   "Content-Type": "application/json",
                   "Accept": "application/json"}
+
 
 def webex_api_call(method: str, url: str, headers: dict = None, params: dict = None, payload: dict = None):
     """ Generic handler for all Webex API requests
@@ -113,8 +113,12 @@ def webex_api_call(method: str, url: str, headers: dict = None, params: dict = N
         if r.ok:
             response = r.json()
             if response:
+                end = time.time()
+                log.debug(f"__webex_api_call() completed in {end - start} seconds")
                 return response
             else:
+                end = time.time()
+                log.debug(f"__webex_api_call() completed in {end - start} seconds")
                 return True
         else:
             log.info("Webex API returned an error")
@@ -125,8 +129,12 @@ def webex_api_call(method: str, url: str, headers: dict = None, params: dict = N
             try:
                 response = r.json()
             except requests.exceptions.JSONDecodeError:
+                end = time.time()
+                log.debug(f"__webex_api_call() completed in {end - start} seconds")
                 return True
             else:
+                end = time.time()
+                log.debug(f"__webex_api_call() completed in {end - start} seconds")
                 return response
         else:
             log.info("Webex API returned an error")
@@ -134,12 +142,15 @@ def webex_api_call(method: str, url: str, headers: dict = None, params: dict = N
     elif method.lower() == "delete":
         r = session.delete(_url_base + url, params=params)
         if r.ok:
+            end = time.time()
+            log.debug(f"__webex_api_call() completed in {end - start} seconds")
             return True
         else:
             log.info("Webex API returned an error")
             raise APIError(f"The Webex API returned an error: {r.text}")
     else:
         return False
+
 
 def console_logging(level: str = "debug"):
     """ Enable logging directly to STDOUT
@@ -158,6 +169,7 @@ def console_logging(level: str = "debug"):
     log = logging.Logger("wxcadm", level=level_map[level])
     handler = logging.StreamHandler(sys.stdout)
     log.addHandler(handler)
+
 
 class Webex:
     """The base class for working with wxcadm"""
@@ -343,6 +355,7 @@ class Webex:
             self._me = me
         return self._me
 
+
 class Org:
     def __init__(self,
                  name: str,
@@ -376,11 +389,11 @@ class Org:
         self._numbers = None
         self._paging_groups = None
         self._parent = parent
-        self.call_queues: list[CallQueue] = None
+        self.call_queues: Union[list[CallQueue], None] = None
         """The Call Queues for this Org"""
-        self.hunt_groups: list[HuntGroup] = None
+        self.hunt_groups: Union[list[HuntGroup], None] = None
         """The Hunt Groups for this Org"""
-        self.pickup_groups: list[PickupGroup] = None
+        self.pickup_groups: Union[list[PickupGroup], None] = None
         'A list of the PickupGroup instances for this Org'
         self.locations: list[Location] = []
         'A list of the Location instances for this Org'
@@ -395,11 +408,11 @@ class Org:
         '''A list of all of the licenses for the Organization as a dictionary of names and IDs'''
         self.people: list[Person] = []
         '''A list of all of the Person instances for the Organization'''
-        self.workspaces: list[Workspace] = None
+        self.workspaces: Union[list[Workspace], None] = None
         """A list of the Workspace instances for this Org."""
-        self.workspace_locations: list[WorkspaceLocation] = None
+        self.workspace_locations: Union[list[WorkspaceLocation], None] = None
         """A list of the Workspace Location instanced for this Org."""
-        self._devices: list[Device] = None
+        self._devices: Union[list[Device], None] = None
         """A list of the Devce instances for this Org"""
         self._auto_attendants: list[AutoAttendant] = []
         """A list of the AutoAttendant instances for this Org"""
@@ -506,8 +519,8 @@ class Org:
             spark_id (str, optional): The Spark ID to find
 
         Returns:
-            PagingGroup: The PagingGroup instance correlating to the given search argument. None is returned if no Location
-                is found.
+            PagingGroup: The PagingGroup instance correlating to the given search argument. None is returned if no
+                Location is found.
 
         Raises:
             ValueError: Raised when the method is called with no arguments
@@ -549,7 +562,7 @@ class Org:
         if id is None and name is None and spark_id is None:
             raise ValueError("A search argument must be provided")
         if not self._auto_attendants:
-            self.auto_attendants
+            self._auto_attendants = self.auto_attendants
         for aa in self._auto_attendants:
             if aa.id == id:
                 return aa
@@ -618,9 +631,7 @@ class Org:
 
         """
         log.info(f"get_number_assignment({number})")
-        if self._numbers is None:
-            self.numbers
-        for num in self._numbers:
+        for num in self.numbers:
             if num.get("phoneNumber", "") is not None:
                 if number in num.get("phoneNumber", ""):
                     log.debug(f"Found match: {num}")
@@ -890,8 +901,6 @@ class Org:
 
         return self.workspaces
 
-    
-
     def get_pickup_groups(self):
         """Get all of the Call Pickup Groups for an Organization.
 
@@ -964,7 +973,6 @@ class Org:
             auto_attendant = AutoAttendant(self, location=location, id=id, name=name)
             self._auto_attendants.append(auto_attendant)
         return self._auto_attendants
-
 
     def get_call_queue_by_id(self, id: str):
         """ Get the :class:`CallQueue` instance with the requested ID
@@ -1077,7 +1085,6 @@ class Org:
         self.people.append(this_person)
         return this_person
 
-
     def get_wxc_people(self):
         """Get all of the people within the Organization **who have Webex Calling**
 
@@ -1179,7 +1186,6 @@ class Location:
     def spark_id(self):
         """The ID used by all of the underlying services."""
         return decode_spark_id(self.id)
-
 
     @property
     def hunt_groups(self):
@@ -1345,7 +1351,7 @@ class Person:
         """Holds the XSI instance when created with the :meth:`start_xsi()` method."""
         self.numbers: list = []
         """The phone numbers for this person from Webex CI"""
-        self.extension: str = None
+        self.extension: Union[str, None] = None
         """The extension for this person"""
         self._hunt_groups: list = []
         """A list of the Hunt Group instances that this user is an Agent for"""
@@ -1357,9 +1363,6 @@ class Person:
         self.applications_settings = None
         """ The Application Services Settings for this Person"""
         self.executive_assistant = None
-
-
-
 
         # API-related attributes
         self._headers = parent._headers
@@ -1729,7 +1732,6 @@ class Person:
         else:
             log.warning(f"The Greeting upload failed: {r.text}")
             return False
-
 
     def push_cf_config(self, cf_config: dict = None):
         """ Pushes the Call Forwarding config back to Webex
@@ -2398,10 +2400,7 @@ class PickupGroup:
         """All of the users (agents) assigned to this Pickup Group"""
         # If no agents were passed, we need to go get the configuration of the PickupGroup
         if users is None:
-            r = requests.get(_url_base + f"v1/telephony/config/locations/{self.location_id}/callPickups/{self.id}",
-                             headers=self._parent._headers
-                             )
-            response = r.json()
+            response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/callPickups/{self.id}")
             # TODO It doesn't make sense to create a new Person instance for the below.
             #      Once we have an API and a class for Workspaces, it would make sense to tie
             #      the agents to the Person or Workspace instance
@@ -2603,7 +2602,7 @@ class XSI:
 
         # Get the profile if we have been asked to
         if get_profile:
-            self.profile
+            self._profile = self.profile
 
     def new_call(self, address: str = None):
         """Create a new Call instance
@@ -2623,7 +2622,7 @@ class XSI:
         self._calls.append(call)
         return call
 
-    def new_conference(self, calls: list = [], comment: str = ""):
+    def new_conference(self, calls: list, comment: str = ""):
         """
         Crates a new Conference instance. A user can only have one Conference instance, so this will replace any
         previous Conference. At the moment, this **should not be called directly** and will be done dynamically by
@@ -2675,7 +2674,7 @@ class XSI:
         for call in self._calls:
             del call
         self._calls.clear()
-        calls_data: list = self.__get_xsi_data(f"/v2.0/user/{self.id}/calls")
+        calls_data: dict = self.__get_xsi_data(f"/v2.0/user/{self.id}/calls")
         log.debug(f"Calls Data: {calls_data}")
         if "call" not in calls_data['Calls']:
             self._calls = []
@@ -2793,7 +2792,7 @@ class XSI:
         if not self._registrations or not self._cache:
             # If we don't have a registrations URL, because we don't have the profile, go get it
             if "registrations_url" not in self._profile:
-                self.profile
+                self._profile = self.profile
             self._registrations = self.__get_xsi_data(self._profile['registrations_url'])
         return self._registrations
 
@@ -3228,7 +3227,8 @@ class Call:
 
     """
 
-    def __init__(self, parent, id: str = "", address: str = "", user_id: str = ""):
+    def __init__(self, parent: Union[Person, XSI, XSICallQueue],
+                 id: str = "", address: str = "", user_id: str = ""):
         """Inititalize a Call instance for a Person
 
         Args:
@@ -3742,15 +3742,15 @@ class Workspace:
         self._headers = self._parent._headers
         self._params = self._parent._params
         # Instance attributes
-        self.location: str = None
+        self.location: Union[str, None] = None
         """The Webex ID of the Workspace Location (note this is a Workspace Location, not a Calling Location."""
-        self.floor: str = None
+        self.floor: Union[str, None] = None
         """The Webex ID of the Floor ID"""
         self.name: str = ""
         """The name of the Workspace"""
-        self.capacity: int = None
+        self.capacity: Union[int, None] = None
         """The capacity of the Workspace"""
-        self.type: str = None
+        self.type: Union[str, None] = None
         """
         The type of Workspace. Valid values are:
         
@@ -3762,11 +3762,11 @@ class Workspace:
             "desk": Individual
             "other": Unspecified
         """
-        self.sip_address: str = None
+        self.sip_address: Union[str, None] = None
         """The SIP Address used to call to the Workspace"""
-        self.created: str = None
+        self.created: Union[str, None] = None
         """The date and time the workspace was created"""
-        self.calling: str = None
+        self.calling: Union[str, None] = None
         """
         The type of Calling license assigned to the Workspace. Valid values are:
         
@@ -3775,9 +3775,9 @@ class Workspace:
             'webexCalling': Webex Calling
             'webexEdgeForDevices': Webex Edge for Devices
         """
-        self.calendar: dict = None
+        self.calendar: Union[dict, None] = None
         """The type of calendar connector assigned to the Workspace"""
-        self.notes: str = None
+        self.notes: Union[str, None] = None
         """Notes associated with the Workspace"""
 
         if config:
@@ -3793,9 +3793,8 @@ class Workspace:
 
     @property
     def spark_id(self):
-        bytes = base64.b64decode(self.id + "===")
-        spark_id = bytes.decode("utf-8")
-        return spark_id
+        """ The internal identifier used by Webex """
+        return decode_spark_id(self.id)
 
     def get_config(self):
         """Get (or refresh) the confirmation of the Workspace from the Webex API"""
@@ -3844,21 +3843,21 @@ class WorkspaceLocation:
         self._headers = self._parent._headers
         self._params = self._parent._params
         # Instance attributes
-        self.name: str = None
+        self.name: Union[str, None] = None
         """The name of the WorkspaceLocation"""
-        self.address: str = None
+        self.address: Union[str, None] = None
         """The address of the WorkspaceLocation"""
-        self.country: str = None
+        self.country: Union[str, None] = None
         """The country code (ISO 3166-1) for the WorkspaceLocation"""
-        self.city: str = None
+        self.city: Union[str, None] = None
         """The city name where the WorkspaceLocation is located"""
-        self.latitude: float = None
+        self.latitude: Union[float, None] = None
         """The WorkspaceLocation latitude"""
-        self.longitude: float = None
+        self.longitude: Union[float, None] = None
         """The WorkspaceLocation longitude"""
-        self.notes: str = None
+        self.notes: Union[str, None] = None
         """Notes associated with the WorkspaceLocation"""
-        self.floors: list[WorkspaceLocationFloor] = None
+        self.floors: Union[list[WorkspaceLocationFloor], None] = None
 
         if config:
             self.__process_config(config)
@@ -3898,7 +3897,7 @@ class WorkspaceLocation:
         self.notes = config.get("notes", "")
 
 
-class WorkspaceLocationFloor(WorkspaceLocation):
+class WorkspaceLocationFloor:
     def __init__(self, config: dict):
         """Initialize a new WorkspaceLocationFloor
 
@@ -3980,7 +3979,7 @@ class CPAPI:
             self.set_global_vm_pin(pin)
 
         r = requests.post(self._url_base + f"users/{user_id}/features/voicemail/actions/resetpin/invoke",
-                      headers=self._headers)
+                          headers=self._headers)
         if r.status_code == 403:
             raise TokenError("Your API Access Token doesn't have permission to use this API call")
 
@@ -4708,7 +4707,8 @@ class RedSky:
         """ Add a new MAC address mapping to RedSky Horizon
 
         Args:
-            mac (str): The MAC address to add. RedSky isn't picky about formatting or case, so any MAC format should work
+            mac (str): The MAC address to add. RedSky isn't picky about formatting or case, so any MAC format should
+                work
             location (RedSkyLocation): The RedSkyLocation instance to add the mapping to
             description (str, optional): A description of the device or any other information to store
 
@@ -4748,7 +4748,8 @@ class RedSky:
             response = r.json()
             for item in response:
                 item['ports'] = []
-                r = requests.get(f"https://api.wxc.e911cloud.com/networking-service/networkSwitchPort/networkSwitch/{item['id']}",
+                r = requests.get(f"https://api.wxc.e911cloud.com/networking-service/networkSwitchPort/"
+                                 f"networkSwitch/{item['id']}",
                                  headers=self._headers)
                 if r.ok:
                     ports = r.json()
@@ -4833,7 +4834,6 @@ class RedSky:
             raise APIError(f"There was a problem adding the port to the chassis: {r.text}")
         return respose
 
-
     def get_bssid_discovery(self):
         """ Get the current BSSID mappings defined in RedSky Horizon
 
@@ -4855,7 +4855,7 @@ class RedSky:
             raise APIError(f"There was a problem getting BSSID mapping: {r.text}")
         return mappings
 
-    def add_bssid_discovery(self, bssid:str, location:"RedSkyLocation", description:str = ""):
+    def add_bssid_discovery(self, bssid: str, location: "RedSkyLocation", description: str = ""):
         """ Add a new BSSID mapping to RedSky Horizon
 
         Args:
@@ -4903,7 +4903,7 @@ class RedSky:
             raise APIError(f"There was a problem getting IP Range mapping: {r.text}")
         return mappings
 
-    def add_ip_range_discovery(self, ip_start:str, ip_end:str, location:"RedSkyLocation", description:str = ""):
+    def add_ip_range_discovery(self, ip_start: str, ip_end: str, location: "RedSkyLocation", description: str = ""):
         """ Add a new IP Range mapping to RedSky Horizon
 
         Args:
@@ -4933,7 +4933,6 @@ class RedSky:
         return added_mapping
 
 
-
 class RedSkyBuilding:
     """A RedSky Horizon Building"""
     def __init__(self, parent: RedSky, config: dict):
@@ -4944,19 +4943,19 @@ class RedSkyBuilding:
             config: (dict): The dict returned by the RedSky API containing the Building information
 
         """
-        self._parent:RedSky = parent
-        self._raw_config:dict = config
-        self.id:str = config.get("id")
+        self._parent: RedSky = parent
+        self._raw_config: dict = config
+        self.id: str = config.get("id")
         """The ID of the Building"""
-        self.name:str = config.get("name")
+        self.name: str = config.get("name")
         """The name of the Building"""
-        self.supplemental_data:str = config.get("supplementalData", None)
+        self.supplemental_data: str = config.get("supplementalData", None)
         """Supplemental data for the Building"""
-        self.type:str = config.get("type", "unknown")
+        self.type: str = config.get("type", "unknown")
         """The type of Building"""
-        self.address:dict = config.get("address")
+        self.address: dict = config.get("address")
         """The physical address of the building"""
-        self._locations: list = None
+        self._locations: Union[list, None] = None
 
     def __str__(self):
         return self.name
@@ -4999,8 +4998,7 @@ class RedSkyBuilding:
                 return location
         return None
 
-
-    def add_location(self, location_name:str, ecbn:str = "", location_info: str = ""):
+    def add_location(self, location_name: str, ecbn: str = "", location_info: str = ""):
         payload = {"name": location_name,
                    "elin": ecbn,
                    "info": location_info,
@@ -5032,8 +5030,8 @@ class RedSkyLocation:
         self.suppplemental_data = config.get("supplementalData", None)
         self.org_name_override = config.get("orgNameOverride")
         self.info = config.get("info")
-        self.address_entity_name:str = config.get("addressEntityName")
-        self.elin:dict = config.get("elin", None)
+        self.address_entity_name: str = config.get("addressEntityName")
+        self.elin: dict = config.get("elin", None)
 
     def __str__(self):
         return self.name
@@ -5041,7 +5039,7 @@ class RedSkyLocation:
     def __repr__(self):
         return self.id
 
-# Playing around with the idea of using dataclasses, so the following classes are different from others
+
 @dataclass
 class AutoAttendant:
     """ Class for AutoAttedants within a :class:`wxcadm.Org`
@@ -5091,7 +5089,6 @@ class AutoAttendant:
                                       f"callForwarding/selectiveRules/{rule['id']}",
                                       headers=self.parent._headers)
             self.cf_rules = api_resp
-
 
     def copy_menu_from_template(self, source: object, menu_type: str = "both"):
         """ Copy the Business Hours, After Hours, or both menus from another :class:`AutoAttendant` instance.
@@ -5160,6 +5157,7 @@ class AutoAttendant:
                 return False
         else:
             return False
+
 
 @dataclass
 class PagingGroup:
@@ -5239,7 +5237,9 @@ class LocationSchedule:
                 }
             }
 
-        The format of this dict, and accepted values can be found `here <https://developer.webex.com/docs/api/v1/webex-calling-organization-settings-with-location-scheduling/create-a-schedule-event>`_
+        The format of this dict, and accepted values can be found
+        `here <https://developer.webex.com/docs/api/v1/
+        webex-calling-organization-settings-with-location-scheduling/create-a-schedule-event>`_
 
         Args:
             name (str): The name of the holiday
@@ -5431,7 +5431,6 @@ class Me(Person):
         """
         messages = []
         # Something funky about this API call needing more headers
-        headers = {"Content-Type": "application/json", "Accept": "*/*", **self._headers}
         data = webex_api_call("get", "v1/telephony/voiceMessages")
         for item in data:
             if item['read'] is True and unread is True:
@@ -5445,16 +5444,21 @@ class Me(Person):
 @dataclass
 class VoiceMessage:
     id: str
+    """ The unique identifier for the Voice Message """
     duration: int
+    """ The duration (in seconds) of the Voice Message. Not present for a fax message."""
     callingParty: dict
+    """ The Calling Party's details """
     read: bool
+    """ True is the Voice Message has been read/heard """
     created: str
-    personId: Union[str, None] = None
-    placeId: Union[str, None] = None
-    privacyEnabled: bool = False
+    """ The date and time the Voice Message was created """
     urgent: bool = False
+    """ True if the Voice Message has been marked Urgent """
     confidential: bool = False
+    """ True if the Voice Message has been marked Confidential """
     faxPageCount: Union[int, None] = None
+    """ Number of pages in the fax. On"""
 
     def mark_read(self) -> bool:
         """ Mark the message as read within Webex
@@ -5486,4 +5490,19 @@ class VoiceMessage:
             return True
         else:
             log.warning("Something went wrong marking the message unread.")
+            return False
+
+    def delete(self) -> bool:
+        """ Delete the Voice Message
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Deleting Voice Message with ID {self.id}")
+        success = webex_api_call("delete", f"v1/telephony/voiceMessages/{self.id}")
+        if success:
+            return True
+        else:
+            log.warning("The Voice Message delete failed")
             return False

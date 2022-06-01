@@ -102,6 +102,7 @@ the two. Stay tuned...
    reference/AutoAttendant
    reference/Person
    reference/Me
+   reference/VoiceMessage
    reference/Device
 
 .. toctree::

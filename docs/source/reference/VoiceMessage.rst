@@ -1,3 +1,5 @@
+.. py:currentmodule:: wxcadm.wxcadm
+
 The VoiceMessage class
 ======================
 The VoiceMessage class provides access to Webex Calling Voice Messages (i.e. Voicemail).
