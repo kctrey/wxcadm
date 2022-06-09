@@ -187,6 +187,19 @@ else:
         else:
             print("No Call Queues found. Skipping Call Queue config tests.")
 
+##### Org Level Tests #####
+### Webhooks ###
+test = "Get Webhooks"
+start_test()
+try:
+    webhooks = webex.orgs[0].webhooks
+except:
+    fail_test()
+else:
+    logging.debug(f"Got {len(webhooks)} Webhooks")
+    pass_test()
+
+
 
 # Person tests
 test = "Person full config"

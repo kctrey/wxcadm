@@ -18,6 +18,7 @@ from threading import Thread
 import xmltodict
 import srvlookup
 
+import wxcadm.exceptions
 from .exceptions import *
 from .common import decode_spark_id
 
@@ -176,31 +177,43 @@ class Webex:
     """The base class for working with wxcadm"""
     def __init__(self,
                  access_token: str,
-                 create_org: bool = True,
+                 get_org_data: bool = True,
                  get_people: bool = True,
                  get_locations: bool = True,
                  get_xsi: bool = False,
                  get_hunt_groups: bool = False,
                  get_call_queues: bool = False,
                  fast_mode: bool = False,
-                 people_list: list = None
+                 people_list: list = None,
                  ) -> None:
         """Initialize a Webex instance to communicate with Webex and store data
 
         Args:
             access_token (str): The Webex API Access Token to authenticate the API calls
-            create_org (bool, optional): Whether to create an Org instance for all organizations.
-            get_people (bool, optional): Whether to get all of the People and created instances for them
-            get_locations (bool, optional): Whether to get all Locations and create instances for them
+            get_org_data (bool, optional): Whether to automatically fetch the data for all Orgs. Setting this to
+                False allows you to get a list of Orgs without collecting all the people and data for each. This
+                reduces processing time and API calls. Once the desired Org is identified, you can collect the
+                data directly from the :py:class:`Org` instance
+            get_people (bool, optional): Whether to get all the People and created instances for them. Defaults to
+                True when there is only one Org. When more than one Org is present, setting this value to True has
+                no effect and the Org-level method must be used.
+            get_locations (bool, optional): Whether to get all Locations and create instances for them. Defaults to
+                True when there is only one Org. When more than one Org is present, setting this value to True has
+                no effect and the Org-level method must be used.
             get_xsi (bool, optional): Whether to get the XSI endpoints for each Org. Defaults to False, since
                 not every Org has XSI capability
-            get_hunt_groups (bool, optional): Whether to get the Hunt Groups for each Org. Defaults to False.
-            get_call_queues (bool, optional): Whether to get the Call Queues for each Org. Defaults to False.
+            get_hunt_groups (bool, optional): Whether to get the Hunt Groups for each Org. Defaults to False. Setting
+                this value to True only applies when one Org is present. If more than one Org is present, this arg
+                is ignored and the Org-level method must be used.
+            get_call_queues (bool, optional): Whether to get the Call Queues for each Org. Defaults to False. Setting
+                this value to True only applies when one Org is present. If more than one Org is present, this arg
+                is ignored and the Org-level method must be used.
             fast_mode (bool, optional): When possible, optimize the API calls to Webex to work more quickly,
                 sometimes at the expense of not getting as much data. Use this option only if you have a script that
                 runs very slowly, especially during the Webex initialization when collecting people.
             people_list (list, optional): A list of people, by ID or email, to get instead of getting all People.
                 **Note** that this ovverrides the ``get_people`` argument, only fetching the people in ``people_list``
+                and will only be used if one Org is present. If multiple Orgs are present, this arg will have no effect.
 
         Returns:
             Webex: The Webex instance
@@ -244,29 +257,38 @@ class Webex:
             raise OrgError
         # If a token can manage a lot of orgs, you might not want to create them all, because
         # it can take some time to do all the API calls and get the data back
-        if not create_org:
-            log.info("Org initialization not requested. Storing orgs.")
-            self.orgs = response['items']
+        if get_org_data is False:
+            log.info("Org data collection not requested. Storing orgs.")
+            for org in response['items']:
+                log.debug(f"Creating Org instance: {org['displayName']}")
+                this_org = Org(name=org['displayName'], id=org['id'], parent=self,
+                               people=False, locations=False, xsi=False, hunt_groups=False, call_queues=False)
+                self.orgs.append(this_org)
             return
         else:
             log.info("Org initialization requested. Collecting orgs")
-            for org in response['items']:
-                # This builds an Org instance for every Org, so be careful
-                # if the user manages multiple orgs
-                log.debug(f"Processing org: {org['displayName']}")
-                # If we were given a list of people, don't have the Org get all people
-                if people_list is not None:
-                    get_people = False
-                org = Org(org['displayName'], org['id'],
-                          people=get_people, locations=get_locations, xsi=get_xsi, parent=self,
-                          call_queues=get_call_queues, hunt_groups=get_hunt_groups, people_list=people_list)
-                self.orgs.append(org)
-            # Most users have only one org, so to make that easier for them to work with
-            # we are also going to put the orgs[0] instance in the org attr
-            # That way both .org and .orgs[0] are the same if they only have one Org
-            if len(self.orgs) == 1:
+            if len(response['items']) == 1:
+                for org in response['items']:
+                    log.debug(f"Processing org: {org['displayName']}")
+                    # If we were given a list of people, don't have the Org get all people
+                    if people_list is not None:
+                        get_people = False
+                    org = Org(org['displayName'], org['id'],
+                              people=get_people, locations=get_locations, xsi=get_xsi, parent=self,
+                              call_queues=get_call_queues, hunt_groups=get_hunt_groups, people_list=people_list)
+                    self.orgs.append(org)
+                # Most users have only one org, so to make that easier for them to work with
+                # we are also going to put the orgs[0] instance in the org attr
+                # That way both .org and .orgs[0] are the same if they only have one Org
                 log.debug(f"Only one org found. Storing as Webex.org")
                 self.org = self.orgs[0]
+            elif len(response['items']) > 1:
+                log.debug("Multiple Orgs present. Skipping data collection during Org init")
+                for org in response['items']:
+                    log.debug(f"Processing org: {org['displayName']}")
+                    this_org = Org(name=org['displayName'], id=org['id'], parent=self,
+                                   people=False, locations=False, xsi=False, hunt_groups=False, call_queues=False)
+                    self.orgs.append(this_org)
 
     @property
     def headers(self):
@@ -405,8 +427,7 @@ class Org:
         self.xsi: dict = {}
         """The XSI details for the Organization"""
         self._params: dict = {"orgId": self.id}
-        self.licenses: list[dict] = []
-        '''A list of all of the licenses for the Organization as a dictionary of names and IDs'''
+        self._licenses: Union[list[dict], None] = None
         self.people: list[Person] = []
         '''A list of all of the Person instances for the Organization'''
         self.workspaces: Union[list[Workspace], None] = None
@@ -420,7 +441,6 @@ class Org:
 
         # Set the Authorization header based on how the instance was built
         self._headers = parent.headers
-        self.licenses = self.__get_licenses()
 
         # Create a CPAPI instance for CPAPI work
         self._cpapi = CPAPI(self, self._parent._access_token)
@@ -443,6 +463,19 @@ class Org:
             for person in people_list:
                 self._get_person(person)
 
+    def get_org_data(self):
+        """ Get the People, Locations, Call Queues and Hunt Groups for the Org
+
+        Returns:
+            None: Doesn't return any values. Simply populates the Org attributes with the data
+
+        """
+        self.get_locations()
+        self.get_call_queues()
+        self.get_hunt_groups()
+        self.get_people()
+        return None
+
     @property
     def spark_id(self):
         """ The decoded "Spark ID" of the Org ID"""
@@ -456,6 +489,13 @@ class Org:
     def __repr__(self):
         return self.id
 
+    @property
+    def licenses(self):
+        '''A list of all of the licenses for the Organization as a dictionary of names and IDs'''
+        if self._licenses is None:
+            self._licenses = self.__get_licenses()
+        return self._licenses
+
     def __get_licenses(self):
         """Gets all of the licenses for the Organization
 
@@ -465,7 +505,10 @@ class Org:
         """
         log.info("__get_licenses() started for org")
         license_list = []
-        api_resp = webex_api_call("get", "v1/licenses", headers=self._headers, params=self._params)
+        try:
+            api_resp = webex_api_call("get", "v1/licenses", headers=self._headers, params=self._params)
+        except wxcadm.exceptions.APIError:
+            return None
         for item in api_resp:
             if "Webex Calling" in item['name']:
                 wxc_license = True
