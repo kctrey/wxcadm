@@ -3940,7 +3940,7 @@ class WorkspaceLocation:
         """The WorkspaceLocation longitude"""
         self.notes: Union[str, None] = None
         """Notes associated with the WorkspaceLocation"""
-        self.floors: Union[list[WorkspaceLocationFloor], None] = None
+        self.floors: Union[list, None] = None
 
         if config:
             self.__process_config(config)
@@ -5876,7 +5876,7 @@ class UserGroups(UserList):
 
     def create_group(self, name: str,
                      description: str = '',
-                     members: Union[list[Person], None] = None) -> bool:
+                     members: Union[list, None] = None) -> bool:
         """ Create a new UserGroup
 
         Args:
