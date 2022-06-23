@@ -428,11 +428,11 @@ class Org:
         self._numbers = None
         self._paging_groups = None
         self._parent = parent
-        self.call_queues: Union[list[CallQueue], None] = None
+        self.call_queues: Union[list, None] = None
         """The Call Queues for this Org"""
-        self.hunt_groups: Union[list[HuntGroup], None] = None
+        self.hunt_groups: Union[list, None] = None
         """The Hunt Groups for this Org"""
-        self.pickup_groups: Union[list[PickupGroup], None] = None
+        self.pickup_groups: Union[list, None] = None
         'A list of the PickupGroup instances for this Org'
         self.locations: list[Location] = []
         'A list of the Location instances for this Org'
@@ -443,14 +443,14 @@ class Org:
         self.xsi: dict = {}
         """The XSI details for the Organization"""
         self._params: dict = {"orgId": self.id}
-        self._licenses: Union[list[dict], None] = None
+        self._licenses: Union[list, None] = None
         self.people: list[Person] = []
         '''A list of all of the Person instances for the Organization'''
-        self.workspaces: Union[list[Workspace], None] = None
+        self.workspaces: Union[list, None] = None
         """A list of the Workspace instances for this Org."""
-        self.workspace_locations: Union[list[WorkspaceLocation], None] = None
+        self.workspace_locations: Union[list, None] = None
         """A list of the Workspace Location instanced for this Org."""
-        self._devices: Union[list[Device], None] = None
+        self._devices: Union[list, None] = None
         """A list of the Devce instances for this Org"""
         self._auto_attendants: list[AutoAttendant] = []
         """A list of the AutoAttendant instances for this Org"""
@@ -1627,6 +1627,17 @@ class Person:
             return self
         else:
             log.info(f"{self.email} is not a Webex Calling user.")
+
+    @property
+    def usergroup(self):
+        """ The :py:class:`UserGroup` that the Person is assigned to
+
+        Returns:
+            UserGroup: The :py:class:`UserGroup`. None is returned if the Person is not assigned to a Group
+
+        """
+        return self._parent.usergroups.find_person_assignment(self)
+
 
     @property
     def hunt_groups(self):
@@ -5891,6 +5902,14 @@ class UserGroups(UserList):
         else:
             log.info("Failed to create new UserGroup")
             return False
+
+    def find_person_assignment(self, person: Person):
+        for group in self.data:
+            for member in group.members:
+                if member.id == person.id:
+                    return group
+        return None
+
 
 
 @dataclass()
