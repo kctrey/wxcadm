@@ -56,6 +56,7 @@
 <li class="toctree-l1"><a class="reference internal" href="reference/VoiceMessage.html">The VoiceMessage class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Device.html">The Device class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Webhooks.html">The Webhooks class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/UserGroups.html">The UserGroups class</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">XSI Reference</span></p>
 <ul>
@@ -161,6 +162,8 @@
 </li>
       <li><a href="reference/RedSky.html#wxcadm.wxcadm.RedSky.add_mac_discovery">add_mac_discovery() (wxcadm.wxcadm.RedSky method)</a>
 </li>
+      <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup.add_member">add_member() (wxcadm.wxcadm.UserGroup method)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Location.html#wxcadm.wxcadm.Location.address">address (wxcadm.wxcadm.Location attribute)</a>
@@ -243,10 +246,10 @@
 </li>
       <li><a href="reference/Webhooks.html#wxcadm.wxcadm.Webhook.change_name">change_name() (wxcadm.wxcadm.Webhook method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Webhooks.html#wxcadm.wxcadm.Webhook.change_owner">change_owner() (wxcadm.wxcadm.Webhook method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.change_phone_number">change_phone_number() (wxcadm.wxcadm.Person method)</a>
 </li>
       <li><a href="reference/Webhooks.html#wxcadm.wxcadm.Webhook.change_secret">change_secret() (wxcadm.wxcadm.Webhook method)</a>
@@ -271,11 +274,15 @@
 </li>
       <li><a href="reference/LocationSchedule.html#wxcadm.wxcadm.LocationSchedule.create_event">create_event() (wxcadm.wxcadm.LocationSchedule method)</a>
 </li>
+      <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroups.create_group">create_group() (wxcadm.wxcadm.UserGroups method)</a>
+</li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.create_person">create_person() (wxcadm.wxcadm.Org method)</a>
 </li>
       <li><a href="reference/Device.html#wxcadm.wxcadm.Device.created">created (wxcadm.wxcadm.Device attribute)</a>
 
       <ul>
+        <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup.created">(wxcadm.wxcadm.UserGroup attribute)</a>
+</li>
         <li><a href="reference/VoiceMessage.html#wxcadm.wxcadm.VoiceMessage.created">(wxcadm.wxcadm.VoiceMessage attribute)</a>
 </li>
         <li><a href="reference/Webhooks.html#wxcadm.wxcadm.Webhook.created">(wxcadm.wxcadm.Webhook attribute)</a>
@@ -291,20 +298,26 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Webhooks.html#wxcadm.wxcadm.Webhook.deactivate">deactivate() (wxcadm.wxcadm.Webhook method)</a>
 </li>
-      <li><a href="reference/VoiceMessage.html#wxcadm.wxcadm.VoiceMessage.delete">delete() (wxcadm.wxcadm.VoiceMessage method)</a>
+      <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup.delete">delete() (wxcadm.wxcadm.UserGroup method)</a>
 
       <ul>
+        <li><a href="reference/VoiceMessage.html#wxcadm.wxcadm.VoiceMessage.delete">(wxcadm.wxcadm.VoiceMessage method)</a>
+</li>
         <li><a href="reference/Webhooks.html#wxcadm.wxcadm.Webhook.delete">(wxcadm.wxcadm.Webhook method)</a>
 </li>
       </ul></li>
       <li><a href="reference/LocationSchedule.html#wxcadm.wxcadm.LocationSchedule.delete_event">delete_event() (wxcadm.wxcadm.LocationSchedule method)</a>
 </li>
-      <li><a href="reference/Device.html#wxcadm.wxcadm.Device">Device (class in wxcadm.wxcadm)</a>
+      <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup.delete_member">delete_member() (wxcadm.wxcadm.UserGroup method)</a>
 </li>
-      <li><a href="reference/Org.html#wxcadm.wxcadm.Org.devices">devices (wxcadm.wxcadm.Org property)</a>
+      <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup.description">description (wxcadm.wxcadm.UserGroup attribute)</a>
+</li>
+      <li><a href="reference/Device.html#wxcadm.wxcadm.Device">Device (class in wxcadm.wxcadm)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Org.html#wxcadm.wxcadm.Org.devices">devices (wxcadm.wxcadm.Org property)</a>
+</li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.disable_call_recording">disable_call_recording() (wxcadm.wxcadm.Person method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.disable_vm_to_email">disable_vm_to_email() (wxcadm.wxcadm.Person method)</a>
@@ -315,6 +328,8 @@
         <li><a href="reference/Person.html#wxcadm.wxcadm.Person.display_name">(wxcadm.wxcadm.Person attribute)</a>
 </li>
       </ul></li>
+      <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup.displayName">displayName (wxcadm.wxcadm.UserGroup attribute)</a>
+</li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.dnd">dnd (wxcadm.wxcadm.Person attribute)</a>
 </li>
       <li><a href="reference/VoiceMessage.html#wxcadm.wxcadm.VoiceMessage.duration">duration (wxcadm.wxcadm.VoiceMessage attribute)</a>
@@ -413,10 +428,10 @@
 </li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_license_name">get_license_name() (wxcadm.wxcadm.Org method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/RedSky.html#wxcadm.wxcadm.RedSky.get_lldp_discovery">get_lldp_discovery() (wxcadm.wxcadm.RedSky method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_location">get_location() (wxcadm.wxcadm.Org method)</a>
 </li>
       <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_location_by_name">get_location_by_name() (wxcadm.wxcadm.Org method)</a>
@@ -436,6 +451,8 @@
       <li><a href="reference/Webex.html#wxcadm.wxcadm.Webex.get_org_by_id">get_org_by_id() (wxcadm.wxcadm.Webex method)</a>
 </li>
       <li><a href="reference/Webex.html#wxcadm.wxcadm.Webex.get_org_by_name">get_org_by_name() (wxcadm.wxcadm.Webex method)</a>
+</li>
+      <li><a href="reference/Org.html#wxcadm.wxcadm.Org.get_org_data">get_org_data() (wxcadm.wxcadm.Org method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.get_outgoing_permission">get_outgoing_permission() (wxcadm.wxcadm.Person method)</a>
 </li>
@@ -518,6 +535,8 @@
 </li>
         <li><a href="reference/RedSkyBuilding.html#wxcadm.wxcadm.RedSkyBuilding.id">(wxcadm.wxcadm.RedSkyBuilding attribute)</a>
 </li>
+        <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup.id">(wxcadm.wxcadm.UserGroup attribute)</a>
+</li>
         <li><a href="reference/VoiceMessage.html#wxcadm.wxcadm.VoiceMessage.id">(wxcadm.wxcadm.VoiceMessage attribute)</a>
 </li>
         <li><a href="reference/Webhooks.html#wxcadm.wxcadm.Webhook.id">(wxcadm.wxcadm.Webhook attribute)</a>
@@ -539,9 +558,11 @@
 </li>
       <li><a href="reference/Device.html#wxcadm.wxcadm.Device.last_seen">last_seen (wxcadm.wxcadm.Device attribute)</a>
 </li>
+      <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup.lastModified">lastModified (wxcadm.wxcadm.UserGroup attribute)</a>
+</li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.license_details">license_details() (wxcadm.wxcadm.Person method)</a>
 </li>
-      <li><a href="reference/Org.html#wxcadm.wxcadm.Org.licenses">licenses (wxcadm.wxcadm.Org attribute)</a>
+      <li><a href="reference/Org.html#wxcadm.wxcadm.Org.licenses">licenses (wxcadm.wxcadm.Org property)</a>
 
       <ul>
         <li><a href="reference/Person.html#wxcadm.wxcadm.Person.licenses">(wxcadm.wxcadm.Person attribute)</a>
@@ -579,11 +600,15 @@
 </li>
       <li><a href="reference/VoiceMessage.html#wxcadm.wxcadm.VoiceMessage.mark_unread">mark_unread() (wxcadm.wxcadm.VoiceMessage method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Me.html#wxcadm.wxcadm.Me">Me (class in wxcadm.wxcadm)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Webex.html#wxcadm.wxcadm.Webex.me">me (wxcadm.wxcadm.Webex property)</a>
+</li>
+      <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup.members">members (wxcadm.wxcadm.UserGroup attribute)</a>
+</li>
+      <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup.memberSize">memberSize (wxcadm.wxcadm.UserGroup attribute)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.monitoring">monitoring (wxcadm.wxcadm.Person attribute)</a>
 
@@ -635,12 +660,16 @@
 </li>
       <li><a href="reference/Webex.html#wxcadm.wxcadm.Webex.org">org (wxcadm.wxcadm.Webex attribute)</a>
 </li>
-      <li><a href="reference/Webhooks.html#wxcadm.wxcadm.Webhook.orgId">orgId (wxcadm.wxcadm.Webhook attribute)</a>
+      <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup.orgId">orgId (wxcadm.wxcadm.UserGroup attribute)</a>
+
+      <ul>
+        <li><a href="reference/Webhooks.html#wxcadm.wxcadm.Webhook.orgId">(wxcadm.wxcadm.Webhook attribute)</a>
 </li>
-      <li><a href="reference/Webex.html#wxcadm.wxcadm.Webex.orgs">orgs (wxcadm.wxcadm.Webex attribute)</a>
-</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Webex.html#wxcadm.wxcadm.Webex.orgs">orgs (wxcadm.wxcadm.Webex attribute)</a>
+</li>
       <li><a href="reference/Call.html#wxcadm.wxcadm.Call.originate">originate() (wxcadm.wxcadm.Call method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.outgoing_permission">outgoing_permission (wxcadm.wxcadm.Person attribute)</a>
@@ -664,6 +693,8 @@
       <ul>
         <li><a href="reference/LocationSchedule.html#wxcadm.wxcadm.LocationSchedule.parent">(wxcadm.wxcadm.LocationSchedule attribute)</a>
 </li>
+        <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup.parent">(wxcadm.wxcadm.UserGroup attribute)</a>
+</li>
       </ul></li>
       <li><a href="reference/Call.html#wxcadm.wxcadm.Call.park">park() (wxcadm.wxcadm.Call method)</a>
 </li>
@@ -681,10 +712,10 @@
 </li>
       <li><a href="reference/XSI.html#wxcadm.wxcadm.XSI.profile">profile (wxcadm.wxcadm.XSI property)</a>
 </li>
-      <li><a href="reference/Person.html#wxcadm.wxcadm.Person.push_applications_settings">push_applications_settings() (wxcadm.wxcadm.Person method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/Person.html#wxcadm.wxcadm.Person.push_applications_settings">push_applications_settings() (wxcadm.wxcadm.Person method)</a>
+</li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.push_barge_in">push_barge_in() (wxcadm.wxcadm.Person method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.push_call_recording">push_call_recording() (wxcadm.wxcadm.Person method)</a>
@@ -833,17 +864,25 @@
 </li>
       <li><a href="reference/AutoAttendant.html#wxcadm.wxcadm.AutoAttendant.upload_greeting">upload_greeting() (wxcadm.wxcadm.AutoAttendant method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Location.html#wxcadm.wxcadm.Location.upload_moh_file">upload_moh_file() (wxcadm.wxcadm.Location method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.wxcadm.Person.upload_no_answer_greeting">upload_no_answer_greeting() (wxcadm.wxcadm.Person method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/VoiceMessage.html#wxcadm.wxcadm.VoiceMessage.urgent">urgent (wxcadm.wxcadm.VoiceMessage attribute)</a>
 </li>
       <li><a href="reference/Device.html#wxcadm.wxcadm.Device.url">url (wxcadm.wxcadm.Device attribute)</a>
 </li>
+      <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup.usage">usage (wxcadm.wxcadm.UserGroup attribute)</a>
+</li>
       <li><a href="reference/Device.html#wxcadm.wxcadm.Device.usage_mode">usage_mode (wxcadm.wxcadm.Device attribute)</a>
+</li>
+      <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroup">UserGroup (class in wxcadm.wxcadm)</a>
+</li>
+      <li><a href="reference/UserGroups.html#wxcadm.wxcadm.UserGroups">UserGroups (class in wxcadm.wxcadm)</a>
+</li>
+      <li><a href="reference/Org.html#wxcadm.wxcadm.Org.usergroups">usergroups (wxcadm.wxcadm.Org property)</a>
 </li>
       <li><a href="reference/Device.html#wxcadm.wxcadm.Device.uuid">uuid (wxcadm.wxcadm.Device attribute)</a>
 </li>

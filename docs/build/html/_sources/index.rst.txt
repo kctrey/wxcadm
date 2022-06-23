@@ -105,6 +105,7 @@ the two. Stay tuned...
    reference/VoiceMessage
    reference/Device
    reference/Webhooks
+   reference/UserGroups
 
 .. toctree::
    :maxdepth: 2

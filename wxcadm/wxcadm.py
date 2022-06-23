@@ -150,6 +150,22 @@ def webex_api_call(method: str, url: str, headers: dict = None, params: dict = N
         else:
             log.info("Webex API returned an error")
             raise APIError(f"The Webex API returned an error: {r.text}")
+    elif method.lower() == "patch":
+        r = session.patch(_url_base + url, params=params, json=payload)
+        if r.ok:
+            try:
+                response = r.json()
+            except requests.exceptions.JSONDecodeError:
+                end = time.time()
+                log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                return True
+            else:
+                end = time.time()
+                log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                return response
+        else:
+            log.info(f"Webex API returned an error")
+            raise APIError(f"The Webex API returned an error: {r.text}")
     else:
         return False
 
@@ -438,6 +454,7 @@ class Org:
         """A list of the Devce instances for this Org"""
         self._auto_attendants: list[AutoAttendant] = []
         """A list of the AutoAttendant instances for this Org"""
+        self._usergroups: list[UserGroup] = None
 
         # Set the Authorization header based on how the instance was built
         self._headers = parent.headers
@@ -554,6 +571,11 @@ class Org:
     def webhooks(self):
         """ The :py:class:`Webhooks` list with the :py:class:`Webhook` instances for the Org"""
         return Webhooks()
+
+    @property
+    def usergroups(self):
+        """ The :py:class:`UserGroups` list with the :py:class:`UserGroup` instances for the Org """
+        return UserGroups(parent=self)
 
     def get_paging_group(self, id: str = None, name: str = None, spark_id: str = None):
         """ Get the PagingGroup instance associated with a given ID, Name, or Spark ID
@@ -2833,6 +2855,7 @@ class XSI:
                 self._profile['number'] = profile_data['Profile']['details']['number']['$']
             if "extension" in profile_data['Profile']['details']:
                 self._profile['extension'] = profile_data['Profile']['details']['extension']['$']
+            self._profile['raw'] = profile_data
         return self._profile
 
     @property
@@ -5824,4 +5847,140 @@ class Webhook:
             return True
         else:
             log.warning("The Webhook change failed")
+            return False
+
+class UserGroups(UserList):
+    """ UserGroups is the parent class for :py:class:`UserGroup`, providing methods for the list of Groups """
+    def __init__(self, parent: Org):
+        log.info("Initializing UserGroups instance")
+        super().__init__()
+        self.parent = parent
+        self.data = []
+        response = webex_api_call("get", "v1/groups")
+        groups = response['groups']
+        log.debug(f"Webex returned {len(groups)} Groups")
+        for group in groups:
+            usergroup = UserGroup(parent = self.parent, **group)
+            self.data.append(usergroup)
+
+    def create_group(self, name: str,
+                     description: str = '',
+                     members: Union[list[Person], None] = None) -> bool:
+        """ Create a new UserGroup
+
+        Args:
+            name (str): The name of the Group
+            description (str, optional): An optional description of the Group
+            members (list[Person], optional): An optional list of :py:class:`Person` instances to add to the Group
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'displayName': name, 'orgId': self.parent.id, 'description': description}
+        if members is not None:
+            payload['members'] = []
+            for member in members:
+                payload['members'].append({'id': member.id})
+        response = webex_api_call('post', 'v1/groups', payload=payload)
+        if response:
+            log.info(f"New UserGroup {name} created")
+            new_group = UserGroup(parent=self.parent, **response)
+            self.data.append(new_group)
+            return True
+        else:
+            log.info("Failed to create new UserGroup")
+            return False
+
+
+@dataclass()
+class UserGroup:
+    """ The UserGroup class holds all the User Groups available within the Org"""
+    parent: Org = field(repr=False)
+    """ The Org instance that owns the Group """
+    id: str
+    """ The unique ID of the Group """
+    displayName: str
+    """ The name of the Group """
+    orgId: str = field(repr=False)
+    """ The Org ID to which the Group belongs """
+    created: str = field(repr=False)
+    """ The timestamp indicating when the Group was created """
+    lastModified: str = field(repr=False)
+    """ The timestamp indicating the last time the Group was modified """
+    usage: str
+    """ The Group usage type """
+    memberSize: int = field(init=True, repr=False, default=0)
+    """ The number of members in the group only if returned by Webex """
+    members: list[Person] = field(init=True, repr=False, default=None)
+    """ A list of all of the :py:class:`Person` instances within the Group """
+    description: str = field(repr=False, default='')
+    """ The long description of the Group """
+
+
+    def __post_init__(self):
+        self._get_members()
+
+    def _get_members(self):
+        response = webex_api_call("get", f"/v1/groups/{self.id}/members")
+        items = response['members']
+        # If there are more than 500 members, we need to go get the rest, and the Groups API handles this
+        # differently than all the other APIs. This is probably going to break things if they ever fix the Groups
+        # API, but we'll handle that when it happens
+
+        people = []
+        for item in items:
+            person = self.parent.get_person_by_id(item['id'])
+            if person is None:
+                people.append(item['id'])
+            else:
+                people.append(person)
+        self.members = people
+
+    def delete(self) -> bool:
+        """ Delete the Group
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        response = webex_api_call('delete', f'v1/groups/{self.id}')
+        if response:
+            log.info(f'Successfully deleted UserGroup {self.displayName}')
+            return True
+        else:
+            log.warning(f'Failed to delete UserGroup {self.displayName}')
+            return False
+
+    def add_member(self, person: Person) -> bool:
+        """ Add a Person to the Group
+
+        Args:
+            person (Person): The :py:class:`Person` instance to add
+
+        Returns:
+
+        """
+        payload = {"members" : [{"id": person.id, "operation": "add"}]}
+        response = webex_api_call("patch", f"v1/groups/{self.id}", payload=payload)
+        if response:
+            return True
+        else:
+            return False
+
+    def delete_member(self, person: Person) -> bool:
+        """ Delete the specified Person from the Group
+
+        Args:
+            person (Person): The :py:class:`Person` instance to delete
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {"members": [{'id': person.id, 'operation': 'delete'}]}
+        response = webex_api_call('patch', f'v1/groups/{self.id}', payload=payload)
+        if response:
+            return True
+        else:
             return False

@@ -198,7 +198,16 @@ except:
 else:
     logging.debug(f"Got {len(webhooks)} Webhooks")
     pass_test()
-
+### User Groups ###
+test = 'Get UserGroups'
+start_test()
+try:
+    usergroups = webex.org[0].usergroups
+except:
+    fail_test()
+else:
+    logging.debug(f"Got {len(usergroups) UserGroups}")
+    pass_test()
 
 
 # Person tests

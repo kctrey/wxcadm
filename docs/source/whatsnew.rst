@@ -5,6 +5,7 @@ What's New
 
 v2.3.0
 ------
+- Added :py:class:`UserGroups` and :py:class:`UserGroup` to handle User Group management
 - BUG FIX: **wxcadm** no longer gets Webex licenses on Org initialization.
 - In addition to the item below, the defaults for Org creation have been changed so that data is not retrieved automatically *unless there is only one org*.
 - To handle admins who manage a large number of Orgs, the ``get_location_data`` args has been added to the :py:class:`Webex` class initialization args. This prevents **wxcadm** from making dozens of potentially unnecessary API calls and speed processing time.
