@@ -250,7 +250,7 @@ class Webex:
         self._fast_mode = fast_mode
 
         # Instance attrs
-        self.orgs: list[Org] = []
+        self.orgs: list = []
         '''A list of the Org instances that this Webex instance can manage'''
         self.org: Union[Org, None] = None
         """
@@ -434,7 +434,7 @@ class Org:
         """The Hunt Groups for this Org"""
         self.pickup_groups: Union[list, None] = None
         'A list of the PickupGroup instances for this Org'
-        self.locations: list[Location] = []
+        self.locations: list = []
         'A list of the Location instances for this Org'
         self.name: str = name
         'The name of the Organization'
@@ -444,7 +444,7 @@ class Org:
         """The XSI details for the Organization"""
         self._params: dict = {"orgId": self.id}
         self._licenses: Union[list, None] = None
-        self.people: list[Person] = []
+        self.people: list = []
         '''A list of all of the Person instances for the Organization'''
         self.workspaces: Union[list, None] = None
         """A list of the Workspace instances for this Org."""
@@ -452,9 +452,9 @@ class Org:
         """A list of the Workspace Location instanced for this Org."""
         self._devices: Union[list, None] = None
         """A list of the Devce instances for this Org"""
-        self._auto_attendants: list[AutoAttendant] = []
+        self._auto_attendants: list = []
         """A list of the AutoAttendant instances for this Org"""
-        self._usergroups: list[UserGroup] = None
+        self._usergroups: list = None
 
         # Set the Authorization header based on how the instance was built
         self._headers = parent.headers
@@ -4388,7 +4388,7 @@ class CSDM:
         self._url_base = f"https://csdm-a.wbx2.com/csdm/api/v1/organization/{self._organization}/devices/"
         self._server = "https://csdm-a.wbx2.com"
 
-        self._devices: list[Device] = []
+        self._devices: list = []
 
     def get_devices(self, with_location: bool = False):
         """ Get a list of all the Device instances from CSDM
@@ -5931,7 +5931,7 @@ class UserGroup:
     """ The Group usage type """
     memberSize: int = field(init=True, repr=False, default=0)
     """ The number of members in the group only if returned by Webex """
-    members: list[Person] = field(init=True, repr=False, default=None)
+    members: list = field(init=True, repr=False, default=None)
     """ A list of all of the :py:class:`Person` instances within the Group """
     description: str = field(repr=False, default='')
     """ The long description of the Group """
