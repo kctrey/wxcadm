@@ -3,6 +3,11 @@
 What's New
 ==========
 
+v2.x.x
+------
+- Added :py:meth:`Person.role_names()` to return role names for a user, rather than Role IDs
+- Added :py:meth:`Org.roles` for full names of Role IDs
+
 v2.3.0
 ------
 - Added :py:class:`UserGroups` and :py:class:`UserGroup` to handle User Group management

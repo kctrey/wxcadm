@@ -202,11 +202,11 @@ else:
 test = 'Get UserGroups'
 start_test()
 try:
-    usergroups = webex.org[0].usergroups
+    usergroups = webex.orgs[0].usergroups
 except:
     fail_test()
 else:
-    logging.debug(f"Got {len(usergroups) UserGroups}")
+    logging.debug(f"Got {len(usergroups)} UserGroups")
     pass_test()
 
 

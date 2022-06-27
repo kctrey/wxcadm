@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json.decoder
 import sys
 import os.path
@@ -455,6 +457,7 @@ class Org:
         self._auto_attendants: list = []
         """A list of the AutoAttendant instances for this Org"""
         self._usergroups: list = None
+        self._roles: dict = None
 
         # Set the Authorization header based on how the instance was built
         self._headers = parent.headers
@@ -512,6 +515,17 @@ class Org:
         if self._licenses is None:
             self._licenses = self.__get_licenses()
         return self._licenses
+
+    @property
+    def roles(self):
+        """ A dict of user roles with the ID as the key and the Role name as the value """
+        if self._roles is None:
+            roles = {}
+            response = webex_api_call('get', 'v1/roles')
+            for role in response:
+                roles[role['id']] = role['name']
+            self._roles = roles
+        return self._roles
 
     def __get_licenses(self):
         """Gets all of the licenses for the Organization
@@ -1396,7 +1410,7 @@ class Person:
         self.location: str = ""
         """The Webex ID of the user's assigned location"""
         self.roles: list = []
-        """The roles assigned to this Person in Webex"""
+        """ The role IDs assigned to this Person in Webex"""
         self.vm_config: dict = {}
         '''Dictionary of the VM config as returned by Webex API with :meth:`get_vm_config()`'''
         self.call_recording: dict = {}
@@ -1529,6 +1543,22 @@ class Person:
         user_id_bytes = base64.b64decode(self.id + "===")
         spark_id = user_id_bytes.decode("utf-8")
         return spark_id
+
+    def role_names(self):
+        """ Returns a list of the user's Roles, using the Role Name rather than the Role ID
+
+        Returns:
+            list: A list of Role names. None is returned if the Person has no administrative Roles
+
+        """
+        if len(self.roles) > 0:
+            roles = []
+            for role in self.roles:
+                roles.append(self._parent.roles[role])
+                return roles
+            else:
+                return None
+
 
     def assign_wxc(self, location: Location, phone_number: str = None, extension: str = None):
         """ Assign Webex Calling to the user, along with a phone number and/or an extension.
@@ -5911,7 +5941,6 @@ class UserGroups(UserList):
         return None
 
 
-
 @dataclass()
 class UserGroup:
     """ The UserGroup class holds all the User Groups available within the Org"""
@@ -5935,7 +5964,6 @@ class UserGroup:
     """ A list of all of the :py:class:`Person` instances within the Group """
     description: str = field(repr=False, default='')
     """ The long description of the Group """
-
 
     def __post_init__(self):
         self._get_members()
