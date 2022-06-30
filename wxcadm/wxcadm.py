@@ -3213,7 +3213,7 @@ class XSIEventsChannel:
                     # Losing a heartbeat is ok, but we should try another one sooner than 15 seconds
                     next_heartbeat = 10
             except Exception as e:
-                log.debug(f"{ip} - Heartbeat failed: {traceback.format_exc()}")
+                log.debug(f"Heartbeat failed: {traceback.format_exc()}")
                 # If the heartbeat couldn't be sent for some reason, retry sooner than 15 seconds
                 next_heartbeat = 10
             time.sleep(next_heartbeat)
