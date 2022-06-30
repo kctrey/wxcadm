@@ -4,6 +4,7 @@ import json.decoder
 import sys
 import os.path
 import time
+import traceback
 import uuid
 import re
 from dataclasses import dataclass, field
@@ -3199,15 +3200,23 @@ class XSIEventsChannel:
         session = requests.Session()
         while self.active:
             log.debug(f"Sending heartbeat for channel: {self.id}")
-            r = session.put(self.events_endpoint + f"/v2.0/channel/{self.id}/heartbeat",
-                            headers=self._headers, stream=True)
-            ip, port = r.raw._connection.sock.getpeername()
-            if r.ok:
-                log.debug(f"{ip} - Heartbeat successful")
-            else:
-                log.debug(f"{ip} - Heartbeat failed: {r.text} [{r.status_code}]")
-            # Send a heartbeat every 15 seconds
-            time.sleep(15)
+            try:
+                r = session.put(self.events_endpoint + f"/v2.0/channel/{self.id}/heartbeat",
+                                headers=self._headers, stream=True)
+                ip, port = r.raw._connection.sock.getpeername()
+                if r.ok:
+                    log.debug(f"{ip} - Heartbeat successful")
+                    # On success, send a heartbeat every 15 seconds
+                    next_heartbeat = 15
+                else:
+                    log.debug(f"{ip} - Heartbeat failed: {r.text} [{r.status_code}]")
+                    # Losing a heartbeat is ok, but we should try another one sooner than 15 seconds
+                    next_heartbeat = 10
+            except Exception as e:
+                log.debug(f"{ip} - Heartbeat failed: {traceback.format_exc()}")
+                # If the heartbeat couldn't be sent for some reason, retry sooner than 15 seconds
+                next_heartbeat = 10
+            time.sleep(next_heartbeat)
         return True
 
     def _ack_event(self, event_id, cookies):

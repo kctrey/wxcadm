@@ -3,8 +3,9 @@
 What's New
 ==========
 
-v2.x.x
+v2.3.1
 ------
+- BUG FIX: :py:meth:`XSIEventsChannel.heartbeat_daemon()` now handles uncaught requests exceptions
 - Added :py:meth:`Person.role_names()` to return role names for a user, rather than Role IDs
 - Added :py:meth:`Org.roles` for full names of Role IDs
 
