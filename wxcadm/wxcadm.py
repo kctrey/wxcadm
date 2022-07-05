@@ -229,7 +229,9 @@ class Webex:
                 is ignored and the Org-level method must be used.
             fast_mode (bool, optional): When possible, optimize the API calls to Webex to work more quickly,
                 sometimes at the expense of not getting as much data. Use this option only if you have a script that
-                runs very slowly, especially during the Webex initialization when collecting people.
+                runs very slowly, especially during the Webex initialization when collecting people. **Note that this
+                option should not be used when it is neccessary to know the phone numbers of each Person, because
+                it skips the API call to the Call Control back-end on initialization.**
             people_list (list, optional): A list of people, by ID or email, to get instead of getting all People.
                 **Note** that this ovverrides the ``get_people`` argument, only fetching the people in ``people_list``
                 and will only be used if one Org is present. If multiple Orgs are present, this arg will have no effect.
