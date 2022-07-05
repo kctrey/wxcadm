@@ -3,6 +3,11 @@
 What's New
 ==========
 
+v2.3.3
+------
+- BUG FIX: :py:meth:`Location.available_numbers` now returns only unassigned numbers
+- :py:meth:`Org.create_person()` now accepts either a :py:class:`Location` instance or the Location ID string for the ``location`` param
+
 v2.3.2
 ------
 - BUG FIX: :py:meth:`XSIEventsChannel.heartbeat_daemon()` now handles uncaught requests exceptions

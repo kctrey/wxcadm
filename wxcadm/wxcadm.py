@@ -832,7 +832,7 @@ class Org:
         raise LicenseError("No Webex Calling Professional license found")
 
     def create_person(self, email: str,
-                      location: str,
+                      location: Union[str, Location],
                       licenses: list = None,
                       calling: bool = True,
                       messaging: bool = True,
@@ -849,7 +849,7 @@ class Org:
 
         Args:
             email (str): The email address of the user
-            location (str): The ID of the Location that the user is assigned to.
+            location (Location): The Location instance to assign the user to. Also accepts the Location ID as a string
             licenses (list, optional): List of license IDs to assign to the user. Use this when the license IDs
             are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
             meetings` parameters.
@@ -888,7 +888,11 @@ class Org:
 
         # Build the payload to send to the API
         log.debug("Building payload.")
-        payload = {"emails": [email], "locationId": location, "orgId": self.id, "licenses": licenses}
+        if isinstance(location, Location):
+            location_id = location.id
+        else:
+            location_id = location
+        payload = {"emails": [email], "locationId": location_id, "orgId": self.id, "licenses": licenses}
         if phone_number is not None:
             payload["phoneNumbers"] = [{"type": "work", "value": phone_number}]
         if extension is not None:
@@ -1303,7 +1307,9 @@ class Location:
         """
         available_numbers = []
         for number in self._parent.numbers:
-            if number['location'].name == self.name and number.get('state', "") == "ACTIVE":
+            if number['location'].name == self.name \
+                    and number.get('state', "") == "ACTIVE" \
+                    and number.get('owner', False) is False:
                 available_numbers.append(number)
         return available_numbers
 
