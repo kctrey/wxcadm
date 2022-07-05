@@ -914,6 +914,25 @@ class Org:
         else:
             raise PutError(response['message'])
 
+    def delete_person(self, person: Person):
+        """ Delete a person
+
+        This method deletes the person record from Webex, which removes all of their licenses, numbers, and devices.
+
+        Args:
+            person (Person): The :py:class:`Person` instance to delete
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        success = webex_api_call("delete", f"v1/people/{person.id}")
+        if success:
+            self.get_people()
+            return True
+        else:
+            return False
+
     def get_person_by_email(self, email):
         """Get the Person instance from an email address
 

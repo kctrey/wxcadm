@@ -5,6 +5,7 @@ What's New
 
 v2.3.3
 ------
+- Added :py:meth:`Org.delete_person()` to support deleting a user
 - BUG FIX: :py:meth:`Location.available_numbers` now returns only unassigned numbers
 - :py:meth:`Org.create_person()` now accepts either a :py:class:`Location` instance or the Location ID string for the ``location`` param
 
