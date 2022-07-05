@@ -2,6 +2,9 @@
 
 What's New
 ==========
+v2.3.4
+------
+- BUG FIX: :py:meth:`Org.get_locations()` no longer creates a duplicate of all locations
 
 v2.3.3
 ------

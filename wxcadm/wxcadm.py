@@ -979,6 +979,7 @@ class Org:
 
         """
         log.info("get_locations() started")
+        self.locations.clear()
         api_resp = webex_api_call("get", "v1/locations", headers=self._headers, params=self._params)
         for location in api_resp:
             this_location = Location(self, location['id'], location['name'], address=location['address'])
