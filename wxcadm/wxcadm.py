@@ -9,7 +9,7 @@ import uuid
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Union
+from typing import Union, Optional
 from collections import UserList
 
 import requests
@@ -257,13 +257,13 @@ class Webex:
         # Instance attrs
         self.orgs: list = []
         '''A list of the Org instances that this Webex instance can manage'''
-        self.org: Union[Org, None] = None
+        self.org: Optional[Org] = None
         """
         If there is only one Org in :py:attr:`Webex.orgs`, this attribute is an alias for Webex.orgs[0]. This attribute
         will be None if there are more than one Org accessible by the token, to prevent accidental changes to the
         incorrect Org.
         """
-        self._me: Union[Me, None] = None
+        self._me: Optional[Me] = None
         # Get the orgs that this token can manage
         log.debug(f"Making API call to v1/organizations")
         r = requests.get(_url_base + "v1/organizations", headers=self._headers)
@@ -433,11 +433,11 @@ class Org:
         self._numbers = None
         self._paging_groups = None
         self._parent = parent
-        self.call_queues: Union[list, None] = None
+        self.call_queues: Optional[list] = None
         """The Call Queues for this Org"""
-        self.hunt_groups: Union[list, None] = None
+        self.hunt_groups: Optional[list] = None
         """The Hunt Groups for this Org"""
-        self.pickup_groups: Union[list, None] = None
+        self.pickup_groups: Optional[list] = None
         'A list of the PickupGroup instances for this Org'
         self.locations: list = []
         'A list of the Location instances for this Org'
@@ -448,19 +448,19 @@ class Org:
         self.xsi: dict = {}
         """The XSI details for the Organization"""
         self._params: dict = {"orgId": self.id}
-        self._licenses: Union[list, None] = None
+        self._licenses: Optional[list] = None
         self.people: list = []
         '''A list of all of the Person instances for the Organization'''
-        self.workspaces: Union[list, None] = None
+        self.workspaces: Optional[list] = None
         """A list of the Workspace instances for this Org."""
-        self.workspace_locations: Union[list, None] = None
+        self.workspace_locations: Optional[list] = None
         """A list of the Workspace Location instanced for this Org."""
-        self._devices: Union[list, None] = None
+        self._devices: Optional[list] = None
         """A list of the Devce instances for this Org"""
         self._auto_attendants: list = []
         """A list of the AutoAttendant instances for this Org"""
-        self._usergroups: list = None
-        self._roles: dict = None
+        self._usergroups: Optional[list] = None
+        self._roles: Optional[dict] = None
 
         # Set the Authorization header based on how the instance was built
         self._headers = parent.headers
@@ -1465,7 +1465,7 @@ class Person:
         """Holds the XSI instance when created with the :meth:`start_xsi()` method."""
         self.numbers: list = []
         """The phone numbers for this person from Webex CI"""
-        self.extension: Union[str, None] = None
+        self.extension: Optional[str] = None
         """The extension for this person"""
         self._hunt_groups: list = []
         """A list of the Hunt Group instances that this user is an Agent for"""
@@ -3892,15 +3892,15 @@ class Workspace:
         self._headers = self._parent._headers
         self._params = self._parent._params
         # Instance attributes
-        self.location: Union[str, None] = None
+        self.location: Optional[str] = None
         """The Webex ID of the Workspace Location (note this is a Workspace Location, not a Calling Location."""
-        self.floor: Union[str, None] = None
+        self.floor: Optional[str] = None
         """The Webex ID of the Floor ID"""
         self.name: str = ""
         """The name of the Workspace"""
-        self.capacity: Union[int, None] = None
+        self.capacity: Optional[int] = None
         """The capacity of the Workspace"""
-        self.type: Union[str, None] = None
+        self.type: Optional[str] = None
         """
         The type of Workspace. Valid values are:
         
@@ -3912,11 +3912,11 @@ class Workspace:
             "desk": Individual
             "other": Unspecified
         """
-        self.sip_address: Union[str, None] = None
+        self.sip_address: Optional[str] = None
         """The SIP Address used to call to the Workspace"""
-        self.created: Union[str, None] = None
+        self.created: Optional[str] = None
         """The date and time the workspace was created"""
-        self.calling: Union[str, None] = None
+        self.calling: Optional[str] = None
         """
         The type of Calling license assigned to the Workspace. Valid values are:
         
@@ -3925,9 +3925,9 @@ class Workspace:
             'webexCalling': Webex Calling
             'webexEdgeForDevices': Webex Edge for Devices
         """
-        self.calendar: Union[dict, None] = None
+        self.calendar: Optional[dict] = None
         """The type of calendar connector assigned to the Workspace"""
-        self.notes: Union[str, None] = None
+        self.notes: Optional[str] = None
         """Notes associated with the Workspace"""
 
         if config:
@@ -3993,21 +3993,21 @@ class WorkspaceLocation:
         self._headers = self._parent._headers
         self._params = self._parent._params
         # Instance attributes
-        self.name: Union[str, None] = None
+        self.name: Optional[str] = None
         """The name of the WorkspaceLocation"""
-        self.address: Union[str, None] = None
+        self.address: Optional[str] = None
         """The address of the WorkspaceLocation"""
-        self.country: Union[str, None] = None
+        self.country: Optional[str] = None
         """The country code (ISO 3166-1) for the WorkspaceLocation"""
-        self.city: Union[str, None] = None
+        self.city: Optional[str] = None
         """The city name where the WorkspaceLocation is located"""
-        self.latitude: Union[float, None] = None
+        self.latitude: Optional[float] = None
         """The WorkspaceLocation latitude"""
-        self.longitude: Union[float, None] = None
+        self.longitude: Optional[float] = None
         """The WorkspaceLocation longitude"""
-        self.notes: Union[str, None] = None
+        self.notes: Optional[str] = None
         """Notes associated with the WorkspaceLocation"""
-        self.floors: Union[list, None] = None
+        self.floors: Optional[list] = None
 
         if config:
             self.__process_config(config)
@@ -5105,7 +5105,7 @@ class RedSkyBuilding:
         """The type of Building"""
         self.address: dict = config.get("address")
         """The physical address of the building"""
-        self._locations: Union[list, None] = None
+        self._locations: Optional[list] = None
 
     def __str__(self):
         return self.name
@@ -5546,7 +5546,7 @@ class LocationSchedule:
         else:
             return False
 
-    def get_event_config_by_id(self, id: str) -> Union[dict, None]:
+    def get_event_config_by_id(self, id: str) -> Optional[dict]:
         """ Get the 'events' dict for a specific event.
 
         This method is useful if you are modifying an event and want to provide the full config.
@@ -5623,7 +5623,7 @@ class VoiceMessage:
     """ True if the Voice Message has been marked Urgent """
     confidential: bool = False
     """ True if the Voice Message has been marked Confidential """
-    faxPageCount: Union[int, None] = None
+    faxPageCount: Optional[int] = None
     """ Number of pages in the fax. On"""
 
     def mark_read(self) -> bool:
@@ -5769,9 +5769,9 @@ class Webhook:
     """ The ID of the user who created the Webhook """
     ownedBy: str
     """ The owner of the Webhook. Specified when creating an org-level Webhook """
-    filter: Union[str, None] = None
+    filter: Optional[str] = None
     """ Any filter that is applied to the Webhook """
-    secret: Union[str, None] = None
+    secret: Optional[str] = None
     """ The secret used to generate the payload signature """
 
     def delete(self) -> bool:
@@ -5943,7 +5943,7 @@ class UserGroups(UserList):
 
     def create_group(self, name: str,
                      description: str = '',
-                     members: Union[list, None] = None) -> bool:
+                     members: Optional[list] = None) -> bool:
         """ Create a new UserGroup
 
         Args:
