@@ -203,7 +203,7 @@ class Webex:
                  get_hunt_groups: bool = False,
                  get_call_queues: bool = False,
                  fast_mode: bool = False,
-                 people_list: list = None,
+                 people_list: Optional[list] = None,
                  ) -> None:
         """Initialize a Webex instance to communicate with Webex and store data
 
@@ -230,10 +230,10 @@ class Webex:
             fast_mode (bool, optional): When possible, optimize the API calls to Webex to work more quickly,
                 sometimes at the expense of not getting as much data. Use this option only if you have a script that
                 runs very slowly, especially during the Webex initialization when collecting people. **Note that this
-                option should not be used when it is neccessary to know the phone numbers of each Person, because
+                option should not be used when it is necessary to know the phone numbers of each Person, because
                 it skips the API call to the Call Control back-end on initialization.**
             people_list (list, optional): A list of people, by ID or email, to get instead of getting all People.
-                **Note** that this ovverrides the ``get_people`` argument, only fetching the people in ``people_list``
+                **Note** that this overrides the ``get_people`` argument, only fetching the people in ``people_list``
                 and will only be used if one Org is present. If multiple Orgs are present, this arg will have no effect.
 
         Returns:
@@ -267,7 +267,7 @@ class Webex:
         # Get the orgs that this token can manage
         log.debug(f"Making API call to v1/organizations")
         r = requests.get(_url_base + "v1/organizations", headers=self._headers)
-        # Handle an invalid access token
+        # Handle invalid access token
         if r.status_code != 200:
             log.critical("The Access Token was not accepted by Webex")
             raise TokenError("The Access Token was not accepted by Webex")
@@ -514,7 +514,7 @@ class Org:
 
     @property
     def licenses(self):
-        '''A list of all of the licenses for the Organization as a dictionary of names and IDs'''
+        """ A list of all licenses for the Organization as a dictionary of names and IDs """
         if self._licenses is None:
             self._licenses = self.__get_licenses()
         return self._licenses
@@ -531,7 +531,7 @@ class Org:
         return self._roles
 
     def __get_licenses(self):
-        """Gets all of the licenses for the Organization
+        """Gets all licenses for the Organization
 
         Returns:
             list: List of dictionaries containing the license name and ID
@@ -2846,8 +2846,9 @@ class XSI:
         self._calls.append(call)
         return call
 
-    def __get_xsi_data(self, url, params: dict = {}):
-        params = {**params, **self._params}
+    def __get_xsi_data(self, url, params: Optional[dict] = None):
+        if params is not None:
+            params = {**params, **self._params}
         r = requests.get(self.xsi_endpoints['actions_endpoint'] + url, headers=self._headers, params=params)
         if r.status_code == 200:
             try:
@@ -3272,7 +3273,7 @@ class XSIEventsChannel:
 
 
 class HuntGroup:
-    def __init__(self, parent: object,
+    def __init__(self, parent: Org,
                  id: str,
                  name: str,
                  location: str,
@@ -3302,7 +3303,7 @@ class HuntGroup:
         """
 
         # Instance attrs
-        self.parent: object = parent
+        self.parent: Org = parent
         self.id: str = id
         """The Webex ID of the Hunt Group"""
         self.name: str = name
@@ -4565,9 +4566,9 @@ class Device:
         """The product family to which the device belongs"""
         self.mac: str = config.get("mac", "UNKNOWN")
         """The MAC address of the device"""
-        self._calling_location: Location = ""
+        self._calling_location: Optional[Location] = None
         """The Webex Calling :class:`Location`"""
-        self._image: str = config.get("imageFilename", None)
+        self._image: Optional[str] = config.get("imageFilename", None)
 
     def __str__(self):
         return f"{self.product},{self.display_name}"
@@ -5367,7 +5368,7 @@ class LocationSchedule:
                                   headers=self.parent._headers)
         self.config = api_resp
 
-    def add_holiday(self, name: str, date: str, recur: bool = False, recurrence: dict = {}):
+    def add_holiday(self, name: str, date: str, recur: bool = False, recurrence: Optional[dict] = None):
         """ Add a new all-day event to a Holidays schedule
 
         This method provides a quicker way to add an all-day event to a Holidays schedule than using
@@ -5413,7 +5414,7 @@ class LocationSchedule:
             log.debug("Trying to add a holiday to a non-holidays schedule. Raising exception.")
             raise TypeError("Schedule is not of type 'holidays'. Cannot add holiday.")
         if recur is True:
-            if recurrence:
+            if recurrence is not None:
                 new_event['recurrence'] = recurrence
             else:
                 new_event['recurrence'] = {"recurForEver": True,
@@ -5459,7 +5460,7 @@ class LocationSchedule:
         return False
 
     def create_event(self, name: str, start_date: str, end_date: str, start_time: str = "",
-                     end_time: str = "", all_day: bool = False, recurrence: dict = {}):
+                     end_time: str = "", all_day: bool = False, recurrence: Optional[dict] = None):
         """ Create a new event within the LocationSchedule instance
 
         Due to the flexibility of the event recurrence needs to be provided as a dict. The format of this dict, and
@@ -5502,7 +5503,7 @@ class LocationSchedule:
         if all_day is False:
             payload['startTime'] = start_time
             payload['endTime'] = end_time
-        if recurrence:
+        if recurrence is not None:
             payload['recurrence'] = recurrence
 
         api_resp = webex_api_call("post", f"v1/telephony/config/locations/{self.parent.id}/"
@@ -5591,7 +5592,7 @@ class Me(Person):
         return messages
 
     @property
-    def voicemail_summary(self):
+    def voicemail_summary(self) -> Optional[dict]:
         """ A summary of the number of read and unread Voice Messages
 
         Returns:
@@ -5605,6 +5606,11 @@ class Me(Person):
                 }
 
         """
+        data: dict = webex_api_call('get', 'v1/telephony/voiceMessages/summary')
+        if data:
+            return data
+        else:
+            return None
 
 
 @dataclass
