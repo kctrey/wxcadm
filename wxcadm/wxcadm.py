@@ -21,9 +21,9 @@ from threading import Thread
 import xmltodict
 import srvlookup
 
-#import wxcadm.exceptions
-from .exceptions import *
-from .common import decode_spark_id
+import wxcadm.exceptions
+from wxcadm.exceptions import *
+from wxcadm.common import decode_spark_id
 
 log = logging.getLogger(__name__)
 
