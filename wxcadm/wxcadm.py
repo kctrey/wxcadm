@@ -9,7 +9,7 @@ import uuid
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Union, Optional
+from typing import Union, Optional, Dict, List, Any
 from collections import UserList
 
 import requests
@@ -21,7 +21,7 @@ from threading import Thread
 import xmltodict
 import srvlookup
 
-import wxcadm.exceptions
+#import wxcadm.exceptions
 from .exceptions import *
 from .common import decode_spark_id
 
@@ -4664,6 +4664,24 @@ class RedSky:
         else:
             raise APIError("There was an error refreshing the RedSky token")
 
+    def get_all_locations(self):
+        """ Get all of the Locations that RedSky knows about
+
+        This method is only useful in very specific reporting cases, since you only get the Location information
+        and no device-level information.
+
+        Returns:
+             list[dict]: A list of the location information as a dict
+
+        """
+        response: dict[str, list[dict]] = {'corporate': [], 'personal': []}
+        r = requests.get(f"https://api.wxc.e911cloud.com/geography-service/locations/parent/{self.org_id}",
+                         headers=self._headers)
+        response['corporate'].extend(r.json())
+        for user in self.users:
+            response['personal'].extend(user.user_locations)
+        return response
+
     @property
     def buildings(self):
         """A list of all of the RedSkyBuilding instances within this RedSky account
@@ -5082,6 +5100,102 @@ class RedSky:
         else:
             raise APIError(f"There was a problem adding the mapping: {r.text}")
         return added_mapping
+
+    @property
+    def users(self):
+        self._users = RedSkyUsers(parent=self)
+        return self._users
+
+
+class RedSkyUsers(UserList):
+    def __init__(self, parent: RedSky):
+        log.info("Initializing RedSkyUsers instance")
+        super().__init__()
+        self.parent = parent
+        self.data = []
+
+        # Handle RedSky pagination
+        more_data = True
+        next_page = 1
+        page_size = 100
+
+        while more_data is True:
+            r = requests.get(f"https://api.wxc.e911cloud.com/admin-service/deviceUser/company/{self.parent.org_id}",
+                             headers=self.parent._headers, params={'page': next_page, 'pageSize': page_size})
+            if r.ok:
+                data = r.json()
+                log.info("Getting RedSky Users")
+                log.debug(f"\tPage: {r.headers['X-Pagination-Page']} of {r.headers['X-Pagination-Count']}")
+                for user in data:
+                    this_user = RedSkyUser(parent=self.parent,
+                                           id=user['id'],
+                                           email=user['heldUserId'],
+                                           raw=user)
+                    self.data.append(this_user)
+                # Figure out if we need to get more data or not
+                if r.headers['X-Pagination-Page'] < r.headers['X-Pagination-Count']:
+                    more_data = True
+                    next_page += 1
+                else:
+                    more_data = False
+                    log.debug(f"\tGot {len(self.data)} Users")
+            else:
+                raise APIError(f"There was a problem getting the RedSky Users")
+
+    def get_by_email(self, email: str) -> Optional[RedSkyUser]:
+        for user in self.data:
+            if user.email == email:
+                return user
+        return None
+
+
+@dataclass
+class RedSkyUser:
+    parent: RedSky
+    id: str
+    email: str
+    raw: field(repr=False, default_factory=dict)
+
+    @property
+    def user_locations(self):
+        """ Get the user-defined locations
+
+        These are the locations that the user has entered manually in the Webex app (or the MyE911 app, if they have
+        used it)
+
+        Returns:
+            list[dict]: List of location information
+        """
+        log.info("Getting RedSky User locations")
+        log.debug(f"User ID: {self.id}")
+        r = requests.get(f"https://api.wxc.e911cloud.com/geography-service/locations/deviceUser/{self.id}",
+                         headers=self.parent._headers)
+        if r.ok:
+            data = r.json()
+            return data
+        else:
+            raise APIError(f"There was a problem getting the User's locations")
+
+    @property
+    def devices(self):
+        """ Get the list of all Webex app devices for the user
+
+        Because the user email is only associated to soft clients, not desk phones, the "devices" returned are only
+        computers that have communicated an Emergency Response Location to RedSky. Unfortunately, with the Webex app,
+        due to privacy restrictions, it can be difficult to know which device the user is current logged in to.
+
+        Returns:
+            list[dict]: A list of the device dictionaries, including the ERL for the device
+
+        """
+        log.info(f"Getting devices for RedSky User {self.email}")
+        r = requests.get(f"https://api.wxc.e911cloud.com/admin-service/device",
+                         headers=self.parent._headers,
+                         params={'deviceUserId': self.id})
+        if r.ok:
+            return r.json()
+        else:
+            return False
 
 
 class RedSkyBuilding:
