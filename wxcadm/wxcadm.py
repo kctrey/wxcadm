@@ -5133,7 +5133,7 @@ class RedSkyUsers(UserList):
                                            raw=user)
                     self.data.append(this_user)
                 # Figure out if we need to get more data or not
-                if r.headers['X-Pagination-Page'] < r.headers['X-Pagination-Count']:
+                if int(r.headers['X-Pagination-Page']) < int(r.headers['X-Pagination-Count']):
                     more_data = True
                     next_page += 1
                 else:
