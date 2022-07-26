@@ -1,7 +1,8 @@
 import base64
 import logging
+import uuid
 
-__all__ = ['decode_spark_id', 'console_logging']
+__all__ = ['decode_spark_id', 'console_logging', 'tracking_id']
 
 def decode_spark_id(id: str):
     """ Decode the Webex ID to obtain the Spark ID
@@ -20,4 +21,9 @@ def decode_spark_id(id: str):
     id_bytes = base64.b64decode(id + "==")
     spark_id: str = id_bytes.decode("utf-8")
     return spark_id
+
+
+def tracking_id():
+    id = f"WXCADM_{uuid.uuid4()}"
+    return id
 

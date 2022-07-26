@@ -16,6 +16,7 @@ import requests
 from requests_toolbelt import MultipartEncoder
 import logging
 import base64
+import threading
 from threading import Thread
 
 import xmltodict
@@ -23,7 +24,7 @@ import srvlookup
 
 import wxcadm.exceptions
 from wxcadm.exceptions import *
-from wxcadm.common import decode_spark_id
+from wxcadm.common import decode_spark_id, tracking_id
 
 log = logging.getLogger(__name__)
 
@@ -593,6 +594,11 @@ class Org:
     def usergroups(self):
         """ The :py:class:`UserGroups` list with the :py:class:`UserGroup` instances for the Org """
         return UserGroups(parent=self)
+
+    @property
+    def applications(self):
+        """ The :py:class:`WebexApplications` list with the :py:class:`WebexApplication` instances for this Org """
+        return WebexApplications(parent=self)
 
     def get_paging_group(self, id: str = None, name: str = None, spark_id: str = None):
         """ Get the PagingGroup instance associated with a given ID, Name, or Spark ID
@@ -3032,7 +3038,9 @@ class XSIEventsChannelSet:
         self.queue = self.parent.queue
 
         # Now init the channels. Get the SRV records to ensure they get opended with each XSP
+        log.debug(f"Getting SRV records for {self.parent.xsi_domain}")
         srv_records = srvlookup.lookup("xsi-client", "TCP", self.parent.xsi_domain)
+        log.debug(f"\t{srv_records}")
         for record in srv_records:
             my_endpoint = re.sub(self.parent.xsi_domain, record.host, self.parent.channel_endpoint)
             my_events_endpoint = re.sub(self.parent.xsi_domain, record.host, self.parent.events_endpoint)
@@ -3048,6 +3056,41 @@ class XSIEventsChannelSet:
             time.sleep(2)
             heartbeat_thread = Thread(target=channel.heartbeat_daemon, daemon=True)
             heartbeat_thread.start()
+
+    def restart_failed_channel(self, channel: XSIEventsChannel):
+        log.debug(f"========== [{threading.current_thread().name}] Restarting XSIEventsChannel with endpoint {channel.endpoint}==========")
+        if channel.active is True:
+            log.info("Cannot restart an active channel")
+            return False
+        # Start the new channel and bring up the threads
+        # TODO - Bringing up the threads should be moved to the Channel init
+        new_channel = XSIEventsChannel(self, channel.endpoint, channel.events_endpoint)
+        self.channels.append(new_channel)
+        channel_thread = Thread(target=new_channel.channel_daemon, daemon=True)
+        channel_thread.start()
+        time.sleep(2)
+        heartbeat_thread = Thread(target=new_channel.heartbeat_daemon, daemon=True)
+        heartbeat_thread.start()
+
+        # Send a DELETE on the failed channel, just to make sure it is removed from the server
+        tid = tracking_id()
+        log.debug(f"[{tid}] Deleting failed channel: {channel.id}")
+        r = requests.delete(self.parent.events_endpoint + f'/v2.0/channel/{channel.id}',
+                            headers={'TrackingID': tid, **self._headers})
+        log.debug(f"[{r.headers.get('TrackingID', 'Unknown')}] Received {r.status_code} from server")
+
+    def audit_channelset(self):
+        """ Audit the known channels against what Webex Calling has listed.
+
+        Returns:
+
+        """
+        r = requests.get(self.parent.events_endpoint + f'/v2.0/channelset/{self.id}',
+                         headers=self._headers)
+        if r.ok:
+            log.debug(f"[{threading.current_thread().name}] Channel Audit: {r.text}")
+
+        return True
 
     def subscribe(self, event_package, person: Person = None):
         """ Subscribe to an Event Package over the channel opened with :meth:`XSIEvents.open_channel()`
@@ -3120,7 +3163,7 @@ class XSIEventsSubscription:
                   f'<applicationId>{self.parent.parent.application_id}</applicationId></Subscription>'
         if person is None:
             r = requests.post(self.events_endpoint + f"/v2.0/serviceprovider/{self.parent.parent.enterprise}",
-                              headers=self._headers, data=payload)
+                              headers={"TrackingId": tracking_id(), **self._headers}, data=payload)
         else:
             if isinstance(person, Person):
                 # Make sure we have the Person's XSI Profile
@@ -3132,28 +3175,28 @@ class XSIEventsSubscription:
         if r.ok:
             response_dict = xmltodict.parse(r.text)
             self.id = response_dict['Subscription']['subscriptionId']
-            log.debug(f"Subscription ID: {self.id}")
+            log.debug(f"[{r.headers.get('TrackingID', 'Unknown')}] Subscription ID: {self.id}")
 
     def _refresh_subscription(self):
         payload = "<Subscription xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Subscription>"
         r = requests.put(self.events_endpoint + f"/v2.0/subscription/{self.id}",
-                         headers=self._headers, data=payload)
+                         headers={'TrackingID': tracking_id(), **self._headers}, data=payload)
         if r.ok:
-            log.debug("Subscription refresh succeeded")
+            log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] Subscription refresh succeeded")
             return True
         else:
-            log.debug(f"Subscription refresh failed: {r.text}")
+            log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] Subscription refresh failed: {r.text}")
             return False
 
     def delete(self):
         log.debug(f"Deleting XSIEventsSubscription: {self.id}, {self.event_package}")
         r = requests.delete(self.events_endpoint + f"/v2.0/subscription/{self.id}",
-                            headers=self._headers)
+                            headers={'TrackingID': tracking_id(), **self._headers})
         if r.ok:
-            log.debug("Subscription delete succeeded")
+            log.debug(f"[{r.headers.get('TrackingID', 'Unknown')}] Subscription delete succeeded")
             return True
         else:
-            log.debug(f"Subscription delete failed: {r.text}")
+            log.debug(f"[{r.headers.get('TrackingID', 'Unknown')}] Subscription delete failed: {r.text}")
             return False
 
 
@@ -3167,6 +3210,8 @@ class XSIEventsChannel:
         self.queue = self.parent.queue
         self.active = True
         self.last_refresh = ""
+        self.xsp_ip:str = ''
+        self.cookies = None
 
     def channel_daemon(self):
         payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
@@ -3178,42 +3223,50 @@ class XSIEventsChannel:
                   f'<applicationId>{self.parent.parent.application_id}</applicationId>' \
                   '</Channel>'
 
-        log.debug("Sending Channel Start Request (Streaming)")
+        tid = tracking_id()
+        log.debug(f"[{threading.current_thread().name}] Number of Channels in ChannelSet {self.parent.id}: {len(self.parent.channels)}")
+        for chan in self.parent.channels:
+            log.debug(f"\t{chan.id} - {str(chan.active)}")
+        log.debug(f"[{threading.current_thread().name}][{tid}] Sending Channel Start Request (Streaming) to {self.endpoint}")
         r = requests.post(
             f"{self.endpoint}/v2.0/channel",
-            headers=self._headers, data=payload, stream=True)
+            headers={'TrackingID': tid, **self._headers}, data=payload, stream=True)
         # Get the real IP of the remote server so we can send subsequent messages to that
         ip, port = r.raw._connection.sock.getpeername()
-        log.debug(f"Received response from {ip}.")
+        log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] Received response from {ip}.")
+        #log.debug(f"[{r.headers.get('TrackingID', 'Unknown')}] Headers: {r.headers}")
+
         self.xsp_ip = str(ip)
         chars = ""
         self.last_refresh = time.time()
         for char in r.iter_content():
             decoded_char = char.decode('utf-8')
             chars += decoded_char
-            # log.info(chars)
+            # The next line spits character-by-character data out, so it's not really useful outside of development
+            #log.debug(chars)
             if "</Channel>" in chars:
+                log.debug(f"[{threading.current_thread().name}][{tid}] Channel setup: {chars} from {self.xsp_ip}")
                 m = re.search("<channelId>(.+)<\/channelId>", chars)
                 self.id = m.group(1)
                 chars = ""
             if "<ChannelHeartBeat xmlns=\"http://schema.broadsoft.com/xsi\"/>" in chars:
-                log.debug("Heartbeat received on channel")
+                log.debug(f"[{threading.current_thread().name}][{tid}] Heartbeat received on channel {self.id}")
                 # Check how long since a channel refresh and refresh if needed
                 time_now = time.time()
                 if time_now - self.last_refresh >= 3600:
-                    log.debug(f"Refreshing channel: {self.id}")
+                    log.debug(f"[{threading.current_thread().name}] Refreshing channel: {self.id}")
                     self._refresh_channel()
                     self.last_refresh = time.time()
                 # Check any subscriptions and refresh them while we are at it
                 for subscription in self.parent.subscriptions:
                     if time_now - subscription.last_refresh >= 3600:
-                        log.debug(f"Refreshing subscription: {subscription.id}")
+                        log.debug(f"[{threading.current_thread().name}] Refreshing subscription: {subscription.id}")
                         subscription._refresh_subscription()
                         subscription.last_refresh = time.time()
                 chars = ""
             if "</xsi:Event>" in chars:
                 event = chars
-                log.debug(f"Full Event: {event}")
+                log.debug(f"[{threading.current_thread().name}][{tid}] Full Event: {event}")
                 message_dict = xmltodict.parse(event)
                 self.parent.queue.put(message_dict)
                 # Reset ready for new message
@@ -3223,28 +3276,36 @@ class XSIEventsChannel:
                 # Discard this for now
                 # log.debug(f"Discard Line: {chars}")
                 chars = ""
-        log.debug("Channel loop ended")
+        log.debug(f"[{threading.current_thread().name}][{tid}] Channel Loop ended: {self.id}")
 
     def heartbeat_daemon(self):
         session = requests.Session()
         while self.active:
-            log.debug(f"Sending heartbeat for channel: {self.id}")
+            tid = tracking_id()
+            log.debug(f"[{threading.current_thread().name}][{tid}] Sending heartbeat for channel: {self.id}")
             try:
                 r = session.put(self.events_endpoint + f"/v2.0/channel/{self.id}/heartbeat",
-                                headers=self._headers, stream=True)
+                                headers={'TrackingID': tid, **self._headers}, stream=True)
                 ip, port = r.raw._connection.sock.getpeername()
                 if r.ok:
-                    log.debug(f"{ip} - Heartbeat successful")
+                    log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] {ip} - Heartbeat successful")
                     # On success, send a heartbeat every 15 seconds
                     next_heartbeat = 15
                 else:
-                    log.debug(f"{ip} - Heartbeat failed: {r.text} [{r.status_code}]")
-                    # Losing a heartbeat is ok, but we should try another one sooner than 15 seconds
-                    next_heartbeat = 10
+                    log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] {ip} - Heartbeat failed: {r.text} [{r.status_code}]")
+                    if r.status_code == 404:
+                        # If the channel can't be found on the server, kill the channel and restart it
+                        self.active = False
+                        self.parent.restart_failed_channel(self)
+                        next_heartbeat = 0
+                    else:
+                        # Losing a heartbeat is ok, but we should try another one sooner than 15 seconds
+                        next_heartbeat = 10
             except Exception as e:
-                log.debug(f"Heartbeat failed: {traceback.format_exc()}")
+                log.debug(f"[{threading.current_thread().name}] Heartbeat failed: {traceback.format_exc()}")
                 # If the heartbeat couldn't be sent for some reason, retry sooner than 15 seconds
                 next_heartbeat = 10
+            #self.parent.audit_channelset()
             time.sleep(next_heartbeat)
         return True
 
@@ -3255,20 +3316,23 @@ class XSIEventsChannel:
                   '<statusCode>200</statusCode>' \
                   '<reason>OK</reason>' \
                   '</EventResponse>'
-        log.debug(f"Acking event: {event_id}")
+        tid = tracking_id()
+        log.debug(f"[{threading.current_thread().name}][{tid}] Acking event: {event_id}")
         r = requests.post(self.events_endpoint + "/v2.0/channel/eventresponse",
-                          headers=self._headers, data=payload, cookies=cookies)
+                          headers={'TrackingID': tracking_id(), **self._headers}, data=payload, cookies=cookies)
         return True
 
     def _refresh_channel(self):
+        tid = tracking_id()
+        log.debug(f"[{threading.current_thread().name}][{tid}] Refreshing Channel: {self.id}")
         payload = "<Channel xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Channel>"
         r = requests.put(self.events_endpoint + f"/v2.0/channel/{self.id}",
-                         headers=self._headers, data=payload)
+                         headers={'TrackingID': tracking_id(), **self._headers}, data=payload)
         if r.ok:
-            log.debug("Channel refresh succeeded")
+            log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] Channel refresh succeeded")
             return True
         else:
-            log.debug(f"Channel refresh failed: {r.text}")
+            log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] Channel refresh failed: {r.text}")
             return False
 
 
@@ -6188,3 +6252,130 @@ class UserGroup:
             return True
         else:
             return False
+
+
+class WebexApplications(UserList):
+    def __init__(self, parent: Org):
+        super().__init__()
+        log.debug("Initializing WebexApps instance")
+        self.parent: Org = parent
+        self.data: list = self._get_applications()
+
+    def _get_applications(self):
+        app_list = []
+        apps = webex_api_call("get", "v1/applications")
+        for app in apps:
+            this_app = WebexApplication(parent=self.parent, **app)
+            app_list.append(this_app)
+        return app_list
+
+    @property
+    def org_apps(self):
+        """ List of :py:class:`WebexApplication` instances for apps owned by this Org """
+        org_apps = []
+        for app in self.data:
+            if app.orgId == self.parent.id:
+                org_apps.append(app)
+        return org_apps
+
+    def get_app_by_name(self, name: str) -> Union[WebexApplication, list]:
+        """ Get a :py:class:`WebexApplication` instance by application name
+
+        .. note::
+            It isn't "against the rules" for two apps to have the same name. If only one app is found, just the
+            :py:class:`WebexApplication` instance is returned. If more than one app is found, a list of instances will
+            be returned
+
+        Args:
+             name (str): The name of the :py:class:`WebexApplication` to search for
+
+        Returns:
+            WebexApplication: The application instance
+
+        """
+        found_apps = []
+        for app in self.data:
+            if app.name == name:
+                found_apps.append(app)
+        if len(found_apps) == 1:
+            return found_apps[0]
+        else:
+            return found_apps
+
+    def add_authorized_application(self, name: str,
+                                   contact_email: str,
+                                   scopes: list,
+                                   logo: str = "https://pngimg.com/uploads/phone/phone_PNG48927.png"):
+        """ Add an Authorized App to the Org
+
+        .. warning::
+        The Authorized App capability is in Early Field Trial and may not be available for you Org.
+
+        Args:
+            name (str): The name of the application
+            contact_email (str): The Contact Email to attach to the application
+            scopes (list): A list of Webex scopes to assign to the application
+            logo (str, optional): A URL to a logo image. If not specified, a generic phone icon is used.
+
+        """
+        payload = {'type': 'authorizedAppIssuer',
+                   'name': name,
+                   'contactEmail': contact_email,
+                   'logo': logo,
+                   'scopes': scopes}
+        response = webex_api_call("post", "v1/applications", payload=payload)
+        return response
+
+
+
+@dataclass
+class WebexApplication:
+    parent: Org = field(repr=False)
+    isNative: bool = field(repr=False)
+    id: str
+    friendlyId: str
+    type: str
+    name: str
+    description: str = field(repr=False)
+    orgId: str = field(repr=False)
+    isFeatured: bool = field(repr=False)
+    submissionStatus: str = field(repr=False)
+    createdBy: str = field(repr=False)
+    created: str = field(repr=False)
+    modified: str = field(default='', repr=False)
+    redirectUrls: list = field(default=None, repr=False)
+    scopes: list = field(default=None, repr=False)
+    clientId: str = field(default='', repr=False)
+    logo: str = field(default='', repr=False)
+    tagLine: str = field(default='', repr=False)
+    shortTagLine: str = field(default='', repr=False)
+    categories: list = field(default=None, repr=False)
+    videoUrl: str = field(default='', repr=False)
+    contactEmail: str = field(default='', repr=False)
+    contactName: str = field(default='', repr=False)
+    companyName: str = field(default='', repr=False)
+    companyUrl: str = field(default='', repr=False)
+    supportUrl: str = field(default='', repr=False)
+    privacyUrl: str = field(default='', repr=False)
+    productUrl: str = field(default='', repr=False)
+    applicationUrls: list = field(default=None, repr=False)
+    botEmail: str = field(default='', repr=False)
+    botPersonId: str = field(default='', repr=False)
+    submissionDate: str = field(default='', repr=False)
+    orgSubmissionStatus: str = field(default='', repr=False)
+    appContext: str = field(default='', repr=False)
+    tags: list = field(default=None, repr=False)
+    screenshot1: str = field(default='', repr=False)
+    screenshot2: str = field(default='', repr=False)
+    screenshot3: str = field(default='', repr=False)
+    validDomains: list = field(default=None, repr=False)
+    groupId: str = field(default='', repr=False)
+    version: str = field(default='', repr=False)
+    meetingLayoutPreference: str = field(default='', repr=False)
+
+
+
+
+
+
+

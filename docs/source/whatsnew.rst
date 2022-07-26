@@ -4,6 +4,8 @@ What's New
 ==========
 v2.3.4
 ------
+- Added debug logging to :py:class:`XSIEventsChannel` to help diagnose heartbeat problems
+- :py:meth:`
 - BUG FIX: :py:meth:`Org.get_locations()` no longer creates a duplicate of all locations
 
 v2.3.3
