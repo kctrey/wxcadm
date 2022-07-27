@@ -3050,15 +3050,16 @@ class XSIEventsChannelSet:
 
         # Now that we have the channels build, start the daemons (threads) for each
         for channel in self.channels:
-            channel_thread = Thread(target=channel.channel_daemon, daemon=True)
+            channel_thread = Thread(target=channel.channel_daemon, daemon=False)
             channel_thread.start()
             # Wait a few seconds to start the heartbeats
             time.sleep(2)
-            heartbeat_thread = Thread(target=channel.heartbeat_daemon, daemon=True)
+            heartbeat_thread = Thread(target=channel.heartbeat_daemon, daemon=False)
             heartbeat_thread.start()
 
     def restart_failed_channel(self, channel: XSIEventsChannel):
-        log.debug(f"========== [{threading.current_thread().name}] Restarting XSIEventsChannel with endpoint {channel.endpoint}==========")
+        log.debug(f"========== [{threading.current_thread().name}] Restarting XSIEventsChannel "
+                  f"with endpoint {channel.endpoint}==========")
         if channel.active is True:
             log.info("Cannot restart an active channel")
             return False
@@ -3066,10 +3067,10 @@ class XSIEventsChannelSet:
         # TODO - Bringing up the threads should be moved to the Channel init
         new_channel = XSIEventsChannel(self, channel.endpoint, channel.events_endpoint)
         self.channels.append(new_channel)
-        channel_thread = Thread(target=new_channel.channel_daemon, daemon=True)
+        channel_thread = Thread(target=new_channel.channel_daemon, daemon=False)
         channel_thread.start()
         time.sleep(2)
-        heartbeat_thread = Thread(target=new_channel.heartbeat_daemon, daemon=True)
+        heartbeat_thread = Thread(target=new_channel.heartbeat_daemon, daemon=False)
         heartbeat_thread.start()
 
         # Send a DELETE on the failed channel, just to make sure it is removed from the server
@@ -3182,10 +3183,12 @@ class XSIEventsSubscription:
         r = requests.put(self.events_endpoint + f"/v2.0/subscription/{self.id}",
                          headers={'TrackingID': tracking_id(), **self._headers}, data=payload)
         if r.ok:
-            log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] Subscription refresh succeeded")
+            log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
+                      f"Subscription refresh succeeded")
             return True
         else:
-            log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] Subscription refresh failed: {r.text}")
+            log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
+                      f"Subscription refresh failed: {r.text}")
             return False
 
     def delete(self):
@@ -3224,16 +3227,19 @@ class XSIEventsChannel:
                   '</Channel>'
 
         tid = tracking_id()
-        log.debug(f"[{threading.current_thread().name}] Number of Channels in ChannelSet {self.parent.id}: {len(self.parent.channels)}")
+        log.debug(f"[{threading.current_thread().name}] Number of Channels in ChannelSet {self.parent.id}: "
+                  f"{len(self.parent.channels)}")
         for chan in self.parent.channels:
             log.debug(f"\t{chan.id} - {str(chan.active)}")
-        log.debug(f"[{threading.current_thread().name}][{tid}] Sending Channel Start Request (Streaming) to {self.endpoint}")
+        log.debug(f"[{threading.current_thread().name}][{tid}] Sending Channel Start Request (Streaming) "
+                  f"to {self.endpoint}")
         r = requests.post(
             f"{self.endpoint}/v2.0/channel",
             headers={'TrackingID': tid, **self._headers}, data=payload, stream=True)
         # Get the real IP of the remote server so we can send subsequent messages to that
         ip, port = r.raw._connection.sock.getpeername()
-        log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] Received response from {ip}.")
+        log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
+                  f"Received response from {ip}.")
         #log.debug(f"[{r.headers.get('TrackingID', 'Unknown')}] Headers: {r.headers}")
 
         self.xsp_ip = str(ip)
@@ -3271,7 +3277,11 @@ class XSIEventsChannel:
                 self.parent.queue.put(message_dict)
                 # Reset ready for new message
                 chars = ""
-                self._ack_event(message_dict['xsi:Event']['xsi:eventID'], r.cookies)
+                try:
+                    self._ack_event(message_dict['xsi:Event']['xsi:eventID'], r.cookies)
+                except KeyError:
+                    log.debug("xsi:Event received but no xsi:eventID to ACK")
+                    pass
             if decoded_char == "\n":
                 # Discard this for now
                 # log.debug(f"Discard Line: {chars}")
@@ -3288,11 +3298,13 @@ class XSIEventsChannel:
                                 headers={'TrackingID': tid, **self._headers}, stream=True)
                 ip, port = r.raw._connection.sock.getpeername()
                 if r.ok:
-                    log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] {ip} - Heartbeat successful")
+                    log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
+                              f"{ip} - Heartbeat successful")
                     # On success, send a heartbeat every 15 seconds
                     next_heartbeat = 15
                 else:
-                    log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] {ip} - Heartbeat failed: {r.text} [{r.status_code}]")
+                    log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
+                              f"{ip} - Heartbeat failed: {r.text} [{r.status_code}]")
                     if r.status_code == 404:
                         # If the channel can't be found on the server, kill the channel and restart it
                         self.active = False
@@ -3329,10 +3341,12 @@ class XSIEventsChannel:
         r = requests.put(self.events_endpoint + f"/v2.0/channel/{self.id}",
                          headers={'TrackingID': tracking_id(), **self._headers}, data=payload)
         if r.ok:
-            log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] Channel refresh succeeded")
+            log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
+                      f"Channel refresh succeeded")
             return True
         else:
-            log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] Channel refresh failed: {r.text}")
+            log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
+                      f"Channel refresh failed: {r.text}")
             return False
 
 
