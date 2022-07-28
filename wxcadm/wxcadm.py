@@ -3040,6 +3040,7 @@ class XSIEventsChannelSet:
         # Now init the channels. Get the SRV records to ensure they get opended with each XSP
         log.debug(f"Getting SRV records for {self.parent.xsi_domain}")
         srv_records = srvlookup.lookup("xsi-client", "TCP", self.parent.xsi_domain)
+        self.srv_records = srv_records
         log.debug(f"\t{srv_records}")
         for record in srv_records:
             my_endpoint = re.sub(self.parent.xsi_domain, record.host, self.parent.channel_endpoint)
@@ -3074,11 +3075,7 @@ class XSIEventsChannelSet:
         heartbeat_thread.start()
 
         # Send a DELETE on the failed channel, just to make sure it is removed from the server
-        tid = tracking_id()
-        log.debug(f"[{tid}] Deleting failed channel: {channel.id}")
-        r = requests.delete(self.parent.events_endpoint + f'/v2.0/channel/{channel.id}',
-                            headers={'TrackingID': tid, **self._headers})
-        log.debug(f"[{r.headers.get('TrackingID', 'Unknown')}] Received {r.status_code} from server")
+        channel.delete()
 
     def audit_channelset(self):
         """ Audit the known channels against what Webex Calling has listed.
@@ -3287,6 +3284,8 @@ class XSIEventsChannel:
                 # log.debug(f"Discard Line: {chars}")
                 chars = ""
         log.debug(f"[{threading.current_thread().name}][{tid}] Channel Loop ended: {self.id}")
+        self.active = False
+        return True
 
     def heartbeat_daemon(self):
         session = requests.Session()
@@ -3348,6 +3347,20 @@ class XSIEventsChannel:
             log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
                       f"Channel refresh failed: {r.text}")
             return False
+
+    def delete(self):
+        tid = tracking_id()
+        log.debug(f"[{threading.current_thread().name}][{tid}] Deleting Channel: {self.id}")
+        r = requests.delete(self.events_endpoint + f'/v2.0/channel/{self.id}',
+                            headers={'TrackingID': tid, **self._headers})
+        log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
+                  f"Channel Delete received {r.status_code} from server")
+        if r.ok:
+            self.active = False
+            return True
+        else:
+            return False
+
 
 
 class HuntGroup:
