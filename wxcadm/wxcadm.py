@@ -3265,11 +3265,22 @@ class XSIEventsChannel:
                 self.parent.queue.put(message_dict)
                 # Reset ready for new message
                 chars = ""
-                try:
-                    self._ack_event(message_dict['xsi:Event']['xsi:eventID'], r.cookies)
-                except KeyError:
-                    log.debug("xsi:Event received but no xsi:eventID to ACK")
-                    pass
+                if message_dict['xsi:Event']['@xsi1:type'] == 'xsi:ChannelTerminatedEvent':
+                    # ChannelTerminatedEvent doesn't require or accept an ACK, so we don't need to do that.
+                    log.debug(f"[{threading.current_thread().name}][{tid}] "
+                              f"Received ChannelTerminatedEvent for channel "
+                              f"{message_dict['xsi:Event']['xsi:channelId']} "
+                              f"with reason {message_dict['xsi:Event']['xsi:reason']}")
+                    # TODO - At some point, we should probably report the channel termination up to see if the channel
+                    #        needs to be restarted, or if it happened because we torn it down. The xsi:reason should
+                    #        help with that.
+                else:
+                    try:
+                        self._ack_event(message_dict['xsi:Event']['xsi:eventID'], r.cookies)
+                    except KeyError:
+                        log.debug("xsi:Event received but no xsi:eventID to ACK")
+                        log.debug(f"\t{message_dict}")
+                        pass
             if decoded_char == "\n":
                 # Discard this for now
                 # log.debug(f"Discard Line: {chars}")
