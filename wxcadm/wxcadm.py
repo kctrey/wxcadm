@@ -3049,31 +3049,14 @@ class XSIEventsChannelSet:
             channel = XSIEventsChannel(self, my_endpoint, my_events_endpoint)
             self.channels.append(channel)
 
-        # Now that we have the channels build, start the daemons (threads) for each
-        for channel in self.channels:
-            channel_thread = Thread(target=channel.channel_daemon, daemon=False)
-            channel_thread.start()
-            # Wait a few seconds to start the heartbeats
-            time.sleep(2)
-            heartbeat_thread = Thread(target=channel.heartbeat_daemon, daemon=False)
-            heartbeat_thread.start()
-
     def restart_failed_channel(self, channel: XSIEventsChannel):
-        log.debug(f"========== [{threading.current_thread().name}] Restarting XSIEventsChannel "
+        log.debug(f"========== [{threading.current_thread().name}] Restarting Failed XSIEventsChannel "
                   f"with endpoint {channel.endpoint}==========")
         if channel.active is True:
             log.info("Cannot restart an active channel")
             return False
-        # Start the new channel and bring up the threads
-        # TODO - Bringing up the threads should be moved to the Channel init
         new_channel = XSIEventsChannel(self, channel.endpoint, channel.events_endpoint)
         self.channels.append(new_channel)
-        channel_thread = Thread(target=new_channel.channel_daemon, daemon=False)
-        channel_thread.start()
-        time.sleep(2)
-        heartbeat_thread = Thread(target=new_channel.heartbeat_daemon, daemon=False)
-        heartbeat_thread.start()
-
         # Send a DELETE on the failed channel, just to make sure it is removed from the server
         channel.delete()
 
@@ -3212,6 +3195,14 @@ class XSIEventsChannel:
         self.last_refresh = ""
         self.xsp_ip:str = ''
         self.cookies = None
+        self.channel_thread = Thread(target=self.channel_daemon)
+        self.heartbeat_thread = Thread(target=self.heartbeat_daemon)
+
+        # Start the channel thread
+        self.channel_thread.start()
+        # Wait a few seconds for the channel to come up before starting the heartbeats
+        time.sleep(2)
+        self.heartbeat_thread.start()
 
     def channel_daemon(self):
         payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
