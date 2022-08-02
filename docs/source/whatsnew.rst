@@ -6,7 +6,6 @@ v2.3.4
 ------
 - Many changes to XSIEvents and the classes associated with it. XSIEvents should now be much more stable.
 - Added debug logging to :py:class:`XSIEventsChannel` to help diagnose heartbeat problems
-- :py:meth:`
 - BUG FIX: :py:meth:`Org.get_locations()` no longer creates a duplicate of all locations
 
 v2.3.3

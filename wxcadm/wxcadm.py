@@ -3134,10 +3134,17 @@ class XSIEventsChannelSet:
         return all_success
 
     def close(self):
+        """ Close all :py:class:`XSIEventsChannel` and delete all :py:class:`XSIEventsSubscription`
+
+        Returns:
+            bool: Always True
+
+        """
         for subscription in self.subscriptions:
             subscription.delete()
         for channel in self.channels:
             channel.delete()
+        return True
 
 
 class XSIEventsSubscription:
@@ -3186,6 +3193,17 @@ class XSIEventsSubscription:
             log.debug(f"[{r.headers.get('TrackingID', 'Unknown')}] Subscription ID: {self.id}")
 
     def _refresh_subscription(self):
+        """ Refresh the subscription
+
+        .. note::
+
+            This method is called automatically by the channels based on the subscription expiration
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+
         payload = "<Subscription xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Subscription>"
         r = requests.put(self.events_endpoint + f"/v2.0/subscription/{self.id}",
                          headers={'TrackingID': tracking_id(), **self._headers}, data=payload)
@@ -3199,6 +3217,14 @@ class XSIEventsSubscription:
             return False
 
     def delete(self):
+        """ Delete the subscription from the server
+
+        Once the subscription is deleted, no events for that subscription will be received.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
         log.debug(f"Deleting XSIEventsSubscription: {self.id}, {self.event_package}")
         r = requests.delete(self.events_endpoint + f"/v2.0/subscription/{self.id}",
                             headers={'TrackingID': tracking_id(), **self._headers})
@@ -3212,6 +3238,21 @@ class XSIEventsSubscription:
 
 class XSIEventsChannel:
     def __init__(self, parent: XSIEventsChannelSet, endpoint: str, events_endpoint: str):
+        """ The `XSIEventsChannel` handles a single channel in an `XSiEventsChannelSet`
+
+        Upon initialization, the instance will start two threads, one for monitoring the events received across the
+        long-running channel and one for sending heartbeats to keep the channel alive.
+
+        .. note::
+
+            This class does not need to be initialized manually. It is done from the :py:class:`XSIEventsChannelSet`
+            instance.
+
+        Args:
+            parent (XSIEventsChannelSet): The :py:class:`XSIEventsChannelSet` to which this channel belongs
+            endpoint (str): The XSI endpoint to connect the long-running channel to
+            events_endpoint (str):  The XSI Events endpoint to send heartbeats and acknowledgements to
+        """
         self.parent = parent
         self._headers = self.parent.parent._headers
         self.id = ""
@@ -3223,8 +3264,8 @@ class XSIEventsChannel:
         self.xsp_ip:str = ''
         self.session = requests.Session()
         self.cookies = None
-        self.channel_thread = Thread(target=self.channel_daemon)
-        self.heartbeat_thread = Thread(target=self.heartbeat_daemon)
+        self.channel_thread = Thread(target=self._channel_daemon)
+        self.heartbeat_thread = Thread(target=self._heartbeat_daemon)
 
         # Start the channel thread
         self.channel_thread.start()
@@ -3232,7 +3273,18 @@ class XSIEventsChannel:
         time.sleep(2)
         self.heartbeat_thread.start()
 
-    def channel_daemon(self):
+    def _channel_daemon(self):
+        """ A Thread-safe daemon to watch the :py:class:`XSIEventsChannel` for incoming messages.
+
+        .. note::
+
+            This method is called automatically when the `XSIEventsChannel` is initialized and never should be
+            called manually
+
+        Returns:
+            bool: Will always return True when the channel is closed
+
+        """
         payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
                   '<Channel xmlns=\"http://schema.broadsoft.com/xsi\">' \
                   f'<channelSetId>{self.parent.id}</channelSetId>' \
@@ -3303,7 +3355,7 @@ class XSIEventsChannel:
                 else:
                     self.parent.queue.put(message_dict) # Moved here 2.3.4 to prevent sending TerminatedEvent to Queue
                     try:
-                        self._ack_event(message_dict['xsi:Event']['xsi:eventID'], r.cookies)
+                        self._ack_event(message_dict['xsi:Event']['xsi:eventID'])
                     except KeyError:
                         log.debug("xsi:Event received but no xsi:eventID to ACK")
                         log.debug(f"\t{message_dict}")
@@ -3316,7 +3368,18 @@ class XSIEventsChannel:
         self.active = False
         return True
 
-    def heartbeat_daemon(self):
+    def _heartbeat_daemon(self):
+        """ A Thread-safe daemon to send heartbeats on the  :py:class:`XSIEventsChannel`
+
+        .. note::
+
+            This method is called automatically when the `XSIEventsChannel` is initialized and never should be
+            called manually
+
+        Returns:
+            bool: Always returns True when the function completes and the channel is down.
+
+        """
         while self.active:
             tid = tracking_id()
             log.debug(f"[{threading.current_thread().name}][{tid}] Sending heartbeat for channel: {self.id}")
@@ -3348,7 +3411,20 @@ class XSIEventsChannel:
             time.sleep(next_heartbeat)
         return True
 
-    def _ack_event(self, event_id, cookies):
+    def _ack_event(self, event_id):
+        """ Send an ACK to the XSI Events server to acknowledge the Event was received.
+
+        .. note::
+
+            This method is called automatically by the `channel_daemon()` and should never be called manually
+
+        Args:
+            event_id (str): The XSI Event ID that the ACK needs to be sent for.
+
+        Returns:
+            bool: True if the ACK was accepted by the server. False otherwise.
+
+        """
         payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
                   '<EventResponse xmlns=\"http://schema.broadsoft.com/xsi\">' \
                   f'<eventID>{event_id}</eventID>' \
@@ -3358,10 +3434,25 @@ class XSIEventsChannel:
         tid = tracking_id()
         log.debug(f"[{threading.current_thread().name}][{tid}] Acking event: {event_id}")
         r = self.session.post(self.events_endpoint + "/v2.0/channel/eventresponse",
-                          headers={'TrackingID': tracking_id(), **self._headers}, data=payload, cookies=cookies)
-        return True
+                          headers={'TrackingID': tracking_id(), **self._headers}, data=payload)
+        if r.ok:
+            return True
+        else:
+            log.debug(f"[{threading.current_thread().name}][{tid}] "
+                      f"The ACK was not successful: {r.text}")
+            return False
 
     def _refresh_channel(self):
+        """ Send a command to refresh the :py:class:`XSIEventsChannel`
+
+        .. note::
+
+            This method is called automatically by the `heartbeat_daemon()` and should never be called manually
+
+        Returns:
+            bool: True on success, False otherwise.
+
+        """
         tid = tracking_id()
         log.debug(f"[{threading.current_thread().name}][{tid}] Refreshing Channel: {self.id}")
         payload = "<Channel xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Channel>"
@@ -3377,6 +3468,14 @@ class XSIEventsChannel:
             return False
 
     def delete(self):
+        """ Delete the :py:class:`XSIEventsChannel` instance
+
+        This method will close the channel and delete it from the server.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
         tid = tracking_id()
         log.debug(f"[{threading.current_thread().name}][{tid}] Deleting Channel: {self.id}")
         r = self.session.delete(self.events_endpoint + f'/v2.0/channel/{self.id}',
@@ -3387,6 +3486,8 @@ class XSIEventsChannel:
             self.active = False
             return True
         else:
+            log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
+                      f"Channel Delete response: {r.text}")
             return False
 
 
@@ -6364,7 +6465,8 @@ class WebexApplications(UserList):
         """ Add an Authorized App to the Org
 
         .. warning::
-        The Authorized App capability is in Early Field Trial and may not be available for you Org.
+
+            The Authorized App capability is in Early Field Trial and may not be available for you Org.
 
         Args:
             name (str): The name of the application
