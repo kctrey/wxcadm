@@ -2691,7 +2691,7 @@ class XSICallQueue:
             Call: The :class:`wxcadm.Call` instance that was attached
 
         """
-        call = Call(self, id = call_id)
+        call = Call(self, id=call_id)
         self._calls.append(call)
         return call
 
@@ -2996,7 +2996,9 @@ class XSIEvents:
         self.channel_endpoint = parent.xsi['events_channel_endpoint']
         self.xsi_domain = parent.xsi['xsi_domain']
         self.application_id = uuid.uuid4()
+        """ The unique Application ID used to identify the application to Webex """
         self.enterprise = self._parent.spark_id.split("/")[-1]
+        """ The Enterprise ID used to identify the Webex Org to the XSI Events service """
         self.channel_sets = []
         self.queue = None
 
@@ -3032,10 +3034,14 @@ class XSIEventsChannelSet:
         self.parent = parent
         self._headers = self.parent._headers
         self.id = uuid.uuid4()
+        """ The unique ID of the Channel Set """
         log.debug(f"Channel Set ID: {self.id}")
         self.channels = []
+        """ List of :py:class:`XSIEventChannel` instances within the Channel Set """
         self.subscriptions = []
+        """ List of :py:class:`XSIEventsSubscription` instances associated with the the Channel Set """
         self.queue = self.parent.queue
+        """ The Python :py:class:`Queue` that was provided to :py:class`XSIEvents` to queue messages """
 
         # Now init the channels. Get the SRV records to ensure they get opended with each XSP
         log.debug(f"Getting SRV records for {self.parent.xsi_domain}")
@@ -3050,18 +3056,32 @@ class XSIEventsChannelSet:
             self.channels.append(channel)
 
     def restart_failed_channel(self, channel: XSIEventsChannel):
-        log.debug(f"========== [{threading.current_thread().name}] Restarting Failed XSIEventsChannel "
-                  f"with endpoint {channel.endpoint}==========")
+        """ Starts a new channel, using an :py:class:`XSIEventsChannel` with an ``active=False`` status as the source
+        to determine where the new channel should be established to.
+
+        Args:
+            channel (XSIEventsChannel: The :py:class:`XSIEventsChannel` instance that failed.
+
+        Returns:
+            bool: True on success, False otherwise.
+
+        """
+        log.debug(f"[{threading.current_thread().name}] ==== Restarting Failed XSIEventsChannel "
+                  f"with endpoint {channel.endpoint.split('/')[2]} ====")
         if channel.active is True:
-            log.info("Cannot restart an active channel")
+            log.warning("Cannot restart an active channel")
             return False
         new_channel = XSIEventsChannel(self, channel.endpoint, channel.events_endpoint)
         self.channels.append(new_channel)
         # Send a DELETE on the failed channel, just to make sure it is removed from the server
         channel.delete()
+        return True
 
     def audit_channelset(self):
         """ Audit the known channels against what Webex Calling has listed.
+
+        ..note:
+            This method is not fully implemented at this time and is being added for future use.
 
         Returns:
 
@@ -3113,6 +3133,12 @@ class XSIEventsChannelSet:
                     all_success = False
         return all_success
 
+    def close(self):
+        for subscription in self.subscriptions:
+            subscription.delete()
+        for channel in self.channels:
+            channel.delete()
+
 
 class XSIEventsSubscription:
     def __init__(self, parent: XSIEventsChannelSet, event_package: str, person: Person = None):
@@ -3135,6 +3161,7 @@ class XSIEventsSubscription:
         self.events_endpoint = self.parent.parent.events_endpoint
         self._headers = self.parent._headers
         self.last_refresh = time.time()
+        """ The date and time that the subscription was last refreshed """
         self.event_package = event_package
         log.info(f"Subscribing to: {self.event_package}")
         payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
@@ -3194,6 +3221,7 @@ class XSIEventsChannel:
         self.active = True
         self.last_refresh = ""
         self.xsp_ip:str = ''
+        self.session = requests.Session()
         self.cookies = None
         self.channel_thread = Thread(target=self.channel_daemon)
         self.heartbeat_thread = Thread(target=self.heartbeat_daemon)
@@ -3215,20 +3243,19 @@ class XSIEventsChannel:
                   '</Channel>'
 
         tid = tracking_id()
-        log.debug(f"[{threading.current_thread().name}] Number of Channels in ChannelSet {self.parent.id}: "
-                  f"{len(self.parent.channels)}")
-        for chan in self.parent.channels:
-            log.debug(f"\t{chan.id} - {str(chan.active)}")
         log.debug(f"[{threading.current_thread().name}][{tid}] Sending Channel Start Request (Streaming) "
-                  f"to {self.endpoint}")
-        r = requests.post(
+                  f"to {self.endpoint.split('/')[2]}")
+        r = self.session.post(
             f"{self.endpoint}/v2.0/channel",
             headers={'TrackingID': tid, **self._headers}, data=payload, stream=True)
         # Get the real IP of the remote server so we can send subsequent messages to that
         ip, port = r.raw._connection.sock.getpeername()
         log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
-                  f"Received response from {ip}.")
+                  f"Received response from {ip}. Status code {r.status_code}")
         #log.debug(f"[{r.headers.get('TrackingID', 'Unknown')}] Headers: {r.headers}")
+        log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
+                  f"Saving Cookies: {r.cookies}")
+        self.cookies = r.cookies
 
         self.xsp_ip = str(ip)
         chars = ""
@@ -3262,7 +3289,6 @@ class XSIEventsChannel:
                 event = chars
                 log.debug(f"[{threading.current_thread().name}][{tid}] Full Event: {event}")
                 message_dict = xmltodict.parse(event)
-                self.parent.queue.put(message_dict)
                 # Reset ready for new message
                 chars = ""
                 if message_dict['xsi:Event']['@xsi1:type'] == 'xsi:ChannelTerminatedEvent':
@@ -3275,6 +3301,7 @@ class XSIEventsChannel:
                     #        needs to be restarted, or if it happened because we torn it down. The xsi:reason should
                     #        help with that.
                 else:
+                    self.parent.queue.put(message_dict) # Moved here 2.3.4 to prevent sending TerminatedEvent to Queue
                     try:
                         self._ack_event(message_dict['xsi:Event']['xsi:eventID'], r.cookies)
                     except KeyError:
@@ -3290,12 +3317,11 @@ class XSIEventsChannel:
         return True
 
     def heartbeat_daemon(self):
-        session = requests.Session()
         while self.active:
             tid = tracking_id()
             log.debug(f"[{threading.current_thread().name}][{tid}] Sending heartbeat for channel: {self.id}")
             try:
-                r = session.put(self.events_endpoint + f"/v2.0/channel/{self.id}/heartbeat",
+                r = self.session.put(self.events_endpoint + f"/v2.0/channel/{self.id}/heartbeat",
                                 headers={'TrackingID': tid, **self._headers}, stream=True)
                 ip, port = r.raw._connection.sock.getpeername()
                 if r.ok:
@@ -3331,7 +3357,7 @@ class XSIEventsChannel:
                   '</EventResponse>'
         tid = tracking_id()
         log.debug(f"[{threading.current_thread().name}][{tid}] Acking event: {event_id}")
-        r = requests.post(self.events_endpoint + "/v2.0/channel/eventresponse",
+        r = self.session.post(self.events_endpoint + "/v2.0/channel/eventresponse",
                           headers={'TrackingID': tracking_id(), **self._headers}, data=payload, cookies=cookies)
         return True
 
@@ -3339,7 +3365,7 @@ class XSIEventsChannel:
         tid = tracking_id()
         log.debug(f"[{threading.current_thread().name}][{tid}] Refreshing Channel: {self.id}")
         payload = "<Channel xmlns=\"http://schema.broadsoft.com/xsi\"><expires>7200</expires></Channel>"
-        r = requests.put(self.events_endpoint + f"/v2.0/channel/{self.id}",
+        r = self.session.put(self.events_endpoint + f"/v2.0/channel/{self.id}",
                          headers={'TrackingID': tracking_id(), **self._headers}, data=payload)
         if r.ok:
             log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
@@ -3353,7 +3379,7 @@ class XSIEventsChannel:
     def delete(self):
         tid = tracking_id()
         log.debug(f"[{threading.current_thread().name}][{tid}] Deleting Channel: {self.id}")
-        r = requests.delete(self.events_endpoint + f'/v2.0/channel/{self.id}',
+        r = self.session.delete(self.events_endpoint + f'/v2.0/channel/{self.id}',
                             headers={'TrackingID': tid, **self._headers})
         log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
                   f"Channel Delete received {r.status_code} from server")
@@ -4522,7 +4548,6 @@ class Bifrost:
                 webex_location = self._parent.get_location_by_name(location['name'])
                 webex_location.bifrost_config = location
         return locations
-
 
 
 class CSDM:
@@ -6140,6 +6165,7 @@ class Webhook:
             log.warning("The Webhook change failed")
             return False
 
+
 class UserGroups(UserList):
     """ UserGroups is the parent class for :py:class:`UserGroup`, providing methods for the list of Groups """
     def __init__(self, parent: Org):
@@ -6354,7 +6380,6 @@ class WebexApplications(UserList):
                    'scopes': scopes}
         response = webex_api_call("post", "v1/applications", payload=payload)
         return response
-
 
 
 @dataclass
