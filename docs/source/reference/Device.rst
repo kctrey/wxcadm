@@ -1,6 +1,6 @@
 The Device class
 ================
 
-.. autoclass:: wxcadm.wxcadm.Device
+.. autoclass:: wxcadm.device.Device
     :members:
     :undoc-members:

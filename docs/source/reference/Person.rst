@@ -1,6 +1,6 @@
 The Person class
 ================
 
-.. autoclass:: wxcadm.wxcadm.Person
+.. autoclass:: wxcadm.person.Person
     :members:
     :undoc-members:

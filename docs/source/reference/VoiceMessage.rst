@@ -1,4 +1,4 @@
-.. py:currentmodule:: wxcadm.wxcadm
+.. py:currentmodule:: wxcadm.person
 
 The VoiceMessage class
 ======================
@@ -11,6 +11,6 @@ VoiceMessage instances are instantiated with the :py:meth:`Me.get_voice_messages
     Voice Message access is limited to the token owner only. An administrator token does not have access to other
     user's Voice Messages.
 
-.. autoclass:: wxcadm.wxcadm.VoiceMessage
+.. autoclass:: wxcadm.person.VoiceMessage
     :members:
     :undoc-members:

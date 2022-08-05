@@ -6,6 +6,7 @@ import uuid
 import time
 import requests
 import sys
+from typing import Optional
 
 from .exceptions import *
 from wxcadm import log
@@ -151,7 +152,7 @@ def webex_api_call(method: str, url: str, headers: dict = None, params: dict = N
         return False
 
 
-def console_logging(level: str = "debug"):
+def console_logging(level: str = "debug", formatter: Optional[logging.Formatter] = None):
     """ Enable logging directly to STDOUT
 
     This adds a STDOUT logging handler to the existing logger. Any other handlers that have been applied will continue
@@ -160,8 +161,25 @@ def console_logging(level: str = "debug"):
     Args:
         level (str, optional): The logging level. Valid values are ``"debug"``, ``"info"``, ``"warning"`` and
             ``"critical"``. Defaults to ``debug`` for full debug output.
+        formatter (logging.Formatter, optional): A :py:class:`logging.Formatter` object defining the log format for
+            logging to the console. If omitted, the format will be the message level and the message.
     """
     handler = logging.StreamHandler(sys.stdout)
+    level_map = {"info": logging.INFO,
+                 "warning": logging.WARNING,
+                 "debug": logging.DEBUG,
+                 "critical": logging.CRITICAL}
+    handler.setLevel(level_map[level])
+    if formatter is not None:
+        if isinstance(formatter, logging.Formatter):
+            handler.setFormatter(formatter)
+        else:
+            log.warning("Did not receive logging.Formatter object for formatter argument")
+            formatter = logging.Formatter('%(levelname)s:\t%(message)s')
+            handler.setFormatter(formatter)
+    else:
+        formatter = logging.Formatter('%(levelname)s:\t%(message)s')
+        handler.setFormatter(formatter)
     log.addHandler(handler)
 
 

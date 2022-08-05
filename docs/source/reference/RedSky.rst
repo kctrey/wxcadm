@@ -1,5 +1,5 @@
 The RedSky class
 ================
-.. autoclass:: wxcadm.wxcadm.RedSky
+.. autoclass:: wxcadm.redsky.RedSky
     :members:
     :undoc-members:

@@ -1,6 +1,6 @@
 The RedSkyLocation class
 ========================
 
-.. autoclass:: wxcadm.wxcadm.RedSkyLocation
+.. autoclass:: wxcadm.redsky.RedSkyLocation
     :members:
     :undoc-members:

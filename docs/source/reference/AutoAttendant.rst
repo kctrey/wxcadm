@@ -1,6 +1,6 @@
 The AutoAttendant class
 =======================
 
-.. autoclass:: wxcadm.wxcadm.AutoAttendant
+.. autoclass:: wxcadm.location_features.AutoAttendant
     :members:
     :undoc-members:

@@ -1,4 +1,4 @@
-.. py:currentmodule:: wxcadm.wxcadm
+.. py:currentmodule:: wxcadm.webhooks
 
 The Webhooks class
 ==================

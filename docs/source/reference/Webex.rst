@@ -1,6 +1,6 @@
 The Webex class
 ===============
 
-.. autoclass:: wxcadm.wxcadm.Webex
+.. autoclass:: wxcadm.webex.Webex
     :members:
     :undoc-members:

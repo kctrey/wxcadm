@@ -1,6 +1,6 @@
 The XSIEvents class
 ===================
 
-.. autoclass:: wxcadm.wxcadm.XSIEvents
+.. autoclass:: wxcadm.xsi.XSIEvents
     :members:
     :undoc-members:
