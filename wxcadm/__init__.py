@@ -1,6 +1,6 @@
 import logging
 
-from .wxcadm import Webex, RedSky, XSIEvents, XSICallQueue
+from .wxcadm import Webex, RedSky, XSIEvents, XSICallQueue, Call
 from .exceptions import (
     OrgError, LicenseError, APIError, TokenError,
     PutError, XSIError, NotAllowed, CSDMError
