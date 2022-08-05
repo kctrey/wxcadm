@@ -2,6 +2,10 @@
 
 What's New
 ==========
+v2.3.5
+------
+- Added the :py:class:`Call` class to the package root to allow ``wxcadm.Call()``
+
 v2.3.4
 ------
 - Many changes to XSIEvents and the classes associated with it. XSIEvents should now be much more stable.
