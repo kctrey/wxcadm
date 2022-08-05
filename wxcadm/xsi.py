@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 import srvlookup
+import xmltodict
 import re
 import requests
 import threading
