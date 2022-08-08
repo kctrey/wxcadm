@@ -2,6 +2,15 @@
 
 What's New
 ==========
+v3.0.0
+------
+- Massive code refactor. **wxcadm** has grown too large to be a single Python file. Debugging and linting was getting overwhelming. v3.0.0 introduces a new package layout that will simplify a lot of things.
+- Added the ability to pass a :py:class:`logging.Formatter` to the :py:meth:`wxcadm.console_logging()` method for those who use STDOUT logging and want control of the format.
+
+v2.3.5
+------
+- Added the :py:class:`Call` class to the package root to allow ``wxcadm.Call()``
+
 v2.3.4
 ------
 - Many changes to XSIEvents and the classes associated with it. XSIEvents should now be much more stable.

@@ -8,6 +8,8 @@ import requests
 import threading
 from threading import Thread
 import time
+
+import wxcadm
 from wxcadm import log
 from .common import *
 
@@ -883,24 +885,23 @@ class Call:
         """The externalTrackingId used by XSI"""
         self._status: dict = {}
         """The status of the call"""
-
-        if type(self._parent) is Person:
+        if type(self._parent) is wxcadm.person.Person:
             # This is where we set things based on whether the parent is a Person
             self._url = _url_base
             self.type = "Person"
             pass
-        elif type(self._parent) is XSICallQueue:
+        elif type(self._parent) is wxcadm.xsi.XSICallQueue:
             self._url = self._parent.org.xsi['actions_endpoint'] + f"/v2.0/callcenter/{self._userid}/calls"
             self.type = "CallQueue"
-        elif type(self._parent) is XSI:
+        elif type(self._parent) is wxcadm.xsi.XSI:
             # The Call parent is XSI
             self._url = self._parent.xsi_endpoints['actions_endpoint'] + f"/v2.0/user/{self._userid}/calls"
             self.type = "XSI"
-        elif type(self._parent) is Call:
+        elif type(self._parent) is wxcadm.xsi.Call:
             # Another Call created this Call instance (probably for a transfer or conference
             self._url = self._parent.xsi_endpoints['actions_endpoint'] + f"/v2.0/user/{self._parent._userid}/calls"
             self.type = "Call"
-        elif type(self._parent) is Org:
+        elif type(self._parent) is wxcadm.org.Org:
             # Basically manually creating a call instance, probably based on an XSI Event or some other way
             # that we determined the call ID and the user it was for
             self._url = self._parent.xsi['actions_endpoint'] + f"/v2.0/user/{self._userid}/calls"

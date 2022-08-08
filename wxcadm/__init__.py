@@ -8,9 +8,7 @@ log.setLevel(logging.DEBUG)
 log.addHandler(logging.NullHandler())
 
 from .webex import Webex
-from .xsi import XSIEvents, Call, XSI
+from .xsi import XSIEvents, Call, XSI, XSICallQueue
+from .redsky import RedSky
 from .exceptions import *
 from .common import *
-
-
-
