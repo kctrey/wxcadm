@@ -1318,8 +1318,9 @@ class UserGroup:
     """ The timestamp indicating when the Group was created """
     lastModified: str = field(repr=False)
     """ The timestamp indicating the last time the Group was modified """
-    usage: str
-    """ The Group usage type """
+    # Changed 3.0.0 - This field no longer comes back in the API response. Not sure if it will be re-added
+    usage: str = field(init=True, repr=True, default='Unknown')
+    """ The Group usage type. This is a value that was provided by Webex but has been removed """
     memberSize: int = field(init=True, repr=False, default=0)
     """ The number of members in the group only if returned by Webex """
     members: list = field(init=True, repr=False, default=None)
