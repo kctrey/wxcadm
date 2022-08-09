@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import requests
+import base64
+import os
+from requests_toolbelt import MultipartEncoder
 from wxcadm import log
+from .exceptions import *
 from .common import *
+
 
 class CPAPI:
     """The CPAPI class handles API calls using the CP-API, which is the native API used by Webex Control Hub.
@@ -146,7 +152,6 @@ class CPAPI:
             raise TokenError("Your API Access Token doesn't have permission to use this API call")
         else:
             raise APIError("CPAPI failed to update Caller ID for Workspace")
-
 
     def get_workspace_calling_location(self, workspace_id: str):
         """ Gets the Location instance associated with a Workspace

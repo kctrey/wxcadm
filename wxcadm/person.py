@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import requests
+from requests_toolbelt import MultipartEncoder
 import base64
-import logging
+import os
 from typing import Optional, Type
 from dataclasses import dataclass, field
 from collections import UserList
 
-from .common import _url_base
+from .common import *
 from .xsi import XSI
 
 from wxcadm import log

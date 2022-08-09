@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import requests
 from wxcadm import log
+from .common import *
+from .exceptions import *
 
 
 class Terminus:
@@ -12,9 +15,8 @@ class Terminus:
         self._headers = {"Authorization": f"Bearer {access_token}"}
 
         # Calculate the "customer" ID from the Org ID
-        org_id_bytes = base64.b64decode(org.id + "===")
-        org_id_decoded = org_id_bytes.decode("utf-8")
-        self._customer = org_id_decoded.split("/")[-1]
+        spark_id = decode_spark_id(org.id)
+        self._customer = spark_id.split("/")[-1]
 
         self._url_base = f"https://terminus.huron-dev.com/api/v2/customers/{self._customer}/"
         self._server = "https://terminus.huron-dev.com"

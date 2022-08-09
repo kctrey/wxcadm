@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from typing import Union
 from dataclasses import dataclass, field
 from collections import UserList
 from wxcadm import log
+from .common import *
+
 
 class WebexApplications(UserList):
     def __init__(self, parent: Org):

@@ -4,6 +4,10 @@ from dataclasses import dataclass, field
 from collections import UserList
 from wxcadm import log
 
+import requests
+from typing import Optional
+from .exceptions import *
+
 
 class RedSky:
     def __init__(self, username: str, password: str):

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from wxcadm import log
+import requests
+from typing import Optional
+from .exceptions import *
 
 
 class Device:

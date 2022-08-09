@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import requests
 import base64
 
 from wxcadm import log
+from .exceptions import *
+
 
 class CSDM:
     """The base class for dealing with devices"""
@@ -47,18 +50,18 @@ class CSDM:
         """
         log.info("Getting devices from CSDM")
         devices_from_csdm = []
-        payload =  {"query": None,
-                    "aggregates": ["connectionStatus",
-                                   "category",
-                                   "callingType"
-                                   ],
-                    "size": 100,
-                    "from": 0,
-                    "sortField": "category",
-                    "sortOrder": "asc",
-                    "initial": True,
-                    "translatedQueryString": ""
-                    }
+        payload = {"query": None,
+                   "aggregates": ["connectionStatus",
+                                  "category",
+                                  "callingType"
+                                  ],
+                   "size": 100,
+                   "from": 0,
+                   "sortField": "category",
+                   "sortOrder": "asc",
+                   "initial": True,
+                   "translatedQueryString": ""
+                   }
         r = requests.post(self._url_base + "_search", headers=self._headers, json=payload)
         if r.ok:
             response = r.json()
@@ -81,7 +84,7 @@ class CSDM:
                 else:
                     keep_going = False
         else:
-            log.error(("Failed getting devices"))
+            log.error("Failed getting devices")
             raise CSDMError("Error getting devices")
 
         self._devices = []

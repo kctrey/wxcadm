@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import logging
+from typing import Optional
 from collections import UserList
 from dataclasses import dataclass, field
-
 from wxcadm import log
+from .common import *
 
 
 class Webhooks(UserList):

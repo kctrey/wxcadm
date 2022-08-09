@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from wxcadm import log
+from .common import *
 
 
 class Location:
@@ -60,7 +61,7 @@ class Location:
 
     @property
     def available_numbers(self):
-        """Returns all of the available numbers for the Location.
+        """Returns all available numbers for the Location.
 
         Only returns active numbers, so numbers that have not been activated yet will not be returned.
 
@@ -68,11 +69,13 @@ class Location:
             list[dict]: A list of available numbers, in dict form
 
         """
+        log.debug('Getting available numbers')
         available_numbers = []
         for number in self._parent.numbers:
             if number['location'].name == self.name \
                     and number.get('state', "") == "ACTIVE" \
                     and number.get('owner', False) is False:
+                log.debug(f'\tAvailable number: {number}')
                 available_numbers.append(number)
         return available_numbers
 
@@ -92,9 +95,11 @@ class Location:
     @property
     def schedules(self):
         """ List of all of the :class:`wxcadm.LocationSchedule` instances for this Location"""
+        log.debug('Getting Location Schedules')
         response = []
         api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.id}/schedules", headers=self._headers)
         for schedule in api_resp['schedules']:
+            log.debug(f'\tSchedule: {schedule}')
             this_schedule = LocationSchedule(self, schedule['id'], schedule['name'], schedule['type'])
             response.append(this_schedule)
         return response
@@ -117,12 +122,16 @@ class Location:
             This method requires the CP-API access scope.
 
         """
+        log.debug(f'Uploading MOH file: {filename}')
         upload = self._parent._cpapi.upload_moh_file(self.id, filename)
         if upload is True:
+            log.debug('\tActivating MOH')
             activate = self._parent._cpapi.set_custom_moh(self.id, filename)
             if activate is True:
+                log.debug('\t\tSuccessful activation')
                 return True
             else:
+                log.debug('\t\tActivation failed')
                 return False
         else:
             return False
@@ -137,8 +146,11 @@ class Location:
 
             This method requires the CP-API access scope.
         """
+        log.debug('Setting Default MOH')
         activate = self._parent._cpapi.set_default_moh(self.id)
         if activate is True:
+            log.debug('\tSuccessful activation')
             return True
         else:
+            log.debug('\tActivation failed')
             return False

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import requests
+from typing import Optional
 from dataclasses import dataclass, field
 from wxcadm import log
+from .common import *
 
 
 class PickupGroup:
