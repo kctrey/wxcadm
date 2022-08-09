@@ -212,8 +212,8 @@ class XSIEventsChannel:
         self.xsp_ip:str = ''
         self.session = requests.Session()
         self.cookies = None
-        self.channel_thread = Thread(target=self._channel_daemon)
-        self.heartbeat_thread = Thread(target=self._heartbeat_daemon)
+        self.channel_thread = Thread(target=self._channel_daemon, daemon=True)
+        self.heartbeat_thread = Thread(target=self._heartbeat_daemon, daemon=True)
 
         # Start the channel thread
         self.channel_thread.start()
