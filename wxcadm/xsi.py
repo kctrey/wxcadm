@@ -472,7 +472,7 @@ class XSIEventsSubscription:
             r = requests.post(self.events_endpoint + f"/v2.0/serviceprovider/{self.parent.parent.enterprise}",
                               headers={"TrackingId": tracking_id(), **self._headers}, data=payload)
         else:
-            if isinstance(person, Person):
+            if isinstance(person, wxcadm.person.Person):
                 # Make sure we have the Person's XSI Profile
                 user_id = person.spark_id.split("/")[-1]
                 r = requests.post(self.events_endpoint + f"/v2.0/user/{user_id}",

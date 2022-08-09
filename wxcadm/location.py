@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from wxcadm import log
+from .location_features import LocationSchedule
 from .common import *
 
 
