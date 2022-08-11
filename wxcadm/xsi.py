@@ -16,6 +16,7 @@ import wxcadm
 from wxcadm import log
 from .common import *
 from .exceptions import *
+from .xsi_response import XSIResponse
 
 
 class XSIEvents:
@@ -1096,11 +1097,7 @@ class Call:
                 return False
         else:
             r = requests.put(self._url + f"/{self.id}/BlindTransfer", headers=self._headers, params=params)
-            if r.status_code in [200, 201, 204]:
-                return True
-            else:
-                log.debug(f"Transfer request {r.request.url}")
-                raise APIError(f"The Transfer call failed: {r.text}")
+            return XSIResponse(r)
 
     def finish_transfer(self):
         """
