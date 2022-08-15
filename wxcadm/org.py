@@ -15,6 +15,7 @@ from .webhooks import Webhooks
 from .person import UserGroups, Person
 from .applications import WebexApplications
 from .workspace import Workspace, WorkspaceLocation
+from .call_routing import CallRouting
 
 
 class Org:
@@ -78,6 +79,8 @@ class Org:
         """A list of the AutoAttendant instances for this Org"""
         self._usergroups: Optional[list] = None
         self._roles: Optional[dict] = None
+
+        self.call_routing = CallRouting(self)
 
         # Set the Authorization header based on how the instance was built
         self._headers = parent.headers

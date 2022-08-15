@@ -7,7 +7,6 @@ class XSIResponse:
     def __init__(self, response: Response):
         self.raw_response = response.json()
         self.summary: Optional[str] = None
-        self.
 
         if self.raw_response.get('ErrorInfo'):
             self.summary = self.raw_response['ErrorInfo']['summary']['$']
