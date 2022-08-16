@@ -12,11 +12,23 @@ from .common import *
 class CallRouting:
     def __init__(self, org: Org):
         self.org = org
+        """ The Org to which the Call Routing is associated """
         pass
 
     @property
     def trunks(self):
+        """ The ":py:class:`Trunks` instance for this Org """
         return Trunks(self.org)
+
+    @property
+    def route_groups(self):
+        """ The :py:class:`RouteGroups` instance for this Org """
+        return RouteGroups(self.org)
+
+    @property
+    def route_lists(self):
+        """ The :py:class:`RouteLists` instance for this Org """
+        return RouteLists(self.org)
 
 
 class Trunks(UserList):
@@ -118,3 +130,77 @@ class Trunk:
         my_location = self.org.get_location(id=self.location['id'])
         if my_location is not None:
             self.location = my_location
+
+
+class RouteGroups(UserList):
+    def __init__(self, org: Org):
+        log.info('Initializing RouteGroups instance')
+        super().__init__()
+        self.org = org
+        self.data = []
+        items = webex_api_call('get', '/v1/telephony/config/premisePstn/routeGroups')
+        log.debug(f'Route Groups from Webex: {items}')
+        for item in items['routeGroups']:
+            this_rg = RouteGroup(self.org, **item)
+            self.data.append(this_rg)
+
+    def get_route_group(self, id: Optional[str] = None, name: Optional[str] = None) -> RouteGroup:
+        """ Return a RouteGroup instance with the given ID or name.
+
+        Args:
+            id (str, optional): The RouteGroup ID
+            name (str, optional): The RouteGroup name
+
+        Returns:
+            RouteGroup: The matching RouteGroup instance. None is returned if no match is found.
+
+        """
+        for rg in self.data:
+            if rg.id == id or rg.name == name:
+                return rg
+        return None
+
+
+@dataclass
+class RouteGroup:
+    org: Org = field(repr=False)
+    """ The Org to which the RouteGroup belongs """
+    id: str
+    """ The unique identifier for the RouteGroup """
+    name: str
+    """ The name of the RouteGroup """
+    inUse: bool
+    """ Whether or not the RouteGroup is being used by any Location, Route List or Dial Plan"""
+
+
+class RouteLists(UserList):
+    def __init__(self, org: Org):
+        log.info('Initializing RouteLists instance')
+        super().__init__()
+        self.org = org
+        self.data = []
+        items = webex_api_call('get', '/v1/telephony/config/premisePstn/routeLists')
+        log.debug(f'Route Lists from Webex: {items}')
+        for item in items['routeLists']:
+            this_rl = RouteList(self.org, **item)
+            self.data.append(this_rl)
+
+
+@dataclass
+class RouteList:
+    org: Org = field(repr=False)
+    """ The Org to which the RouteList belongs """
+    id: str
+    """ The unique identifier for the RouteList """
+    name: str
+    """ The name of the RouteList """
+    locationId: str
+    locationName: str
+    routeGroupId: str
+    routeGroupName: str
+
+    def __post_init__(self):
+        self.route_group = self.org.call_routing.route_groups.get_route_group(id=self.routeGroupId)
+        del self.routeGroupId, self.routeGroupName
+        self.location = self.org.get_location(id=self.locationId)
+        del self.locationId, self.locationName
