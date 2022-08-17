@@ -17,7 +17,7 @@ class CallRouting:
 
     @property
     def trunks(self):
-        """ The ":py:class:`Trunks` instance for this Org """
+        """ The :py:class:`Trunks` instance for this Org """
         return Trunks(self.org)
 
     @property
@@ -37,7 +37,21 @@ class CallRouting:
 
     def test(self, originator: Union[wxcadm.person.Person, Trunk],
              destination: str,
-             orig_number: Optional[str] = None):
+             orig_number: Optional[str] = None) -> dict:
+        """ Test the Call Routing for a call.
+
+        This method accepts the `originator` as either a :py:class:`Person` instance or a :py:class:`Trunk` instance,
+        depending on whether the call is being placed by a user or arriving at Webex Calling over a Trunk.
+
+        Args:
+            originator (Person, Trunk): The Person or Trunk instance to test origination from
+            destination (str): The destination number
+            orig_number (str): For Trunk-originated calls, the originator number
+
+        Returns:
+            dict: Since the responses are dynamic, the full response dict from the Webex API is returned.
+
+        """
         # First, figure out if the originator is a Person or a Trunk
         if isinstance(originator, wxcadm.person.Person):
             originator = originator.id
@@ -63,6 +77,7 @@ class CallRouting:
 
 
 class Trunks(UserList):
+    """ Trunks is a class that behaves as an array. Each item in the array is a :py:class:`Trunk` instance."""
     def __init__(self, org: Org):
         log.info('Initializing Trunks instance')
         super().__init__()
@@ -164,6 +179,7 @@ class Trunk:
 
 
 class RouteGroups(UserList):
+    """ RouteGroups is a class that behaves as an array. Each item in the array is a :py:class:`RouteGroup` instance."""
     def __init__(self, org: Org):
         log.info('Initializing RouteGroups instance')
         super().__init__()
@@ -205,6 +221,7 @@ class RouteGroup:
 
 
 class RouteLists(UserList):
+    """ RouteLists is a class that behaves as an array. Each item in the array is a :py:class:`RouteList` instance."""
     # TODO - Create Route List, Delete Route List
     def __init__(self, org: Org):
         log.info('Initializing RouteLists instance')
@@ -247,6 +264,7 @@ class RouteList:
 
 
 class DialPlans(UserList):
+    """ DialPlans is a class that behaves as an array. Each item in the array is a :py:class:`DialPlan` instance."""
     def __init__(self, org: Org):
         log.info('Initializing DialPlans instance')
         super().__init__()
@@ -298,7 +316,7 @@ class DialPlan:
         """ Delete a dial pattern from the DialPlan
 
         Args:
-            pattern (str): The pattern to delete. The patter should already exist in the DialPlan
+            pattern (str): The pattern to delete. The pattern should already exist in the DialPlan
 
         Returns:
             bool: True on success, False otherwise
