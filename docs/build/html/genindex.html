@@ -13,6 +13,7 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="#" />
@@ -48,6 +49,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="reference/Webex.html">The Webex class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Org.html">The Org class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/CallRouting.html">The Call Routing Classes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Location.html">The Location class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/LocationSchedule.html">The LocationSchedule class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/AutoAttendant.html">The AutoAttendant class</a></li>
@@ -165,14 +167,18 @@
 </li>
       <li><a href="reference/UserGroups.html#wxcadm.person.UserGroup.add_member">add_member() (wxcadm.person.UserGroup method)</a>
 </li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.DialPlan.add_pattern">add_pattern() (wxcadm.call_routing.DialPlan method)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.Trunks.add_trunk">add_trunk() (wxcadm.call_routing.Trunks method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Location.html#wxcadm.location.Location.address">address (wxcadm.location.Location attribute)</a>
 
       <ul>
         <li><a href="reference/RedSkyBuilding.html#wxcadm.redsky.RedSkyBuilding.address">(wxcadm.redsky.RedSkyBuilding attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/XSI.html#wxcadm.xsi.XSI.alternate_numbers">alternate_numbers (wxcadm.xsi.XSI property)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.xsi.XSI.anonymous_call_rejection">anonymous_call_rejection (wxcadm.xsi.XSI property)</a>
@@ -244,6 +250,8 @@
       <li><a href="reference/Device.html#wxcadm.device.Device.calling_type">calling_type (wxcadm.device.Device attribute)</a>
 </li>
       <li><a href="reference/VoiceMessage.html#wxcadm.person.VoiceMessage.callingParty">callingParty (wxcadm.person.VoiceMessage attribute)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.CallRouting">CallRouting (class in wxcadm.call_routing)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.xsi.XSI.calls">calls (wxcadm.xsi.XSI property)</a>
 </li>
@@ -321,15 +329,23 @@
 </li>
       <li><a href="reference/UserGroups.html#wxcadm.person.UserGroup.delete_member">delete_member() (wxcadm.person.UserGroup method)</a>
 </li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.DialPlan.delete_pattern">delete_pattern() (wxcadm.call_routing.DialPlan method)</a>
+</li>
       <li><a href="reference/Org.html#wxcadm.org.Org.delete_person">delete_person() (wxcadm.org.Org method)</a>
 </li>
       <li><a href="reference/UserGroups.html#wxcadm.person.UserGroup.description">description (wxcadm.person.UserGroup attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Device.html#wxcadm.device.Device">Device (class in wxcadm.device)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Org.html#wxcadm.org.Org.devices">devices (wxcadm.org.Org property)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.CallRouting.dial_plans">dial_plans (wxcadm.call_routing.CallRouting property)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.DialPlan">DialPlan (class in wxcadm.call_routing)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.DialPlans">DialPlans (class in wxcadm.call_routing)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.person.Person.disable_call_recording">disable_call_recording() (wxcadm.person.Person method)</a>
 </li>
@@ -445,10 +461,10 @@
 </li>
       <li><a href="reference/Org.html#wxcadm.org.Org.get_license_name">get_license_name() (wxcadm.org.Org method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/RedSky.html#wxcadm.redsky.RedSky.get_lldp_discovery">get_lldp_discovery() (wxcadm.redsky.RedSky method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Org.html#wxcadm.org.Org.get_location">get_location() (wxcadm.org.Org method)</a>
 </li>
       <li><a href="reference/Org.html#wxcadm.org.Org.get_location_by_name">get_location_by_name() (wxcadm.org.Org method)</a>
@@ -490,6 +506,8 @@
 </li>
       </ul></li>
       <li><a href="reference/Org.html#wxcadm.org.Org.get_pickup_groups">get_pickup_groups() (wxcadm.org.Org method)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteGroups.get_route_group">get_route_group() (wxcadm.call_routing.RouteGroups method)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.xsi.XSI.get_services">get_services() (wxcadm.xsi.XSI method)</a>
 </li>
@@ -537,9 +555,17 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference/Location.html#wxcadm.location.Location.id">id (wxcadm.location.Location attribute)</a>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.DialPlan.id">id (wxcadm.call_routing.DialPlan attribute)</a>
 
       <ul>
+        <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteGroup.id">(wxcadm.call_routing.RouteGroup attribute)</a>
+</li>
+        <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteList.id">(wxcadm.call_routing.RouteList attribute)</a>
+</li>
+        <li><a href="reference/CallRouting.html#wxcadm.call_routing.Trunk.id">(wxcadm.call_routing.Trunk attribute)</a>
+</li>
+        <li><a href="reference/Location.html#wxcadm.location.Location.id">(wxcadm.location.Location attribute)</a>
+</li>
         <li><a href="reference/AutoAttendant.html#wxcadm.location_features.AutoAttendant.id">(wxcadm.location_features.AutoAttendant attribute)</a>
 </li>
         <li><a href="reference/LocationSchedule.html#wxcadm.location_features.LocationSchedule.id">(wxcadm.location_features.LocationSchedule attribute)</a>
@@ -567,6 +593,12 @@
 </li>
       <li><a href="reference/Person.html#wxcadm.person.Person.intercept">intercept (wxcadm.person.Person attribute)</a>
 </li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteGroup.inUse">inUse (wxcadm.call_routing.RouteGroup attribute)</a>
+
+      <ul>
+        <li><a href="reference/CallRouting.html#wxcadm.call_routing.Trunk.inUse">(wxcadm.call_routing.Trunk attribute)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -587,16 +619,22 @@
         <li><a href="reference/Person.html#wxcadm.person.Person.licenses">(wxcadm.person.Person attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Location.html#wxcadm.location.Location">Location (class in wxcadm.location)</a>
 </li>
-      <li><a href="reference/AutoAttendant.html#wxcadm.location_features.AutoAttendant.location">location (wxcadm.location_features.AutoAttendant attribute)</a>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.Trunk.location">location (wxcadm.call_routing.Trunk attribute)</a>
 
       <ul>
+        <li><a href="reference/AutoAttendant.html#wxcadm.location_features.AutoAttendant.location">(wxcadm.location_features.AutoAttendant attribute)</a>
+</li>
         <li><a href="reference/Person.html#wxcadm.person.Person.location">(wxcadm.person.Person attribute)</a>
 </li>
       </ul></li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteList.locationId">locationId (wxcadm.call_routing.RouteList attribute)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteList.locationName">locationName (wxcadm.call_routing.RouteList attribute)</a>
+</li>
       <li><a href="reference/Org.html#wxcadm.org.Org.locations">locations (wxcadm.org.Org attribute)</a>
 
       <ul>
@@ -641,9 +679,17 @@
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="reference/Location.html#wxcadm.location.Location.name">name (wxcadm.location.Location attribute)</a>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.DialPlan.name">name (wxcadm.call_routing.DialPlan attribute)</a>
 
       <ul>
+        <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteGroup.name">(wxcadm.call_routing.RouteGroup attribute)</a>
+</li>
+        <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteList.name">(wxcadm.call_routing.RouteList attribute)</a>
+</li>
+        <li><a href="reference/CallRouting.html#wxcadm.call_routing.Trunk.name">(wxcadm.call_routing.Trunk attribute)</a>
+</li>
+        <li><a href="reference/Location.html#wxcadm.location.Location.name">(wxcadm.location.Location attribute)</a>
+</li>
         <li><a href="reference/AutoAttendant.html#wxcadm.location_features.AutoAttendant.name">(wxcadm.location_features.AutoAttendant attribute)</a>
 </li>
         <li><a href="reference/LocationSchedule.html#wxcadm.location_features.LocationSchedule.name">(wxcadm.location_features.LocationSchedule attribute)</a>
@@ -661,9 +707,11 @@
 </li>
       <li><a href="reference/XSI.html#wxcadm.xsi.XSI.new_conference">new_conference() (wxcadm.xsi.XSI method)</a>
 </li>
-      <li><a href="reference/Org.html#wxcadm.org.Org.numbers">numbers (wxcadm.org.Org property)</a>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteList.numbers">numbers (wxcadm.call_routing.RouteList property)</a>
 
       <ul>
+        <li><a href="reference/Org.html#wxcadm.org.Org.numbers">(wxcadm.org.Org property)</a>
+</li>
         <li><a href="reference/Person.html#wxcadm.person.Person.numbers">(wxcadm.person.Person attribute)</a>
 </li>
       </ul></li>
@@ -677,16 +725,28 @@
 </li>
       <li><a href="reference/Org.html#wxcadm.org.Org">Org (class in wxcadm.org)</a>
 </li>
-      <li><a href="reference/Webex.html#wxcadm.webex.Webex.org">org (wxcadm.webex.Webex attribute)</a>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.CallRouting.org">org (wxcadm.call_routing.CallRouting attribute)</a>
+
+      <ul>
+        <li><a href="reference/CallRouting.html#wxcadm.call_routing.DialPlan.org">(wxcadm.call_routing.DialPlan attribute)</a>
 </li>
+        <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteGroup.org">(wxcadm.call_routing.RouteGroup attribute)</a>
+</li>
+        <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteList.org">(wxcadm.call_routing.RouteList attribute)</a>
+</li>
+        <li><a href="reference/CallRouting.html#wxcadm.call_routing.Trunk.org">(wxcadm.call_routing.Trunk attribute)</a>
+</li>
+        <li><a href="reference/Webex.html#wxcadm.webex.Webex.org">(wxcadm.webex.Webex attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/UserGroups.html#wxcadm.person.UserGroup.orgId">orgId (wxcadm.person.UserGroup attribute)</a>
 
       <ul>
         <li><a href="reference/Webhooks.html#wxcadm.webhooks.Webhook.orgId">(wxcadm.webhooks.Webhook attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Webex.html#wxcadm.webex.Webex.orgs">orgs (wxcadm.webex.Webex attribute)</a>
 </li>
       <li><a href="reference/Call.html#wxcadm.xsi.Call.originate">originate() (wxcadm.xsi.Call method)</a>
@@ -716,6 +776,8 @@
 </li>
       </ul></li>
       <li><a href="reference/Call.html#wxcadm.xsi.Call.park">park() (wxcadm.xsi.Call method)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.DialPlan.patterns">patterns (wxcadm.call_routing.DialPlan property)</a>
 </li>
       <li><a href="reference/Org.html#wxcadm.org.Org.people">people (wxcadm.org.Org attribute)</a>
 </li>
@@ -791,8 +853,6 @@
 </li>
       <li><a href="reference/LocationSchedule.html#wxcadm.location_features.LocationSchedule.refresh_config">refresh_config() (wxcadm.location_features.LocationSchedule method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Person.html#wxcadm.person.Person.refresh_person">refresh_person() (wxcadm.person.Person method)</a>
 </li>
       <li><a href="reference/XSI.html#wxcadm.xsi.XSI.registrations">registrations (wxcadm.xsi.XSI property)</a>
@@ -803,6 +863,8 @@
 </li>
       <li><a href="reference/XSIEventsChannelSet.html#wxcadm.xsi.XSIEventsChannelSet.restart_failed_channel">restart_failed_channel() (wxcadm.xsi.XSIEventsChannelSet method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Call.html#wxcadm.xsi.Call.resume">resume() (wxcadm.xsi.Call method)</a>
 </li>
       <li><a href="reference/Person.html#wxcadm.person.Person.role_names">role_names() (wxcadm.person.Person method)</a>
@@ -813,6 +875,28 @@
         <li><a href="reference/Person.html#wxcadm.person.Person.roles">(wxcadm.person.Person attribute)</a>
 </li>
       </ul></li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.CallRouting.route_groups">route_groups (wxcadm.call_routing.CallRouting property)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.CallRouting.route_lists">route_lists (wxcadm.call_routing.CallRouting property)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteGroup">RouteGroup (class in wxcadm.call_routing)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteList.routeGroupId">routeGroupId (wxcadm.call_routing.RouteList attribute)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteList.routeGroupName">routeGroupName (wxcadm.call_routing.RouteList attribute)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteGroups">RouteGroups (class in wxcadm.call_routing)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.DialPlan.routeId">routeId (wxcadm.call_routing.DialPlan attribute)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteList">RouteList (class in wxcadm.call_routing)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.RouteLists">RouteLists (class in wxcadm.call_routing)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.DialPlan.routeName">routeName (wxcadm.call_routing.DialPlan attribute)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.DialPlan.routeType">routeType (wxcadm.call_routing.DialPlan attribute)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -873,10 +957,20 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="reference/Webhooks.html#wxcadm.webhooks.Webhook.targetUrl">targetUrl (wxcadm.webhooks.Webhook attribute)</a>
 </li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.CallRouting.test">test() (wxcadm.call_routing.CallRouting method)</a>
+</li>
       <li><a href="reference/Call.html#wxcadm.xsi.Call.transfer">transfer() (wxcadm.xsi.Call method)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.Trunk">Trunk (class in wxcadm.call_routing)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.Trunks">Trunks (class in wxcadm.call_routing)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.CallRouting.trunks">trunks (wxcadm.call_routing.CallRouting property)</a>
+</li>
+      <li><a href="reference/CallRouting.html#wxcadm.call_routing.Trunk.trunkType">trunkType (wxcadm.call_routing.Trunk attribute)</a>
+</li>
       <li><a href="reference/Device.html#wxcadm.device.Device.type">type (wxcadm.device.Device attribute)</a>
 
       <ul>

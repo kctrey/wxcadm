@@ -30,6 +30,37 @@ class CallRouting:
         """ The :py:class:`RouteLists` instance for this Org """
         return RouteLists(self.org)
 
+    @property
+    def dial_plans(self):
+        """ The :py:class:`DialPlans` instance for this Org """
+        return DialPlans(self.org)
+
+    def test(self, originator: Union[wxcadm.person.Person, Trunk],
+             destination: str,
+             orig_number: Optional[str] = None):
+        # First, figure out if the originator is a Person or a Trunk
+        if isinstance(originator, wxcadm.person.Person):
+            originator = originator.id
+            orig_type = 'USER'
+        elif isinstance(originator, Trunk):
+            originator = originator.id
+            orig_type = 'TRUNK'
+        else:
+            log.warning("CallRouting.test() called without a Person or Trunk instance")
+            raise ValueError('originator argument must be a Person or Trunk instance')
+
+        payload = {'originatorId': originator,
+                   'originatorType': orig_type,
+                   'destination': destination}
+        if orig_type == 'TRUNK' and orig_number is not None:
+            payload['originatorNumber'] = orig_number
+
+        response = webex_api_call('post', '/v1/telephony/config/actions/testCallRouting/invoke',
+                                  params={'orgId': self.org.id}, payload=payload)
+        return response
+
+
+
 
 class Trunks(UserList):
     def __init__(self, org: Org):
@@ -138,7 +169,7 @@ class RouteGroups(UserList):
         super().__init__()
         self.org = org
         self.data = []
-        items = webex_api_call('get', '/v1/telephony/config/premisePstn/routeGroups')
+        items = webex_api_call('get', '/v1/telephony/config/premisePstn/routeGroups', params={'orgId': self.org.id})
         log.debug(f'Route Groups from Webex: {items}')
         for item in items['routeGroups']:
             this_rg = RouteGroup(self.org, **item)
@@ -174,6 +205,7 @@ class RouteGroup:
 
 
 class RouteLists(UserList):
+    # TODO - Create Route List, Delete Route List
     def __init__(self, org: Org):
         log.info('Initializing RouteLists instance')
         super().__init__()
@@ -188,9 +220,10 @@ class RouteLists(UserList):
 
 @dataclass
 class RouteList:
+    # TODO - Delete Route List
     org: Org = field(repr=False)
     """ The Org to which the RouteList belongs """
-    id: str
+    id: str = field(repr=False)
     """ The unique identifier for the RouteList """
     name: str
     """ The name of the RouteList """
@@ -200,7 +233,82 @@ class RouteList:
     routeGroupName: str
 
     def __post_init__(self):
+        # This cleans up the Location and Route Group references so that they get the wxcadm instances for each
         self.route_group = self.org.call_routing.route_groups.get_route_group(id=self.routeGroupId)
         del self.routeGroupId, self.routeGroupName
         self.location = self.org.get_location(id=self.locationId)
         del self.locationId, self.locationName
+
+    @property
+    def numbers(self):
+        """ The numbers assigned to this RouteList """
+        response = webex_api_call('get', f'/v1/telephony/config/premisePstn/routeLists/{self.id}/numbers')
+        return response.json()
+
+
+class DialPlans(UserList):
+    def __init__(self, org: Org):
+        log.info('Initializing DialPlans instance')
+        super().__init__()
+        self.org = org
+        self.data = []
+        items = webex_api_call('get', '/v1/telephony/config/premisePstn/dialPlans')
+        log.debug(f'Dial Plans from Webex: {items}')
+        for item in items['dialPlans']:
+            this_dp = DialPlan(self.org, **item)
+            self.data.append(this_dp)
+
+@dataclass
+class DialPlan:
+    org: Org = field(repr=False)
+    id: str = field(repr=False)
+    name: str
+    routeId: str
+    routeName: str
+    routeType: str
+
+    _patterns: Optional[list] = field(init=False, default=None)
+
+    @property
+    def patterns(self):
+        """ The Dial Patters within the DialPlan"""
+        response = webex_api_call('get', f'/v1/telephony/config/premisePstn/dialPlans/{self.id}/dialPatterns')
+        self._patterns = response['dialPatterns']
+        return self._patterns
+
+    def add_pattern(self, pattern: str) -> bool:
+        """ Add a new dial pattern to the DialPlan
+
+        Args:
+            pattern (str): The pattern to add. This should be a valid Webex Dial Plan pattern.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'dialPatterns': [{'dialPattern': pattern, 'action': 'ADD'}]}
+        success = webex_api_call('put', f'/v1/telephony/config/premisePstn/dialPlans/{self.id}/dialPatterns',
+                                 payload=payload)
+        if success:
+            return True
+        else:
+            return False
+
+    def delete_pattern(self, pattern: str) -> bool:
+        """ Delete a dial pattern from the DialPlan
+
+        Args:
+            pattern (str): The pattern to delete. The patter should already exist in the DialPlan
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'dialPatterns': [{'dialPattern': pattern, 'action': 'DELETE'}]}
+        success = webex_api_call('put', f'/v1/telephony/config/premisePstn/dialPlans/{self.id}/dialPatterns',
+                                 payload=payload)
+        if success:
+            return True
+        else:
+            return False
+
