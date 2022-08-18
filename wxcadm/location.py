@@ -155,3 +155,40 @@ class Location:
         else:
             log.debug('\tActivation failed')
             return False
+
+
+    @property
+    def outgoing_call_permissions(self):
+        """ The Outgoing Call Permissions dicts (as a list) for the Location"""
+        ocp = webex_api_call('get', f'/v1/telephony/config/locations/{self.id}/outgoingPermission')
+        return ocp['callingPermissions']
+
+    def set_outgoing_call_permissions(self, outgoing_call_permissions: list) -> bool:
+        """ Ste the Outgoing Call Permissions for the Location
+
+        This method uses the `callingPermissions` list style of the Webex API, which is the same format as returned by
+        the :py:meth:`outgoing_call_permissions` property. The easiest method to change the permissions is to pull the
+        `outgoing_call_permissions` list, modify it and pass it back to this method.
+
+        Args:
+            outgoing_call_permissions (list): The Webex `callingPermissions` list
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f'Setting Outgoing Call Permission for Location: {self.name}')
+        log.debug(f'\tNew Permissions: {outgoing_call_permissions}')
+        if not isinstance(outgoing_call_permissions, list):
+            log.warning('outgoing_call_permissions is not a list')
+            raise ValueError('outgoing_call_permissions must be a list')
+
+        payload = {'callingPermissions': outgoing_call_permissions}
+
+        success = webex_api_call('put', f'/v1/telephony/config/locations/{self.id}/outgoingPermission',
+                                 payload=payload)
+        if success:
+            return True
+        else:
+            return False
+

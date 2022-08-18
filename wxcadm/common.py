@@ -66,7 +66,7 @@ def webex_api_call(method: str, url: str, headers: dict = None, params: dict = N
                 return response
         else:
             log.debug("Webex API returned an error")
-            raise APIError(f"The Webex API returned an error: {r.text}")
+            raise APIError(f"The Webex API returned an error: [{r.status_code}] {r.text}")
 
         # Now we look for pagination and get any additional pages as part of the same Session
         if "next" in r.links:
@@ -95,7 +95,10 @@ def webex_api_call(method: str, url: str, headers: dict = None, params: dict = N
     elif method.lower() == "put":
         r = session.put(_url_base + url, params=params, json=payload)
         if r.ok:
-            response = r.json()
+            try:
+                response = r.json()
+            except requests.exceptions.JSONDecodeError:
+                response = r.text
             if response:
                 end = time.time()
                 log.debug(f"__webex_api_call() completed in {end - start} seconds")
