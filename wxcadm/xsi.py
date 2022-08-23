@@ -974,10 +974,7 @@ class Call:
 
         """
         r = requests.put(self._url + f"/{self.id}/ExecutiveAssistantCallPush", headers=self._headers)
-        if r.status_code == 200:
-            return True
-        else:
-            raise NotAllowed("The call cannot be pushed")
+        return XSIResponse(r)
 
     def hangup(self, decline: bool = False):
         """Hang up the call
@@ -993,10 +990,7 @@ class Call:
         log.info(f"Hanging up call ID: {self.id}")
         r = requests.delete(self._url + f"/{self.id}",
                             headers=self._headers, params=params)
-        if r.status_code == 200:
-            return True
-        else:
-            return False
+        return XSIResponse(r)
 
     @property
     def status(self):
@@ -1085,16 +1079,10 @@ class Call:
             return True
         elif type.lower() == "vm":
             r = requests.put(self._url + f"/{self.id}/VmTransfer", headers=self._headers, params=params)
-            if r.status_code in [200, 201, 204]:
-                return True
-            else:
-                return False
+            return XSIResponse(r)
         elif type.lower() == "mute":
             r = requests.put(self._url + f"/{self.id}/MuteTransfer", headers=self._headers, params=params)
-            if r.status_code in [200, 201, 204]:
-                return True
-            else:
-                return False
+            return XSIResponse(r)
         else:
             r = requests.put(self._url + f"/{self.id}/BlindTransfer", headers=self._headers, params=params)
             return XSIResponse(r)
@@ -1110,10 +1098,7 @@ class Call:
         """
         log.info("Completing transfer...")
         r = requests.put(self._url + f"/{self.id}/ConsultTransfer/{self._transfer_call.id}", headers=self._headers)
-        if r.status_code in [200, 201, 204]:
-            return True
-        else:
-            return False, r.text
+        return XSIResponse(r)
 
     def conference(self, address: str = ""):
         """
@@ -1166,10 +1151,7 @@ class Call:
         """
         params = {"playdtmf": str(dtmf)}
         r = requests.put(self._url + f"/{self.id}/TransmitDTMF", headers=self._headers, params=params)
-        if r.status_code in [200, 201, 204]:
-            return True
-        else:
-            return False, r.text
+        return XSIResponse(r)
 
     def hold(self):
         """Place the call on hold
@@ -1179,10 +1161,7 @@ class Call:
 
         """
         r = requests.put(self._url + f"/{self.id}/Hold", headers=self._headers)
-        if r.status_code in [200, 201, 204]:
-            return True
-        else:
-            return False
+        return XSIResponse(r)
 
     def resume(self):
         """Resume a call that was placed on hold
@@ -1192,10 +1171,7 @@ class Call:
 
         """
         r = requests.put(self._url + f"/{self.id}/Talk", headers=self._headers)
-        if r.status_code in [200, 201, 204]:
-            return True
-        else:
-            return False
+        return XSIResponse(r)
 
     def park(self, extension: str = None):
         """Park the call
@@ -1239,10 +1215,7 @@ class Call:
     def reconnect(self):
         """Retrieves the call from hold **and releases all other calls**"""
         r = requests.put(self._url + f"{self.id}/Reconnect", headers=self._headers)
-        if r.ok:
-            return True
-        else:
-            return NotAllowed("The reconnect failed")
+        return XSIResponse(r)
 
     def recording(self, action: str):
         """Control the recording of the call
@@ -1282,10 +1255,7 @@ class Call:
         else:
             raise ValueError(f"{action} is not a valid action")
 
-        if r.ok:
-            return True
-        else:
-            raise NotAllowed(f"The {action} action was not successful: {r.text}")
+        return XSIResponse(r)
 
 
 class Conference:
@@ -1326,10 +1296,7 @@ class Conference:
 
         """
         r = requests.put(self._url + f"{call}/Deaf", headers=self._headers)
-        if r.ok:
-            return True
-        else:
-            raise NotAllowed(f"The deaf command was rejected by the server: {r.text}")
+        return XSIResponse(r)
 
     def mute(self, call: str):
         """Mute a conference participant. Audio and video sent to the participant are unaffected.
@@ -1345,7 +1312,4 @@ class Conference:
 
         """
         r = requests.put(self._url + f"{call}/Mute", headers=self._headers)
-        if r.ok:
-            return True
-        else:
-            raise NotAllowed(f"The mute command was rejected by the server: {r.text}")
+        return XSIResponse(r)
