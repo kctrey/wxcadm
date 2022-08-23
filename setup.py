@@ -14,7 +14,7 @@ if sys.argv[-1] == 'publish':
 packages = ['wxcadm']
 
 requires = [
-    'requests>=2.26.0',
+    'requests>=3.0.0',
     'requests-toolbelt>=0.9.1',
     'srvlookup>=2.0.0',
     'xmltodict>=0.12.0'

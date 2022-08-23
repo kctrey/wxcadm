@@ -20,7 +20,13 @@ _webex_headers = {"Authorization": "",
                   "Accept": "application/json"}
 
 
-def webex_api_call(method: str, url: str, headers: dict = None, params: dict = None, payload: dict = None):
+def webex_api_call(method: str,
+                   url: str,
+                   headers: dict = None,
+                   params: dict = None,
+                   payload: dict = None,
+                   retry_count: int = 3,
+                   **kwargs):
     """ Generic handler for all Webex API requests
 
     This function performs the Webex API call as a Session and handles processing the response. It has the ability
@@ -33,8 +39,11 @@ def webex_api_call(method: str, url: str, headers: dict = None, params: dict = N
         headers (dict, optional): HTTP headers to use with the request. If not provided, **wxcadm** will use the base
             Authorization header from when the Webex instance was initialized.
         params (dict, optional): Any parameters to be passed as part of an API call
-        payload: (dict, optional): Payload that will be sent in a POST or PUT. Will be converted to JSON during the
+        payload (dict, optional): Payload that will be sent in a POST or PUT. Will be converted to JSON during the
             API call
+        retry_count (int, optional): Controls the number of times an API call will be retried if the API returns a
+            429 Too Many Requests. The wait time between retries will be based on the Retry-After header sent by Webex.
+            Default is 3.
 
     Returns:
         The return value will vary based on the API response. If a list of items are returned, a list will be returned.
@@ -55,104 +64,146 @@ def webex_api_call(method: str, url: str, headers: dict = None, params: dict = N
     else:
         session.headers.update(_webex_headers)
 
-    if method.lower() == "get":
-        r = session.get(_url_base + url, params=params)
-        if r.ok:
-            response = r.json()
-            # With an 'items' array, we know we are getting multiple values. Without it, we are getting a singe entity
-            if "items" in response:
-                log.debug(f"Webex returned {len(response['items'])} items")
-            else:
-                return response
-        else:
-            log.debug("Webex API returned an error")
-            raise APIError(f"The Webex API returned an error: [{r.status_code}] {r.text}")
-
-        # Now we look for pagination and get any additional pages as part of the same Session
-        if "next" in r.links:
-            keep_going = True
-            next_url = r.links['next']['url']
-            while keep_going:
-                log.debug(f"Getting more items from {next_url}")
-                r = session.get(next_url)
-                if r.ok:
-                    new_items = r.json()
-                    if "items" not in new_items:
-                        continue        # This is here just to handle a weird case where the API responded with no data
-                    log.debug(f"Webex returned {len(new_items['items'])} more items")
-                    response['items'].extend(new_items['items'])
-                    if "next" not in r.links:
-                        keep_going = False
-                    else:
-                        next_url = r.links['next']['url']
+    try_num = 1
+    while try_num <= retry_count:
+        if method.lower() == "get":
+            r = session.get(_url_base + url, params=params)
+            if r.ok:
+                response = r.json()
+                # With an 'items' array, we know we are getting multiple values. Without it, we are getting a singe entity
+                if "items" in response:
+                    log.debug(f"Webex returned {len(response['items'])} items")
                 else:
-                    keep_going = False
+                    return response
+            else:
+                log.warning("Webex API returned an error")
+                if r.status_code == 429:
+                    retry_after = int(r.headers.get('Retry-After', 30))
+                    log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                    time.sleep(retry_after)
+                    continue
+                if r.status_code == 400 and kwargs.get('ignore_400', False) is True:
+                    log.info("Ignoring 400 Error due to ignore_400=True")
+                    return None
+                else:
+                    raise APIError(f"The Webex API returned an error: [{r.status_code}] {r.text}")
 
-        session.close()
-        end = time.time()
-        log.debug(f"__webex_api_call() completed in {end - start} seconds")
-        return response['items']
-    elif method.lower() == "put":
-        r = session.put(_url_base + url, params=params, json=payload)
-        if r.ok:
-            try:
-                response = r.json()
-            except requests.exceptions.JSONDecodeError:
-                response = r.text
-            if response:
-                end = time.time()
-                log.debug(f"__webex_api_call() completed in {end - start} seconds")
-                return response
-            else:
-                end = time.time()
-                log.debug(f"__webex_api_call() completed in {end - start} seconds")
-                return True
-        else:
-            log.info("Webex API returned an error")
-            raise APIError(f"The Webex API returned an error: {r.text}")
-    elif method.lower() == "post":
-        r = session.post(_url_base + url, params=params, json=payload)
-        if r.ok:
-            try:
-                response = r.json()
-            except requests.exceptions.JSONDecodeError:
-                end = time.time()
-                log.debug(f"__webex_api_call() completed in {end - start} seconds")
-                return True
-            else:
-                end = time.time()
-                log.debug(f"__webex_api_call() completed in {end - start} seconds")
-                return response
-        else:
-            log.info("Webex API returned an error")
-            raise APIError(f"The Webex API returned an error: {r.text}")
-    elif method.lower() == "delete":
-        r = session.delete(_url_base + url, params=params)
-        if r.ok:
+            # Now we look for pagination and get any additional pages as part of the same Session
+            if "next" in r.links:
+                keep_going = True
+                next_url = r.links['next']['url']
+                while keep_going:
+                    log.debug(f"Getting more items from {next_url}")
+                    r = session.get(next_url)
+                    if r.ok:
+                        new_items = r.json()
+                        if "items" not in new_items:
+                            continue     # This is here just to handle a weird case where the API responded with no data
+                        log.debug(f"Webex returned {len(new_items['items'])} more items")
+                        response['items'].extend(new_items['items'])
+                        if "next" not in r.links:
+                            keep_going = False
+                        else:
+                            next_url = r.links['next']['url']
+                    else:
+                        if r.status_code == 429:
+                            retry_after = int(r.headers.get('Retry-After', 30))
+                            log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                            time.sleep(retry_after)
+                            continue
+                        else:
+                            keep_going = False
+
+            session.close()
             end = time.time()
             log.debug(f"__webex_api_call() completed in {end - start} seconds")
-            return True
-        else:
-            log.info("Webex API returned an error")
-            raise APIError(f"The Webex API returned an error: {r.text}")
-    elif method.lower() == "patch":
-        r = session.patch(_url_base + url, params=params, json=payload)
-        if r.ok:
-            try:
-                response = r.json()
-            except requests.exceptions.JSONDecodeError:
+            return response['items']
+        elif method.lower() == "put":
+            r = session.put(_url_base + url, params=params, json=payload)
+            if r.ok:
+                try:
+                    response = r.json()
+                except requests.exceptions.JSONDecodeError:
+                    response = r.text
+                if response:
+                    end = time.time()
+                    log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    return response
+                else:
+                    end = time.time()
+                    log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    return True
+            else:
+                log.warning("Webex API returned an error")
+                if r.status_code == 429:
+                    retry_after = int(r.headers.get('Retry-After', 30))
+                    log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                    time.sleep(retry_after)
+                    continue
+                else:
+                    raise APIError(f"The Webex API returned an error: {r.text}")
+        elif method.lower() == "post":
+            r = session.post(_url_base + url, params=params, json=payload)
+            if r.ok:
+                try:
+                    response = r.json()
+                except requests.exceptions.JSONDecodeError:
+                    end = time.time()
+                    log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    return True
+                else:
+                    end = time.time()
+                    log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    return response
+            else:
+                log.warning("Webex API returned an error")
+                if r.status_code == 429:
+                    retry_after = int(r.headers.get('Retry-After', 30))
+                    log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                    time.sleep(retry_after)
+                    continue
+                else:
+                    raise APIError(f"The Webex API returned an error: {r.text}")
+        elif method.lower() == "delete":
+            r = session.delete(_url_base + url, params=params)
+            if r.ok:
                 end = time.time()
                 log.debug(f"__webex_api_call() completed in {end - start} seconds")
                 return True
             else:
-                end = time.time()
-                log.debug(f"__webex_api_call() completed in {end - start} seconds")
-                return response
+                log.warning("Webex API returned an error")
+                if r.status_code == 429:
+                    retry_after = int(r.headers.get('Retry-After', 30))
+                    log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                    time.sleep(retry_after)
+                    continue
+                else:
+                    raise APIError(f"The Webex API returned an error: {r.text}")
+        elif method.lower() == "patch":
+            r = session.patch(_url_base + url, params=params, json=payload)
+            if r.ok:
+                try:
+                    response = r.json()
+                except requests.exceptions.JSONDecodeError:
+                    end = time.time()
+                    log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    return True
+                else:
+                    end = time.time()
+                    log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    return response
+            else:
+                log.info(f"Webex API returned an error")
+                if r.status_code == 429:
+                    retry_after = int(r.headers.get('Retry-After', 30))
+                    log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                    time.sleep(retry_after)
+                    continue
+                else:
+                    raise APIError(f"The Webex API returned an error: {r.text}")
         else:
-            log.info(f"Webex API returned an error")
-            raise APIError(f"The Webex API returned an error: {r.text}")
-    else:
-        return False
+            return False
+    return False
 
 
 def console_logging(level: str = "debug", formatter: Optional[logging.Formatter] = None):
