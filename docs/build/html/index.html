@@ -14,6 +14,7 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -50,6 +51,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="reference/Webex.html">The Webex class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Org.html">The Org class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/CallRouting.html">The Call Routing Classes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Location.html">The Location class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/LocationSchedule.html">The LocationSchedule class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/AutoAttendant.html">The AutoAttendant class</a></li>
@@ -114,7 +116,7 @@
            <div itemprop="articleBody">
              
   <section id="wxcadm">
-<h1>wxcadm<a class="headerlink" href="#wxcadm" title="Permalink to this headline"></a></h1>
+<h1>wxcadm<a class="headerlink" href="#wxcadm" title="Permalink to this heading"></a></h1>
 <p>Welcome to the documentation home of <strong>wxcadm</strong>, a Python 3 library to simplify the API calls to Webex in order to
 manage and report on users of Webex Calling.</p>
 <p>Although the primary focus is Webex Calling, many of the other Webex admin functions are included. This library is not
@@ -123,7 +125,7 @@ provide that.</p>
 <p>This project is not affiliated with or supported by Cisco, although the APIs that are used by the project are, for the
 most part, the public Webex APIs available at <a class="reference external" href="https://developer.webex.com">https://developer.webex.com</a>.</p>
 <section id="status">
-<h2>Status<a class="headerlink" href="#status" title="Permalink to this headline"></a></h2>
+<h2>Status<a class="headerlink" href="#status" title="Permalink to this heading"></a></h2>
 <p>The <a class="reference external" href="https://github.com/kctrey/wxcadm">main branch</a> version is stable and available for use and the current <a class="reference external" href="https://pypi.org/project/wxcadm/">PyPI PIP
 Package</a> is built from that branch.</p>
 <p>There are still enhancements being made and I am addressing any <a class="reference external" href="https://github.com/kctrey/wxcadm/issues">issues</a> as
@@ -132,13 +134,13 @@ page.</p>
 </section>
 </section>
 <section id="installation">
-<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h1>
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
 <p><strong>wxcadm</strong> is available as a <a class="reference external" href="https://pypi.org/project/wxcadm/">PIP package</a>.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python3 -m pip install wxcadm
 </pre></div>
 </div>
 <section id="quickstart">
-<h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline"></a></h2>
+<h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this heading"></a></h2>
 <p>By creating a Webex instance with a valid API Access Token, the module will pull the Webex Organization information as
 well as all the People within the Organization. The Org instance will contain all People, whether they have the
 Webex Calling service or not. An Org method <code class="docutils literal notranslate"><span class="pre">get_webex_people()</span></code> makes it easy to get only the People that have
@@ -172,13 +174,13 @@ a while, but then all the People are stored as Person objects.</p>
 </div>
 </section>
 <section id="about-api-scopes">
-<h2>About API Scopes<a class="headerlink" href="#about-api-scopes" title="Permalink to this headline"></a></h2>
+<h2>About API Scopes<a class="headerlink" href="#about-api-scopes" title="Permalink to this heading"></a></h2>
 <p>Most of the API calls that the <strong>wxcadm</strong> methods use are supported by the “public” Webex API found at
 <a class="reference external" href="https://developer.webex.com.">developer.webex.com</a>. The 12-hour token that can be obtained by logging in there
 includes all of the necessary scopes to perform all of the API calls that <strong>wxcadm</strong> supports. As mentioned in the
 Getting Started with XSI section, you need to have XSI enabled for your Org, however.</p>
 <section id="integrations">
-<h3>Integrations<a class="headerlink" href="#integrations" title="Permalink to this headline"></a></h3>
+<h3>Integrations<a class="headerlink" href="#integrations" title="Permalink to this heading"></a></h3>
 <p>The 12-hour token from <a class="reference external" href="https://developer.webex.com.">developer.webex.com</a> is useful for testing, and for running
 one-time scripts, but logging in every 12 hours isn’t feasible for a full-featured middleware that provides
 administrative access to Webex, such as a bot or management portal. To obtain a longer-lived token, which also
@@ -219,7 +221,7 @@ with the following scopes should have access to nearly everything that <strong>w
 that <strong>wxcadm</strong> supports.</p>
 </section>
 <section id="the-cp-api">
-<h3>The CP-API<a class="headerlink" href="#the-cp-api" title="Permalink to this headline"></a></h3>
+<h3>The CP-API<a class="headerlink" href="#the-cp-api" title="Permalink to this heading"></a></h3>
 <p>In some cases, the public Webex API does not provide the full functionality available in Webex Control Hub. Cisco
 continues to enhance the Webex API, but, for operations that are not yet available via that API, <strong>wxcadm</strong> also takes
 advantage of the CP-API, which is the API that is used by Webex Control Hub directly.</p>
@@ -235,7 +237,7 @@ Control Hub token that is used when signing into Control Hub.</p>
 </section>
 </section>
 <section id="regarding-multiple-organizations">
-<h2>Regarding Multiple Organizations<a class="headerlink" href="#regarding-multiple-organizations" title="Permalink to this headline"></a></h2>
+<h2>Regarding Multiple Organizations<a class="headerlink" href="#regarding-multiple-organizations" title="Permalink to this heading"></a></h2>
 <p>Most Webex admins only have access to a single Org, but Webex does allow a single admin to manage multiple Orgs. When
 the Webex instance is created, it creates the <code class="xref py py-attr docutils literal notranslate"><span class="pre">Webex.org</span></code> attribute when only one Org is present. If there are
 mutliple, the <code class="xref py py-attr docutils literal notranslate"><span class="pre">orgs</span></code> attribute contains a list of all the Orgs. <code class="docutils literal notranslate"><span class="pre">orgs</span></code> is created whether there is one Org or
@@ -263,7 +265,7 @@ example, to enable VM-to-Email across all users of every Org, the following is s
 </div>
 </section>
 <section id="usage-reference">
-<h2>Usage Reference<a class="headerlink" href="#usage-reference" title="Permalink to this headline"></a></h2>
+<h2>Usage Reference<a class="headerlink" href="#usage-reference" title="Permalink to this heading"></a></h2>
 <p>The following examples show many of the common use cases supported by <strong>wxcadm</strong>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">wxcadm</span>
 
@@ -291,10 +293,10 @@ processing.</p>
 </pre></div>
 </div>
 <section id="common-webex-use-cases">
-<h3>Common Webex Use Cases<a class="headerlink" href="#common-webex-use-cases" title="Permalink to this headline"></a></h3>
+<h3>Common Webex Use Cases<a class="headerlink" href="#common-webex-use-cases" title="Permalink to this heading"></a></h3>
 <p>These are some commonly-requested changes that most Webex Calling admins have to deal with.</p>
 <section id="organization-and-location-numbers">
-<h4>Organization and Location Numbers<a class="headerlink" href="#organization-and-location-numbers" title="Permalink to this headline"></a></h4>
+<h4>Organization and Location Numbers<a class="headerlink" href="#organization-and-location-numbers" title="Permalink to this heading"></a></h4>
 <p>In order to create users, or sometimes to report on them, it is useful to pull the numbers associated with an
 Org. The <code class="docutils literal notranslate"><span class="pre">Org.numbers</span></code> attribute provides a list of numbers, along with the Location each is assigned to. If a
 number is assigned to a Person, then the person instance will be included.</p>
@@ -314,7 +316,7 @@ number is assigned to a Person, then the person instance will be included.</p>
 </div>
 </section>
 <section id="assign-webex-calling-to-an-existing-user">
-<h4>Assign Webex Calling to an Existing User<a class="headerlink" href="#assign-webex-calling-to-an-existing-user" title="Permalink to this headline"></a></h4>
+<h4>Assign Webex Calling to an Existing User<a class="headerlink" href="#assign-webex-calling-to-an-existing-user" title="Permalink to this heading"></a></h4>
 <p>In order to assign Webex Calling, you must know the Location instance and provide either the phone number, the
 extension, or both.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">wxcadm</span>
@@ -340,7 +342,7 @@ extension, or both.</p>
 </div>
 </section>
 <section id="change-the-user-s-phone-number">
-<h4>Change the user’s phone number<a class="headerlink" href="#change-the-user-s-phone-number" title="Permalink to this headline"></a></h4>
+<h4>Change the user’s phone number<a class="headerlink" href="#change-the-user-s-phone-number" title="Permalink to this heading"></a></h4>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">wxcadm</span>
 
 <span class="n">access_token</span> <span class="o">=</span> <span class="s2">&quot;Your API Access Token&quot;</span>
@@ -356,7 +358,7 @@ extension, or both.</p>
 </div>
 </section>
 <section id="get-the-hunt-groups-and-call-queues-the-user-is-an-agent-for">
-<h4>Get the Hunt Groups and Call Queues the user is an Agent for<a class="headerlink" href="#get-the-hunt-groups-and-call-queues-the-user-is-an-agent-for" title="Permalink to this headline"></a></h4>
+<h4>Get the Hunt Groups and Call Queues the user is an Agent for<a class="headerlink" href="#get-the-hunt-groups-and-call-queues-the-user-is-an-agent-for" title="Permalink to this heading"></a></h4>
 <p>The <code class="docutils literal notranslate"><span class="pre">hunt_groups</span></code> and <code class="docutils literal notranslate"><span class="pre">call_queues</span></code> attributes hold all of the instances of each that the user is assigned to as an
 “agent”. Of course, this would be more useful if there were methods for those Classes, but that’s coming soon. For now,
 it makes it easy to find all of the places the user is being used.</p>
@@ -376,7 +378,7 @@ it makes it easy to find all of the places the user is being used.</p>
 </div>
 </section>
 <section id="workspaces">
-<h4>Workspaces<a class="headerlink" href="#workspaces" title="Permalink to this headline"></a></h4>
+<h4>Workspaces<a class="headerlink" href="#workspaces" title="Permalink to this heading"></a></h4>
 <p>The Webex Calling functionality that is exposed to Workspaces is limited. At this time, the Workspaces and their
 associated Workspace Locations can be obtained with the <code class="docutils literal notranslate"><span class="pre">get_workspaces()</span></code> method of the Org instance. This will
 populate the <code class="docutils literal notranslate"><span class="pre">Org.workspaces</span></code> and <code class="docutils literal notranslate"><span class="pre">Org.workspace_locations</span></code> attributes, which contain the information. As the API is
@@ -385,12 +387,12 @@ enhanced to provide capabilities, new methods will be added to <strong>wxcadm</s
 </section>
 </section>
 <section id="logging">
-<h2>Logging<a class="headerlink" href="#logging" title="Permalink to this headline"></a></h2>
+<h2>Logging<a class="headerlink" href="#logging" title="Permalink to this heading"></a></h2>
 <p><strong>wxcadm</strong> supports the standard Python <code class="docutils literal notranslate"><span class="pre">logging</span></code> module, using the <code class="docutils literal notranslate"><span class="pre">wxcadm</span></code> logger name. The INFO and DEBUG logging
 levels are useful to see the interaction with the Webex API.</p>
 </section>
 <section id="data-structure-note">
-<h2>Data Structure Note<a class="headerlink" href="#data-structure-note" title="Permalink to this headline"></a></h2>
+<h2>Data Structure Note<a class="headerlink" href="#data-structure-note" title="Permalink to this heading"></a></h2>
 <p>At the moment, the module works in two ways. In one way, it populates attributes based on the data from Webex. In
 another, it stores the JSON representation directly from Webex. The latter is very handy for pushing data back to
 Webex, but it requires some knowledge of the API structure, and doesn’t abstract it well. Not to mention that the
@@ -407,6 +409,8 @@ the two. Stay tuned…</p>
 <li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="whatsnew.html">What’s New</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="whatsnew.html#v3-0-0">v3.0.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="whatsnew.html#v2-3-5">v2.3.5</a></li>
 <li class="toctree-l2"><a class="reference internal" href="whatsnew.html#v2-3-4">v2.3.4</a></li>
 <li class="toctree-l2"><a class="reference internal" href="whatsnew.html#v2-3-3">v2.3.3</a></li>
 <li class="toctree-l2"><a class="reference internal" href="whatsnew.html#v2-3-2">v2.3.2</a></li>
@@ -441,6 +445,14 @@ the two. Stay tuned…</p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="reference/Webex.html">The Webex class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Org.html">The Org class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/CallRouting.html">The Call Routing Classes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="reference/CallRouting.html#callrouting">CallRouting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="reference/CallRouting.html#trunks">Trunks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="reference/CallRouting.html#routegroups">RouteGroups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="reference/CallRouting.html#dialplans">DialPlans</a></li>
+<li class="toctree-l2"><a class="reference internal" href="reference/CallRouting.html#routelists">RouteLists</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Location.html">The Location class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/LocationSchedule.html">The LocationSchedule class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/AutoAttendant.html">The AutoAttendant class</a></li>
@@ -455,7 +467,10 @@ the two. Stay tuned…</p>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">XSI Reference</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="reference/XSI.html">The XSI class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/XSI.html">The XSI class</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="reference/XSI.html#xsiresponse">XSIResponse</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="reference/Call.html">The Call class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/XSIEvents.html">The XSIEvents class</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reference/XSIEventsChannelSet.html">The XSIEventsChannelSet class</a></li>
@@ -495,7 +510,7 @@ the two. Stay tuned…</p>
 </div>
 </section>
 <section id="indexes-and-tables">
-<h2>Indexes and tables<a class="headerlink" href="#indexes-and-tables" title="Permalink to this headline"></a></h2>
+<h2>Indexes and tables<a class="headerlink" href="#indexes-and-tables" title="Permalink to this heading"></a></h2>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>

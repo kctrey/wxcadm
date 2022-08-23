@@ -2,6 +2,7 @@ from builtins import Exception
 
 __all__ = ['OrgError', 'LicenseError', 'APIError', 'TokenError', 'PutError', 'XSIError', 'NotAllowed', 'CSDMError']
 
+
 class OrgError(Exception):
     """The base error class for Org-related exceptions"""
     def __init__(self, message):
@@ -19,24 +20,28 @@ class APIError(Exception):
     def __init__(self, message):
         super(APIError, self).__init__(message)
 
+
 class TokenError(APIError):
     """Exceptions dealing with the Access Token itself"""
-    def __init__(self,message):
+    def __init__(self, message):
         super(TokenError, self).__init__(message)
+
 
 class PutError(APIError):
     """Exception class for problems putting values back into Webex"""
     pass
 
+
 class XSIError(APIError):
     """Exception class for problems with the XSI API. Serves as a base class for other errors."""
     pass
+
 
 class NotAllowed(XSIError):
     """Exception class for XSI actions that are not allowed by the platform due to user settings"""
     pass
 
+
 class CSDMError(APIError):
     def __init__(self, message):
         super().__init__(message)
-

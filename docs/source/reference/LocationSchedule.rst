@@ -1,6 +1,6 @@
 The LocationSchedule class
 ==========================
 
-.. autoclass:: wxcadm.wxcadm.LocationSchedule
+.. autoclass:: wxcadm.location_features.LocationSchedule
     :members:
     :undoc-members:

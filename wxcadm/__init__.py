@@ -1,13 +1,13 @@
+from __future__ import annotations
+
 import logging
-
-from .wxcadm import Webex, RedSky, XSIEvents, XSICallQueue, Call
-from .exceptions import (
-    OrgError, LicenseError, APIError, TokenError,
-    PutError, XSIError, NotAllowed, CSDMError
-)
-
-from .common import decode_spark_id
-from .wxcadm import console_logging
-
 # Set up NullHandler for logging
-logging.getLogger(__name__).addHandler(logging.NullHandler())
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+log.addHandler(logging.NullHandler())
+
+from .webex import Webex
+from .xsi import XSIEvents, Call, XSI, XSICallQueue
+from .redsky import RedSky
+from .exceptions import *
+from .common import *

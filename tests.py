@@ -106,7 +106,7 @@ else:
 # Count of manageable orgs and org report
 print(f"This token can access {len(webex.orgs)} Orgs")
 for org in webex.orgs:
-    print(f"\t{org.name}\t{org.id}\t{wxcadm.wxcadm.decode_spark_id(org.id).split('/')[-1]}")
+    print(f"\t{org.name}\t{org.id}\t{wxcadm.common.decode_spark_id(org.id).split('/')[-1]}")
 if len(webex.orgs) > 1:
     print(f"Using {webex.orgs[0].nane} for tests.")
 
@@ -213,7 +213,7 @@ else:
 # Person tests
 test = "Person full config"
 start_test()
-person: wxcadm.wxcadm.Person = random.choice(webex.orgs[0].get_wxc_people())
+person: wxcadm.person.Person = random.choice(webex.orgs[0].get_wxc_people())
 try:
     full_config = person.get_full_config()
 except:

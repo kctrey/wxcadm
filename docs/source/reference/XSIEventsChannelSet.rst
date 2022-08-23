@@ -1,6 +1,6 @@
 The XSIEventsChannelSet class
 =============================
 
-.. autoclass:: wxcadm.wxcadm.XSIEventsChannelSet
+.. autoclass:: wxcadm.xsi.XSIEventsChannelSet
     :members:
     :undoc-members:

@@ -1,6 +1,6 @@
 The Location class
 ==================
 
-.. autoclass:: wxcadm.wxcadm.Location
+.. autoclass:: wxcadm.location.Location
     :members:
     :undoc-members:
