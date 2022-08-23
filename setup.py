@@ -14,7 +14,7 @@ if sys.argv[-1] == 'publish':
 packages = ['wxcadm']
 
 requires = [
-    'requests>=3.0.0',
+    'requests>=2.27.1',
     'requests-toolbelt>=0.9.1',
     'srvlookup>=2.0.0',
     'xmltodict>=0.12.0'
@@ -25,7 +25,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='wxcadm',
-    version='3.0.0',
+    version='3.0.1',
     packages=packages,
     url='https://github.com/kctrey/wxcadm',
     license='GPL-3.0',
