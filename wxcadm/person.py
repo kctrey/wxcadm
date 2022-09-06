@@ -1137,6 +1137,20 @@ class Person:
             log.warning("The Executive Assistant config push failed")
             return False
 
+    @property
+    def wxc_numbers(self):
+        """ All the phone numbers for the user from the Webex Calling platform.
+
+        Unlike the :py:meth:`Person.numbers` property, which only reads the data from Webex Common Identity, this
+        property pulls the data from the Webex Calling platform, so it includes the Primary number as well as any
+        Alias numbers and doesn't include any Active Directory data.
+
+        Returns:
+            dict: Dict of numbers properties as defined at https://developer.webex.com/docs/api/v1/webex-calling-person-settings/get-a-list-of-phone-numbers-for-a-person
+
+        """
+        return webex_api_call('get', f'/v1/people/{self.id}/features/numbers')
+
 class Me(Person):
     """ The class representing the token owner. Some methods are only available at an owner scope. """
     def __init__(self, user_id, parent: Org = None, config: dict = None):

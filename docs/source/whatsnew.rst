@@ -2,6 +2,10 @@
 
 What's New
 ==========
+v3.0.1
+------
+- New :py:meth:`Person.wxc_numbers` to get numbers, including Alias numbers, from Webex Calling instead of CI
+
 v3.0.0
 ------
 - **BREAKING CHANGE:** - XSI Actions for Calls now return a :py:class:`XSIResponse` instead of a boolean indicator of success. This allows flexibility to determine why the XSI API call failed and whether it should be retried.
