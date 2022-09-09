@@ -4,6 +4,7 @@ What's New
 ==========
 v3.0.1
 ------
+- Added the :py:class:`Reports` class to manage reports
 - New :py:meth:`Person.wxc_numbers` to get numbers, including Alias numbers, from Webex Calling instead of CI
 
 v3.0.0

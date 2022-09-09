@@ -16,6 +16,7 @@ from .person import UserGroups, Person
 from .applications import WebexApplications
 from .workspace import Workspace, WorkspaceLocation
 from .call_routing import CallRouting
+from .reports import Reports
 
 
 class Org:
@@ -81,6 +82,9 @@ class Org:
         self._roles: Optional[dict] = None
 
         self.call_routing = CallRouting(self)
+        """ The :py:class:`CallRouting` instance for this Org """
+        self.reports = Reports(self)
+        """ The :py:class:`Reports` instance for this Org """
 
         # Set the Authorization header based on how the instance was built
         self._headers = parent.headers
