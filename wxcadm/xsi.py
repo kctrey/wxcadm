@@ -143,9 +143,11 @@ class XSIEventsChannelSet:
             XSIEventsSubscription: The Subscription instance. False is returned if the subscription fails.
 
         """
+        log.info(f'Subscribing to {event_package}')
         subscription = XSIEventsSubscription(self, event_package, person=person)
         if subscription:
             self.subscriptions.append(subscription)
+            log.debug(f'\tCurrent Subscriptions: {self.subscriptions}')
             return subscription
         else:
             return False

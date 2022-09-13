@@ -2,6 +2,13 @@
 
 What's New
 ==========
+v3.0.3
+------
+- Converted :py:meth:`Org.wxc_licenses` to a property to ensure it can be retrieved at any time
+- Various optimizations for tokens with access to more than one Org to reduce pre-fetching but not require any special logic
+- BUG FIX: Webex.me now works correctly if the token has access to more than one Org
+- Added :py:meth:`Org.get_audit_events()` to retrieve Admin Audit Events for an Org
+
 v3.0.2
 ------
 - Added the :py:class:`Reports` class to manage reports

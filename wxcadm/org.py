@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import requests
+import re
 from typing import Union, Optional
 from wxcadm import log
 from .common import *
@@ -68,7 +69,8 @@ class Org:
         """The XSI details for the Organization"""
         self._params: dict = {"orgId": self.id}
         self._licenses: Optional[list] = None
-        self.people: list = []
+        self._wxc_licenses: Optional[list] = None
+        self._people: list = []
         '''A list of all of the Person instances for the Organization'''
         self.workspaces: Optional[list] = None
         """A list of the Workspace instances for this Org."""
@@ -95,7 +97,6 @@ class Org:
         # Create a CSDM instance for CSDM work
         self._csdm = CSDM(self, self._parent._access_token)
 
-        # Get all the people if we aren't told not to
         if locations:
             self.get_locations()
         if xsi:
@@ -420,6 +421,14 @@ class Org:
                     return location
         return None
 
+    @property
+    def people(self):
+        """ A list of all of the Person instances for the Organization """
+        if not self._people:
+            return self.get_people()
+        else:
+            return self._people
+
     def get_person_by_id(self, id: str):
         """Get the Person instance associated with a given ID
 
@@ -435,14 +444,16 @@ class Org:
                 return person
         return None
 
-    def __get_wxc_licenses(self):
+    @property
+    def wxc_licenses(self):
         """Get only the Webex Calling licenses from the Org.licenses attribute
 
         Returns:
-            list[str]:
+            list[str]: The license IDs for each Webex Calling license
 
         """
-        log.info("__get_wxc_licenses started")
+        if self.licenses is None:
+            self.__get_licenses()
         license_list = []
         for license in self.licenses:
             if license['wxc_license']:
@@ -540,7 +551,7 @@ class Org:
         response = r.json()
         if r.status_code == 200:
             person = Person(response['id'], self, response)
-            self.people.append(person)
+            self._people.append(person)
             return person
         else:
             raise PutError(response['message'])
@@ -559,7 +570,7 @@ class Org:
         """
         success = webex_api_call("delete", f"v1/people/{person.id}")
         if success:
-            self.get_people()
+            self._people = []
             return True
         else:
             return False
@@ -787,7 +798,7 @@ class Org:
         return self.hunt_groups
 
     def get_people(self):
-        """Get all of the people within the Organization.
+        """ Get all people within the Organization.
 
         Also creates a Person instance and stores it in the Org.people attributes
 
@@ -803,16 +814,13 @@ class Org:
         people = webex_api_call("get", "v1/people", headers=self._headers, params=params)
         log.info(f"Found {len(people)} people.")
 
-        self.wxc_licenses = self.__get_wxc_licenses()
-
         for person in people:
             this_person = Person(person['id'], parent=self, config=person)
-            self.people.append(this_person)
-        return self.people
+            self._people.append(this_person)
+        return self._people
 
     def _get_person(self, match):
         log.info(f"Getting person: {match}")
-        self.wxc_licenses = self.__get_wxc_licenses()
         if "@" in match:
             params = {"max": "1000", "callingData": "true", "email": match, **self._params}
             url = "v1/people"
@@ -823,26 +831,8 @@ class Org:
             url = f"v1/people/{match}"
             response = webex_api_call("get", url, headers=self._headers, params=params)
             this_person = Person(response['id'], parent=self, config=response)
-        self.people.append(this_person)
+        self._people.append(this_person)
         return this_person
-
-    def get_wxc_people(self):
-        """Get all of the people within the Organization **who have Webex Calling**
-
-        .. deprecated:: 2.3.0
-            Use :meth:`wxc_people` instead
-
-        Returns:
-            list[Person]: List of Person instances of people who have a Webex Calling license
-
-        """
-        if not self.people:
-            self.get_people()
-        wxc_people = []
-        for person in self.people:
-            if person.wxc:
-                wxc_people.append(person)
-        return wxc_people
 
     @property
     def wxc_people(self):
@@ -852,8 +842,6 @@ class Org:
             list[Person]: List of Person instances of people who have a Webex Calling license
 
         """
-        if not self.people:
-            self.get_people()
         wxc_people = []
         for person in self.people:
             if person.wxc:
@@ -889,3 +877,37 @@ class Org:
             if license['id'] == license_id:
                 return license['name']
         return None
+
+    def get_audit_events(self,
+                         start: str, end: str,
+                         actor: Optional[Person] = None) -> list[dict]:
+        """ Get a list of Admin Audit Events for the Organization
+
+        Args:
+            start (str): The first date/time in the report, in the format `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM:SS.000Z`
+            end (str): The first date/time in the report, in the format `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM:SS.000Z`
+            actor (Person, optional): Only show events performed by this Person
+
+        Returns:
+
+        """
+        # Normalize the start and end if only the date was provided
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", start):
+            start = start + "T00.00.00.000Z"
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", end):
+            end = end + "T23:59:59.999Z"
+
+        if actor is not None:
+            actor_id = actor.id
+        else:
+            actor_id = None
+
+        params = {
+            'orgId': self.id,
+            'from': start,
+            'to': end,
+            'actorId': actor_id,
+        }
+        response = webex_api_call('get', '/v1/adminAudit/events', params=params)
+        return response
+

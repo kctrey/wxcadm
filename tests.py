@@ -108,7 +108,7 @@ print(f"This token can access {len(webex.orgs)} Orgs")
 for org in webex.orgs:
     print(f"\t{org.name}\t{org.id}\t{wxcadm.common.decode_spark_id(org.id).split('/')[-1]}")
 if len(webex.orgs) > 1:
-    print(f"Using {webex.orgs[0].nane} for tests.")
+    print(f"Using {webex.orgs[0].name} for tests.")
 
 # Get the count of records, just for debugging purpose later
 people_count = len(webex.orgs[0].people)
@@ -137,7 +137,7 @@ else:
 
     test = "Location ID to User Location match"
     start_test()
-    person = webex.orgs[0].get_wxc_people()[0]
+    person = random.choice(webex.orgs[0].wxc_people)
     person_location = webex.orgs[0].get_location(id=person.location)
     if person_location is None:
         fail_test()
@@ -213,7 +213,7 @@ else:
 # Person tests
 test = "Person full config"
 start_test()
-person: wxcadm.person.Person = random.choice(webex.orgs[0].get_wxc_people())
+person: wxcadm.person.Person = random.choice(webex.orgs[0].wxc_people)
 try:
     full_config = person.get_full_config()
 except:
@@ -353,7 +353,7 @@ if endpoints is not None:
     events_queue = queue.Queue()
     channel = events.open_channel(events_queue)
     channel.subscribe("Advanced Call")
-    channel.unsubscribe(channel.subscriptions[0].id)
+    channel.unsubscribe("all")
     try:
         message = events_queue.get()
         print(message['xsi:Event']['xsi:eventData']['@xsi1:type'] + "...", end="")
@@ -366,7 +366,7 @@ if endpoints is not None:
     events = wxcadm.XSIEvents(webex.orgs[0])
     events_queue = queue.Queue()
     channel = events.open_channel(events_queue)
-    channel.subscribe("Advanced Call", person=webex.orgs[0].get_wxc_people()[0])
+    channel.subscribe("Advanced Call", person=random.choice(webex.orgs[0].wxc_people))
     channel.unsubscribe(channel.subscriptions[0].id)
     try:
         message = events_queue.get()

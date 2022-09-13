@@ -30,7 +30,7 @@ Regarding Multiple Organizations
 ================================
 Most Webex admins only have access to a single Org, but Webex does allow a single admin to manage multiple Orgs. When
 the Webex instance is created, it creates the :attr:`Webex.org` attribute when only one Org is present. If there are
-mutliple, the :attr:`orgs` attribute contains a list of all the Orgs. ``orgs`` is created whether there is one Org or
+multiple, the :attr:`orgs` attribute contains a list of all the Orgs. ``orgs`` is created whether there is one Org or
 multiple, so :attr:`Webex.org` is equivalent to :attr:`Webex.orgs[0]`. For example:
 
 .. code-block:: python
