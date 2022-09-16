@@ -3,6 +3,7 @@ from typing import Optional
 import requests
 from .common import *
 from wxcadm import log
+from datetime import datetime, timedelta
 
 
 class Reports:
@@ -117,5 +118,39 @@ class Reports:
         else:
             return False
 
+    def cdr_report(self, start: Optional[str] = None, end: Optional[str] = None, days: Optional[int] = None):
+        """ Create a CDR report
 
+        This method serves as a shortcut to :py:meth:`create_report()` for a Calling Detailed Call History report. It
+        finds the correct template and creates the report using the given start and end dates, or the ``days``
+        argument can be provided to report the last X days.
 
+        Args:
+            start (str, optional): The first date to include in the report (YYYY-MM-DD)
+            end (str, optional): The last date to include in the report (YYYY-MM-DD)
+            days (int, optional): The number of days to report on, ending on yesterday's date
+
+        Returns:
+            str: The Report ID
+
+        """
+        if start is None and days is None:
+            raise ValueError("You must provide either a start date or the number of days")
+        if start is not None and days is not None:
+            raise ValueError("You must not specify a start date and number of days")
+        if days is not None:
+            yesterday = datetime.now() - timedelta(1)
+            end = datetime.strftime(yesterday, "%Y-%m-%d")
+            start_date = yesterday - timedelta(days)
+            start = datetime.strftime(start_date, "%Y-%m-%d")
+
+        # Find the CDR Report Template
+        for template in self.templates:
+            if template['title'] == 'Calling Detailed Call History':
+                cdr_template = template['Id']
+                break
+
+        report_id = self.create_report(template_id=cdr_template,
+                                       start_date=start,
+                                       end_date=end)
+        return report_id

@@ -4,6 +4,7 @@ What's New
 ==========
 v3.0.3
 ------
+- Added :py:meth:`Reports.cdr_report()` to make creating a CDR report easier
 - Converted :py:meth:`Org.wxc_licenses` to a property to ensure it can be retrieved at any time
 - Various optimizations for tokens with access to more than one Org to reduce pre-fetching but not require any special logic
 - BUG FIX: Webex.me now works correctly if the token has access to more than one Org
