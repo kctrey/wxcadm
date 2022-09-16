@@ -819,7 +819,7 @@ class XSI:
     def get_fac(self):
         # If we don't have a FAC URL, go get it
         if "fac_url" not in self._profile:
-            self.profile()
+            self.profile
         r = requests.get(self.xsi_endpoints['actions_endpoint'] + self._profile['fac_url'],
                          headers=self._headers, params=self._params)
         response = r.json()
