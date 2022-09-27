@@ -167,9 +167,16 @@ def webex_api_call(method: str,
         elif method.lower() == "delete":
             r = session.delete(_url_base + url, params=params)
             if r.ok:
-                end = time.time()
-                log.debug(f"__webex_api_call() completed in {end - start} seconds")
-                return True
+                try:
+                    response = r.json()
+                except requests.exceptions.JSONDecodeError:
+                    end = time.time()
+                    log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    return True
+                else:
+                    end = time.time()
+                    log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    return response
             else:
                 log.warning("Webex API returned an error")
                 if r.status_code == 429:

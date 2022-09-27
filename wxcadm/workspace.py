@@ -97,7 +97,8 @@ class Workspace:
         self.location = config.get("workspaceLocationId", "")
         self.floor = config.get("floorId", "")
         self.capacity = config.get("capacity", 0)
-        self.type = config['type']
+        if 'type' in config:
+            self.type = config['type']
         self.sip_address = config.get("sipAddress", "")
         self.created = config.get("created", "")
         if "calling" in config:

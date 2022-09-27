@@ -88,6 +88,7 @@ the two. Stay tuned...
    whatsnew
    usage/tests
    usage/api_scope
+   usage/service_app
    usage/documentation
    usage/xsi
 

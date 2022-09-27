@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Union
 from dataclasses import dataclass, field
 from collections import UserList
+
+import wxcadm.org
 from wxcadm import log
 from .common import *
 
@@ -55,15 +57,37 @@ class WebexApplications(UserList):
         else:
             return found_apps
 
-    def add_authorized_application(self, name: str,
-                                   contact_email: str,
-                                   scopes: list,
-                                   logo: str = "https://pngimg.com/uploads/phone/phone_PNG48927.png"):
-        """ Add an Authorized App to the Org
+    def get_app_by_id(self, id: str) -> WebexApplication:
+        """ Get a :py:class:`WebexApplication` instance by application ID
+
+        Args:
+            id (str): The ID of the :py:class:`WebexApplication` to get
+
+        Returns:
+            WebexApplication: The application instance. None is returned if no match is found.
+
+        """
+        # First check the known apps to see if we already have it
+        for app in self.data:
+            if app.id == id:
+                return app
+        # If it wasn't found, call the API to get the app and build an instance for it
+        app = webex_api_call('get', f'/v1/applications/{id}')
+        return app
+
+    def add_service_application(self, name: str,
+                                contact_email: str,
+                                scopes: list,
+                                logo: str = "https://pngimg.com/uploads/hacker/hacker_PNG6.png"):
+        """ Add a Service App to the Org
+
+        .. note::
+
+            Ensure you record the client_secret that comes back. It will not be visible later.
 
         .. warning::
 
-            The Authorized App capability is in Early Field Trial and may not be available for you Org.
+            The Service App capability is in Early Field Trial and may not be available for you Org.
 
         Args:
             name (str): The name of the application
@@ -89,12 +113,12 @@ class WebexApplication:
     friendlyId: str
     type: str
     name: str
-    description: str = field(repr=False)
     orgId: str = field(repr=False)
     isFeatured: bool = field(repr=False)
     submissionStatus: str = field(repr=False)
     createdBy: str = field(repr=False)
     created: str = field(repr=False)
+    description: str = field(default='', repr=False)
     modified: str = field(default='', repr=False)
     redirectUrls: list = field(default=None, repr=False)
     scopes: list = field(default=None, repr=False)
@@ -125,3 +149,81 @@ class WebexApplication:
     groupId: str = field(default='', repr=False)
     version: str = field(default='', repr=False)
     meetingLayoutPreference: str = field(default='', repr=False)
+    entitlements: str = field(default='', repr=False)
+
+    def authorize(self):
+        """ Authorize the application for the Organization
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'orgId': self.parent.id}
+        response = webex_api_call('post', f'/v1/applications/{self.id}/authorize', payload=payload)
+        return response
+
+    def delete(self):
+        """ Delete the application
+
+        Returns:
+
+        """
+        response = webex_api_call('delete', f'/v1/applications/{self.id}')
+        return response
+
+    def get_token(self, client_secret: str, target_org: Union[Org, str]):
+        """ Get the access and refresh tokens to utilize the application in the target Org
+
+        Args:
+            client_secret (str): The Client Secret value stored when the Application was created
+            target_org (str): The Base64 Org ID to obtain a token for
+
+        Returns:
+            dict: A dict of the token info, including access_token and refresh_token
+
+        """
+        if isinstance(target_org, wxcadm.org.Org):
+            org_id = target_org.id
+        else:
+            org_id = target_org
+            #TODO - Eventually we should take the Org ID in both Base64 (current) and the UUID format
+
+        payload = {
+            'clientId': self.clientId,
+            'clientSecret': client_secret,
+            'targetOrgId': org_id
+        }
+        response = webex_api_call('post', f'/v1/applications/{self.id}/token', payload=payload)
+        return response
+
+    def get_token_refresh(self, client_secret: str, refresh_token: str):
+        """ Use the provided Refresh Token to obtain a new Access Token
+
+        Args:
+            client_secret (str): The Client Secret value stored when the Application was created
+            refresh_token (str): The Refresh Token stored when the initial token was obtained with :py:meth:get_token()
+
+        Returns:
+            dict: A dict of the token info, including access_token and refresh_token
+
+        """
+        payload = {
+            'grant_type': 'refresh_token',
+            'client_id': self.clientId,
+            'client_secret': client_secret,
+            'refresh_token': refresh_token
+        }
+        response = webex_api_call('post', '/v1/access_token', payload=payload)
+        return response
+
+    def regenerate_client_secret(self):
+        """ Obtain a new Client Secret if the initial value was lost or compromised
+
+        Returns:
+            str: The new Client Secret value
+        """
+        response = webex_api_call('delete', f'/v1/applications/{self.id}/clientSecret')
+        if 'clientSecret' in response:
+            return response['clientSecret']
+        else:
+            return False

@@ -6,7 +6,12 @@ from .common import *
 
 
 class Location:
-    def __init__(self, parent: Org, location_id: str, name: str, address: dict = None):
+    def __init__(self, parent: Org, location_id: str,
+                 name: str,
+                 time_zone: str,
+                 preferred_language: str,
+                 announcement_language: str = None,
+                 address: dict = None):
         """Initialize a Location instance
 
         .. note::
@@ -16,6 +21,9 @@ class Location:
         Args:
             location_id (str): The Webex ID of the Location
             name (str): The name of the Location
+            time_zone (str): The time zone of the Location
+            preferred_language (str): The preferred language at the Location
+            announcement_language (str): The language for audio announcements at the Location
             address (dict): The address information for the Location
 
         Returns:
@@ -30,6 +38,12 @@ class Location:
         """The name of the Location"""
         self.address: dict = address
         """The address of the Location"""
+        self.time_zone: str = time_zone
+        """ The Location time zone"""
+        self.preferred_language: str = preferred_language
+        """ The preferred language at the Location"""
+        self.announcement_language: str = announcement_language
+        """ The language for audio announcements at the Location"""
 
     def __str__(self):
         return self.name

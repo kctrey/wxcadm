@@ -624,9 +624,30 @@ class Org:
         self.locations.clear()
         api_resp = webex_api_call("get", "v1/locations", headers=self._headers, params=self._params)
         for location in api_resp:
-            this_location = Location(self, location['id'], location['name'], address=location['address'])
+            this_location = Location(self,
+                                     location['id'],
+                                     location['name'],
+                                     address=location['address'],
+                                     time_zone=location['timeZone'],
+                                     preferred_language=location['preferredLanguage'])
             self.locations.append(this_location)
         return self.locations
+
+    def create_location(self,
+                        name: str,
+                        time_zone: str,
+                        preferred_language: str,
+                        announcement_language: str,
+                        address: dict):
+        payload = {
+            'name': name,
+            'timeZone': time_zone,
+            'preferredLanguage': preferred_language,
+            'announcementLanguage': announcement_language,
+            'address': address
+        }
+        response = webex_api_call('post', '/v1/locations', params={'orgId': self.id}, payload=payload)
+        return response
 
     def get_workspaces(self):
         """Get the Workspaces and Workspace Locations for the Organizations.

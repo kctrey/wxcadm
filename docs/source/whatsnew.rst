@@ -4,6 +4,7 @@ What's New
 ==========
 v3.0.3
 ------
+- **wxcadm** now supports Service Applications
 - BUG FIX: :py:meth:`XSI.get_fac()` no longer requires the profile to be retrieved first
 - Added :py:meth:`Reports.cdr_report()` to make creating a CDR report easier
 - Converted :py:meth:`Org.wxc_licenses` to a property to ensure it can be retrieved at any time
