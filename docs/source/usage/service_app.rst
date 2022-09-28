@@ -130,6 +130,24 @@ method can be used:
     # And get the token information for the Administrator Webex Org
     token_info = app.get_token_refresh(client_secret, refresh_token)
 
+6. (Optional) If the Developer needs to update the Client Secret in case it was lost or compromised, the
+:py:meth:`Applications.regenerate_client_secret()` method can be used.
+
+.. code-block:: python
+
+    import wxcadm
+
+    developer_access_token = "The Developer OAuth token"
+    app_id = "The App ID for the Service Application that was authorized"
+
+    developer_webex = wxcadm.Webex(developer_access_token)
+
+    # Get the Service Application by ID
+    app = developer_webex.org.applications.get_app_by_id(app_id)
+
+    # Reset the client_secret and store the value
+    client_secret = app.regenerate_client_secret()
+
 Conclusion
 ----------
 For those with experience on the Developer side, it should be very clear that Service Applications can greatly simplify
