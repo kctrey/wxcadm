@@ -21,6 +21,9 @@ class Webex:
                  get_call_queues: bool = False,
                  fast_mode: bool = False,
                  people_list: Optional[list] = None,
+                 client_id: Optional[str] = None,
+                 client_secret: Optional[str] = None,
+                 refresh_token: Optional[str] = None
                  ) -> None:
         """Initialize a Webex instance to communicate with Webex and store data
 
@@ -52,6 +55,12 @@ class Webex:
             people_list (list, optional): A list of people, by ID or email, to get instead of getting all People.
                 **Note** that this overrides the ``get_people`` argument, only fetching the people in ``people_list``
                 and will only be used if one Org is present. If multiple Orgs are present, this arg will have no effect.
+            client_id (str, optional): The Client ID or Application ID to associate with the token. This value is only
+                useful if you are planning to call the :py:meth:`refresh_token()` method to refresh the token.
+            client_secret (str, optional): The Client Secret for the Integration or Service Application. This value is
+                only useful if you are planning to call the :py:math:`refresh_token()` method to refresh the token.
+            refresh_token (str, optional): The Refresh Token associated with the Access Token. This argument is needed
+                if you are planning to call the :py:meth:`refresh_token()` method to refresh the Access Token.
 
         Returns:
             Webex: The Webex instance
@@ -72,6 +81,13 @@ class Webex:
         self._fast_mode = fast_mode
 
         # Instance attrs
+        self.client_id = client_id
+        """ The Client ID or Application ID """
+        self.client_secret = client_secret
+        """ The Client Secret value for the Integration or Service Application """
+        self.refresh_token = refresh_token
+        """ The Refresh Token associated with the Access Token """
+
         self.orgs: list = []
         '''A list of the Org instances that this Webex instance can manage'''
         self.org: Optional[Org] = None
@@ -132,6 +148,54 @@ class Webex:
     def headers(self):
         """The "universal" HTTP headers with the Authorization header present"""
         return self._headers
+
+    def get_new_token(self, client_id: Optional[str] = None,
+                      client_secret: Optional[str] = None,
+                      refresh_token: Optional[str] = None):
+        """ Refresh the Access Token
+
+        To perform a refresh, you must know the client_id and client_secret, and refresh_token value. If you have not
+        already set the attributes on the :py:class:`Webex` instance, you can provide them as arguments to this method.
+        Passing those arguments will set the instance attributes so they don't have to be passed on every call to this
+        method, meaning any existing value will be overwritten.
+
+        When the Access Token is refreshed, the :py:class:`Webex` instance will be updated to use the new token.
+
+        Args:
+            client_id (str): The Client ID or Application ID of your Integration or Service Application
+            client_secret (str): The Client Secret of your Integration or Service Application
+            refresh_token (str): The Refresh Token associated with the given Access Token
+
+        Returns:
+            dict: The new token information
+
+        """
+        if client_id is None:
+            if self.client_id is None:
+                raise ValueError
+        else:
+            self.client_id = client_id
+        if client_secret is None:
+            if self.client_secret is None:
+                raise ValueError
+        else:
+            self.client_secret = client_secret
+        if refresh_token is None:
+            if self.refresh_token is None:
+                raise ValueError
+        else:
+            self.refresh_token = refresh_token
+
+        payload = {
+            'grant_type': 'refresh_token',
+            'client_id': self.client_id,
+            'client_secret': self.client_secret,
+            'refresh_token': self.refresh_token
+        }
+
+        response = webex_api_call('post', '/v1/access_token', payload=payload)
+        return response
+
 
     def get_org_by_name(self, name: str):
         """Get the Org instance that matches all or part of the name argument.

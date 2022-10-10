@@ -4,6 +4,7 @@ What's New
 ==========
 v3.0.3
 ------
+- Added :py:meth:`Webex.get_new_token()` method to use the Refresh Token to obtain a new token.
 - **wxcadm** now supports Service Applications
 - BUG FIX: :py:meth:`XSI.get_fac()` no longer requires the profile to be retrieved first
 - Added :py:meth:`Reports.cdr_report()` to make creating a CDR report easier
