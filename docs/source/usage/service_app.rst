@@ -6,6 +6,12 @@ accounts that need to be able to perform work in Webex on behalf of an Organizat
 Application are similar to the Integration method but do not require a web-based authentication by the Webex Admin each
 time a token needs to be generated.
 
+.. note::
+
+    Some roles that are available to Inetegrations are not (yet) supported by Service Applications. For example, the
+    ``analytics:read_all`` role, which is required for CDR reporting, is not supported by Service Applications at
+    this time
+
 Authorization Overview
 ----------------------
 The Service Application flow requires work by two functional entities, the Developer and the Administrator.
