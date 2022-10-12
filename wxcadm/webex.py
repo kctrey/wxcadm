@@ -194,7 +194,18 @@ class Webex:
         }
 
         response = webex_api_call('post', '/v1/access_token', payload=payload)
-        return response
+        if 'access_token' in response:
+            log.info(f"Changing Access Token to {response['access_token']}")
+            self._access_token = response['access_token']
+            self._headers: dict = {"Authorization": "Bearer " + self._access_token}
+
+            log.debug(f"Setting Org._headers to {self._headers}")
+            log.debug(f"Setting Global _webex_headers")
+            global _webex_headers
+            _webex_headers['Authorization'] = "Bearer " + self._access_token
+            return response
+        else:
+            return False
 
 
     def get_org_by_name(self, name: str):

@@ -73,7 +73,9 @@ class WebexApplications(UserList):
                 return app
         # If it wasn't found, call the API to get the app and build an instance for it
         app = webex_api_call('get', f'/v1/applications/{id}')
-        return app
+        this_app = WebexApplication(parent=self.parent, **app)
+        self.data.append(this_app)
+        return this_app
 
     def add_service_application(self, name: str,
                                 contact_email: str,
