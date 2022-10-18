@@ -892,6 +892,9 @@ class Call:
         """The externalTrackingId used by XSI"""
         self._status: dict = {}
         """The status of the call"""
+        self.held: bool = False
+        """ Whether or not the call is on hold """
+        self._transfer_call = None
         if type(self._parent) is wxcadm.person.Person:
             # This is where we set things based on whether the parent is a Person
             self._url = _url_base
@@ -1026,24 +1029,36 @@ class Call:
         response = r.json()
         log.debug(f"Call Status response: {response}")
         if r.status_code == 200:
-            return_data = {
-                "network_call_id": response['Call']['networkCallId']['$'],
-                "personality": response['Call']['personality']['$'],
-                "state": response['Call']['state']['$'],
-                "remote_party": {
-                    "address": response['Call']['remoteParty']['address']['$'],
-                    "call_type": response['Call']['remoteParty']['callType']['$'],
-                },
-                "endpoint": {
-                    "type": response['Call']['endpoint']['@xsi1:type'],
-                    "AoR": response['Call']['endpoint']['addressOfRecord']['$']
-                },
-                "appearance": response['Call']['appearance']['$'],
-                "diversion_inhibited": response['Call']['diversionInhibited'],
-                "start_time": response['Call']['startTime']['$'],
-                "answer_time": response['Call']['answerTime']['$'],
-                "status_time": int(time.time())
-            }
+            return_data = {}
+            ## Added key checking 3.0.4
+            call_status = response['Call']
+            if 'networkCallId' in call_status:
+                return_data['network_call_id'] = call_status['networkCallId']['$']
+            if 'personality' in call_status:
+                return_data['personality'] = call_status['personality']['$']
+            if 'state' in call_status:
+                return_data['state'] = call_status['state']['$']
+            if 'remoteParty' in call_status:
+                return_data['remote_party'] = {
+                    "address": call_status['remoteParty']['address']['$'],
+                    "call_type": call_status['remoteParty']['callType']['$']
+                }
+            if 'endpoint' in call_status:
+                return_data['endpoint'] = {
+                    "type": call_status['endpoint']['@xsi1:type'],
+                    "aor": call_status['endpoint']['addressOfRecord']['$']
+                }
+            if 'appearance' in call_status:
+                return_data['appearance'] = call_status['appearance']['$']
+            if 'diversionInhibited' in call_status:
+                return_data['diversion_inhibited'] = call_status['diversionInhibited']
+            if 'startTime' in call_status:
+                return_data['start_time'] = call_status['startTime']['$']
+            if 'answerTime' in call_status:
+                return_data['answer_time'] = call_status['answerTime']['$']
+            else:
+                return_data['answer_time'] = None
+            return_data['status_time'] = int(time.time())
             return return_data
         else:
             return False
@@ -1107,6 +1122,10 @@ class Call:
         Starts a multi-party conference. If the call is already held and an attended transfer is in progress,
         meaning the user is already talking to the transfer-to user, this method will bridge the calls.
 
+        When an address is passed, the existing call will be placed on hold, the second call will be originated, and the
+        conference will be connected as soon as the second party answers. If the desired behavior is not to connect the
+        parties until later, the calls should be created separately and bridged later.
+
         Args:
             address (str, optional): The address (usually a phone number or extension) to conference to. Not needed
                 when the call is already part of an Attended Transfer
@@ -1138,8 +1157,34 @@ class Call:
             else:
                 return False
         else:
-            # Still needs work.
-            pass
+            # Put the current call on hold if it isn't already
+            if self.held is False:
+                self.hold()
+            # Build the second call
+            second_call = self._parent.new_call(address=address)
+            # Get the status of the second call. We cannot complete the conference until it is answered.
+            call_state = second_call.status.get('state', 'unknown')
+            while call_state != 'Active':
+                call_state = second_call.status.get('state', 'unknown')
+
+            xml = f"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" \
+                  f"<Conference xmlns=\"http://schema.broadsoft.com/xsi\">" \
+                  f"<conferenceParticipantList>" \
+                  f"<conferenceParticipant>" \
+                  f"<callId>{self.id}</callId>" \
+                  f"</conferenceParticipant>" \
+                  f"<conferenceParticipant>" \
+                  f"<callId>{second_call.id}</callId>" \
+                  f"</conferenceParticipant>" \
+                  f"</conferenceParticipantList>" \
+                  f"</Conference>"
+            headers = self._headers
+            headers['Content-Type'] = "application/xml; charset=UTF-8"
+            r = requests.post(self._url + f"/Conference", headers=headers, data=xml)
+            if r.status_code in [200, 201, 204]:
+                return self._parent.new_conference([self.id, second_call.id])
+            else:
+                return False
 
     def send_dtmf(self, dtmf: str):
         """Transmit DTMF tones outbound
@@ -1163,6 +1208,7 @@ class Call:
 
         """
         r = requests.put(self._url + f"/{self.id}/Hold", headers=self._headers)
+        self.held = True
         return XSIResponse(r)
 
     def resume(self):
@@ -1173,6 +1219,7 @@ class Call:
 
         """
         r = requests.put(self._url + f"/{self.id}/Talk", headers=self._headers)
+        self.held = False
         return XSIResponse(r)
 
     def park(self, extension: str = None):
@@ -1217,6 +1264,7 @@ class Call:
     def reconnect(self):
         """Retrieves the call from hold **and releases all other calls**"""
         r = requests.put(self._url + f"{self.id}/Reconnect", headers=self._headers)
+        self.held = False
         return XSIResponse(r)
 
     def recording(self, action: str):

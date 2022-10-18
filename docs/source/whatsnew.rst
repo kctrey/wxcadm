@@ -2,6 +2,11 @@
 
 What's New
 ==========
+v3.0.4
+------
+- Finalized :py:meth:`XSI.Call.conference()` to allow a conference to be immediately started from an active call
+- BUG FIX: XSI call status failed for calls that weren't in an answered state
+
 v3.0.3
 ------
 - Added :py:meth:`Webex.get_new_token()` method to use the Refresh Token to obtain a new token.
