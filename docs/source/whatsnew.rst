@@ -4,8 +4,10 @@ What's New
 ==========
 v3.0.4
 ------
+- BUG FIX: Rejected XSIEventsSubscription is now handled and reported
+- BUG FIX: XSIEventsChannel now handles non-OK responses on channel creation
 - Finalized :py:meth:`XSI.Call.conference()` to allow a conference to be immediately started from an active call
-- BUG FIX: XSI call status failed for calls that weren't in an answered state
+- BUG FIX: XSI call status fixed for calls that weren't in an answered state
 
 v3.0.3
 ------

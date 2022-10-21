@@ -93,7 +93,7 @@ class XSIEventsChannelSet:
             channel = XSIEventsChannel(self, my_endpoint, my_events_endpoint)
             self.channels.append(channel)
 
-    def restart_failed_channel(self, channel: XSIEventsChannel):
+    def restart_failed_channel(self, channel: XSIEventsChannel, wait: int = 0):
         """ Starts a new channel, using an :py:class:`XSIEventsChannel` with an ``active=False`` status as the source
         to determine where the new channel should be established to.
 
@@ -104,11 +104,12 @@ class XSIEventsChannelSet:
             bool: True on success, False otherwise.
 
         """
-        log.debug(f"[{threading.current_thread().name}] ==== Restarting Failed XSIEventsChannel "
-                  f"with endpoint {channel.endpoint.split('/')[2]} ====")
         if channel.active is True:
             log.warning("Cannot restart an active channel")
             return False
+        log.debug(f"[{threading.current_thread().name}] ==== Restarting Failed XSIEventsChannel "
+                  f"with endpoint {channel.endpoint.split('/')[2]} in {wait} seconds ====")
+        time.sleep(wait)
         new_channel = XSIEventsChannel(self, channel.endpoint, channel.events_endpoint)
         self.channels.append(new_channel)
         # Send a DELETE on the failed channel, just to make sure it is removed from the server
@@ -131,6 +132,14 @@ class XSIEventsChannelSet:
 
         return True
 
+    @property
+    def active_channels(self):
+        active_channels = []
+        for channel in self.channels:
+            if channel.active is True:
+                active_channels.append(channel)
+        return active_channels
+
     def subscribe(self, event_package, person: Person = None):
         """ Subscribe to an Event Package over the channel opened with :meth:`XSIEvents.open_channel()`
 
@@ -144,12 +153,16 @@ class XSIEventsChannelSet:
 
         """
         log.info(f'Subscribing to {event_package}')
+        if len(self.active_channels) == 0:
+            log.warning("Cannot subscribe when no channels are active")
+            raise XSIError("Cannot subscribe with no active channels")
         subscription = XSIEventsSubscription(self, event_package, person=person)
-        if subscription:
+        if subscription and subscription.active is True:
             self.subscriptions.append(subscription)
             log.debug(f'\tCurrent Subscriptions: {self.subscriptions}')
             return subscription
         else:
+            log.warning(f"The subscription did not activate")
             return False
 
     def unsubscribe(self, subscription_id: str):
@@ -211,6 +224,7 @@ class XSIEventsChannel:
         self.events_endpoint = events_endpoint
         self.queue = self.parent.queue
         self.active = True
+        self.needs_restart = False
         self.last_refresh = ""
         self.xsp_ip:str = ''
         self.session = requests.Session()
@@ -252,8 +266,17 @@ class XSIEventsChannel:
         r = self.session.post(
             f"{self.endpoint}/v2.0/channel",
             headers={'TrackingID': tid, **self._headers}, data=payload, stream=True)
-        # Get the real IP of the remote server so we can send subsequent messages to that
-        ip, port = r.raw._connection.sock.getpeername()
+        # An issue with the F5 in Oct 2022 showed that we need to handle non-ok responses better
+        if not r.ok:
+            log.debug(f"\tHeaders: {r.headers}")
+            log.debug(f"\tBody: {r.text}")
+            log.warning(f"Unable to establish connection with {self.endpoint}")
+            ip = 'unknown'
+            self.active = False
+            self.needs_restart = True
+        else:
+            # Get the real IP of the remote server so we can send subsequent messages to that
+            ip, port = r.raw._connection.sock.getpeername()
         log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
                   f"Received response from {ip}. Status code {r.status_code}")
         # log.debug(f"[{r.headers.get('TrackingID', 'Unknown')}] Headers: {r.headers}")
@@ -318,6 +341,8 @@ class XSIEventsChannel:
                 chars = ""
         log.debug(f"[{threading.current_thread().name}][{tid}] Channel Loop ended: {self.id}")
         self.active = False
+        if self.needs_restart is True:
+            self.parent.restart_failed_channel(self, wait=60)
         return True
 
     def _heartbeat_daemon(self):
@@ -454,7 +479,7 @@ class XSIEventsSubscription:
             person (Person): A Person instance to subscribe to the event package for. If not provided,
                 the entire Organization will be subscribed.
         """
-        self.id = ""
+        self.id: Optional[str] = None
         self.parent = parent
         if person is None:
             self.target = "serviceprovider"
@@ -465,7 +490,7 @@ class XSIEventsSubscription:
         self.last_refresh = time.time()
         """ The date and time that the subscription was last refreshed """
         self.event_package = event_package
-        log.info(f"Subscribing to: {self.event_package}")
+        log.info(f"Subscribing to: {self.event_package} at {self.events_endpoint}")
         payload = '<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n' \
                   '<Subscription xmlns=\"http://schema.broadsoft.com/xsi\">' \
                   f'<event>{self.event_package}</event>' \
@@ -484,8 +509,13 @@ class XSIEventsSubscription:
                 raise ValueError("The user argument requires a Person instance")
         if r.ok:
             response_dict = xmltodict.parse(r.text)
+            log.debug(f"Response: {response_dict}")
             self.id = response_dict['Subscription']['subscriptionId']
             log.debug(f"[{r.headers.get('TrackingID', 'Unknown')}] Subscription ID: {self.id}")
+            self.active = True
+        else:
+            log.warning(f"Subscription failed: [{r.status_code}] {r.text}")
+            self.active = False
 
     def _refresh_subscription(self):
         """ Refresh the subscription
@@ -1110,7 +1140,7 @@ class Call:
         has been done first.
 
         Returns:
-            bool: Whether or not the transfer completes
+            bool: Whether the transfer completes
 
         """
         log.info("Completing transfer...")
