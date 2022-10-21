@@ -352,29 +352,33 @@ if endpoints is not None:
     events = wxcadm.XSIEvents(webex.orgs[0])
     events_queue = queue.Queue()
     channel = events.open_channel(events_queue)
-    channel.subscribe("Advanced Call")
-    channel.unsubscribe("all")
-    try:
-        message = events_queue.get()
-        print(message['xsi:Event']['xsi:eventData']['@xsi1:type'] + "...", end="")
-    except:
-        fail_test()
+    time.sleep(5)
+    subscribed = channel.subscribe("Advanced Call")
+    if subscribed is True:
+        channel.unsubscribe("all")
+        try:
+            message = events_queue.get()
+            print(message['xsi:Event']['xsi:eventData']['@xsi1:type'] + "...", end="")
+        except:
+            fail_test()
+        else:
+            pass_test()
     else:
-        pass_test()
+        fail_test()
     test = "XSI Events - Person"
     start_test()
-    events = wxcadm.XSIEvents(webex.orgs[0])
-    events_queue = queue.Queue()
-    channel = events.open_channel(events_queue)
-    channel.subscribe("Advanced Call", person=random.choice(webex.orgs[0].wxc_people))
-    channel.unsubscribe(channel.subscriptions[0].id)
-    try:
-        message = events_queue.get()
-        print(message['xsi:Event']['xsi:eventData']['@xsi1:type'] + "...", end="")
-    except:
-        fail_test()
+    subscribed = channel.subscribe("Advanced Call", person=random.choice(webex.orgs[0].wxc_people))
+    if subscribed is True:
+        channel.unsubscribe(channel.subscriptions[0].id)
+        try:
+            message = events_queue.get()
+            print(message['xsi:Event']['xsi:eventData']['@xsi1:type'] + "...", end="")
+        except:
+            fail_test()
+        else:
+            pass_test()
     else:
-        pass_test()
+        fail_test()
 else:
     fail_test()
     print("XSI not enabled. Skipping XSI tests.")
