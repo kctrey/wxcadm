@@ -1277,7 +1277,7 @@ class UserGroups(UserList):
         groups = response['groups']
         log.debug(f"Webex returned {len(groups)} Groups")
         for group in groups:
-            usergroup = UserGroup(parent = self.parent, **group)
+            usergroup = UserGroup(parent=self.parent, **group)
             self.data.append(usergroup)
 
     def create_group(self, name: str,
