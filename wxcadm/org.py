@@ -18,6 +18,7 @@ from .applications import WebexApplications
 from .workspace import Workspace, WorkspaceLocation
 from .call_routing import CallRouting
 from .reports import Reports
+from .calls import Calls
 
 
 class Org:
@@ -223,6 +224,12 @@ class Org:
     def applications(self):
         """ The :py:class:`WebexApplications` list with the :py:class:`WebexApplication` instances for this Org """
         return WebexApplications(parent=self)
+
+    @property
+    def calls(self):
+        """ The :py:class:`Calls` instance for this Org"""
+        return Calls(parent=self)
+
 
     def get_paging_group(self, id: str = None, name: str = None, spark_id: str = None):
         """ Get the PagingGroup instance associated with a given ID, Name, or Spark ID

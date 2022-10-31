@@ -26,6 +26,7 @@ def webex_api_call(method: str,
                    params: dict = None,
                    payload: dict = None,
                    retry_count: int = 3,
+                   domain: Optional[str] = None,
                    **kwargs):
     """ Generic handler for all Webex API requests
 
@@ -44,6 +45,7 @@ def webex_api_call(method: str,
         retry_count (int, optional): Controls the number of times an API call will be retried if the API returns a
             429 Too Many Requests. The wait time between retries will be based on the Retry-After header sent by Webex.
             Default is 3.
+        donmain (str, optional): The domain name to use if anything other than https://webexapis.com
 
     Returns:
         The return value will vary based on the API response. If a list of items are returned, a list will be returned.
@@ -55,7 +57,13 @@ def webex_api_call(method: str,
     """
     log.debug("Webex API Call:")
     log.debug(f"\tMethod: {method}")
-    log.debug(f"\tURL: {url}")
+
+    # Hacky fix for API calls that don't use the webexapis.com base domain
+    if domain is not None
+        _url_base = domain
+
+    log.debug(f"\tURL: {_url_base + url}")
+    log.debug(f"\tParams: {params}")
 
     start = time.time()     # Tracking API execution time
     session = requests.Session()
