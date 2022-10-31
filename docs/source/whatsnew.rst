@@ -2,6 +2,11 @@
 
 What's New
 ==========
+v3.0.5
+------
+- BUG FIX: LocationSchedule.add_holiday() fixed
+- The behavior of :py:meth:`Webex.org` has changed. Previously, the ``org`` attribute was only available if the token could only access one Webex Org. Now, ``org`` is always available and will be the first Org in the :py:meth:`Webex.orgs` list, which is the Primary Org for the user.
+
 v3.0.4
 ------
 - BUG FIX: Rejected XSIEventsSubscription is now handled and reported
