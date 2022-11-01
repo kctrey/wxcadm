@@ -19,7 +19,8 @@ class Calls:
         Args:
             start (str, optional): The first date to include (YYYY-MM-DD)
             end (str, optional): The last date to include (YYYY-MM-DD)
-            days (int, optional): The number of days to include, including today
+            days (int, optional): The number of days to include, including today. Currently only 1 is supported by the
+                API.
             hours (int, optional): The number of hours to include
 
         Returns:
@@ -48,16 +49,25 @@ class Calls:
             log.debug(f"No end provided. Using {end} as end time.")
 
         if hours is not None:
-            starttime = endtime - timedelta(hours=hours)
+            # Fix for time sync issue with API. The API is very picky about the start time not being even a second
+            # longer than 48 hours
+            if hours == 48:
+                starttime = timenow - timedelta(hours=hours) + timedelta(minutes=1)
+            else:
+                starttime = timenow - timedelta(hours=hours)
             start = datetime.strftime(starttime, '%Y-%m-%dT%H:%M:%S.000Z')
         elif days is not None:
-            starttime = endtime - timedelta(days=days)
+            # Fix for time sync issue with API. The API is very picky about the start time not being even a second
+            # longer than 48 hours
+            if days == 2:
+                starttime = timenow - timedelta(days=days) + timedelta(minutes=1)
+            else:
+                starttime = timenow - timedelta(days=days)
             start = datetime.strftime(starttime, '%Y-%m-%dT%H:%M:%S.000Z')
         elif start is not None:
             start = start
+
         log.debug(f'Setting start time to {start}')
-
         payload = {'startTime': start, 'endTime': end}
-
         response = webex_api_call('get', '/v1/cdr_feed', params=payload, domain='https://analytics.webexapis.com')
         return response
