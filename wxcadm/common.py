@@ -59,7 +59,7 @@ def webex_api_call(method: str,
     log.debug(f"\tMethod: {method}")
 
     # Hacky fix for API calls that don't use the webexapis.com base domain
-    if domain is not None
+    if domain is not None:
         _url_base = domain
 
     log.debug(f"\tURL: {_url_base + url}")
