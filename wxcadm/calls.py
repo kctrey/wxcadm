@@ -26,7 +26,9 @@ class Calls:
             str: The Report ID
 
         .. note::
-            This method requires a token with the ``spark-admin:calling_cdr_read`` scope
+            This method requires a token with the ``spark-admin:calling_cdr_read`` scope. Additionally, the user
+            must have the "Webex Calling Detailed Call History API access" option enabled in Control Hub, under the
+            Administrator Roles.
 
         """
         log.debug('Calls.cdr() started')
