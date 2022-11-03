@@ -652,21 +652,24 @@ class XSI:
         if get_profile:
             self._profile = self.profile
 
-    def new_call(self, address: str = None):
+    def new_call(self, address: str = None, phone: str = 'All', aor: Optional[str] = None):
         """Create a new Call instance
 
         Args:
             address (str, optional): The address to originate a call to
+            phone (str, optional): The phone to use for the call. Valid values are ``All``, ``Primary``,
+                or ``SharedCallAppearance``. The SharedCallAppearance argument also requires an address-or-record
+                ``aor`` argument with the AoR of the Shared device.
+            aor (str, optional): The address-of-record of the Shared device to place the call from
 
         Returns:
             Call: The Call instance
 
         """
         # If we got an address, pass it to the new instance
+        call = Call(self)
         if address is not None:
-            call = Call(self, address=address)
-        else:
-            call = Call(self)
+            call.originate(address=address, phone=phone, aor=aor)
         self._calls.append(call)
         return call
 
@@ -950,7 +953,11 @@ class Call:
         if address:
             self.originate(address)
 
-    def originate(self, address: str, comment: str = "", executive: str = None):
+    def originate(self, address: str,
+                  comment: str = "",
+                  phone: str = 'All',
+                  aor: Optional[str] = None,
+                  executive: str = None):
         """Originate a call on behalf of the Person
 
         The optional ``executive`` argument takes an extension or phone number and allows the call to be placed
@@ -960,6 +967,10 @@ class Call:
         Args:
             address (str): The address (usually a phone number) to originate the call to
             comment (str, optional): Text comment to attach to the call
+            phone (str, optional): The phone to use for the call. Valid values are ``All``, ``Primary``,
+                or ``SharedCallAppearance``. The SharedCallAppearance argument also requires an address-or-record
+                ``aor`` argument with the AoR of the Shared device.
+            aor (str, optional): The address-of-record of the Shared device to place the call from
             executive (str, optional): The phone number or extension of the Executive to place the call on behalf of
 
         Returns:
@@ -984,7 +995,9 @@ class Call:
                 raise NotAllowed("Person is not allowed to place calls on behalf of this executive")
         else:
             log.info(f"Originating a call to {address} for {self._userid}")
-            params = {"address": address, "info": comment}
+            params = {"address": address, "info": comment, "location": phone}
+            if aor is not None:
+                params['locationAddress'] = aor
             r = requests.post(self._url + "/new", headers=self._headers, params=params)
             if r.status_code == 201:
                 response = r.json()
@@ -1248,6 +1261,11 @@ class Call:
             bool: Whether the command was successful
 
         """
+        r = requests.put(self._url + f"/{self.id}/Talk", headers=self._headers)
+        self.held = False
+        return XSIResponse(r)
+
+    def answer(self):
         r = requests.put(self._url + f"/{self.id}/Talk", headers=self._headers)
         self.held = False
         return XSIResponse(r)

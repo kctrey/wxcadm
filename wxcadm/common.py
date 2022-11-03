@@ -60,9 +60,11 @@ def webex_api_call(method: str,
 
     # Hacky fix for API calls that don't use the webexapis.com base domain
     if domain is not None:
-        _url_base = domain
+        url_base = domain
+    else:
+        url_base = _url_base
 
-    log.debug(f"\tURL: {_url_base + url}")
+    log.debug(f"\tURL: {url_base + url}")
     log.debug(f"\tParams: {params}")
 
     start = time.time()     # Tracking API execution time
@@ -75,7 +77,7 @@ def webex_api_call(method: str,
     try_num = 1
     while try_num <= retry_count:
         if method.lower() == "get":
-            r = session.get(_url_base + url, params=params)
+            r = session.get(url_base + url, params=params)
             if r.ok:
                 response = r.json()
                 # With an 'items' array, we know we are getting multiple values. Without it, we are getting a singe entity
@@ -127,7 +129,7 @@ def webex_api_call(method: str,
             log.debug(f"__webex_api_call() completed in {end - start} seconds")
             return response['items']
         elif method.lower() == "put":
-            r = session.put(_url_base + url, params=params, json=payload)
+            r = session.put(url_base + url, params=params, json=payload)
             if r.ok:
                 try:
                     response = r.json()
@@ -151,7 +153,7 @@ def webex_api_call(method: str,
                 else:
                     raise APIError(f"The Webex API returned an error: {r.text}")
         elif method.lower() == "post":
-            r = session.post(_url_base + url, params=params, json=payload)
+            r = session.post(url_base + url, params=params, json=payload)
             if r.ok:
                 try:
                     response = r.json()
@@ -173,7 +175,7 @@ def webex_api_call(method: str,
                 else:
                     raise APIError(f"The Webex API returned an error: {r.text}")
         elif method.lower() == "delete":
-            r = session.delete(_url_base + url, params=params)
+            r = session.delete(url_base + url, params=params)
             if r.ok:
                 try:
                     response = r.json()
@@ -195,7 +197,7 @@ def webex_api_call(method: str,
                 else:
                     raise APIError(f"The Webex API returned an error: {r.text}")
         elif method.lower() == "patch":
-            r = session.patch(_url_base + url, params=params, json=payload)
+            r = session.patch(url_base + url, params=params, json=payload)
             if r.ok:
                 try:
                     response = r.json()

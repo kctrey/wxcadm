@@ -4,6 +4,7 @@ What's New
 ==========
 v3.0.5
 ------
+- XSI calls, either :py:meth:`new_call()` or :py:meth:`originate()` now accept a ``phone`` argument to specify which phone is to be used to make the call.
 - Added support for the real-time CDR API in the :py:class:`Calls` class using the :py:meth:`cdr()` method
 - BUG FIX: LocationSchedule.add_holiday() fixed
 - The behavior of :py:meth:`Webex.org` has changed. Previously, the ``org`` attribute was only available if the token could only access one Webex Org. Now, ``org`` is always available and will be the first Org in the :py:meth:`Webex.orgs` list, which is the Primary Org for the user.
