@@ -820,23 +820,28 @@ class XSI:
     @property
     def profile(self):
         """The XSI Profile for this Person"""
+        log.debug("Getting XSI Profile")
         if not self._profile or not self._cache:
             profile_data: dict = \
                 self.__get_xsi_data(f"/v2.0/user/{self.id}/profile")
             # The following is a mapping of the raw XSI format to the profile attribute
-            self._profile['registrations_url'] = profile_data['Profile']['registrations']['$']
-            self._profile['schedule_url'] = profile_data['Profile']['scheduleList']['$']
-            self._profile['fac_url'] = profile_data['Profile']['fac']['$']
-            self._profile['country_code'] = profile_data['Profile']['countryCode']['$']
-            self._profile['user_id'] = profile_data['Profile']['details']['userId']['$']
-            self._profile['group_id'] = profile_data['Profile']['details']['groupId']['$']
-            self._profile['service_provider'] = profile_data['Profile']['details']['serviceProvider']['$']
-            # Not everyone has a number and/or extension, so we need to check to see if there are there
-            if "number" in profile_data['Profile']['details']:
-                self._profile['number'] = profile_data['Profile']['details']['number']['$']
-            if "extension" in profile_data['Profile']['details']:
-                self._profile['extension'] = profile_data['Profile']['details']['extension']['$']
-            self._profile['raw'] = profile_data
+            log.debug(f"User Profile: {profile_data}")
+            if profile_data:
+                self._profile['registrations_url'] = profile_data['Profile']['registrations']['$']
+                self._profile['schedule_url'] = profile_data['Profile']['scheduleList']['$']
+                self._profile['fac_url'] = profile_data['Profile']['fac']['$']
+                self._profile['country_code'] = profile_data['Profile']['countryCode']['$']
+                self._profile['user_id'] = profile_data['Profile']['details']['userId']['$']
+                self._profile['group_id'] = profile_data['Profile']['details']['groupId']['$']
+                self._profile['service_provider'] = profile_data['Profile']['details']['serviceProvider']['$']
+                # Not everyone has a number and/or extension, so we need to check to see if there are there
+                if "number" in profile_data['Profile']['details']:
+                    self._profile['number'] = profile_data['Profile']['details']['number']['$']
+                if "extension" in profile_data['Profile']['details']:
+                    self._profile['extension'] = profile_data['Profile']['details']['extension']['$']
+                self._profile['raw'] = profile_data
+            else:
+                self._profile = None
         return self._profile
 
     @property
