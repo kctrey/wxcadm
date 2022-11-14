@@ -143,6 +143,7 @@ class Webex:
                     this_org = Org(name=org['displayName'], id=org['id'], parent=self,
                                    people=False, locations=False, xsi=False, hunt_groups=False, call_queues=False)
                     self.orgs.append(this_org)
+                self.org = self.orgs[0]
 
     @property
     def headers(self):
