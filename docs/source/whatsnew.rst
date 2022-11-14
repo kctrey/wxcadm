@@ -2,8 +2,10 @@
 
 What's New
 ==========
-v3.0.5
+v3.1.0
 ------
+
+- :py:meth:`Location.set_announcement_language()` added to update Announcement Language for Locations, Users and Features
 - BUG FIX: Fixed exception when XSI.profile is called and no profile is returned
 - XSI calls, either :py:meth:`new_call()` or :py:meth:`originate()` now accept a ``phone`` argument to specify which phone is to be used to make the call.
 - Added support for the real-time CDR API in the :py:class:`Calls` class using the :py:meth:`cdr()` method

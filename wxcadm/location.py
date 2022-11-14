@@ -119,6 +119,43 @@ class Location:
             response.append(this_schedule)
         return response
 
+    def set_announcement_language(self, language: str,
+                                  update_users: bool = False,
+                                  update_features: bool = False) -> bool:
+        """ Set the Announcement Language for the Location or update the Announcement Language for existing users
+        or features.
+
+        When using this method, setting either ``update_users`` or ``update_features`` will only change the
+            Announcement Language for existing users/features. It does not change the Location default that will be used
+            for any new users or features. To ensure that the default language is changed, the method should be called
+            without those arguments.
+
+        Args:
+            language (str): The language code (e.g. ``en_US``) to assign
+            update_users (bool, optional): True to update all existing Users and Workspaces to the new language
+            update_features (bool, optional): True to update all existing Features to the new language.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Setting language for {self.name} to {language}")
+        payload = {
+            'announcementLanguageCode': language,
+            'agentEnabled': update_users,
+            'serviceEnabled': update_features
+        }
+        success = webex_api_call('post',
+                                  f'/v1/telephony/config/locations/{self.id}/actions/modifyAnnouncementLanguage/invoke',
+                                  payload=payload)
+        log.debug(f"Response: {success}")
+        if success:
+            log.info("Language change succeeded")
+            return True
+        else:
+            log.info("Language change failed")
+            return False
+
     def upload_moh_file(self, filename: str):
         """ Upload and activate a custom Music On Hold audio file.
 
@@ -169,7 +206,6 @@ class Location:
         else:
             log.debug('\tActivation failed')
             return False
-
 
     @property
     def outgoing_call_permissions(self):
