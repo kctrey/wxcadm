@@ -261,7 +261,7 @@ class XSIEventsChannel:
 
         tid = tracking_id()
         log.debug(f"[{threading.current_thread().name}][{tid}] Sending Channel Start Request (Streaming) "
-                  f"to {self.endpoint.split('/')[2]}")
+                  f"to {self.endpoint}/v2.0/channel")
         log.debug(f"\tHeaders: {self._headers}\n\tPayload: {payload}")
         r = self.session.post(
             f"{self.endpoint}/v2.0/channel",
@@ -281,7 +281,7 @@ class XSIEventsChannel:
                   f"Received response from {ip}. Status code {r.status_code}")
         # log.debug(f"[{r.headers.get('TrackingID', 'Unknown')}] Headers: {r.headers}")
         log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
-                  f"Saving Cookies: {r.cookies}")
+                  f"Saving Cookies: {r.cookies.get_dict()}")
         self.cookies = r.cookies
 
         self.xsp_ip = str(ip)
