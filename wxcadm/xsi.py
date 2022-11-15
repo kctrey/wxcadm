@@ -196,6 +196,7 @@ class XSIEventsChannelSet:
         for subscription in self.subscriptions:
             subscription.delete()
         for channel in self.channels:
+            log.debug(f"Deleting Channel {channel.id} with {channel.endpoint}")
             channel.delete()
         return True
 
