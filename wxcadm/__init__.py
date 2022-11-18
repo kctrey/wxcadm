@@ -11,3 +11,4 @@ from .xsi import XSIEvents, Call, XSI, XSICallQueue
 from .redsky import RedSky
 from .exceptions import *
 from .common import *
+from .wholesale import Wholesale
