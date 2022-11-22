@@ -75,24 +75,59 @@ class Location:
         return my_call_queues
 
     @property
+    def numbers(self):
+        """ All the Numbers for the Location
+
+        Returns:
+            list[dict]: List of dict containing information about each number
+
+        """
+        log.info("Getting Location numbers from Webex")
+        params = {'locationId': self.id}
+        response = webex_api_call("get", "v1/telephony/config/numbers", params=params)
+        loc_numbers = response['phoneNumbers']
+        for num in loc_numbers:
+            if "owner" in num:
+                if "id" in num['owner']:
+                    person = self._parent.get_person_by_id(num['owner']['id'])
+                    if person is not None:
+                        num['owner'] = person
+                    else:
+                        if num['owner']['type'].upper() == "HUNT_GROUP":
+                            hunt_group = self._parent.get_hunt_group_by_id(num['owner']['id'])
+                            if hunt_group is not None:
+                                num['owner'] = hunt_group
+                        elif num['owner']['type'].upper() == "GROUP_PAGING":
+                            paging_group = self._parent.get_paging_group(id=num['owner']['id'])
+                            if paging_group is not None:
+                                num['owner'] = paging_group
+                        elif num['owner']['type'].upper() == "CALL_CENTER":
+                            call_queue = self._parent.get_call_queue_by_id(num['owner']['id'])
+                            if call_queue is not None:
+                                num['owner'] = call_queue
+                        elif num['owner']['type'].upper() == "AUTO_ATTENDANT":
+                            auto_attendant = self._parent.get_auto_attendant(id=num['owner']['id'])
+                            if auto_attendant is not None:
+                                num['owner'] = auto_attendant
+        return loc_numbers
+
+    @property
     def available_numbers(self):
         """Returns all available numbers for the Location.
 
-        Only returns active numbers, so numbers that have not been activated yet will not be returned.
+        Returns both Active and Inactive numbers so that numbers can be assigned prior to activation/porting/
 
         Returns:
             list[dict]: A list of available numbers, in dict form
 
         """
         log.debug('Getting available numbers')
-        available_numbers = []
-        for number in self._parent.numbers:
-            if number['location'].name == self.name \
-                    and number.get('state', "") == "ACTIVE" \
-                    and number.get('owner', False) is False:
-                log.debug(f'\tAvailable number: {number}')
-                available_numbers.append(number)
-        return available_numbers
+        params = {'locationId': self.id, 'available': True}
+        response = webex_api_call("get", "v1/telephony/config/numbers", params=params)
+        if len(response.get('phoneNumbers', 0)) == 0:
+            return None
+        else:
+            return response['phoneNumbers']
 
     @property
     def main_number(self):
