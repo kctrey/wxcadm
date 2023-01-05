@@ -500,6 +500,11 @@ class XSIEventsSubscription:
         if person is None:
             r = requests.post(self.events_endpoint + f"/v2.0/serviceprovider/{self.parent.parent.enterprise}",
                               headers={"TrackingId": tracking_id(), **self._headers}, data=payload)
+            # Adding the following debug to help with failed subscriptions.
+            log.debug("Subscribe API Call:")
+            log.debug(f"\tURL: {self.events_endpoint}/v2.0/serviceprovider/{self.parent.parent.enterprise}")
+            log.debug(f"\tHeaders: {self._headers}")
+            log.debug(f"\tPayload: {payload}")
         else:
             if isinstance(person, wxcadm.person.Person):
                 # Make sure we have the Person's XSI Profile
