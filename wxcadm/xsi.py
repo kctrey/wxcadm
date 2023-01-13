@@ -765,10 +765,18 @@ class XSI:
     def __get_xsi_data(self, url, params: Optional[dict] = None):
         if params is not None:
             params = {**params, **self._params}
+        log.debug(f"Sending API Call: {self.xsi_endpoints['actions_endpoint'] + url}")
+        log.debug(f"\tHeaders: {self._headers}")
+        log.debug(f"\tParams: {params}")
         r = requests.get(self.xsi_endpoints['actions_endpoint'] + url, headers=self._headers, params=params)
+        log.debug(f"Response: {r.status_code}")
         if r.status_code == 200:
             try:
                 response = r.json()
+                # As of the addition of directory() in 3.1.0, we have to be prepared for paginated responses.
+                # There is a chance to add that here so that the invoking method doesn't have to care about it, but
+                # for now we are going to just return the dict we get and let the other method decide if it needs more
+                # records and send this method the right params
             except json.decoder.JSONDecodeError:
                 response = r.text
             return_data = response
@@ -896,6 +904,132 @@ class XSI:
             else:
                 self.services[service['name']['$']] = True
         return self.services
+
+    def directory(self,
+                  type: Optional[str] = 'Enterprise',
+                  first_name: Optional[str] = None,
+                  last_name: Optional[str] = None,
+                  name: Optional[str] = None,
+                  user_id: Optional[str] = None,
+                  group_id: Optional[str] = None,
+                  number: Optional[str] = None,
+                  extension: Optional[str] = None,
+                  mobile_number: Optional[str] = None,
+                  department: Optional[str] = None,
+                  email: Optional[str] = None,
+                  any_match: Optional[bool] = False,) -> list[dict]:
+        """ Search the Webex Calling directories
+
+        When search filters are applied as arguments, the directory will be searched by those values. If the desire is
+        to match any one of the values (logical OR), the ``any_match`` parameter should also be set to True. Note that
+        each directory type supports its own filter criteria and not all criteria are available across all directories.
+        The following table shows the filter arguments that are available for each type.
+
+        Note that all directory filter arguments are case-sensitive within Webex Calling. If you want to perform a
+        case-insensitive search, append "/i" to the search string. For example, ``first_name='John/i'`` will match
+        "John", "john" and "JOHN".
+
+        .. list::table::
+            :header-rows: 1
+
+            * - Directory Type
+              - Available Filters
+            * - Enterprise
+              - first_name, last_name, name, user_id, group_id, number, extension, mobile_number, department, email
+            * - Group
+              - first_name, last_name, name, user_id, group_id, number, extension, mobile_number, department, email
+            * - Personal
+              - name, number
+
+
+        Args:
+            type (str, Optional): The type of diectory to search. Valid values are ``Enterprise``,
+                ``Group``, and ``Personal``. Defaults to ``Enterprise``.
+            first_name (str, optional): The First Name field in the directory
+            last_name (str, optional): The Last Name field in the directory
+            name (str, optional): The "combined" name field that allows a search based on First Name and Last Name
+            user_id (str, optional): The User ID used on the Webex Calling call control platform. This is the User ID
+                that is displayed for the user across all of the XSI APIs
+            group_id (str, optional): The Group ID used on the Webex Calling call control platform. This ID is unique
+                to the Webex Calling Location and can be used to find all users at a specific Location.
+            number (str, optional): The Webex Calling phone number
+            extension (str, optional): The Webex Calling extension
+            mobile_number (str, optional): The user's mobile number, if populated by Directory Sync
+            department (str, optional): The user's department, if populated by Directory Sync
+            email (str, optional): The user's email address
+            any_match (bool, optional): When True, all arguments will be treated uniquely (OR) and results will be
+                returned if any argument matches. For exmaple, if the arguments
+                ``first_name=Joe,last_name=Smith,any_match=True`` are passed, the results will include Joe Smith, but
+                will also include Joe James and Lisa Smith. Defaults to ``False``.
+
+        Returns:
+            list[dict]: A list of matching records, represented as a dictionary. If there are no matches, an empty
+                list is returned. If an invalid directory type is requested, None is returned.
+
+        """
+        type = type.title()
+        log.info(f"Getting {type} directory")
+        log.debug(f"\tArgs: {locals()}")
+        if type.upper() in ['ENTERPRISE', 'GROUP']:
+            params = {
+                'firstName': first_name,
+                'lastName': last_name,
+                'name': name,
+                'userId': user_id,
+                'groupId': group_id,
+                'number': number,
+                'extension': extension,
+                'mobileNo': mobile_number,
+                'department': department,
+                'emailAddress': email,
+                'searchCriteriaModeOr': any_match,
+            }
+        elif type.upper() in ['PERSONAL']:
+            params = {
+                'name': name,
+                'number': number
+            }
+        else:
+            log.warning(f"Directory type {type} is not valid")
+            return None
+
+        # Set some vars to keep track of the number of records we get and how many more we expect
+        more_records = True
+        num_records = 0
+        next_index = 1
+        get_count = 50
+        return_records = []
+        while more_records is True:
+            response = self.__get_xsi_data(f'/v2.0/user/{self.id}/directories/{type}',
+                                           params={'start': next_index, 'results': get_count, **params})
+            num_records += int(response[type]['numberOfRecords']['$'])
+            total_records = int(response[type]['totalAvailableRecords']['$'])
+            log.debug(f"Received {num_records}/{total_records} records")
+            if int(response[type]['numberOfRecords']['$']) == 0: # No records returned
+                return return_records
+            if type.upper() in ['ENTERPRISE', 'GROUP']:
+                key = f"{type.lower()}Directory"
+                if isinstance(response[type][key]['directoryDetails'], dict):   # If we get a dict instead of a list
+                    return_records.append(response[type][key]['directoryDetails'])
+                else:
+                    for entry in response[type][key]['directoryDetails']:
+                        return_records.append(entry)
+            if type.upper() in ['PERSONAL']:
+                if isinstance(response[type]['entry'], dict):   # Single entry returned
+                    return_records.append(response[type]['entry'])
+                else:
+                    for entry in response[type]['entry']:
+                        return_records.append(entry)
+
+            # Check and see if we need to get more records
+            if num_records < total_records:
+                more_records = True
+                next_index += int(response[type]['numberOfRecords']['$'])
+            else:
+                more_records = False
+
+        return return_records
+
 
 
 class Call:
