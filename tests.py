@@ -347,6 +347,11 @@ if endpoints is not None:
         fail_test()
     else:
         pass_test()
+    ### XSI Directory Tests ###
+    test = "XSI Directory - Enterprise"
+    start_test()
+
+    ### XSI events Tests ###
     test = "XSI Events - Service Provider"
     start_test()
     events = wxcadm.XSIEvents(webex.orgs[0])

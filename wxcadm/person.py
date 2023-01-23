@@ -10,6 +10,7 @@ from collections import UserList
 
 from .common import *
 from .xsi import XSI
+from .device import Device
 
 from wxcadm import log
 
@@ -307,6 +308,18 @@ class Person:
 
         """
         return self._parent.usergroups.find_person_assignment(self)
+
+    @property
+    def devices(self):
+        log.info(f"Collecting devices for {self.display_name}")
+        devices = []
+        response = webex_api_call('get', f'/v1/telephony/config/people/{self.id}/devices')
+        log.debug(f"{response}")
+        for item in response['devices']:
+            this_device = Device(self, item)
+            devices.append(this_device)
+        return devices
+
 
 
     @property

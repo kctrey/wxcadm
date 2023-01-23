@@ -2,11 +2,16 @@
 
 What's New
 ==========
+v3.2.0
+------
+- With the release of the Devices API, the :py:class:`Device` class no longer requires CSDM access and can be used with any Integration token
+- Complete rewrite of the :class:`Device` class to handle only what is supported by the developer API
+
 v3.1.0
 ------
 - XSI now offers a :py:meth:`directory()` method to search Enterprise, Group and Personal directories.
 - PERFORMANCE: **wxcadm** previously retrieved too much data when Orgs and Locations were initialized. The API calls have been moved so they are only performed when the relevant data is needed.
-- PERFORMANCE: :py:meth:`Location.numbers` and :py:meth:`Location.asailable_numbers` now don't pull all numbers for the Org, only the Location
+- PERFORMANCE: :py:meth:`Location.numbers` and :py:meth:`Location.available_numbers` now don't pull all numbers for the Org, only the Location
 - **wxcadm** now supports Wholesale partners with the :py:class:`WholesaleCustomer` and :py:class:`WholesaleSubscriber` classes
 - :py:meth:`Location.set_announcement_language()` added to update Announcement Language for Locations, Users and Features
 - BUG FIX: Fixed exception when XSI.profile is called and no profile is returned

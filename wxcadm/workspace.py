@@ -5,6 +5,7 @@ from typing import Optional
 from wxcadm import log
 from .common import *
 from .exceptions import *
+from .device import Device
 
 
 class Workspace:
@@ -80,6 +81,17 @@ class Workspace:
     def spark_id(self):
         """ The internal identifier used by Webex """
         return decode_spark_id(self.id)
+
+    @property
+    def devices(self):
+        log.info(f"Collecting devices for {self.name}")
+        devices = []
+        response = webex_api_call('get', f'/v1/telephony/config/workspaces/{self.id}/devices')
+        log.debug(f"{response}")
+        for item in response['devices']:
+            this_device = Device(self, item)
+            devices.append(this_device)
+        return devices
 
     def get_config(self):
         """Get (or refresh) the confirmation of the Workspace from the Webex API"""
