@@ -4,6 +4,7 @@ What's New
 ==========
 v3.2.0
 ------
+- Added :py:meth:`Person.enable_vm_notification()` and :py:meth:`Person.disable_vm_notification()` as suggested by @vaijanaths007
 - With the release of the Devices API, the :py:class:`Device` class no longer requires CSDM access and can be used with any Integration token
 - Complete rewrite of the :class:`Device` class to handle only what is supported by the developer API
 

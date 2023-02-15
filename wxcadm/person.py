@@ -566,6 +566,51 @@ class Person:
         else:
             return self.vm_config
 
+    def enable_vm_notification(self, email: str = None, push=True):
+        """
+        Change the Voicemail config to enable voicemail notification to specified email address. If the email param
+        is not present, it will use the Person's email address as the default.
+
+        Args:
+            email (optional): The email address to send VMs to.
+            push (optional): Whether to immediately push the change to Webex. Defaults to True.
+
+        Returns:
+            dict: The `Person.vm_config` attribute
+        """
+        if not self.vm_config:
+            self.get_vm_config()
+        if email is None:
+            email = self.email
+        self.vm_config['notifications']['enabled'] = True
+        self.vm_config['notifications']['destination'] = email
+        if push:
+            return self.push_vm_config()
+        else:
+            return self.vm_config
+
+    def disable_vm_notification(self, email: str = None, push=True):
+        """
+        Change the Voicemail config to disable voicemail notification to specified email address. If the email param
+        is not present, it will use the Person's email address as the default.
+
+        Args:
+            email (optional): The email address to send VMs to.
+            push (optional): Whether to immediately push the change to Webex. Defaults to True.
+
+        Returns:
+            dict: The `Person.vm_config` attribute
+        """
+        if not self.vm_config:
+            self.get_vm_config()
+        if email is None:
+            email = self.email
+        self.vm_config['notifications']['enabled'] = False
+        if push:
+            return self.push_vm_config()
+        else:
+            return self.vm_config
+
     def set_voicemail_rings(self, rings: int, push=True):
         """ Set the number of rings before an Unanswered call is sent to Voicemail
 
