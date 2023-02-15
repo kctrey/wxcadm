@@ -9,7 +9,7 @@ from .device import Device
 
 
 class Workspace:
-    def __init__(self, parent: Org, id: str, config: dict = None):
+    def __init__(self, parent: Org, id: str, config: Optional[dict] = None):
         """Initialize a Workspace instance
 
         If only the `id` is provided, the configuration will be fetched from
@@ -117,7 +117,7 @@ class Workspace:
             self.calling = config['calling']['type']
         else:
             self.calling = "None"
-        self.calendar = config['calendar']
+        self.calendar = config.get('calendar', None)
         self.notes = config.get("notes", "")
 
 

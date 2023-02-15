@@ -107,6 +107,7 @@ the two. Stay tuned...
    reference/Person
    reference/Me
    reference/VoiceMessage
+   reference/Workspace
    reference/Device
    reference/Webhooks
    reference/UserGroups

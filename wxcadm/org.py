@@ -363,6 +363,40 @@ class Org:
                     return num
         return None
 
+    def get_workspace_devices(self, workspace: Optional[Workspace] = None):
+        """ Get Webex Calling Workspaces and their associated Devices
+
+        When called without an argument, a list of Workspace instances is returned. Devices associated with each
+        Workspace can be accessed with the .devices attribute of each Workspace. If there are no Devices assigned
+        to a Workspace, .devices will return an empty list (i.e. []).
+
+        When called with a ``workspace`` argument, which is a Workspace instance, the Devices for that Workspace will
+        be returned as a list of Device instances.
+
+        Args:
+            workspace (Workspace, optional): A Workspace instance to show devices for
+
+        Returns:
+            list: Either a list of :py:class:`Workspace` or a list of :py:class:`Device`, depending on the argument
+
+        """
+        # TODO: For now, until the Workspaces API works for all WxC Workspaces, we use the .numbers as the key
+        if workspace is not None:
+            return workspace.devices
+        workspaces = []
+        for number in self.numbers:
+            if 'owner' in number.keys():
+                if isinstance(number['owner'], dict) and number['owner']['type'] == 'PLACE':
+                    print(number)
+                    ws_config = {'displayName': number['owner']['firstName']}
+                    workspace = Workspace(self, id=number['owner']['id'], config=ws_config)
+                    if number['owner']['lastName'] != '.':
+                        workspace.name += f" {number['owner']['lastName']}"
+                    workspace.location = number['location']
+                    workspaces.append(workspace)
+        return workspaces
+
+
     @property
     def devices(self):
         """All the Device instances for the Org

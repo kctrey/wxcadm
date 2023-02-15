@@ -31,6 +31,11 @@ class Device:
 
     @property
     def settings(self):
+        """ The device settings.
+
+        The available settings vary by device type, so the raw dictionary from Webex is returned.
+
+        """
         if self._settings is None:
             response = webex_api_call('get', f'/v1/telephony/config/devices/{self.id}/settings',
                                       params={'model': self.model})
@@ -46,3 +51,18 @@ class Device:
             logging.warning("The API call to set the device settings failed")
 
         self._settings = config
+
+    def apply_changes(self) -> bool:
+        """ Issues request to the device to download and apply changes to the configuration.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        try:
+            webex_api_call('post', f'/v1/telephony/config/devices/{self.id}/actions/applyChanges/invoke')
+        except APIError:
+            return False
+
+        return True
+

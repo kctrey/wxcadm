@@ -87,6 +87,7 @@ def webex_api_call(method: str,
                     return response
             else:
                 log.warning("Webex API returned an error")
+                log.warning(f"\t[{r.status_code}] {r.text}")
                 if r.status_code == 429:
                     retry_after = int(r.headers.get('Retry-After', 30))
                     log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")

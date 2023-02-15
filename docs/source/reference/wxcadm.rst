@@ -59,3 +59,7 @@ is provided as a view under the hood of the module for those interested in enhan
    :undoc-members:
    :noindex:
 
+.. automodule:: wxcadm.workspace
+   :members:
+   :undoc-members:
+   :noindex:
