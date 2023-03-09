@@ -136,14 +136,19 @@ class RedSky:
                 return building
         return None
 
-    def add_building(self, webex_location: Location, create_location: bool = True):
+    def add_building(self, webex_location: Optional[Location] = None,
+                     address_string: Optional[str] = None, create_location: bool = True):
         """ Add a new Building to RedSky
 
         The ``create_location`` arg defaults to True, which will automatically create a RedSkyLocation called "Default".
         If you want to prevent a Location from being created, pass ``create_location=False``.
 
+        Either a ``webex_location`` or ``address_string`` argument should be provided. If both are provided, the Webex
+        Location instance will take precedence
+
         Args:
             webex_location (Location): The Webex Location instance to create the building for
+            address_string (str, optional): The complete address, as a string
             create_location (bool. optional: Whether to create a RedSkyLocation called "Default" in the RedSkyBuilding
 
         Returns:
@@ -154,15 +159,18 @@ class RedSky:
             wxcadm.exceptions.APIError: Raised on all API failures
 
         """
-        if webex_location.address['country'] != "US":
-            raise ValueError("Cannot create Building for non-US location")
+        if webex_location is not None:
+            if webex_location.address['country'] != "US":
+                raise ValueError("Cannot create Building for non-US location")
 
-        a1 = webex_location.address['address1']
-        a2 = webex_location.address.get("address2", "")
-        city = webex_location.address['city']
-        state = webex_location.address['state']
-        zip = webex_location.address['postalCode']
-        full_address = f"{a1} {a2}, {city}, {state} {zip}"
+            a1 = webex_location.address['address1']
+            a2 = webex_location.address.get("address2", "")
+            city = webex_location.address['city']
+            state = webex_location.address['state']
+            zip = webex_location.address['postalCode']
+            full_address = f"{a1} {a2}, {city}, {state} {zip}"
+        else:
+            full_address = address_string
 
         payload = {"name": webex_location.name,
                    "supplementalData": webex_location.id[-20:],
@@ -315,6 +323,22 @@ class RedSky:
             raise APIError(f"There was a problem getting Chassis mapping: {r.text}")
         return mappings
 
+    def get_lldp_discovery_by_chassis(self, chassis_id: str):
+        """ Get the LLDP chassis and port mappings for a give Chassis identifier
+
+        Args:
+            chassis_id (str): The Chassis idnetifier
+
+        Returns:
+            dict: The LLDP discovery configuration. None is returned if no match if found
+
+        """
+        for entry in self.get_lldp_discovery():
+            if entry['chassisId'].upper() == chassis_id.upper():
+                return entry
+        return None
+
+
     def add_lldp_discovery(self, chassis: str, location: "RedSkyLocation", ports: list = None, description: str = ""):
         """ Add a new LLDP mapping to RedSky Horizon
 
@@ -356,10 +380,40 @@ class RedSky:
             for entry in current_lldp:
                 if entry['chassisId'].lower == chassis.lower():
                     return entry
-            raise APIError("Something went wrong addind the LLDP mapping")
         else:
             new_chassis = self._add_chassis_discovery(chassis, location, description)
             return new_chassis
+
+    def update_lldp_location(self, entry_id: str, chassis: str, new_location: RedSkyLocation, description: str):
+        payload = {
+            'chassisId': chassis,
+            'companyId': self.org_id,
+            'id': entry_id,
+            'locationId': new_location.id,
+            'description': description
+        }
+        r = requests.put("https://api.wxc.e911cloud.com/networking-service/networkSwitch",
+                         headers=self._headers, json=payload)
+        if r.ok:
+            return True
+        else:
+            raise APIError(f"There was a problem updating the chassis: {r.text}")
+
+    def update_lldp_port_location(self, entry_id: str, chassis_id: str, port: str,
+                                  new_location: RedSkyLocation, description: str):
+        payload = {
+            'description': description,
+            'erlId': new_location.id,
+            'id': entry_id,
+            'networkSwitchId': chassis_id,
+            'portId': port
+        }
+        r = requests.put("https://api.wxc.e911cloud.com/networking-service/networkSwitchPort",
+                         headers=self._headers, json=payload)
+        if r.ok:
+            return True
+        else:
+            raise APIError(f"There was a problem updating the chassis: {r.text}")
 
     def _add_chassis_discovery(self, chassis, location, description=""):
         payload = {"chassisId": chassis,

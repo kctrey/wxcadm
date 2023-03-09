@@ -2,6 +2,10 @@
 
 What's New
 ==========
+v3.3.0
+------
+- **wxcadm** now supports an integration with the Meraki Dashboard with the goal of being able to use Meraki Dashboard data to populate the RedSky Network Discovery.
+
 v3.2.0
 ------
 - Added :py:meth:`Org.get_workspace_devices()` to return Webex Calling Workspaces with their devices, or an empty device list if there are no devices

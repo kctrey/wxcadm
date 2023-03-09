@@ -9,6 +9,7 @@ log.addHandler(logging.NullHandler())
 from .webex import Webex
 from .xsi import XSIEvents, Call, XSI, XSICallQueue
 from .redsky import RedSky
+from .meraki import Meraki
 from .exceptions import *
 from .common import *
 from .wholesale import Wholesale

@@ -131,6 +131,13 @@ the two. Stay tuned...
     reference/RedSkyLocation
 
 .. toctree::
+    :maxdepth: 2
+    :caption: Meraki
+
+    usage/meraki
+    reference/Meraki
+
+.. toctree::
    :maxdepth: 3
    :caption: Full Reference
 
