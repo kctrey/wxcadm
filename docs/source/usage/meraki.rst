@@ -43,14 +43,20 @@ Meraki network. To ensure the full functionality, the following guidelines shoul
 - Tags can be applied as follows:
   - Switch
     - When a tag is applied to a switch, the entire switch chassis will be assigned to the Location_name of the tag
+
   - Switch Port
+
     - When a switch port is tagged, the port will be added to RedSky with the appropriate Location_name
+
     - If a switch port is tagged, the switch must also be tagged. The Location_names do not have to be the same.
+
     - Switch ports are considered an override for the switch, so if only one port needs a different Location_name than
-  the switch.
+      the switch.
+
   - Access Point
+
     - When a tag is applied to an access point, all SSIDs and bands will be mapped to the same Location_name. This may
-  not be desirable if the RF coverage is different, but Meraki doesn't provide a method to tag individual BSSIDs.
+      not be desirable if the RF coverage is different, but Meraki doesn't provide a method to tag individual BSSIDs.
 
 Building Determination
 ----------------------
