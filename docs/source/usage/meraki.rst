@@ -38,10 +38,14 @@ Meraki network. To ensure the full functionality, the following guidelines shoul
 
 - The audit is performed at the Network level of the Meraki hierarchy. If multiple networks are used, the audit should
   be repeated for each.
+
 - The tag used to identify the Dispatchable Location text (e.g. "Floor 1", "Floor 2", "West side") must follow the
   format "``911-Location_Name``" (i.e. "911-Floor_1", "911-Floor_2", "911-West_side")
+
 - Tags can be applied as follows:
+
   - Switch
+
     - When a tag is applied to a switch, the entire switch chassis will be assigned to the Location_name of the tag
 
   - Switch Port
