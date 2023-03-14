@@ -17,7 +17,8 @@ requires = [
     'requests>=2.27.1',
     'requests-toolbelt>=0.9.1',
     'srvlookup>=2.0.0',
-    'xmltodict>=0.12.0'
+    'xmltodict>=0.12.0',
+    'meraki==1.27.0'
 ]
 
 with open('README.md', 'r', encoding='utf-8') as f:
