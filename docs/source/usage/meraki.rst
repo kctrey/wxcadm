@@ -14,7 +14,7 @@ ensures the engineers who are installing and configuring these devices, and who 
 coverage of the devices, can populate an accurate dispatchable address.
 
 Although this practice is not limited to Cisco network management, the Meraki Dashboard provides an easy way to
-access this data and use it in a RedSky envirnoment. **wxcadm** supports a native way to use the Meraki Dashboard API
+access this data and use it in a RedSky environment. **wxcadm** supports a native way to use the Meraki Dashboard API
 to obtain this data and automatically populate the RedSky Network Discovery.
 
 In a Meraki network, all devices, whether they are siwtches, switch ports, or Wi-Fi access points, have the ability to
