@@ -2,6 +2,17 @@
 
 What's New
 ==========
+v3.4.0
+------
+- Refactor to remove CSDM requirement for device work now that it is supported in Webex API
+- Added :py:meth:`Org.get_workspace_by_id()`
+- Added :py:meth:`Person.add_device()` to allow devices to be created for people
+- Added :py:meth:`Workspace.add_device()` to allow devices to be created for Workpaces
+- Added :py:meth:`Device.delete()` to delete a device
+- Added a number of new attributes to :py:class:`Device` that are now provided by Webex
+- Added :py:meth:`Org.get_supported_devices()` to provide a list of supported devices now that they can be added
+- Changed :py:meth:`Org.get_devices()` and :py:meth:`Org.get_device_by_id()` to deal with mismatched IDs for the same device, but with the same UUID
+
 v3.3.0
 ------
 - **wxcadm** now supports an integration with the Meraki Dashboard with the goal of being able to use Meraki Dashboard data to populate the RedSky Network Discovery.
@@ -35,6 +46,7 @@ v3.0.4
 
 v3.0.3
 ------
+- Added :py:meth:`Device.change_tags()`
 - Added :py:meth:`Webex.get_new_token()` method to use the Refresh Token to obtain a new token.
 - **wxcadm** now supports Service Applications
 - BUG FIX: :py:meth:`XSI.get_fac()` no longer requires the profile to be retrieved first

@@ -52,7 +52,9 @@ class WebexApplications(UserList):
         for app in self.data:
             if app.name == name:
                 found_apps.append(app)
-        if len(found_apps) == 1:
+        if len(found_apps) == 0:
+            return None
+        elif len(found_apps) == 1:
             return found_apps[0]
         else:
             return found_apps

@@ -23,6 +23,7 @@ class RedSky:
         r = requests.post("https://api.wxc.e911cloud.com/auth-service/login", json=payload)
         if r.ok:
             response = r.json()
+            log.debug(response)
         else:
             raise APIError("Cannot log into RedSky Horizon")
         self._access_token = response['accessToken']

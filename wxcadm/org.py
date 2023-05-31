@@ -8,7 +8,6 @@ from wxcadm import log
 from .common import *
 from .common import _url_base
 from .exceptions import *
-from .csdm import CSDM
 from .cpapi import CPAPI
 from .location import Location
 from .location_features import PagingGroup, PickupGroup, HuntGroup, CallQueue, AutoAttendant
@@ -19,6 +18,7 @@ from .workspace import Workspace, WorkspaceLocation
 from .call_routing import CallRouting
 from .reports import Reports
 from .calls import Calls
+from .device import Device
 
 
 class Org:
@@ -94,9 +94,6 @@ class Org:
 
         # Create a CPAPI instance for CPAPI work
         self._cpapi = CPAPI(self, self._parent._access_token)
-
-        # Create a CSDM instance for CSDM work
-        self._csdm = CSDM(self, self._parent._access_token)
 
         if locations:
             self.get_locations()
@@ -209,6 +206,10 @@ class Org:
                 paging_groups.append(this_pg)
             self._paging_groups = paging_groups
         return self._paging_groups
+
+    def get_supported_devices(self):
+        response = webex_api_call('get', f"/v1/telephony/config/supportedDevices", params={'orgId': self.id})
+        return response['devices']
 
     @property
     def webhooks(self):
@@ -404,8 +405,29 @@ class Org:
         Returns:
             list[Device]: List of all Device instances
         """
-        self._devices = self._csdm.get_devices()
-        return self._devices
+        devices = []
+        response = webex_api_call("get", "/v1/devices", params={"orgId": self.id})
+        for device in response:
+            this_device = Device(self, config=device)
+            devices.append(this_device)
+        return devices
+
+    def get_device_by_id(self, device_id: str):
+        """ Get the :py:class:`Device` instance for a specific Device ID
+
+        Args:
+            device_id (str): The Device ID to return
+
+        Returns:
+            Device: The Device instance. False is returned if no match is found.
+
+        """
+        log.debug(f"Finding device with ID {device_id}")
+        for device in self.devices:
+            if device.id == device_id or decode_spark_id(device.id).split("/")[-1] == \
+                    decode_spark_id(device_id).split("/")[-1]:
+                return device
+        return False
 
     def get_location_by_name(self, name: str):
         """Get the Location instance associated with a given Location name
@@ -714,6 +736,23 @@ class Org:
             self.workspace_locations.append(this_location)
 
         return self.workspaces
+
+    def get_workspace_by_id(self, id: str) -> Optional[Workspace]:
+        """ Get a :py:class:`Workspace` by its ID
+
+        Args:
+            id (str): The Workspace ID to serach for
+
+        Returns:
+            Workspace: The matching Workspace instance. None is returned if no match is found.
+
+        """
+        if self.workspaces is None:
+            self.get_workspaces()
+        for workspace in self.workspaces:
+            if workspace.id == id:
+                return workspace
+        return None
 
     def get_pickup_groups(self):
         """Get all of the Call Pickup Groups for an Organization.
