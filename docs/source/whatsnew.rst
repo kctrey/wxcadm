@@ -4,6 +4,7 @@ What's New
 ==========
 v3.4.0
 ------
+- Added :py:meth:`RedSky.delete_lldp_chassis()` to remove LLDP mapping
 - Changed :py:meth:`Org.locations` to not require :py:meth:`Org.get_locations()` first, so that it behaves like the newer classes. Added new :py:meth:`Org.refresh_locations()` method, which can be used to pull updated Location data.
 - Announcement Repository now supported across :py:class:`Org` and :py:class:`Location`. New :py:class:`Announcement` class.
 - BUG FIX: :py:meth:`Org.get_call_queue_by_id()` fixed
