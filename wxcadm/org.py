@@ -14,6 +14,7 @@ from .location_features import PagingGroup, PickupGroup, HuntGroup, CallQueue, A
 from .webhooks import Webhooks
 from .person import UserGroups, Person
 from .applications import WebexApplications
+from .announcements import AnnouncementList
 from .workspace import Workspace, WorkspaceLocation
 from .call_routing import CallRouting
 from .reports import Reports
@@ -60,8 +61,8 @@ class Org:
         """The Hunt Groups for this Org"""
         self.pickup_groups: Optional[list] = None
         'A list of the PickupGroup instances for this Org'
-        self.locations: list = []
-        'A list of the Location instances for this Org'
+        self._locations: list | None = None
+        """ The cache of locations as used by the .locations property """
         self.name: str = name
         'The name of the Organization'
         self.id: str = id
@@ -83,6 +84,7 @@ class Org:
         """A list of the AutoAttendant instances for this Org"""
         self._usergroups: Optional[list] = None
         self._roles: Optional[dict] = None
+        self._announcements: Optional[AnnouncementList] = None
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -141,6 +143,12 @@ class Org:
         if self._licenses is None:
             self._licenses = self.__get_licenses()
         return self._licenses
+
+    @property
+    def locations(self):
+        if self._locations is None:
+            self.get_locations()
+        return self._locations
 
     @property
     def roles(self):
@@ -225,6 +233,13 @@ class Org:
     def applications(self):
         """ The :py:class:`WebexApplications` list with the :py:class:`WebexApplication` instances for this Org """
         return WebexApplications(parent=self)
+
+    @property
+    def announcements(self):
+        """ The :py:class:`AnnouncementList` list with the :py:class:`Announcement` instances for this Org """
+        if self._announcements is None:
+            self._announcements = AnnouncementList(parent=self)
+        return self._announcements
 
     @property
     def calls(self):
@@ -684,7 +699,7 @@ class Org:
 
         """
         log.info("get_locations() started")
-        self.locations.clear()
+        self._locations = []
         api_resp = webex_api_call("get", "v1/locations", headers=self._headers, params=self._params)
         for location in api_resp:
             this_location = Location(self,
@@ -693,8 +708,8 @@ class Org:
                                      address=location['address'],
                                      time_zone=location['timeZone'],
                                      preferred_language=location['preferredLanguage'])
-            self.locations.append(this_location)
-        return self.locations
+            self._locations.append(this_location)
+        return self._locations
 
     def create_location(self,
                         name: str,
@@ -709,7 +724,7 @@ class Org:
             'announcementLanguage': announcement_language,
             'address': address
         }
-        response = webex_api_call('post', '/v1/locations', params={'orgId': self.id}, payload=payload)
+        response = webex_api_call('post', 'v1/locations', payload=payload)
         return response
 
     def get_workspaces(self):
@@ -836,6 +851,7 @@ class Org:
             HuntGroup: The :class:`CallQueue` instance
 
         """
+        log.info(f"Getting Call Queue with ID {id}")
         if self.call_queues is None:
             self.get_call_queues()
         for cq in self.call_queues:
@@ -1011,4 +1027,8 @@ class Org:
         }
         response = webex_api_call('get', '/v1/adminAudit/events', params=params)
         return response
+
+    ### Method aliases
+    # Used for backwards compatibility to old method names as new methods are added/changed
+    refresh_locations = get_locations
 

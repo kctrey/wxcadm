@@ -4,6 +4,11 @@ What's New
 ==========
 v3.4.0
 ------
+- Changed :py:meth:`Org.locations` to not require :py:meth:`Org.get_locations()` first, so that it behaves like the newer classes. Added new :py:meth:`Org.refresh_locations()` method, which can be used to pull updated Location data.
+- Announcement Repository now supported across :py:class:`Org` and :py:class:`Location`. New :py:class:`Announcement` class.
+- BUG FIX: :py:meth:`Org.get_call_queue_by_id()` fixed
+- Added :py:meth:`Location.auto_attendants` to make finding AAs by Location easier
+- BUG FIX: Fixed :py:meth:`Org.create_location()` which had an incorrect API endpoint
 - Refactor to remove CSDM requirement for device work now that it is supported in Webex API
 - Added :py:meth:`Org.get_workspace_by_id()`
 - Added :py:meth:`Person.add_device()` to allow devices to be created for people

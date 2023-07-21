@@ -153,6 +153,32 @@ def webex_api_call(method: str,
                     continue
                 else:
                     raise APIError(f"The Webex API returned an error: {r.text}")
+        elif method.lower() == "put_upload":
+            log.debug("Putting a file upload")
+            log.debug(payload)
+            session.headers['Content-Type'] = payload.content_type
+            r = session.put(url_base + url, params=params, data=payload)
+            log.debug(f"Response Headers: {r.headers}")
+            if r.ok:
+                try:
+                    response = r.json()
+                except requests.exceptions.JSONDecodeError:
+                    end = time.time()
+                    log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    return True
+                else:
+                    end = time.time()
+                    log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    return response
+            else:
+                log.warning("Webex API returned an error")
+                if r.status_code == 429:
+                    retry_after = int(r.headers.get('Retry-After', 30))
+                    log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                    time.sleep(retry_after)
+                    continue
+                else:
+                    raise APIError(f"The Webex API returned an error: {r.text}")
         elif method.lower() == "post":
             log.debug(f"Post body: {payload}")
             r = session.post(url_base + url, params=params, json=payload)
@@ -169,6 +195,32 @@ def webex_api_call(method: str,
                     return response
             else:
                 log.warning(f"Webex API returned an error: {r.text}")
+                if r.status_code == 429:
+                    retry_after = int(r.headers.get('Retry-After', 30))
+                    log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                    time.sleep(retry_after)
+                    continue
+                else:
+                    raise APIError(f"The Webex API returned an error: {r.text}")
+        elif method.lower() == "post_upload":
+            log.debug("Posting a file upload")
+            log.debug(payload)
+            session.headers['Content-Type'] = payload.content_type
+            r = session.post(url_base + url, params=params, data=payload)
+            log.debug(f"Response Headers: {r.headers}")
+            if r.ok:
+                try:
+                    response = r.json()
+                except requests.exceptions.JSONDecodeError:
+                    end = time.time()
+                    log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    return True
+                else:
+                    end = time.time()
+                    log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    return response
+            else:
+                log.warning("Webex API returned an error")
                 if r.status_code == 429:
                     retry_after = int(r.headers.get('Retry-After', 30))
                     log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")

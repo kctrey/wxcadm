@@ -66,6 +66,26 @@ class Location:
         return my_hunt_groups
 
     @property
+    def announcements(self):
+        """ List of :py:class:`Announcement` instances for the Location
+
+        .. note::
+            This does not include announcements built at the Organization level
+
+        """
+        annc_list = self._parent.announcements.get_by_location_id(self.id)
+        return annc_list
+
+    @property
+    def auto_attenndants(self):
+        """ List of AutoAttendant instances for this Location"""
+        aa_list = []
+        for aa in self._parent.auto_attendants:
+            if aa.location == self.id:
+                aa_list.append(aa)
+        return aa_list
+
+    @property
     def call_queues(self):
         """List of CallQueue instances for this Location"""
         my_call_queues = []
