@@ -385,6 +385,43 @@ class RedSky:
             new_chassis = self._add_chassis_discovery(chassis, location, description)
             return new_chassis
 
+    def delete_lldp_chassis(self, chassis_id: str, delete_ports: bool = False):
+        """ Delete an LLDP mapping from Horizon Mobility
+
+        Args:
+            chassis_id (str): The chassis ID of the LLDp Discovery to delete
+            delete_ports (bool, optional): Whether to delete all ports first. Defaults to False
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Deleting Chassis Discovery: {chassis_id}")
+        chassis_entry = self.get_lldp_discovery_by_chassis(chassis_id)
+
+        if delete_ports is True:
+            log.info("Deleting all ports")
+            for port in chassis_entry['ports']:
+                log.info(f"\tDeleting Port: {port['portId']}")
+                r = requests.delete(f"https://api.wxc.e911cloud.com/networking-service/networkSwitchPort/{port['id']}",
+                                    headers=self._headers,
+                                    params={
+                                        "companyId": self.org_id
+                                    })
+                log.debug(f"Response Code: {r.status_code}")
+
+        r = requests.delete(f"https://api.wxc.e911cloud.com/networking-service/networkSwitch/{chassis_entry['id']}",
+                            headers=self._headers,
+                            params={
+                                "companyId": self.org_id
+                            })
+        log.debug(f"Response Code: {r.status_code}")
+
+        if r.ok:
+            return True
+        else:
+            return False
+
     def update_lldp_location(self, entry_id: str, chassis: str, new_location: RedSkyLocation, description: str):
         payload = {
             'chassisId': chassis,
