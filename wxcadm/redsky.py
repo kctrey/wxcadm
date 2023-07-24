@@ -213,7 +213,6 @@ class RedSky:
         if r.status_code == 200:
             self._held_devices = []
             response = r.json()
-            log.debug(response)
             for device in response:
                 self._held_devices.append(device)
         else:
@@ -645,8 +644,12 @@ class RedSky:
 
     def get_ip_range_discovery(self, ip_start: Optional[str] = None,
                                ip_end: Optional[str] = None,
-                               range_for_ip: Optional[str] = None) -> list | dict | None:
+                               range_for_ip: Optional[str] = None,
+                               type: Optional[str] = 'private') -> list | dict | None:
         """ Get the current IP Range mappings defined in Horizon Mobility
+
+        This method can be used to retrieve Private IP Range Discovery (the default) as well as Public IP Ranges.
+        Public IP Ranges can be retrieved by adding ``type='public'`` to the arguments.
 
         When this method is called without an argument, all IP Range Discovery entries will be returned as a list, or an
         empty list if there are none defines. When passed with any argument, the method will return the dict of the
@@ -660,6 +663,13 @@ class RedSky:
         If both ``ip_start`` and ``ip_end`` are given, an entry that matches either value will be returned. If only one
         is passed, the entry must mach that value.
 
+        Args:
+            ip_start (str, optional): The first IP in the range
+            ip_end (str, optional): The last IP in the range
+            range_for_ip (str, optional): An IP to find the matching range for (i.e. an IP within an IP Range entry)
+            type (str, optional): Accepted values are ``'private'`` and ``'public'``. Defaults to ``'private'``.
+
+
         Returns:
             list[dict]: A list of all the IP Range mappings. An empty list is returned when no argument is passed and
                 there are no entries in the IP Range Discovery.
@@ -667,11 +677,19 @@ class RedSky:
             None: No match for given ``ip_start``, ``ip_end`` or ``range_for_ip``
 
         Raises:
+            ValueError: Raised if ``type`` argument is not ``'private'`` or ``'public'``
             wxcadm.exceptions.APIError: Raised on any error from the RedSKy API
 
         """
+        if type.lower() != 'private' and type.lower() != 'public':
+            raise ValueError("Unrecognized type value")
+
+        if type.lower() == 'private':
+            endpoint = 'ipRange'
+        elif type.lower() == 'public':
+            endpoint = 'publicIpRange'
         mappings = []
-        r = requests.get(f"https://api.wxc.e911cloud.com/networking-service/ipRange/company/{self.org_id}",
+        r = requests.get(f"https://api.wxc.e911cloud.com/networking-service/{endpoint}/company/{self.org_id}",
                          headers=self._headers)
         if r.ok:
             response = r.json()
@@ -712,15 +730,42 @@ class RedSky:
         payload = {"ipAddressLow": ip_start,
                    "ipAddressHigh": ip_end,
                    "locationId": location.id,
-                   "orgId": self.org_id,
                    "description": description}
         r = requests.post(f"https://api.wxc.e911cloud.com/networking-service/ipRange",
-                          headers=self._headers, json=payload)
+                          headers=self._headers, json=payload, params={'companyId': self.org_id})
         if r.ok:
             added_mapping = r.json()
         else:
             raise APIError(f"There was a problem adding the mapping: {r.text}")
         return added_mapping
+
+    def add_public_ip_range(self, ip_start: str, ip_end: str, description: str = ""):
+        """ Add a new Public IP Range to RedSky Horizon
+
+        .. note::
+
+            Public IP Ranges are not mapped to a Location. They are to ensure that only requests from recognized
+            corporates networks are accepted by Horizon Mobility
+
+        Args:
+            ip_start (str): The first IP in the range
+            ip_end (str): The last IP in the range
+            description (str, optional): A description for the Public IP Range entry
+
+        Returns:
+
+        """
+        payload = {"ipAddressLow": ip_start,
+                   "ipAddressHigh": ip_end,
+                   "description": description,
+                   "companyId": self.org_id}
+        r = requests.post(f"https://api.wxc.e911cloud.com/networking-service/publicIpRange",
+                          headers=self._headers, json=payload, params={'companyId': self.org_id})
+        if r.ok:
+            added_range = r.json()
+        else:
+            raise APIError(f"There was a problem adding the mapping: {r.text}")
+        return added_range
 
     def delete_ip_range_discovery(self, ip_start: str, ip_end: str):
         """ Delete an IP Range mapping from Horizon Mobility
@@ -752,6 +797,7 @@ class RedSky:
     def users(self):
         self._users = RedSkyUsers(parent=self)
         return self._users
+
 
 
 class RedSkyUsers(UserList):
@@ -921,6 +967,38 @@ class RedSkyBuilding:
             return True
         else:
             raise APIError("Something went wrong adding the Location: {r.text}")
+
+    @property
+    def bssid_discovery(self):
+        """ The BSSID Discovery entries associated with Locations at this RedSkyBuilding """
+        entries = []
+        for location in self.locations:
+            entries.extend(location.bssid_discovery)
+        return entries
+
+    @property
+    def lldp_discovery(self):
+        """ The LLDP Discovery entries associated with Locations at this RedSkyBuilding"""
+        entries = []
+        for location in self.locations:
+            entries.extend(location.lldp_discovery)
+        return entries
+
+    @property
+    def mac_discovery(self):
+        """ The MAC Address Discovery entries associated with Locations at this RedSkyBuilding """
+        entries = []
+        for location in self.locations:
+            entries.extend(location.mac_discovery)
+        return entries
+
+    @property
+    def ip_range_discovery(self):
+        """ The IP Range Discovery entries associated with Locations at this RedSkyBuilding """
+        entries = []
+        for location in self.locations:
+            entries.extend(location.ip_range_discovery)
+        return entries
 
 
 class RedSkyLocation:
