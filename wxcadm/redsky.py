@@ -256,9 +256,8 @@ class RedSky:
             mac (str, optional): The MAC value to get the details for
 
         Returns:
-            list[dict]: A list of all the MAC address mappings
-            dict: The matching MAC Discovery dict
-            None: No matching MAC Discovery found for given ``mac``
+            list[dict]: A list of all the MAC address mappings. If a ``mac`` argument was passed, the dict of that
+                entry is returned, or None is returned if no match was found
 
         Raises:
             wxcadm.exceptions.APIError: Raised on any error from the RedSKy API
@@ -753,6 +752,7 @@ class RedSky:
             description (str, optional): A description for the Public IP Range entry
 
         Returns:
+            dict: The created entry
 
         """
         payload = {"ipAddressLow": ip_start,
