@@ -671,9 +671,8 @@ class RedSky:
 
         Returns:
             list[dict]: A list of all the IP Range mappings. An empty list is returned when no argument is passed and
-                there are no entries in the IP Range Discovery.
-            dict: The entry for the given ``ip_start``, ``ip_end`` or ``range_for_ip``
-            None: No match for given ``ip_start``, ``ip_end`` or ``range_for_ip``
+            there are no entries in the IP Range Discovery. If a filter argument was passed, the entry will be the dict
+            of the matching entry or None if no match was found.
 
         Raises:
             ValueError: Raised if ``type`` argument is not ``'private'`` or ``'public'``
