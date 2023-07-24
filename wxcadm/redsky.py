@@ -257,7 +257,7 @@ class RedSky:
 
         Returns:
             list[dict]: A list of all the MAC address mappings. If a ``mac`` argument was passed, the dict of that
-                entry is returned, or None is returned if no match was found
+            entry is returned, or None is returned if no match was found
 
         Raises:
             wxcadm.exceptions.APIError: Raised on any error from the RedSKy API
