@@ -31,6 +31,7 @@ class RedSky:
         self._refresh_token = response['refreshTokenInfo']['id']
         self._full_config = response
         self._buildings = []
+        self._users = None
 
     @property
     def _headers(self):
@@ -50,10 +51,12 @@ class RedSky:
             raise APIError("There was an error refreshing the RedSky token")
 
     def get_all_locations(self):
-        """ Get all of the Locations that RedSky knows about
+        """ Get all the Locations that RedSky knows about
 
-        This method is only useful in very specific reporting cases, since you only get the Location information
-        and no device-level information.
+        .. note ::
+
+            This method is only useful in very specific reporting cases, since you only get the Location information
+            and no device-level information.
 
         Returns:
              list[dict]: A list of the location information as a dict
@@ -69,7 +72,7 @@ class RedSky:
 
     @property
     def buildings(self):
-        """A list of all of the RedSkyBuilding instances within this RedSky account
+        """A list of all the RedSkyBuilding instances within this RedSky account
 
         Returns:
             list[RedSkyBuilding]: The RedSkyBuilding instances
@@ -102,7 +105,7 @@ class RedSky:
         """Get the RedSkyBuilding instance for a given name
 
         Args:
-            name (str): The name of the Building to return. Not case sensitive.
+            name (str): The name of the Building to return. Not case-sensitive.
 
         Returns:
             RedSkyBuilding: The instance of the RedSkyBuilding class. None is returned if no match is found.
@@ -150,7 +153,7 @@ class RedSky:
         Args:
             webex_location (Location): The Webex Location instance to create the building for
             address_string (str, optional): The complete address, as a string
-            create_location (bool. optional: Whether to create a RedSkyLocation called "Default" in the RedSkyBuilding
+            create_location (bool. optional): Whether to create a RedSkyLocation called "Default" in the RedSkyBuilding
 
         Returns:
             RedSkyBuilding: The RedSkyBulding instance that was created
@@ -196,7 +199,7 @@ class RedSky:
 
     @property
     def held_devices(self):
-        """All of the HELD devices known to RedSky"""
+        """All the HELD devices known to RedSky"""
         params = {"page": 1,
                   "pageSize": 100,
                   "searchTerm": None,
@@ -244,11 +247,19 @@ class RedSky:
                 devices.append(device)
         return devices
 
-    def get_mac_discovery(self):
+    def get_mac_discovery(self, mac: Optional[str] = None) -> list | dict | None:
         """ Get the current MAC address mapping defined in RedSky Horizon
+
+        When called without the ``mac`` argument, all current MAC mappings will be returned. When a ``mac`` is passed,
+        the entry for that MAC will be returned. If no match can be found, None will be returned.
+
+        Args:
+            mac (str, optional): The MAC value to get the details for
 
         Returns:
             list[dict]: A list of all the MAC address mappings
+            dict: The matching MAC Discovery dict
+            None: No matching MAC Discovery found for given ``mac``
 
         Raises:
             wxcadm.exceptions.APIError: Raised on any error from the RedSKy API
@@ -263,6 +274,15 @@ class RedSky:
                 mappings.append(item)
         else:
             raise APIError(f"There was a problem getting MAC mapping: {r.text}")
+
+        if mac is not None:
+            log.info(f"Finding MAC Discover for MAC: {mac.upper()}")
+            for entry in mappings:
+                if entry['macAddress'].upper() == mac.upper():
+                    log.debug(f"Match found: {entry['id']}")
+                    return entry
+            log.warning("No MAC match found")
+            return None
         return mappings
 
     def add_mac_discovery(self, mac: str, location: "RedSkyLocation", description: str = ""):
@@ -292,6 +312,47 @@ class RedSky:
         else:
             raise APIError(f"There was a problem adding the mapping: {r.text}")
         return added_mapping
+
+    def delete_mac_discovery(self, mac: Optional[str] = None, entry_id: Optional[str] = None) -> bool:
+        """ Delete a MAC Address mapping from Horizon Mobility
+
+        If you have found the MAC Discovery entry yourself using the :py:meth:`get_mac_discovery()` method, you
+        can pass the ``['id']`` of that entry as the ``entry_id``. If you pass the ``mac`` argument, that lookup will
+        be done for you.
+
+        Either the ``mac`` or the ``entry_id`` argument must be passed. If both are passed, the ``entry_id`` will
+        take precedence and the ``mac`` value will be ignored.
+
+        Args:
+            mac (str, optional): The MAC address to delete
+            entry_id (str, optional): The ``['id']`` of the MAC Discovery entry dic
+
+        Returns:
+            bool: True on success, False otherwise
+
+        Raises:
+            ValueError: Raised when no ``mac`` or ``entry_id`` is present in the arguments
+
+        """
+        if mac is None and entry_id is None:
+            raise ValueError("Either mac or entry_id argument must be present")
+        log.info(f"Deleting MAC Discovery: {mac}")
+
+        if entry_id is None:
+            entry = self.get_mac_discovery(mac)
+            if entry is None:
+                return False
+            else:
+                entry_id = entry['id']
+
+        r = requests.delete(f"https://api.wxc.e911cloud.com/networking-service/macAddress/{entry_id}",
+                            headers=self._headers,
+                            params={"companyId": self.org_id})
+        log.info(f"Response Code: {r.status_code}")
+        if r.ok:
+            return True
+        else:
+            return False
 
     def get_lldp_discovery(self):
         """ Get the current LLDP chassis and port mappings defined in RedSky Horizon
@@ -328,17 +389,16 @@ class RedSky:
         """ Get the LLDP chassis and port mappings for a give Chassis identifier
 
         Args:
-            chassis_id (str): The Chassis idnetifier
+            chassis_id (str): The Chassis identifier
 
         Returns:
-            dict: The LLDP discovery configuration. None is returned if no match if found
+            dict: The LLDP discovery configuration. None is returned if no match is found
 
         """
         for entry in self.get_lldp_discovery():
             if entry['chassisId'].upper() == chassis_id.upper():
                 return entry
         return None
-
 
     def add_lldp_discovery(self, chassis: str, location: "RedSkyLocation", ports: list = None, description: str = ""):
         """ Add a new LLDP mapping to RedSky Horizon
@@ -474,13 +534,19 @@ class RedSky:
         r = requests.post(f"https://api.wxc.e911cloud.com/networking-service/networkSwitchPort",
                           headers=self._headers, json=payload)
         if r.ok:
-            respose = r.json()
+            response = r.json()
         else:
             raise APIError(f"There was a problem adding the port to the chassis: {r.text}")
-        return respose
+        return response
 
-    def get_bssid_discovery(self):
+    def get_bssid_discovery(self, bssid: Optional[str] = None) -> list | dict | None:
         """ Get the current BSSID mappings defined in RedSky Horizon
+
+        When called without the ``bssid`` argument, all current BSSID mappings will be returned. When a ``bssid`` is
+        passed, the entry for that BSSID will be returned. If no match can be found, None will be returned.
+
+        Args:
+            bssid (str, optional): The BSSID value to get the details for
 
         Returns:
             list[dict]: A list of all the BSSID mappings
@@ -489,6 +555,7 @@ class RedSky:
             wxcadm.exceptions.APIError: Raised on any error from the RedSKy API
 
         """
+        log.info("Getting BSSID Discovery")
         mappings = []
         r = requests.get(f"https://api.wxc.e911cloud.com/networking-service/bssid/company/{self.org_id}",
                          headers=self._headers)
@@ -498,6 +565,15 @@ class RedSky:
                 mappings.append(item)
         else:
             raise APIError(f"There was a problem getting BSSID mapping: {r.text}")
+
+        if bssid is not None:
+            log.info(f"Finding BSSID Discovery for BSSID: {bssid.upper()}")
+            for entry in mappings:
+                if entry['bssid'].upper() == bssid.upper():
+                    log.debug(f"Match found: {entry['id']}")
+                    return entry
+            log.warning("No BSSID match found")
+            return None
         return mappings
 
     def add_bssid_discovery(self, bssid: str, location: "RedSkyLocation", description: str = ""):
@@ -527,11 +603,68 @@ class RedSky:
             raise APIError(f"There was a problem adding the mapping: {r.text}")
         return added_mapping
 
-    def get_ip_range_discovery(self):
-        """ Get the current IP Range mappings defined inRedSky Horizon
+    def delete_bssid_discovery(self, bssid: Optional[str] = None, entry_id: Optional[str] = None) -> bool:
+        """ Delete a BSSID Mapping from Horizon Mobility
+
+        If you have found the BSSID Discovery entry yourself using the :py:meth:`get_bsssid_discovery()` method, you
+        can pass the ``['id']`` of that entry as the ``entry_id``. If you pass the ``bssid`` argument, that lookup will
+        be done for you.
+
+        Either the ``bssid`` or the ``entry_id`` argument must be passed. If both are passed, the ``entry_id`` will
+        take precedence and the ``bssid`` value will be ignored.
+
+        Args:
+            bssid (str, optional): The BSSID to delete
+            entry_id (str, optional): The ``['id']`` of the BSSID Discovery entry dict
 
         Returns:
-            list[dict]: A list of all the IP Range mappings
+            bool: True on success, False otherwise
+
+        Raises:
+            ValueError: Raised when no ``bssid`` or ``entry_id`` is present in the arguments
+
+        """
+        if bssid is None and entry_id is None:
+            raise ValueError("Either bssid or entry_id argument must be present")
+        log.info(f"Deleting BSSID Discovery: {bssid}")
+
+        if entry_id is None:
+            entry = self.get_bssid_discovery(bssid)
+            if entry is None:
+                return False
+            else:
+                entry_id = entry['id']
+        r = requests.delete(f"https://api.wxc.e911cloud.com/networking-service/bssid/{entry_id}",
+                            headers=self._headers,
+                            params={"companyId": self.org_id})
+        log.info(f"Response Code: {r.status_code}")
+        if r.ok:
+            return True
+        else:
+            return False
+
+    def get_ip_range_discovery(self, ip_start: Optional[str] = None,
+                               ip_end: Optional[str] = None,
+                               range_for_ip: Optional[str] = None) -> list | dict | None:
+        """ Get the current IP Range mappings defined in Horizon Mobility
+
+        When this method is called without an argument, all IP Range Discovery entries will be returned as a list, or an
+        empty list if there are none defines. When passed with any argument, the method will return the dict of the
+        matching entry, or None will be returned if there is no match.
+
+        The ``range_for_ip`` argument takes priority and will return the entry of the range that will include the
+        given IP. For example, with an existing entry from 192.168.1.1 - 192.168.1.255, a
+        ``range_for_ip='192.168.1.100'`` will return that entry, to make finding ranges by included IPs easier. If this
+        argument is passed, the ``ip_start`` and ``ip_end`` arguments will be ignored.
+
+        If both ``ip_start`` and ``ip_end`` are given, an entry that matches either value will be returned. If only one
+        is passed, the entry must mach that value.
+
+        Returns:
+            list[dict]: A list of all the IP Range mappings. An empty list is returned when no argument is passed and
+                there are no entries in the IP Range Discovery.
+            dict: The entry for the given ``ip_start``, ``ip_end`` or ``range_for_ip``
+            None: No match for given ``ip_start``, ``ip_end`` or ``range_for_ip``
 
         Raises:
             wxcadm.exceptions.APIError: Raised on any error from the RedSKy API
@@ -546,6 +679,18 @@ class RedSky:
                 mappings.append(item)
         else:
             raise APIError(f"There was a problem getting IP Range mapping: {r.text}")
+
+        if range_for_ip is not None:
+            for entry in mappings:
+                if entry['ipAddressLow'] <= range_for_ip <= entry['ipAddressHigh']:
+                    return entry
+            return None
+
+        if ip_start is not None or ip_end is not None:
+            for entry in mappings:
+                if entry['ipAddressLow'] == ip_start or entry['ipAddressHigh'] == ip_end:
+                    return entry
+            return None
         return mappings
 
     def add_ip_range_discovery(self, ip_start: str, ip_end: str, location: "RedSkyLocation", description: str = ""):
@@ -576,6 +721,32 @@ class RedSky:
         else:
             raise APIError(f"There was a problem adding the mapping: {r.text}")
         return added_mapping
+
+    def delete_ip_range_discovery(self, ip_start: str, ip_end: str):
+        """ Delete an IP Range mapping from Horizon Mobility
+
+        The ``ip_start`` and ``ip_end`` arguments must match the IP Range Discovery entry to delete
+
+        Args:
+            ip_start (str): The first IP in the range to delete
+            ip_end (str): The last IP in the range to delete
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Deleting IP Range Discovery: {ip_start} - {ip_end}")
+        entry = self.get_ip_range_discovery(ip_start=ip_start, ip_end=ip_end)
+        if entry is None:
+            return False
+        r = requests.delete(f"https://api.wxc.e911cloud.com/networking-service/ipRange/{entry['id']}",
+                            headers=self._headers,
+                            params={"companyId": self.org_id})
+        log.info(f"Response Code: {r.status_code}")
+        if r.ok:
+            return True
+        else:
+            return False
 
     @property
     def users(self):
@@ -768,7 +939,7 @@ class RedSkyLocation:
         self.name = config.get("name")
         self.address = config.get("address")
         self.type = config.get("type", "unknown")
-        self.suppplemental_data = config.get("supplementalData", None)
+        self.supplemental_data = config.get("supplementalData", None)
         self.org_name_override = config.get("orgNameOverride")
         self.info = config.get("info")
         self.address_entity_name: str = config.get("addressEntityName")
@@ -780,4 +951,22 @@ class RedSkyLocation:
     def __repr__(self):
         return self.id
 
+    @property
+    def bssid_discovery(self):
+        """ The BSSID Discovery entries associated with this RedSkyLocation """
+        return [entry for entry in self._parent._parent.get_bssid_discovery() if entry['location']['id'] == self.id]
 
+    @property
+    def lldp_discovery(self):
+        """ The LLDP Discovery entries associated with this RedSkyLocation"""
+        return [entry for entry in self._parent._parent.get_lldp_discovery() if entry['location']['id'] == self.id]
+
+    @property
+    def mac_discovery(self):
+        """ The MAC Address Discovery entries associated with this RedSkyLocation """
+        return [entry for entry in self._parent._parent.get_mac_discovery() if entry['location']['id'] == self.id]
+
+    @property
+    def ip_range_discovery(self):
+        """ The IP Range Discovery entries associated with this RedSkyLocation """
+        return [entry for entry in self._parent._parent.get_ip_range_discovery() if entry['location']['id'] == self.id]

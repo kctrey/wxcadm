@@ -2,6 +2,12 @@
 
 What's New
 ==========
+v3.4.1
+------
+- Added methods to :py:class:`RedSky` and :py:class:`RedSkyLocation` to make Network Discovery easier to find and manage
+- Added :py:meth:`RedSky.delete_mac_discovery()`, :py:meth:`RedSky.delete_bssid_discovery()`
+- Added ``bssid`` argument to :py:meth:`RedSky.get_bssid_discovery`` to allow a single entry to be returned
+
 v3.4.0
 ------
 - Added :py:meth:`RedSky.delete_lldp_chassis()` to remove LLDP mapping
@@ -13,7 +19,7 @@ v3.4.0
 - Refactor to remove CSDM requirement for device work now that it is supported in Webex API
 - Added :py:meth:`Org.get_workspace_by_id()`
 - Added :py:meth:`Person.add_device()` to allow devices to be created for people
-- Added :py:meth:`Workspace.add_device()` to allow devices to be created for Workpaces
+- Added :py:meth:`Workspace.add_device()` to allow devices to be created for Workspaces
 - Added :py:meth:`Device.delete()` to delete a device
 - Added a number of new attributes to :py:class:`Device` that are now provided by Webex
 - Added :py:meth:`Org.get_supported_devices()` to provide a list of supported devices now that they can be added
@@ -70,7 +76,7 @@ v3.0.2
 v3.0.0
 ------
 - **BREAKING CHANGE:** - XSI Actions for Calls now return a :py:class:`XSIResponse` instead of a boolean indicator of success. This allows flexibility to determine why the XSI API call failed and whether it should be retried.
-- The :py:meth:`wxcadm.webex_api_call()` method, which is used by all of the API calls, now supports retry when a 429 is recieved from Webex. The default retry count is 3.
+- The :py:meth:`wxcadm.webex_api_call()` method, which is used by all of the API calls, now supports retry when a 429 is received from Webex. The default retry count is 3.
 - Locations now support :py:meth:`outgoing_call_permissions` property and :py:meth:`set_outgoing_call_permissions()` method
 - The :py:class:`CallRouting` class and :py:meth:`Org.call_routing` property have been added to support the Trunking, Route Groups, and Dial Plan
 - Massive code refactor. **wxcadm** has grown too large to be a single Python file. Debugging and linting was getting overwhelming. v3.0.0 introduces a new package layout that will simplify a lot of things.
@@ -117,7 +123,7 @@ v2.3.0
 v2.2.1
 ------
 - Bug Fix: Removed print() statements from RedSky class
-- **Breaking Change** - :meth:`Org.get_auto_attendants()` has been changed to a property :meth:`Org.auto_attednants` to match other classes.
+- **Breaking Change** - :meth:`Org.get_auto_attendants()` has been changed to a property :meth:`Org.auto_attendants` to match other classes.
 - :meth:`AutoAttendant.upload_greeting()` added to support uploading custom WAV files for Auto Attendants. Note that this requires an Access Token capable of utilizing the CP-API.
 - :meth:`XSIEventsChannelSet.subscribe()` now allows a Person target for subscriptions
 - Improved :meth:`Org.number` to handle HuntGroup, PagingGroup, and CallQueue owners
