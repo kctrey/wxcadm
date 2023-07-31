@@ -55,10 +55,6 @@ class Org:
         self._numbers = None
         self._paging_groups = None
         self._parent = parent
-        self.call_queues: Optional[list] = None
-        """The Call Queues for this Org"""
-        self.hunt_groups: Optional[list] = None
-        """The Hunt Groups for this Org"""
         self.pickup_groups: Optional[list] = None
         'A list of the PickupGroup instances for this Org'
         self._locations: list | None = None
@@ -81,10 +77,11 @@ class Org:
         self._devices: Optional[list] = None
         """A list of the Devce instances for this Org"""
         self._auto_attendants: list = []
-        """A list of the AutoAttendant instances for this Org"""
         self._usergroups: Optional[list] = None
         self._roles: Optional[dict] = None
         self._announcements: Optional[AnnouncementList] = None
+        self._hunt_groups = []
+        self._call_queues = []
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -795,20 +792,18 @@ class Org:
                 self.pickup_groups.append(pg)
         return self.pickup_groups
 
-    def get_call_queues(self):
-        """Get the Call Queues for an Organization.
-
-        Also stores them in the Org.call_queues attribute.
+    @property
+    def call_queues(self):
+        """The Call Queues for an Organization.
 
         Returns:
             list[CallQueue]: List of CallQueue instances for the Organization
 
         """
-        log.info("get_call_queues() started")
-        self.call_queues = []
-        if not self.locations:
-            self.get_locations()
-        api_resp = webex_api_call("get", "v1/telephony/config/queues", headers=self._headers, params=self._params)
+        log.info("Getting Call Queues for Organization")
+        call_queues = []
+        api_resp = webex_api_call("get", "v1/telephony/config/queues", params={"orgId": self.id})
+        log.debug(api_resp)
         for queue in api_resp['queues']:
             id = queue.get("id")
             name = queue.get("name", None)
@@ -817,9 +812,10 @@ class Org:
             extension = queue.get("extension", None)
             enabled = queue.get("enabled")
 
-            queue = CallQueue(self, id, name, location_id, phone_number, extension, enabled, get_config=True)
-            self.call_queues.append(queue)
-        return self.call_queues
+            this_queue = CallQueue(self, id, name, location_id, phone_number, extension, enabled)
+            call_queues.append(this_queue)
+        self._call_queues = call_queues
+        return call_queues
 
     @property
     def auto_attendants(self):
@@ -852,9 +848,9 @@ class Org:
 
         """
         log.info(f"Getting Call Queue with ID {id}")
-        if self.call_queues is None:
-            self.get_call_queues()
-        for cq in self.call_queues:
+        if not self._call_queues:
+            self.call_queues
+        for cq in self._call_queues:
             if cq.id == id:
                 return cq
         return None
@@ -868,9 +864,9 @@ class Org:
             HuntGroup: The :class:`HuntGroup` instance
 
         """
-        if self.hunt_groups is None:
-            self.get_hunt_groups()
-        for hg in self.hunt_groups:
+        if not self._hunt_groups:
+            self.hunt_groups
+        for hg in self._hunt_groups:
             if hg.id == id:
                 return hg
         return None
@@ -893,26 +889,21 @@ class Org:
         else:
             return None
 
-    def get_hunt_groups(self):
-        """Get the Hunt Groups for an Organization.
-
-        Also stores them in the Org.hunt_groups attribute.
-
-        Returns:
-            list[HuntGroup]: List of HuntGroup instances for the Organization
-
-        """
-        log.info("get_hunt_groups() started")
-        self.hunt_groups = []
+    @property
+    def hunt_groups(self):
+        """ Get the Hunt Groups for an Organization """
+        log.info("Getting Hunt Groups for Org")
+        hunt_groups = []
         if not self.locations:
             self.get_locations()
 
-        api_resp = webex_api_call("get", "v1/telephony/config/huntGroups", headers=self._headers, params=self._params)
+        api_resp = webex_api_call("get", "v1/telephony/config/huntGroups", params={"orgId": self.id})
         for hg in api_resp['huntGroups']:
             hunt_group = HuntGroup(self, hg['id'], hg['name'], hg['locationId'], hg['enabled'],
                                    hg.get("phoneNumber", ""), hg.get("extension", ""))
-            self.hunt_groups.append(hunt_group)
-        return self.hunt_groups
+            hunt_groups.append(hunt_group)
+        self._hunt_groups = hunt_groups
+        return hunt_groups
 
     def get_people(self):
         """ Get all people within the Organization.
@@ -1031,4 +1022,6 @@ class Org:
     ### Method aliases
     # Used for backwards compatibility to old method names as new methods are added/changed
     refresh_locations = get_locations
+    get_hunt_groups = hunt_groups
+    get_call_queues = call_queues
 

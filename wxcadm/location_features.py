@@ -4,6 +4,8 @@ import requests
 from typing import Optional
 from dataclasses import dataclass, field
 from datetime import datetime
+
+import wxcadm.location
 from wxcadm import log
 from .common import *
 
@@ -48,7 +50,7 @@ class PickupGroup:
 
 
 class CallQueue:
-    def __init__(self, parent, id, name, location, phone_number, extension, enabled, get_config=True):
+    def __init__(self, parent, id, name, location, phone_number, extension, enabled):
         """
         .. note::
             CallQueue instances are normally not instantiated manually and are done automatically with the
@@ -69,16 +71,10 @@ class CallQueue:
         """The extension of the Call Queue"""
         self.enabled: bool = enabled
         """True if the Call Queue is enabled. False if disabled"""
-        self.call_forwarding: dict = {}
-        """The Call Forwarding config for the Call Queue"""
-        self.config: dict = {}
-        """The configuration dictionary for the Call Queue"""
         self.spark_id: str = decode_spark_id(self.id)
         """ The Spark IS for the CallQueue"""
 
-        if get_config:
-            self.get_queue_config()
-            self.get_queue_forwarding()
+        log.info(f"Creating CallQueue instance for Queue: {self.name}")
 
     def __str__(self):
         return self.name
@@ -86,35 +82,29 @@ class CallQueue:
     def __repr__(self):
         return self.id
 
-    def get_queue_config(self):
-        """Get the configuration of this Call Queue instance
+    @property
+    def config(self) -> dict:
+        """ The configuration of this Call Queue instance """
+        log.info(f"Getting Queue config for {self.name}")
+        response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/queues/{self.id}")
+        config = response
+        return config
 
-        Returns:
-            CallQueue.config: The config dictionary of this Call Queue
-
-        """
-        r = requests.get(_url_base + "v1/telephony/config/locations/" + self.location_id + "/queues/" + self.id,
-                         headers=self._parent._headers)
-        response = r.json()
-        self.config = response
-        return self.config
-
-    def get_queue_forwarding(self):
-        """Get the Call Forwarding settings for this Call Queue instance
-
-        Returns:
-            CallQueue.call_forwarding: The Call Forwarding settings for the Person
-
-        """
+    @property
+    def call_forwarding(self):
+        """ The Call Forwarding settings for this Call Queue instance """
         # TODO: The rules within Call Forwarding are weird. The rules come back in this call, but they are
         #       different than the /selectiveRules response. It makes sense to aggregate them, but that probably
         #       requires the object->JSON mapping that we need to do for all classes
-        r = requests.get(_url_base + "v1/telephony/config/locations/" + self.location_id +
-                         "/queues/" + self.id + "/callForwarding",
-                         headers=self._parent._headers)
-        response = r.json()
-        self.call_forwarding = response
-        return self.call_forwarding
+        response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/queues/{self.id}"
+                                         f"/callForwarding")
+        forwarding = response
+        return forwarding
+
+    @property
+    def agents(self) -> list:
+        """ The agents assigned to the Call Queue """
+        return self.config['agents']
 
     def push(self):
         """Push the contents of the CallQueue.config back to Webex
@@ -132,9 +122,13 @@ class CallQueue:
         self.get_queue_config()
         return self.config
 
+    # Method aliases
+    get_queue_config = config
+    get_queue_forwarding = call_forwarding
+
 
 class HuntGroup:
-    def __init__(self, parent: Org,
+    def __init__(self, parent: Location | Org,
                  id: str,
                  name: str,
                  location: str,
@@ -145,12 +139,8 @@ class HuntGroup:
                  ):
         """Initialize a HuntGroup instance
 
-        .. note::
-            HuntGroup instances are normally not instantiated manually and are done automatically with the
-            :meth:`Org.get_hunt_groups` method.
-
         Args:
-            parent (Org): The Org instance to which the Hunt Group belongs
+            parent (Location|Org): The Location or Org instance to which the Hunt Group belongs
             id (str): The Webex ID for the Hunt Group
             name (str): The name of the Hunt Group
             location (str): The Location ID associated with the Hunt Group
@@ -177,8 +167,6 @@ class HuntGroup:
         """The DID for the Hunt Group"""
         self.extension: str = extension
         """The extension of the Hunt Group"""
-        self.agents: list = []
-        """List of agents/users assigned to this Hunt Group"""
         self.distinctive_ring: bool = False
         """Whether or not the Hunt Group has Distinctive Ring enabled"""
         self.alternate_numbers_settings: dict = {}
@@ -195,15 +183,7 @@ class HuntGroup:
         """The time zone for the Hunt Group"""
         self.call_policy: dict = {}
         """The Call Policy for the Hunt Group"""
-        self.agents: list = []
-        """List of users assigned to this Hunt Group"""
-        self.raw_config: dict = {}
-        """The raw JSON-to-Python config from Webex"""
 
-        # Get the config unless we are asked not to
-        if config:
-            log.info(f"Getting config for Hunt Group {self.id} in Location {self.location_id}")
-            self.get_config()
 
     def __str__(self):
         return self.name
@@ -211,23 +191,17 @@ class HuntGroup:
     def __repr__(self):
         return self.id
 
-    def get_config(self):
-        """Get the Hunt Group config, including agents"""
-        r = requests.get(_url_base + f"v1/telephony/config/locations/{self.location_id}/huntGroups/{self.id}",
-                         headers=self.parent._headers)
-        response = r.json()
-        self.raw_config = response
-        self.agents = response['agents']
-        self.distinctive_ring = response.get("distinctiveRing", False)
-        self.alternate_numbers_settings = response['alternateNumberSettings']
-        self.language = response['language']
-        self.language_code = response['languageCode']
-        self.first_name = response['firstName']
-        self.last_name = response['lastName']
-        self.time_zone = response['timeZone']
-        self.call_policy = response['callPolicies']
+    @property
+    def config(self) -> dict:
+        """ The config of the Hunt Group """
+        response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/huntGroups/{self.id}")
+        return response
 
-        return self.raw_config
+    @property
+    def agents(self) -> list:
+        return self.config['agents']
+
+
 
 @dataclass
 class AutoAttendant:
@@ -255,29 +229,23 @@ class AutoAttendant:
     name: str
     """ The name of the AutoAttendant """
 
-    config: dict = field(init=False, repr=False)
-    """ The configuration dict returned by Webex """
-    call_forwarding: dict = field(init=False, repr=False)
-    """ The Call Forwarding config returned by Webex """
-    cf_rules: dict = field(init=False, repr=False)
-    """ The Call Forwarding rules returned by Webex """
     spark_id: str = field(init=False, repr=False)
 
     def __post_init__(self):
         self.spark_id = decode_spark_id(self.id)
-        api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.location.id}/autoAttendants/{self.id}",
-                                  headers=self.parent._headers)
-        self.config = api_resp
-        api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.location.id}/autoAttendants/{self.id}"
-                                         f"/callForwarding",
-                                  headers=self.parent._headers)
-        self.call_forwarding = api_resp
-        for rule in self.call_forwarding['callForwarding']['rules']:
-            api_resp = webex_api_call("get",
-                                      f"v1/telephony/config/locations/{self.location.id}/autoAttendants/{self.id}/"
-                                      f"callForwarding/selectiveRules/{rule['id']}",
-                                      headers=self.parent._headers)
-            self.cf_rules = api_resp
+
+    @property
+    def config(self) -> dict:
+        """ The config of the AutoAtteandant """
+        response = webex_api_call("get", f"v1/telephony/config/locations/{self.location.id}/autoAttendants/{self.id}")
+        return response
+
+    @property
+    def call_forwarding(self) -> dict:
+        """ The Call Forwarding settings for the AutoAttendant """
+        response = webex_api_call("get", f"v1/telephony/config/locations/{self.location.id}/autoAttendants/{self.id}"
+                                         f"/callForwarding")
+        return response
 
     def copy_menu_from_template(self, source: object, menu_type: str = "both"):
         """ Copy the Business Hours, After Hours, or both menus from another :class:`AutoAttendant` instance.
@@ -312,38 +280,6 @@ class AutoAttendant:
                               headers=self.parent._headers, payload=self.config)
         if resp:
             return True
-        else:
-            return False
-
-    def upload_greeting(self, type: str, filename: str) -> bool:
-        """ Upload a new greeting to the Auto Attendant
-
-        This method takes a WAV file name, including path, and uploads the file to the Auto Attendant. The file must be
-        in the correct format or it will be rejected by Webex.
-
-        Args:
-            type (str): The type of greeting. Valid values are 'business_hours' or 'after_hours'.
-            filename (str): The file name, including the path, to upload to Webex
-
-        Returns:
-            bool: True on success, False otherwise.
-
-        .. warning::
-
-            This method requires the CP-API access scope.
-
-        """
-        if type not in ['business_hours', 'after_hours']:
-            raise ValueError("Valid type values are 'business_hours' and 'after_hours'")
-
-        cpapi = self.parent._cpapi
-        success = cpapi.upload_aa_greeting(self, type, filename)
-        if success is True:
-            success = cpapi.set_custom_aa_greeting(self, type, filename)
-            if success is True:
-                return True
-            else:
-                return False
         else:
             return False
 
@@ -601,3 +537,19 @@ class LocationSchedule:
             if e['id'] == id:
                 return e
         return None
+
+
+class CallParkGroup:
+    pass
+
+@dataclass
+class CallParkExtension:
+    parent: wxcadm.location.Location
+    """ The Location to which the Call Park Extension is assigned """
+    id: str
+    """ The ID of the Call Park Extension """
+    name: str
+    """ The name of the Call Park Extension """
+    extension: str
+    """ The Call Park Extension number (as a string) """
+

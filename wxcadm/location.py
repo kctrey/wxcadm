@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from typing import Optional
 from wxcadm import log
-from .location_features import LocationSchedule
+from .location_features import LocationSchedule, CallParkExtension, HuntGroup, CallQueue, AutoAttendant
 from .common import *
 
 
@@ -59,11 +60,15 @@ class Location:
     @property
     def hunt_groups(self):
         """List of HuntGroup instances for this Location"""
-        my_hunt_groups = []
-        for hg in self._parent.hunt_groups:
-            if hg.location == self.id:
-                my_hunt_groups.append(hg)
-        return my_hunt_groups
+        log.info(f"Getting Hunt Groups for Location: {self.name}")
+        hunt_groups = []
+        response = webex_api_call("get", "v1/telephony/config/huntGroups", params={"locationId": self.id})
+        log.debug(response)
+        for hg in response['huntGroups']:
+            this_instance = HuntGroup(self, hg['id'], hg['name'], hg['locationId'], hg['enabled'],
+                                      hg.get("phoneNumber", ""), hg.get("extension", ""))
+            hunt_groups.append(this_instance)
+        return hunt_groups
 
     @property
     def announcements(self):
@@ -77,22 +82,38 @@ class Location:
         return annc_list
 
     @property
-    def auto_attenndants(self):
+    def auto_attendants(self):
         """ List of AutoAttendant instances for this Location"""
-        aa_list = []
-        for aa in self._parent.auto_attendants:
-            if aa.location == self.id:
-                aa_list.append(aa)
-        return aa_list
+        log.info(f"Getting Auto Attendants for Location: {self.name}")
+        auto_attendants = []
+        response = webex_api_call("get", "v1/telephony/config/autoAttendants", params={"locationId": self.id})
+        log.debug(response)
+        for aa in response['autoAttendants']:
+            this_instance = AutoAttendant(self,
+                                          self,
+                                          id=aa['id'],
+                                          name=aa['name'])
+            auto_attendants.append(this_instance)
+
+        return auto_attendants
 
     @property
     def call_queues(self):
         """List of CallQueue instances for this Location"""
-        my_call_queues = []
-        for cq in self._parent.call_queues:
-            if cq.location_id == self.id:
-                my_call_queues.append(cq)
-        return my_call_queues
+        log.info(f"Getting Call Queues for Location: {self.name}")
+        hunt_groups = []
+        response = webex_api_call("get", "v1/telephony/config/queues", params={"locationId": self.id})
+        log.debug(response)
+        for cq in response['queues']:
+            this_instance = CallQueue(self,
+                                      id=cq['id'],
+                                      name=cq['name'],
+                                      location=self.id,
+                                      enabled=cq['enabled'],
+                                      phone_number=cq.get("phoneNumber", ""),
+                                      extension=cq.get("extension", ""))
+            hunt_groups.append(this_instance)
+        return hunt_groups
 
     @property
     def numbers(self):
@@ -201,8 +222,8 @@ class Location:
             'serviceEnabled': update_features
         }
         success = webex_api_call('post',
-                                  f'/v1/telephony/config/locations/{self.id}/actions/modifyAnnouncementLanguage/invoke',
-                                  payload=payload)
+                                 f'/v1/telephony/config/locations/{self.id}/actions/modifyAnnouncementLanguage/invoke',
+                                 payload=payload)
         log.debug(f"Response: {success}")
         if success:
             log.info("Language change succeeded")
@@ -297,3 +318,212 @@ class Location:
         else:
             return False
 
+    def create_call_queue(self,
+                          name: str,
+                          first_name: str,
+                          last_name: str,
+                          phone_number: Optional[str],
+                          extension: Optional[str],
+                          call_policies: dict,
+                          queue_settings: dict,
+                          language: Optional[str] = None,
+                          time_zone: Optional[str] = None,
+                          allow_agent_join: Optional[bool] = False,
+                          allow_did_for_outgoing_calls: Optional[bool] = False,
+                          ):
+        """ Create a new Call Queue at the Location
+
+        Args:
+            name (str): The name of the Call Queue
+            first_name (str): The first name of the Call Queue in the directory and for Caller ID
+            last_name (str): The last name of the Call Queue in the directory and for Caller ID
+            phone_number (str, None): The DID for the Call Queue. None indicates no DID.
+            extension (str, None): The extension for the Call Queue. None indicates no extension.
+            call_policies (dict): The callPolicies dict for the Call Queue. Because the format of this dict changes
+                often, see the documentation at developer.webex.com for values.
+            queue_settings (dict): The queueSettings dict for the Call Queue. Because the format of this dict changes
+                often, see the documentation at developer.webex.com for values.
+            language (str, optional): The language code (e.g. 'en_us') for the Call Queue. Defaults to the
+                announcement_language of the Location.
+            time_zone (str, optional): The time zone (e.g. 'America/Phoenix') for the Call Queue. Defaults to the
+                time_zone of the Location.
+            allow_agent_join (bool, optional): Whether to allow agents to join/unjoin the Call Queue. Default False.
+            allow_did_for_outgoing_calls (bool, optional): Whether to allow the Call Queue DID to be use for
+                outgoing calls. Default False.
+
+        Returns:
+            CallQueue: The created CallQueue instance
+
+        Raises:
+            ValueError: Raised when phone_number and extension are both None. One or both is required.
+
+        """
+        log.info(f"Creating Call Queue at Location {self.name} with name: {name}")
+        # Get some values if they weren't passed
+        if phone_number is None and extension is None:
+            raise ValueError("phone_number and/or extension are required")
+        if time_zone is None:
+            log.debug(f"Using Location time_zone {self.time_zone}")
+            time_zone = self.time_zone
+        if language is None:
+            log.debug(f"Using Location announcement_language {self.announcement_language}")
+            language = self.announcement_language
+
+        payload = {
+            "name": name,
+            "firstName": first_name,
+            "lastName": last_name,
+            "extension": extension,
+            "phoneNumber": phone_number,
+            "callPolicies": call_policies,
+            "queueSettings": queue_settings,
+            "timeZone": time_zone,
+            "languageCode": language,
+            "allowAgentJoinEnabled": allow_agent_join,
+            "phoneNumberForOutgoingCallsEnabled": allow_did_for_outgoing_calls
+        }
+        response = webex_api_call("post", f"v1/telephony/config/locations/{self.id}/queues",
+                                  payload=payload,
+                                  params={'orgId': self._parent.id})
+        new_queue_id = response['id']
+
+        # Get the details of the new Queue
+        response = webex_api_call("get", f"v1/telephony/config/locations/{self.id}/queues/{new_queue_id}")
+        new_queue = CallQueue(self,
+                              id=response['id'],
+                              name=response['name'],
+                              location=self,
+                              phone_number=response.get('phoneNumber', ''),
+                              extension=response.get('extension', ''),
+                              enabled=response['enabled'],
+                              get_config=False
+                              )
+        return new_queue
+
+    def create_auto_attendant(self,
+                              name: str,
+                              first_name: str,
+                              last_name: str,
+                              phone_number: Optional[str],
+                              extension: Optional[str],
+                              business_hours_schedule: str,
+                              holiday_schedule: Optional[str],
+                              business_hours_menu: dict,
+                              after_hours_menu: dict,
+                              extension_dialing_scope: str = "GROUP",
+                              name_dialing_scope: str = "GROUP",
+                              language: Optional[str] = None,
+                              time_zone: Optional[str] = None
+                              ):
+        log.info(f"Creating Auto Attendant at Location {self.name} with name: {name}")
+        # Get some values if they weren't passed
+        if phone_number is None and extension is None:
+            raise ValueError("phone_number and/or extension are required")
+        if time_zone is None:
+            log.debug(f"Using Location time_zone {self.time_zone}")
+            time_zone = self.time_zone
+        if language is None:
+            log.debug(f"Using Location announcement_language {self.announcement_language}")
+            language = self.announcement_language
+
+        payload = {
+            "name": name,
+            "firstName": first_name,
+            "lastName": last_name,
+            "extension": extension,
+            "phoneNumber": phone_number,
+            "timeZone": time_zone,
+            "languageCode": language,
+            "businessSchedule": business_hours_schedule,
+            "holidaySchedule": holiday_schedule,
+            "extensionDialing": extension_dialing_scope,
+            "nameDialing": name_dialing_scope,
+            "businessHoursMenu": business_hours_menu,
+            "afterHoursMenu": after_hours_menu
+        }
+        response = webex_api_call("post", f"v1/telephony/config/locations/{self.id}/autoAttendants",
+                                  payload=payload,
+                                  params={'orgId': self._parent.id})
+        new_aa_id = response['id']
+        this_aa = AutoAttendant(self, self, new_aa_id, name)
+        return this_aa
+
+    def create_hunt_group(self,
+                          name: str,
+                          first_name: str,
+                          last_name: str,
+                          phone_number: Optional[str],
+                          extension: Optional[str],
+                          call_policies: dict,
+                          enabled: bool = True,
+                          language: Optional[str] = None,
+                          time_zone: Optional[str] = None
+                          ):
+        log.info(f"Creating Hunt Group at Location {self.name} with name: {name}")
+        # Get some values if they weren't passed
+        if phone_number is None and extension is None:
+            raise ValueError("phone_number and/or extension are required")
+        if time_zone is None:
+            log.debug(f"Using Location time_zone {self.time_zone}")
+            time_zone = self.time_zone
+        if language is None:
+            log.debug(f"Using Location announcement_language {self.announcement_language}")
+            language = self.announcement_language
+
+        payload = {
+            "name": name,
+            "firstName": first_name,
+            "lastName": last_name,
+            "extension": extension,
+            "phoneNumber": phone_number,
+            "timeZone": time_zone,
+            "languageCode": language,
+            "callPolicies": call_policies
+        }
+        response = webex_api_call("post", f"v1/telephony/config/locations/{self.id}/huntGroups",
+                                  payload=payload,
+                                  params={'orgId': self._parent.id})
+        new_hg_id = response['id']
+        # Get the details of the new Hunt Group
+        response = webex_api_call("get", f"v1/telephony/config/locations/{self.id}/huntGroups/{new_hg_id}")
+        new_hg = HuntGroup(self,
+                           id=response['id'],
+                           name=response['name'],
+                           location=self.id,
+                           phone_number=response.get('phoneNumber', ''),
+                           extension=response.get('extension', ''),
+                           enabled=response['enabled'],
+                           config=False
+                           )
+        return new_hg
+
+    @property
+    def park_extensions(self):
+        """ List of :py:class:`CallParkExtension` instances for this Location """
+        log.info(f"Getting Park Extensions for Location: {self.name}")
+        park_extensions = []
+        response = webex_api_call("get", "v1/telephony/config/callParkExtensions", params={'locationId': self.id})
+        log.debug(f"Response:\n\t{response}")
+        for entry in response['callParkExtensions']:
+            this_instance = CallParkExtension(self, entry['id'], entry['name'], entry['extension'])
+            park_extensions.append(this_instance)
+
+        return park_extensions
+
+    def create_park_extension(self, name: str, extension: str):
+        """ Create a new Call Park Extension at the Location
+
+        Args:
+            name (str): The name of the Park Extension
+            extension (str): The Park Extension
+
+        Returns:
+            str: The ID of the newly created CallParkExtension
+
+        """
+        log.info(f"Creating Park Extension {name} ({extension}) at Location: {self.name}")
+        payload = {"name": name, "extension": extension}
+        response = webex_api_call("post", f"v1/telephony/config/locations/{self.id}/callParkExtensions",
+                                  params={'orgId': self._parent.id}, payload=payload)
+        log.debug(f"Response:\n\t{response}")
+        return response['id']

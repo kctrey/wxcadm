@@ -80,6 +80,7 @@ class AnnouncementList(UserList):
                 announcement to
 
         Returns:
+            str: The ID of the created Announcement
 
         """
         log.info(f"Uploading Announcement {name} with file: {filename}")

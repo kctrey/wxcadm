@@ -2,8 +2,14 @@
 
 What's New
 ==========
-v3.4.1
+v3.5.0
 ------
+- Removed :py:meth:`AutoAttendant.upload_greeting()` now that the Announcement Repository is in place
+- Lots of performance improvements to ensure API calls only happen when needed by the caller. Too much data was being populated in advance even though it was never used.
+- Refactor Org and Location hunt_groups property to eliminate the need for :py:meth:`Org.get_hunt_groups()`.
+- Now that Webex creates UserGroups for all Locations, the :py:class:`UserGroups` doesn't fetch group members on init. This speeds things up and reduces API calls.
+- **BREAKING CHANGE** :py:meth:`Person.usergroup` has been removed and replaced with :py:meth:`Person.user_group()`
+- Added :py:meth:`Location.create_call_queue()`
 - Added methods to :py:class:`RedSky` and :py:class:`RedSkyLocation` to make Network Discovery easier to find and manage
 - Added :py:meth:`RedSky.delete_mac_discovery()`, :py:meth:`RedSky.delete_bssid_discovery()`
 - Added ``bssid`` argument to :py:meth:`RedSky.get_bssid_discovery`` to allow a single entry to be returned

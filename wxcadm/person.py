@@ -300,8 +300,7 @@ class Person:
         else:
             log.info(f"{self.email} is not a Webex Calling user.")
 
-    @property
-    def usergroup(self):
+    def user_group(self):
         """ The :py:class:`UserGroup` that the Person is assigned to
 
         Returns:
@@ -1485,13 +1484,14 @@ class UserGroup:
     """ The Group usage type. This is a value that was provided by Webex but has been removed """
     memberSize: int = field(init=True, repr=False, default=0)
     """ The number of members in the group only if returned by Webex """
-    members: list = field(init=True, repr=False, default=None)
-    """ A list of all of the :py:class:`Person` instances within the Group """
     description: str = field(repr=False, default='')
     """ The long description of the Group """
 
-    def __post_init__(self):
-        self._get_members()
+    @property
+    def members(self):
+        """ List of all members with this Group """
+        return self._get_members()
+
 
     def _get_members(self):
         response = webex_api_call("get", f"/v1/groups/{self.id}/members")
