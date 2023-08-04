@@ -17,7 +17,7 @@ from wxcadm import log
 
 
 class Person:
-    def __init__(self, user_id, parent: Type[Org] = None, config: dict = None):
+    def __init__(self, user_id, parent: Type["Org"] = None, config: dict = None):
         """ Initialize a new Person instance.
 
         If only the `user_id` is provided, the API calls will be made to get
@@ -201,8 +201,7 @@ class Person:
             else:
                 return None
 
-
-    def assign_wxc(self, location: Type[Location], phone_number: str = None, extension: str = None):
+    def assign_wxc(self, location: Type["Location"], phone_number: str = None, extension: str = None):
         """ Assign Webex Calling to the user, along with a phone number and/or an extension.
 
         Args:
@@ -1415,7 +1414,7 @@ class VoiceMessage:
 
 class UserGroups(UserList):
     """ UserGroups is the parent class for :py:class:`UserGroup`, providing methods for the list of Groups """
-    def __init__(self, parent: Org):
+    def __init__(self, parent: "Org"):
         log.info("Initializing UserGroups instance")
         super().__init__()
         self.parent = parent
@@ -1467,7 +1466,7 @@ class UserGroups(UserList):
 @dataclass()
 class UserGroup:
     """ The UserGroup class holds all the User Groups available within the Org"""
-    parent: Org = field(repr=False)
+    parent: "Org" = field(repr=False)
     """ The Org instance that owns the Group """
     id: str
     """ The unique ID of the Group """

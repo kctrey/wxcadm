@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import requests
-from typing import Optional
+from typing import Optional, Union
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -74,8 +74,6 @@ class CallQueue:
         self.spark_id: str = decode_spark_id(self.id)
         """ The Spark IS for the CallQueue"""
 
-        log.info(f"Creating CallQueue instance for Queue: {self.name}")
-
     def __str__(self):
         return self.name
 
@@ -105,6 +103,25 @@ class CallQueue:
     def agents(self) -> list:
         """ The agents assigned to the Call Queue """
         return self.config['agents']
+
+    def add_agent(self, agent: Union[Person, Workspace],
+                  weight: Optional[str] = None,
+                  skill: Optional[str] = None,
+                  joined: bool = True) -> bool:
+        """ Add a Person or Workspace as an Agent to the Call Queue
+
+        Args:
+            agent (Person|Workspace): The Person or Workspace to add as the agent
+            weight (str, optional): The weight of the agent route when using a weighted Queue
+            skill (str, optional): The kill level (1-20) of the agent when using a Skill-Based Queue
+            joined (bool, optional): Whether the agent will be joined into the Queue as soon as they are added
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        pass
+
 
     def push(self):
         """Push the contents of the CallQueue.config back to Webex

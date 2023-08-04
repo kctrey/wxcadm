@@ -4,6 +4,7 @@ What's New
 ==========
 v3.5.0
 ------
+- BUG FIX: :py:meth:`Call.recording()` was broken and has been fixed.
 - Removed :py:meth:`AutoAttendant.upload_greeting()` now that the Announcement Repository is in place
 - Lots of performance improvements to ensure API calls only happen when needed by the caller. Too much data was being populated in advance even though it was never used.
 - Refactor Org and Location hunt_groups property to eliminate the need for :py:meth:`Org.get_hunt_groups()`.

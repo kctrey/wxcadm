@@ -1487,18 +1487,20 @@ class Call:
             ValueError: Raised when the action is not recognized.
 
         """
+        log.info(f"Changing Recoding with an action: {action}")
 
         if action.lower() == "start":
-            r = requests.put(self._url + f"{self.id}/Record", headers=self._headers)
+            r = requests.put(self._url + f"/{self.id}/Record", headers=self._headers)
         elif action.lower() == "resume":
-            r = requests.put(self._url + f"{self.id}/ResumeRecording", headers=self._headers)
+            r = requests.put(self._url + f"/{self.id}/ResumeRecording", headers=self._headers)
         elif action.lower() == "stop":
-            r = requests.put(self._url + f"{self.id}/StopRecording", headers=self._headers)
+            r = requests.put(self._url + f"/{self.id}/StopRecording", headers=self._headers)
         elif action.lower() == "resume":
-            r = requests.put(self._url + f"{self.id}/PauseRecording", headers=self._headers)
+            r = requests.put(self._url + f"/{self.id}/PauseRecording", headers=self._headers)
         else:
             raise ValueError(f"{action} is not a valid action")
 
+        log.debug(f"XSI Response:\n\t{r.text}")
         return XSIResponse(r)
 
 
