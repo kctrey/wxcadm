@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional
 from wxcadm import log
 from .location_features import LocationSchedule, CallParkExtension, HuntGroup, CallQueue, AutoAttendant
+from .workspace import WorkspaceList
 from .common import *
 
 

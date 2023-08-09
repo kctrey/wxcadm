@@ -1,11 +1,82 @@
 from __future__ import annotations
 
 import requests
-from typing import Optional
+from collections import UserList
+from typing import Optional, Union
+
+import wxcadm.location
 from wxcadm import log
 from .common import *
 from .exceptions import *
 from .device import Device
+
+
+class WorkspaceLocationList(UserList):
+    def __init__(self, parent: Union["Org"]):
+        super().__init__()
+        log.debug("Initializing WorkspaceLocationList")
+        self.parent: Org = parent
+        self.data: list = self._get_workspace_locations()
+
+    def _get_workspace_locations(self):
+        log.debug("Getting list of Workspace Locations")
+        workspace_locations = []
+        log.debug(f"Using Org {self.parent.name} as WorkspaceLocation filter")
+        params = {'orgId': self.parent.id}
+
+        response = webex_api_call("get", "v1/workspaceLocations", params=params)
+        log.debug(f"Received {len(response)} Workspace Locations from Webex")
+        for entry in response:
+            workspace_locations.append(WorkspaceLocation(self.parent, id=entry['id'], config=entry))
+        return workspace_locations
+
+class WorkspaceList(UserList):
+    def __init__(self, parent: Union["Org", "WorkspaceLocation"]):
+        super().__init__()
+        log.debug("Initializing WorkspaceList instance")
+        self.parent: Org = parent
+        self.data: list = self._get_workspaces()
+
+    def _get_workspaces(self):
+        log.debug("Getting List of Workspaces")
+        workspaces = []
+        # Eventually, I would like to handle Location instances, but for now we just reject them
+        if isinstance(self.parent, wxcadm.location.Location):
+            log.warning("Workspaces by Location are not Supported. WorkspaceLocation must be used.")
+            raise ValueError("Workspaces cannot be obtained for a Location")
+        elif isinstance(self.parent, wxcadm.workspace.WorkspaceLocation):
+            log.debug(f"Using WorkspaceLocation {self.parent.name} as Workspace filter")
+            params = {'workspaceLocationId': self.parent.id}
+        elif isinstance(self.parent, wxcadm.org.Org):
+            log.debug(f"Using Org {self.parent.name} as Workspace filter")
+            params = {'orgId': self.parent.id}
+        else:
+            params = {}
+        response = webex_api_call("get", "v1/workspaces", params=params)
+        log.debug(f"Received {len(response)} Workspaces from Webex")
+        for entry in response:
+            workspaces.append(Workspace(self.parent, id=entry['id'], config=entry))
+        return workspaces
+
+    def refresh(self):
+        """ Re-query the list of Workspaces from Webex """
+        self.data: list = self._get_workspaces()
+
+    def get_by_id(self, id: str):
+        """ Get a Workspace instance from the WorkspaceList by ID
+
+        Args:
+            id (str): The Workspace ID to find
+
+        Returns:
+            Workspace: The :py:class:`Workspace` instance for the given ID. None is returned if no match is found.
+
+        """
+        entry: Workspace
+        for entry in self.data:
+            if entry.id == id:
+                return entry
+        return None
 
 
 class Workspace:
@@ -246,7 +317,6 @@ class WorkspaceLocation:
             self.__process_config(config)
         else:
             self.get_config()
-        self.get_floors()
 
     def get_config(self):
         """Get (or refresh) the configuration of the WorkspaceLocations from the Webex API"""

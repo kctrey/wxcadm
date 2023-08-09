@@ -4,6 +4,9 @@ What's New
 ==========
 v3.5.0
 ------
+- The Org class now has a :py:meth:`workspace_locations` attribute, which is a :py:class:`WorkspaceLocationList`
+- :py:meth:`Org.get_workspace_by_id()` has been moved to :py:meth:`Org.workspaces.get_by_id()`
+- New :py:class:`WorkspaceList` to provide list functions for :py:meth:`Org.workspaces` and :py:meth:`Location.workspaces`, which both use the new class
 - BUG FIX: :py:meth:`Call.recording()` was broken and has been fixed.
 - Removed :py:meth:`AutoAttendant.upload_greeting()` now that the Announcement Repository is in place
 - Lots of performance improvements to ensure API calls only happen when needed by the caller. Too much data was being populated in advance even though it was never used.

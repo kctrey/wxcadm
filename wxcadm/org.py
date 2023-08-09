@@ -15,7 +15,7 @@ from .webhooks import Webhooks
 from .person import UserGroups, Person
 from .applications import WebexApplications
 from .announcements import AnnouncementList
-from .workspace import Workspace, WorkspaceLocation
+from .workspace import Workspace, WorkspaceLocation, WorkspaceList, WorkspaceLocationList
 from .call_routing import CallRouting
 from .reports import Reports
 from .calls import Calls
@@ -70,10 +70,6 @@ class Org:
         self._wxc_licenses: Optional[list] = None
         self._people: list = []
         '''A list of all of the Person instances for the Organization'''
-        self.workspaces: Optional[list] = None
-        """A list of the Workspace instances for this Org."""
-        self.workspace_locations: Optional[list] = None
-        """A list of the Workspace Location instanced for this Org."""
         self._devices: Optional[list] = None
         """A list of the Devce instances for this Org"""
         self._auto_attendants: list = []
@@ -82,6 +78,8 @@ class Org:
         self._announcements: Optional[AnnouncementList] = None
         self._hunt_groups = []
         self._call_queues = []
+        self._workspaces: Optional[WorkspaceList] = None
+        self._workspace_locations: Optional[list[Workspace]] = None
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -122,6 +120,13 @@ class Org:
         return None
 
     @property
+    def workspace_locations(self):
+        """ :py:class:`WorkspaceLocationList of all :py:class:`WorkspaceLocation`s"""
+        if self._workspace_locations is None:
+            self._workspace_locations = WorkspaceLocationList(self)
+        return self._workspace_locations
+
+    @property
     def spark_id(self):
         """ The decoded "Spark ID" of the Org ID"""
         org_id_bytes = base64.b64decode(self.id + "===")
@@ -133,6 +138,12 @@ class Org:
 
     def __repr__(self):
         return self.id
+
+    @property
+    def workspaces(self):
+        if self._workspaces is None:
+            self._workspaces = WorkspaceList(parent=self)
+        return self._workspaces
 
     @property
     def licenses(self):
@@ -498,7 +509,7 @@ class Org:
 
     @property
     def people(self):
-        """ A list of all of the Person instances for the Organization """
+        """ A list of all the Person instances for the Organization """
         if not self._people:
             return self.get_people()
         else:
@@ -723,48 +734,6 @@ class Org:
         }
         response = webex_api_call('post', 'v1/locations', payload=payload)
         return response
-
-    def get_workspaces(self):
-        """Get the Workspaces and Workspace Locations for the Organizations.
-
-        Also stores them in the Org.workspaces and Org.workspace_locations attributes.
-
-        Returns:
-            list[Workspace]: List of Workspace instance objects. See the Workspace class for attributes.
-
-        """
-        log.info("Getting Workspaces")
-        self.workspaces = []
-        api_resp = webex_api_call("get", "v1/workspaces", headers=self._headers, params=self._params)
-        for workspace in api_resp:
-            this_workspace = Workspace(self, workspace['id'], workspace)
-            self.workspaces.append(this_workspace)
-
-        log.info("Getting Workspace Locations")
-        self.workspace_locations = []
-        api_resp = webex_api_call("get", "v1/workspaceLocations", headers=self._headers, params=self._params)
-        for location in api_resp:
-            this_location = WorkspaceLocation(self, location['id'], location)
-            self.workspace_locations.append(this_location)
-
-        return self.workspaces
-
-    def get_workspace_by_id(self, id: str) -> Optional[Workspace]:
-        """ Get a :py:class:`Workspace` by its ID
-
-        Args:
-            id (str): The Workspace ID to serach for
-
-        Returns:
-            Workspace: The matching Workspace instance. None is returned if no match is found.
-
-        """
-        if self.workspaces is None:
-            self.get_workspaces()
-        for workspace in self.workspaces:
-            if workspace.id == id:
-                return workspace
-        return None
 
     def get_pickup_groups(self):
         """Get all of the Call Pickup Groups for an Organization.
@@ -1024,4 +993,5 @@ class Org:
     refresh_locations = get_locations
     get_hunt_groups = hunt_groups
     get_call_queues = call_queues
+    get_workspaces = workspaces
 
