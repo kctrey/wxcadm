@@ -63,3 +63,8 @@ is provided as a view under the hood of the module for those interested in enhan
    :members:
    :undoc-members:
    :noindex:
+
+.. automodule:: wxcadm.announcements
+   :members:
+   :undoc-members:
+   :noindex:

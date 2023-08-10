@@ -30,6 +30,23 @@ class WorkspaceLocationList(UserList):
             workspace_locations.append(WorkspaceLocation(self.parent, id=entry['id'], config=entry))
         return workspace_locations
 
+    def get_by_id(self, id: str):
+        """ Get a WorkspaceLocation instance from the WorkspaceLocationList by ID
+
+        Args:
+            id (str): The WorkspaceLocation ID to find
+
+        Returns:
+            WorkspaceLocation: The :py:class:`WorkspaceLocation` instance for the given ID.
+            None is returned if no match is found.
+
+        """
+        entry: WorkspaceLocation
+        for entry in self.data:
+            if entry.id == id:
+                return entry
+        return None
+
 class WorkspaceList(UserList):
     def __init__(self, parent: Union["Org", "WorkspaceLocation"]):
         super().__init__()
@@ -312,6 +329,7 @@ class WorkspaceLocation:
         self.notes: Optional[str] = None
         """Notes associated with the WorkspaceLocation"""
         self.floors: Optional[list] = None
+        self._workspaces: Optional[WorkspaceList] = None
 
         if config:
             self.__process_config(config)
@@ -338,6 +356,14 @@ class WorkspaceLocation:
         for floor in response['items']:
             this_floor = WorkspaceLocationFloor(floor)
             self.floors.append(this_floor)
+
+    @property
+    def workspaces(self):
+        """ The :py:class:`Workspace` instances for this WorkspaceLocation """
+        if self._workspaces is None:
+            self._workspaces = WorkspaceList(self)
+        return self._workspaces
+
 
     def __process_config(self, config: dict):
         """Processes the config dict, whether passed in init or from an API call"""

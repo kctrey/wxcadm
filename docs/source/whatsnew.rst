@@ -4,7 +4,8 @@ What's New
 ==========
 v3.5.0
 ------
-- The Org class now has a :py:meth:`workspace_locations` attribute, which is a :py:class:`WorkspaceLocationList`
+- This version stars the refactor change to a new "List Class" for all lists, starting with WorkspaceLocationList and WorkspaceList. All create/delete methods will be moved to the list class to make it easier to manage elements in a list. Changelog entries going forward will refer to these as List Classes.
+- The Org class now has a :py:attr:`workspace_locations` attribute, which is a :py:class:`WorkspaceLocationList`
 - :py:meth:`Org.get_workspace_by_id()` has been moved to :py:meth:`Org.workspaces.get_by_id()`
 - New :py:class:`WorkspaceList` to provide list functions for :py:meth:`Org.workspaces` and :py:meth:`Location.workspaces`, which both use the new class
 - BUG FIX: :py:meth:`Call.recording()` was broken and has been fixed.

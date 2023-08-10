@@ -111,6 +111,7 @@ the two. Stay tuned...
    reference/Device
    reference/Webhooks
    reference/UserGroups
+   reference/Announcements
 
 .. toctree::
    :maxdepth: 2
