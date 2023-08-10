@@ -2,8 +2,14 @@
 
 What's New
 ==========
-v3.5.0
+v4.0.0
 ------
+- Deprecated :py:meth:`Org.get_recorded_people()`. Use :py:meth:`Org.people.recorded()` instead.
+- Deprecated :py:meth:`Org.get_wxc_people()`. Use :py:meth:`Org.people.webex_calling()` instead.
+- Deprecated :py:meth:`Org.get_person_by_email()`. Use :py:meth:`Org.people.get_by_email()` instead.
+- Deprecated :py:meth:`Org.get_person_by_id()`. Use :py:meth:`Org.people.get_by_id()` instead.
+- **BREAKING CHANGE** - With the creation of :py:class:`PersonList`, the ``people`` and ``people_list`` arguments to the :py:class:`Webex` class have been deprecated. **wxcadm** will never pre-fetch Person-related data from Webex.
+- New List Class :py:class:`PersonList` accessed with :py:attr:`Org.people` and :py:attr:`Location.people`
 - This version stars the refactor change to a new "List Class" for all lists, starting with WorkspaceLocationList and WorkspaceList. All create/delete methods will be moved to the list class to make it easier to manage elements in a list. Changelog entries going forward will refer to these as List Classes.
 - The Org class now has a :py:attr:`workspace_locations` attribute, which is a :py:class:`WorkspaceLocationList`
 - :py:meth:`Org.get_workspace_by_id()` has been moved to :py:meth:`Org.workspaces.get_by_id()`

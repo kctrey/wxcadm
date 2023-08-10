@@ -4,7 +4,7 @@ import requests
 from requests_toolbelt import MultipartEncoder
 import base64
 import os
-from typing import Optional, Type
+from typing import Optional, Type, Union
 from dataclasses import dataclass, field
 from collections import UserList
 
@@ -12,8 +12,107 @@ import wxcadm.exceptions
 from .common import *
 from .xsi import XSI
 from .device import Device
+from .location import Location
 
 from wxcadm import log
+
+
+class PersonList(UserList):
+    def __init__(self, parent: Union["Org", Location]):
+        super().__init__()
+        log.debug("Initializing PersonList")
+        self.parent: Union["Org", Person] = parent
+        self.data: list = self._get_people()
+
+    def _get_people(self):
+        log.debug("_get_people() started")
+        params = {"callingData": "true"}
+        response = webex_api_call("get", "v1/people", params=params)
+        log.info(f"Found {len(response)} People")
+
+        people = []
+
+        for entry in response:
+            people.append(Person(entry['id'], parent=self.parent, config=entry))
+        return people
+
+    def refresh(self):
+        """ Refresh the list of :py:class:`Person` instances from Webex
+
+        Returns:
+            bool: True on success, False otherwise.
+
+        """
+        self.data = self._get_people()
+
+    def get_by_id(self, id: str) -> Optional[Person]:
+        """ Get the :py:class:`Person` with the given Person ID
+
+        Args:
+            id (str): The Person ID to find
+
+        Returns:
+            Person: The :py:class:`Person` instance. None is return if no match is found.
+
+        """
+        entry: Person
+        for entry in self.data:
+            if entry.id == id:
+                return entry
+        return None
+
+    def get_by_email(self, email: str) -> Optional[Person]:
+        """ Get the :py:class:`Person` with the given email address
+
+        Args:
+            email (str): The email address to find
+
+        Returns:
+            Person: The :py:class:`Person` instance. None is returned if no match is found.
+
+        """
+        entry: Person
+        for entry in self.data:
+            if entry.email.lower() == email.lower():
+                return entry
+        return None
+
+    def webex_calling(self, enabled: bool = True) -> list[Person]:
+        """ Return a list of :py:class:`Person` where Webex Calling is enabled/disabled
+
+        Args:
+            enabled (bool, optional): True (default) returns Webex Calling people. False returns people without
+                Webex Calling
+
+        Returns:
+            list[:py:class:`Person`]: List of :py:class:`Person` instances. An empty list is returned if none match the
+                given criteria
+
+        """
+        people = []
+        entry: Person
+        for entry in self.data:
+            if entry.wxc is enabled:
+                people.append(entry)
+        return people
+
+    def recorded(self, enabled: bool = True) -> list[Person]:
+        """ Return a list of :py:class:`Person` where Call Recording is enabled/disabled
+
+        Args:
+            enabled (bool, optional): True (default) returns Recorded people. False returns people without Recording.
+
+        Returns:
+            list[:py:class:`Person`]: List of :py:class:`Person` instances. An empty list is returned if none match the
+                given criteria.
+
+        """
+        people = []
+        for entry in self.webex_calling(True):
+            rec_config = entry.get_call_recording()
+            if rec_config['enabled'] is enabled:
+                people.append(entry)
+        return people
 
 
 class Person:
@@ -275,7 +374,7 @@ class Person:
 
     def get_full_config(self):
         """
-        Fetches all of the Webex Calling settings for the Person. Due to the number of API calls, this
+        Fetches all Webex Calling settings for the Person. Due to the number of API calls, this
         method is not performed automatically on Person init and should be called for each Person during
         any subsequent processing. If you are only interested in one of the features, calling that method
         directly can significantly improve the time to return data.
@@ -381,8 +480,8 @@ class Person:
                 data_needed = True
                 if password is None:    # Generate a unique password
                     response = webex_api_call('POST',
-                                                  f'/v1/telephony/config/locations/{self.location}/actions/'
-                                                  f'generatePassword/invoke')
+                                              f'/v1/telephony/config/locations/{self.location}/actions/'
+                                              f'generatePassword/invoke')
                     password = response['exampleSipPassword']
                 payload['password'] = password
             response = webex_api_call('post', '/v1/devices', payload=payload)
@@ -419,7 +518,7 @@ class Person:
 
         """
         log.info(f"Getting Hunt Groups for {self.email}")
-        # First, we need to make sure we know about the Org's Hunt Groups. If not, pull them.
+        # First, we need to make sure we know about the Org Hunt Groups. If not, pull them.
         if self._parent.hunt_groups is None:
             self._parent.get_hunt_groups()
         hunt_groups = []
@@ -440,7 +539,7 @@ class Person:
 
         """
         log.info(f"Getting Hunt Groups for {self.email}")
-        # First, we need to make sure we know about the Org's Hunt Groups. If not, pull them.
+        # First, we need to make sure we know about the Org Hunt Groups. If not, pull them.
         if self._parent.call_queues is None:
             self._parent.get_call_queues()
         call_queues = []
@@ -466,7 +565,7 @@ class Person:
         """Get the Barge-In config for the Person
 
         Returns:
-            dict: The Barge-In config for the Person instannce
+            dict: The Barge-In config for the Person instance
         """
         log.info(f"Getting Barge-In config for {self.email}")
         self.barge_in = self.__get_webex_data(f"v1/people/{self.id}/features/bargeIn")
@@ -878,7 +977,7 @@ class Person:
         """ Push the Caller ID config to Webex
 
         This method differs from :meth:`Person.set_caller_id()`. It sends the config dict directly.
-        :meth:`Person.set_caller_id()` builds the config dict itself so that you don't have to know all of the
+        :meth:`Person.set_caller_id()` builds the config dict itself so that you don't have to know all the
         intricacies of the API specification. In most cases, that method is preferable.
 
         Args:
@@ -913,7 +1012,7 @@ class Person:
             wxcadm.exceptions.APIError: Raised when there is a problem with the API call
 
         """
-        log.info(f"Settting Caller ID for {self.email}")
+        log.info(f"Setting Caller ID for {self.email}")
         log.debug(f"\tNew Name: {name}\tNew Number: {number}")
         payload = {}
         # Handle the possible number values
@@ -954,7 +1053,7 @@ class Person:
         """ Push the Do Not Disturb (DND) config to Webex
 
         Args:
-            config (dict): The DND confirguration to push
+            config (dict): The DND configuration to push
 
         Returns:
             bool: True on success, False otherwise
@@ -1030,7 +1129,7 @@ class Person:
             return False
 
     def license_details(self):
-        """Get the full details for all of the licenses assigned to the Person
+        """Get the full details for all licenses assigned to the Person
 
         Returns:
             list[dict]: List of the license dictionaries
@@ -1047,11 +1146,11 @@ class Person:
     def refresh_person(self, raw: bool = False):
         """
         Pull a fresh copy of the Person details from the Webex API and update the instance. Useful when changes
-        are made outside of the script or changes have been pushed and need to get updated info.
+        are made outside the script or changes have been pushed and need to get updated info.
 
         Args:
             raw (bool, optional): Return the "raw" config from the as a dict. Useful when making changes to
-                the user, because you have to send all of the values over again.
+                the user, because you have to send all values again.
 
         Returns:
             bool: True if successful, False if not
@@ -1081,7 +1180,7 @@ class Person:
 
         Pass only the arguments that you want to change. Other attributes will be populated
         with the existing values from the instance. *Note:* This allows changes directly to the instance attrs to
-        be pushed to Webex. For example, changing Person.extension and then calling `update_person()` with no
+        be pushed to Webex. For example, changing :py:attr:`Person.extension` and then calling `update_person()` with no
         arguments will still push the extension change. This allows for a lot of flexibility if a method does not
         exist to change the desired value. It is also the method other methods use to push their changes to Webex.
 
@@ -1176,7 +1275,6 @@ class Person:
             log.warning("The Set Calling Only command failed")
             return False
 
-
     def change_phone_number(self, new_number: str, new_extension: str = None):
         """ Change a person's phone number and extension
 
@@ -1205,7 +1303,6 @@ class Person:
         else:
             log.warning("Updating the phone number config failed")
             return False
-
 
     def disable_call_recording(self):
         """ Disables Call Recording for the Person
@@ -1246,7 +1343,7 @@ class Person:
                            "interval": reminder_interval
                            }
                        }
-                  }
+                   }
         success = self.push_call_recording(payload)
         if success:
             return True
@@ -1265,7 +1362,7 @@ class Person:
         return self.executive_assistant
 
     def push_executive_assistant(self, config: dict) -> bool:
-        """ Push the Exectuve Assistant config to Webex
+        """ Push the Executive Assistant config to Webex
 
         Args:
             config (dict): The Executive Assistant Config
@@ -1292,24 +1389,26 @@ class Person:
         Alias numbers and doesn't include any Active Directory data.
 
         Returns:
-            dict: Dict of numbers properties as defined at https://developer.webex.com/docs/api/v1/webex-calling-person-settings/get-a-list-of-phone-numbers-for-a-person
+            dict: Dict of numbers properties as defined at
+                developer.webex.com/docs/api/v1/webex-calling-person-settings/get-a-list-of-phone-numbers-for-a-person
 
         """
         return webex_api_call('get', f'/v1/people/{self.id}/features/numbers')
 
+
 class Me(Person):
     """ The class representing the token owner. Some methods are only available at an owner scope. """
-    def __init__(self, user_id, parent: Org = None, config: dict = None):
+    def __init__(self, user_id, parent: "Org" = None, config: dict = None):
         super().__init__(user_id, parent, config)
 
     def get_voice_messages(self, unread: bool = False):
-        """ Get all the Voice Messages for the Me instance
+        """ Get all the Voice Messages for the :py:class:`Me` instance
 
         Args:
             unread (bool, optional): Whether to only return Unread messages. Default is False
 
         Returns:
-            list[VoiceMessage]: A list of all of the :py:class:`VoiceMessage` instances
+            list[VoiceMessage]: A list of all :py:class:`VoiceMessage` instances
 
         """
         messages = []
@@ -1491,7 +1590,6 @@ class UserGroup:
         """ List of all members with this Group """
         return self._get_members()
 
-
     def _get_members(self):
         response = webex_api_call("get", f"/v1/groups/{self.id}/members")
         items = response['members']
@@ -1532,7 +1630,7 @@ class UserGroup:
         Returns:
 
         """
-        payload = {"members" : [{"id": person.id, "operation": "add"}]}
+        payload = {"members": [{"id": person.id, "operation": "add"}]}
         response = webex_api_call("patch", f"v1/groups/{self.id}", payload=payload)
         if response:
             return True

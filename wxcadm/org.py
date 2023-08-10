@@ -12,10 +12,10 @@ from .cpapi import CPAPI
 from .location import Location
 from .location_features import PagingGroup, PickupGroup, HuntGroup, CallQueue, AutoAttendant
 from .webhooks import Webhooks
-from .person import UserGroups, Person
+from .person import UserGroups, Person, PersonList
 from .applications import WebexApplications
 from .announcements import AnnouncementList
-from .workspace import Workspace, WorkspaceLocation, WorkspaceList, WorkspaceLocationList
+from .workspace import Workspace, WorkspaceList, WorkspaceLocationList
 from .call_routing import CallRouting
 from .reports import Reports
 from .calls import Calls
@@ -27,12 +27,10 @@ class Org:
                  name: str,
                  id: str,
                  parent: Webex = None,
-                 people: bool = False,
                  locations: bool = False,
                  hunt_groups: bool = False,
                  call_queues: bool = False,
                  xsi: bool = False,
-                 people_list: list = None
                  ):
         """Initialize an Org instance
 
@@ -40,12 +38,10 @@ class Org:
             name (str): The Organization name
             id (str): The Webex ID of the Organization
             parent (Webex, optional): The parent Webex instance that owns this Org.
-            people (bool, optional): Whether to get all People for the Org. Default True.
             locations (bool, optional): Whether to get all Locations for the Org. Default True.
             hunt_groups (bool, optional): Whether to get all Hunt Groups for the Org. Default False.
             call_queues (bool, optional): Whether to get all Call Queues for the Org. Default False.
             xsi (bool, optional): Whether to get the XSI Endpoints for the Org. Default False.
-            people_list (list, optional): List of people, by ID or email to get instances for.
 
         Returns:
             Org: This instance of the Org class
@@ -68,8 +64,6 @@ class Org:
         self._params: dict = {"orgId": self.id}
         self._licenses: Optional[list] = None
         self._wxc_licenses: Optional[list] = None
-        self._people: list = []
-        '''A list of all of the Person instances for the Organization'''
         self._devices: Optional[list] = None
         """A list of the Devce instances for this Org"""
         self._auto_attendants: list = []
@@ -79,7 +73,8 @@ class Org:
         self._hunt_groups = []
         self._call_queues = []
         self._workspaces: Optional[WorkspaceList] = None
-        self._workspace_locations: Optional[list[Workspace]] = None
+        self._workspace_locations: Optional[WorkspaceLocationList] = None
+        self._people: Optional[PersonList] = None
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -100,14 +95,9 @@ class Org:
             self.get_call_queues()
         if hunt_groups:
             self.get_hunt_groups()
-        if people:
-            self.get_people()
-        if people_list:
-            for person in people_list:
-                self._get_person(person)
 
     def get_org_data(self):
-        """ Get the People, Locations, Call Queues and Hunt Groups for the Org
+        """ Get the Locations, Call Queues and Hunt Groups for the Org
 
         Returns:
             None: Doesn't return any values. Simply populates the Org attributes with the data
@@ -116,7 +106,6 @@ class Org:
         self.get_locations()
         self.get_call_queues()
         self.get_hunt_groups()
-        self.get_people()
         return None
 
     @property
@@ -509,14 +498,16 @@ class Org:
 
     @property
     def people(self):
-        """ A list of all the Person instances for the Organization """
-        if not self._people:
-            return self.get_people()
-        else:
-            return self._people
+        """ :py:class:`PersonList` wth all the :py:class:`Person` instances for the Organization """
+        if self._people is None:
+            self._people = PersonList(self)
+        return self._people
 
     def get_person_by_id(self, id: str):
         """Get the Person instance associated with a given ID
+
+        .. deprecated:: 4.0.0
+            Use :py:meth:`Org.people.get_by_id()` instead
 
         Args:
             id (str): The Webex ID of the Person to look for.
@@ -525,10 +516,7 @@ class Org:
             Person: The Person instance. If no match is found, None is returned
 
         """
-        for person in self.people:
-            if person.id == id:
-                return person
-        return None
+        return self.people.get_by_id(id)
 
     @property
     def wxc_licenses(self):
@@ -664,6 +652,9 @@ class Org:
     def get_person_by_email(self, email):
         """Get the Person instance from an email address
 
+        .. deprecated:: 4.0.0
+            Use :py:meth:`Org.people.get_by_email()` instead
+
         Args:
             email (str): The email of the Person to return
 
@@ -671,11 +662,7 @@ class Org:
             Person: Person instance object. None in returned when no Person is found
 
         """
-        log.info("get_person_by_email() started")
-        for person in self.people:
-            if person.email.lower() == email.lower():
-                return person
-        return None
+        return self.people.get_by_email(email)
 
     def get_xsi_endpoints(self):
         """Get the XSI endpoints for the Organization.
@@ -874,71 +861,31 @@ class Org:
         self._hunt_groups = hunt_groups
         return hunt_groups
 
-    def get_people(self):
-        """ Get all people within the Organization.
-
-        Also creates a Person instance and stores it in the Org.people attributes
-
-        Returns:
-            list[Person]: List of Person instances
-
-        """
-        log.info("get_people() started")
-        params = {"max": "1000", "callingData": "true", **self._params}
-        # Fast Mode - callingData: false is much faster
-        if self._parent._fast_mode is True:
-            params['callingData'] = "false"
-        people = webex_api_call("get", "v1/people", headers=self._headers, params=params)
-        log.info(f"Found {len(people)} people.")
-
-        for person in people:
-            this_person = Person(person['id'], parent=self, config=person)
-            self._people.append(this_person)
-        return self._people
-
-    def _get_person(self, match):
-        log.info(f"Getting person: {match}")
-        if "@" in match:
-            params = {"max": "1000", "callingData": "true", "email": match, **self._params}
-            url = "v1/people"
-            response = webex_api_call("get", url, headers=self._headers, params=params)
-            this_person = Person(response[0]['id'], parent=self, config=response[0])
-        else:
-            params = {"callingData": "true"}
-            url = f"v1/people/{match}"
-            response = webex_api_call("get", url, headers=self._headers, params=params)
-            this_person = Person(response['id'], parent=self, config=response)
-        self._people.append(this_person)
-        return this_person
-
     @property
     def wxc_people(self):
         """Return all the people within the Organization **who have Webex Calling**
+
+        .. deprecated:: 4.0.0
+            Use :py:meth:`Org.people.webex_calling()` instead
 
         Returns:
             list[Person]: List of Person instances of people who have a Webex Calling license
 
         """
-        wxc_people = []
-        for person in self.people:
-            if person.wxc:
-                wxc_people.append(person)
-        return wxc_people
+        return self.people.webex_calling(True)
 
     @property
     def recorded_people(self):
         """Return all the People within the Organization who have Call Recording enabled
 
+        .. deprecated:: 4.0.0
+            Use :py:meth:`Org.people.recorded()` instead
+
         Returns:
             list[Person]: List of Person instances that have Call Recording enabled
 
         """
-        recorded_people = []
-        for person in self.wxc_people:
-            rec_config = person.get_call_recording()
-            if rec_config['enabled'] is True:
-                recorded_people.append(person)
-        return recorded_people
+        return self.people.recorded(True)
 
     def get_license_name(self, license_id: str):
         """Gets the name of a license by its ID
@@ -988,10 +935,4 @@ class Org:
         response = webex_api_call('get', '/v1/adminAudit/events', params=params)
         return response
 
-    ### Method aliases
-    # Used for backwards compatibility to old method names as new methods are added/changed
-    refresh_locations = get_locations
-    get_hunt_groups = hunt_groups
-    get_call_queues = call_queues
-    get_workspaces = workspaces
 

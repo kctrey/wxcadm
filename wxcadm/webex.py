@@ -14,13 +14,11 @@ class Webex:
     def __init__(self,
                  access_token: str,
                  get_org_data: bool = True,
-                 get_people: bool = True,
                  get_locations: bool = True,
                  get_xsi: bool = False,
                  get_hunt_groups: bool = False,
                  get_call_queues: bool = False,
                  fast_mode: bool = False,
-                 people_list: Optional[list] = None,
                  client_id: Optional[str] = None,
                  client_secret: Optional[str] = None,
                  refresh_token: Optional[str] = None
@@ -33,9 +31,6 @@ class Webex:
                 False allows you to get a list of Orgs without collecting all the people and data for each. This
                 reduces processing time and API calls. Once the desired Org is identified, you can collect the
                 data directly from the :py:class:`Org` instance
-            get_people (bool, optional): Whether to get all the People and created instances for them. Defaults to
-                True when there is only one Org. When more than one Org is present, setting this value to True has
-                no effect and the Org-level method must be used.
             get_locations (bool, optional): Whether to get all Locations and create instances for them. Defaults to
                 True when there is only one Org. When more than one Org is present, setting this value to True has
                 no effect and the Org-level method must be used.
@@ -52,9 +47,6 @@ class Webex:
                 runs very slowly, especially during the Webex initialization when collecting people. **Note that this
                 option should not be used when it is necessary to know the phone numbers of each Person, because
                 it skips the API call to the Call Control back-end on initialization.**
-            people_list (list, optional): A list of people, by ID or email, to get instead of getting all People.
-                **Note** that this overrides the ``get_people`` argument, only fetching the people in ``people_list``
-                and will only be used if one Org is present. If multiple Orgs are present, this arg will have no effect.
             client_id (str, optional): The Client ID or Application ID to associate with the token. This value is only
                 useful if you are planning to call the :py:meth:`refresh_token()` method to refresh the token.
             client_secret (str, optional): The Client Secret for the Integration or Service Application. This value is
@@ -70,7 +62,7 @@ class Webex:
         # The access token is the only thing that we need to get started
         self._access_token: str = access_token
         # The Authorization header is going to be used by every API call in the package.
-        # Might want to make it something global so we don't have to inherit it across all of the children
+        # Might want to make it something global, so we don't have to inherit it across all the children
         self._headers: dict = {"Authorization": "Bearer " + access_token}
         log.debug(f"Setting Org._headers to {self._headers}")
         log.debug(f"Setting Global _webex_headers")
@@ -107,7 +99,7 @@ class Webex:
         response = r.json()
         # Handle when no Orgs are returned. This is pretty rare
         if len(response['items']) == 0:
-            log.warning("No Orgs were retuend by the Webex API")
+            log.warning("No Orgs were returned by the Webex API")
             raise OrgError
         # If a token can manage a lot of orgs, you might not want to create them all, because
         # it can take some time to do all the API calls and get the data back
@@ -116,7 +108,7 @@ class Webex:
             for org in response['items']:
                 log.debug(f"Creating Org instance: {org['displayName']}")
                 this_org = Org(name=org['displayName'], id=org['id'], parent=self,
-                               people=False, locations=False, xsi=False, hunt_groups=False, call_queues=False)
+                               locations=False, xsi=False, hunt_groups=False, call_queues=False)
                 self.orgs.append(this_org)
             return
         else:
@@ -124,12 +116,9 @@ class Webex:
             if len(response['items']) == 1:
                 for org in response['items']:
                     log.debug(f"Processing org: {org['displayName']}")
-                    # If we were given a list of people, don't have the Org get all people
-                    if people_list is not None:
-                        get_people = False
                     org = Org(org['displayName'], org['id'],
-                              people=get_people, locations=get_locations, xsi=get_xsi, parent=self,
-                              call_queues=get_call_queues, hunt_groups=get_hunt_groups, people_list=people_list)
+                              locations=get_locations, xsi=get_xsi, parent=self,
+                              call_queues=get_call_queues, hunt_groups=get_hunt_groups)
                     self.orgs.append(org)
                 # Most users have only one org, so to make that easier for them to work with
                 # we are also going to put the orgs[0] instance in the org attr
@@ -141,7 +130,7 @@ class Webex:
                 for org in response['items']:
                     log.debug(f"Processing org: {org['displayName']}")
                     this_org = Org(name=org['displayName'], id=org['id'], parent=self,
-                                   people=False, locations=False, xsi=False, hunt_groups=False, call_queues=False)
+                                   locations=False, xsi=False, hunt_groups=False, call_queues=False)
                     self.orgs.append(this_org)
                 self.org = self.orgs[0]
 
@@ -157,7 +146,7 @@ class Webex:
 
         To perform a refresh, you must know the client_id and client_secret, and refresh_token value. If you have not
         already set the attributes on the :py:class:`Webex` instance, you can provide them as arguments to this method.
-        Passing those arguments will set the instance attributes so they don't have to be passed on every call to this
+        Passing those arguments will set the instance attributes, so they don't have to be passed on every call to this
         method, meaning any existing value will be overwritten.
 
         When the Access Token is refreshed, the :py:class:`Webex` instance will be updated to use the new token.
@@ -207,7 +196,6 @@ class Webex:
             return response
         else:
             return False
-
 
     def get_org_by_name(self, name: str):
         """Get the Org instance that matches all or part of the name argument.
@@ -259,7 +247,7 @@ class Webex:
 
         """
         for org in self.orgs:
-            person = org.get_person_by_email(email)
+            person = org.people.get_by_email(email)
             if person is not None:
                 return person
         return None
@@ -278,7 +266,7 @@ class Webex:
 
         """
         for org in self.orgs:
-            person = org.get_person_by_id(id)
+            person = org.people.get_by_id(id)
             if person is not None:
                 return person
         return None
