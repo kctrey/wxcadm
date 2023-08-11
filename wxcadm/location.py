@@ -5,6 +5,7 @@ from wxcadm import log
 from .location_features import LocationSchedule, CallParkExtension, HuntGroup, CallQueue, AutoAttendant
 from .workspace import WorkspaceList
 from .common import *
+from .exceptions import APIError
 
 
 class Location:
@@ -46,12 +47,28 @@ class Location:
         """ The preferred language at the Location"""
         self.announcement_language: str = announcement_language
         """ The language for audio announcements at the Location"""
+        self.calling_enabled: bool = False
+        """ Whether or not the Location is enabled for Webex Calling """
+        self.calling_config: Optional[dict] = None
+        """ The Webex Calling config for the Location, if enabled """
+
+        # Get the Webex Calling config and determine if the Location is Calling-enabled
+        self._get_calling_config()
 
     def __str__(self):
         return self.name
 
     def __repr__(self):
         return self.id
+
+    def _get_calling_config(self):
+        try:
+            response = webex_api_call("get", f"v1/telephony/config/locations/{self.id}")
+            if 'id' in response.keys():
+                self.calling_enabled = True
+                self.calling_config = response
+        except APIError:
+            return None
 
     @property
     def spark_id(self):
@@ -62,6 +79,9 @@ class Location:
     def hunt_groups(self):
         """List of HuntGroup instances for this Location"""
         log.info(f"Getting Hunt Groups for Location: {self.name}")
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         hunt_groups = []
         response = webex_api_call("get", "v1/telephony/config/huntGroups", params={"locationId": self.id})
         log.debug(response)
@@ -86,6 +106,9 @@ class Location:
     def auto_attendants(self):
         """ List of AutoAttendant instances for this Location"""
         log.info(f"Getting Auto Attendants for Location: {self.name}")
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         auto_attendants = []
         response = webex_api_call("get", "v1/telephony/config/autoAttendants", params={"locationId": self.id})
         log.debug(response)
@@ -102,6 +125,9 @@ class Location:
     def call_queues(self):
         """List of CallQueue instances for this Location"""
         log.info(f"Getting Call Queues for Location: {self.name}")
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         hunt_groups = []
         response = webex_api_call("get", "v1/telephony/config/queues", params={"locationId": self.id})
         log.debug(response)
@@ -125,6 +151,9 @@ class Location:
 
         """
         log.info("Getting Location numbers from Webex")
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         params = {'locationId': self.id}
         response = webex_api_call("get", "v1/telephony/config/numbers", params=params)
         loc_numbers = response['phoneNumbers']
@@ -164,6 +193,9 @@ class Location:
 
         """
         log.debug('Getting available numbers')
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         params = {'locationId': self.id, 'available': True}
         response = webex_api_call("get", "v1/telephony/config/numbers", params=params)
         if len(response.get('phoneNumbers', 0)) == 0:
@@ -188,6 +220,9 @@ class Location:
     def schedules(self):
         """ List of all of the :class:`wxcadm.LocationSchedule` instances for this Location"""
         log.debug('Getting Location Schedules')
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         response = []
         api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.id}/schedules", headers=self._headers)
         for schedule in api_resp['schedules']:
@@ -252,6 +287,9 @@ class Location:
 
         """
         log.debug(f'Uploading MOH file: {filename}')
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         upload = self._parent._cpapi.upload_moh_file(self.id, filename)
         if upload is True:
             log.debug('\tActivating MOH')
@@ -276,6 +314,9 @@ class Location:
             This method requires the CP-API access scope.
         """
         log.debug('Setting Default MOH')
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         activate = self._parent._cpapi.set_default_moh(self.id)
         if activate is True:
             log.debug('\tSuccessful activation')
@@ -287,6 +328,9 @@ class Location:
     @property
     def outgoing_call_permissions(self):
         """ The Outgoing Call Permissions dicts (as a list) for the Location"""
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         ocp = webex_api_call('get', f'/v1/telephony/config/locations/{self.id}/outgoingPermission')
         return ocp['callingPermissions']
 
@@ -305,6 +349,9 @@ class Location:
 
         """
         log.info(f'Setting Outgoing Call Permission for Location: {self.name}')
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         log.debug(f'\tNew Permissions: {outgoing_call_permissions}')
         if not isinstance(outgoing_call_permissions, list):
             log.warning('outgoing_call_permissions is not a list')
@@ -360,6 +407,9 @@ class Location:
 
         """
         log.info(f"Creating Call Queue at Location {self.name} with name: {name}")
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         # Get some values if they weren't passed
         if phone_number is None and extension is None:
             raise ValueError("phone_number and/or extension are required")
@@ -417,6 +467,9 @@ class Location:
                               time_zone: Optional[str] = None
                               ):
         log.info(f"Creating Auto Attendant at Location {self.name} with name: {name}")
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         # Get some values if they weren't passed
         if phone_number is None and extension is None:
             raise ValueError("phone_number and/or extension are required")
@@ -461,6 +514,9 @@ class Location:
                           time_zone: Optional[str] = None
                           ):
         log.info(f"Creating Hunt Group at Location {self.name} with name: {name}")
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         # Get some values if they weren't passed
         if phone_number is None and extension is None:
             raise ValueError("phone_number and/or extension are required")
@@ -502,6 +558,9 @@ class Location:
     def park_extensions(self):
         """ List of :py:class:`CallParkExtension` instances for this Location """
         log.info(f"Getting Park Extensions for Location: {self.name}")
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         park_extensions = []
         response = webex_api_call("get", "v1/telephony/config/callParkExtensions", params={'locationId': self.id})
         log.debug(f"Response:\n\t{response}")
@@ -523,6 +582,9 @@ class Location:
 
         """
         log.info(f"Creating Park Extension {name} ({extension}) at Location: {self.name}")
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
         payload = {"name": name, "extension": extension}
         response = webex_api_call("post", f"v1/telephony/config/locations/{self.id}/callParkExtensions",
                                   params={'orgId': self._parent.id}, payload=payload)
