@@ -4,6 +4,7 @@ What's New
 ==========
 v4.0.0
 ------
+- The ``location_features.py`` file was getting hard to manage, so some features (Call Queue, Hunt Group, Auto Attendant) have been split to their own files. This will probably the standard moving forward.
 - With Unified Locations, it is now necessary to check every Location to ensure Calling is enabled before performing any Calling APIs. All of this is handled within the :py:class:`Location` class internally.
 - Deprecated :py:meth:`Org.get_recorded_people()`. Use :py:meth:`Org.people.recorded()` instead.
 - Deprecated :py:meth:`Org.get_wxc_people()`. Use :py:meth:`Org.people.webex_calling()` instead.
