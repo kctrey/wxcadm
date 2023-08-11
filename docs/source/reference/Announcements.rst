@@ -1,5 +1,8 @@
+The Announcement classes
+========================
+
 AnnouncementList
-================
+----------------
 
 .. autoclass:: wxcadm.workspace.AnnouncementList
     :members:
@@ -7,7 +10,7 @@ AnnouncementList
 
 
 Announcement
-============
+------------
 
 .. autoclass:: wxcadm.workspace.Announcement
     :members:

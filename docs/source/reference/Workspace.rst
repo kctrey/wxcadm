@@ -1,5 +1,8 @@
-WorkspaceLocationList
+The Workspace classes
 =====================
+
+WorkspaceLocationList
+---------------------
 
 .. autoclass:: wxcadm.workspace.WorkspaceLocationList
     :members:
@@ -7,7 +10,7 @@ WorkspaceLocationList
 
 
 WorkspaceLocation
-=================
+-----------------
 
 .. autoclass:: wxcadm.workspace.WorkspaceLocation
     :members:
@@ -15,7 +18,7 @@ WorkspaceLocation
 
 
 WorkspaceList
-=============
+-------------
 
 .. autoclass:: wxcadm.workspace.WorkspaceList
     :members:
@@ -23,7 +26,7 @@ WorkspaceList
 
 
 Workspace
-=========
+---------
 
 .. autoclass:: wxcadm.workspace.Workspace
     :members:
