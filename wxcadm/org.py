@@ -9,8 +9,9 @@ from .common import *
 from .common import _url_base
 from .exceptions import *
 from .cpapi import CPAPI
-from .location import Location
-from .location_features import PagingGroup, PickupGroup, HuntGroup, CallQueue, AutoAttendant
+from .location import Location, LocationList
+from .location_features import PagingGroup, PickupGroup, HuntGroup, CallQueue
+from .auto_attendant import AutoAttendantList
 from .webhooks import Webhooks
 from .person import UserGroups, Person, PersonList
 from .applications import WebexApplications
@@ -53,8 +54,6 @@ class Org:
         self._parent = parent
         self.pickup_groups: Optional[list] = None
         'A list of the PickupGroup instances for this Org'
-        self._locations: list | None = None
-        """ The cache of locations as used by the .locations property """
         self.name: str = name
         'The name of the Organization'
         self.id: str = id
@@ -66,7 +65,6 @@ class Org:
         self._wxc_licenses: Optional[list] = None
         self._devices: Optional[list] = None
         """A list of the Devce instances for this Org"""
-        self._auto_attendants: list = []
         self._usergroups: Optional[list] = None
         self._roles: Optional[dict] = None
         self._announcements: Optional[AnnouncementList] = None
@@ -75,6 +73,9 @@ class Org:
         self._workspaces: Optional[WorkspaceList] = None
         self._workspace_locations: Optional[WorkspaceLocationList] = None
         self._people: Optional[PersonList] = None
+        self._auto_attendants: Optional[AutoAttendantList] = None
+        self._locations: Optional[LocationList] = None
+
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -87,14 +88,8 @@ class Org:
         # Create a CPAPI instance for CPAPI work
         self._cpapi = CPAPI(self, self._parent._access_token)
 
-        if locations:
-            self.get_locations()
         if xsi:
             self.get_xsi_endpoints()
-        if call_queues:
-            self.get_call_queues()
-        if hunt_groups:
-            self.get_hunt_groups()
 
     def get_org_data(self):
         """ Get the Locations, Call Queues and Hunt Groups for the Org
@@ -103,7 +98,6 @@ class Org:
             None: Doesn't return any values. Simply populates the Org attributes with the data
 
         """
-        self.get_locations()
         self.get_call_queues()
         self.get_hunt_groups()
         return None
@@ -129,6 +123,12 @@ class Org:
         return self.id
 
     @property
+    def auto_attendants(self):
+        if self._auto_attendants is None:
+            self._auto_attendants = AutoAttendantList(self)
+        return self._auto_attendants
+
+    @property
     def workspaces(self):
         if self._workspaces is None:
             self._workspaces = WorkspaceList(parent=self)
@@ -144,7 +144,7 @@ class Org:
     @property
     def locations(self):
         if self._locations is None:
-            self.get_locations()
+            self._locations = LocationList(self)
         return self._locations
 
     @property
@@ -206,7 +206,7 @@ class Org:
             paging_groups = []
             response = webex_api_call("get", "v1/telephony/config/paging", headers=self._headers, params=self._params)
             for entry in response['locationPaging']:
-                location = self.get_location(id=entry['locationId'])
+                location = self.locations.get(id=entry['locationId'])
                 this_pg = PagingGroup(location, entry['id'], entry['name'])
                 paging_groups.append(this_pg)
             self._paging_groups = paging_groups
@@ -277,41 +277,6 @@ class Org:
                 return pg
         return None
 
-    def get_auto_attendant(self, id: str = None, name: str = None, spark_id: str = None):
-        """ Get the AutoAttendant instance associated with a given ID, Name, or Spark ID
-
-        Only one parameter should be supplied in normal cases. If multiple arguments are provided, the Auto
-        Attendants will be searched in order by ID, Name, and finally Spark ID. If no arguments are provided, the method
-        will raise an Exception.
-
-        Args:
-            id (str, optional): The AutoAttendant ID to find
-            name (str, optional): The AutoAttendant Name to find
-            spark_id (str, optional): The Spark ID to find
-
-        Returns:
-            AutoAttendant: The AutoAttendant instance correlating to the given search argument.
-                None is returned if no AutoAttendant is found.
-
-        Raises:
-            ValueError: Raised when the method is called with no arguments
-
-        """
-        if id is None and name is None and spark_id is None:
-            raise ValueError("A search argument must be provided")
-        if not self._auto_attendants:
-            self._auto_attendants = self.auto_attendants
-        for aa in self._auto_attendants:
-            if aa.id == id:
-                return aa
-        for aa in self._auto_attendants:
-            if aa.name == name:
-                return aa
-        for aa in self._auto_attendants:
-            if aa.spark_id == spark_id:
-                return aa
-        return None
-
     @property
     def numbers(self):
         """ All the Numbers for the Org
@@ -343,11 +308,11 @@ class Org:
                             if call_queue is not None:
                                 num['owner'] = call_queue
                         elif num['owner']['type'].upper() == "AUTO_ATTENDANT":
-                            auto_attendant = self.get_auto_attendant(id=num['owner']['id'])
+                            auto_attendant = self.auto_attendants.get(id=num['owner']['id'])
                             if auto_attendant is not None:
                                 num['owner'] = auto_attendant
             if "location" in num:
-                location = self.get_location_by_name(num['location']['name'])
+                location = self.locations.get(name=num['location']['name'])
                 if location is not None:
                     num['location'] = location
         self._numbers = org_numbers
@@ -459,42 +424,7 @@ class Org:
                 return location
         return None
 
-    def get_location(self, id: str = None, name: str = None, spark_id: str = None):
-        """ Get the Location instance associated with a given ID, Name, or Spark ID
 
-        Only one parameter should be supplied in normal cases. If multiple arguments are provided, the Locations will be
-        searched in order by ID, Name, and finally Spark ID. If no arguments are provided, the method will raise an
-        Exception.
-
-        Args:
-            id (str, optional): The Location ID to find
-            name (str, optional): The Location Name to find
-            spark_id (str, optional): The Spark ID to find
-
-        Returns:
-            Location: The Location instance correlating to the given search argument.
-
-        Raises:
-            ValueError: Raised when the method is called with no arguments
-
-        """
-        if id is None and name is None and spark_id is None:
-            raise ValueError("A search argument must be provided")
-        if not self.locations:
-            self.get_locations()
-        if id is not None:
-            for location in self.locations:
-                if location.id == id:
-                    return location
-        if name is not None:
-            for location in self.locations:
-                if location.name == name:
-                    return location
-        if spark_id is not None:
-            for location in self.locations:
-                if location.spark_id == spark_id:
-                    return location
-        return None
 
     @property
     def people(self):
@@ -684,44 +614,6 @@ class Org:
             return None
         return self.xsi
 
-    def get_locations(self):
-        """Get the Locations for the Organization.
-
-        Also stores them in the Org.locations attribute.
-
-        Returns:
-            list[Location]: List of Location instance objects. See the Locations class for attributes.
-
-        """
-        log.info("get_locations() started")
-        self._locations = []
-        api_resp = webex_api_call("get", "v1/locations", headers=self._headers, params=self._params)
-        for location in api_resp:
-            this_location = Location(self,
-                                     location['id'],
-                                     location['name'],
-                                     address=location['address'],
-                                     time_zone=location['timeZone'],
-                                     preferred_language=location['preferredLanguage'])
-            self._locations.append(this_location)
-        return self._locations
-
-    def create_location(self,
-                        name: str,
-                        time_zone: str,
-                        preferred_language: str,
-                        announcement_language: str,
-                        address: dict):
-        payload = {
-            'name': name,
-            'timeZone': time_zone,
-            'preferredLanguage': preferred_language,
-            'announcementLanguage': announcement_language,
-            'address': address
-        }
-        response = webex_api_call('post', 'v1/locations', payload=payload)
-        return response
-
     def get_pickup_groups(self):
         """Get all of the Call Pickup Groups for an Organization.
 
@@ -772,27 +664,6 @@ class Org:
             call_queues.append(this_queue)
         self._call_queues = call_queues
         return call_queues
-
-    @property
-    def auto_attendants(self):
-        """ The Auto Attendants for an Organization
-
-        Returns:
-            list[AutoAttendant]: List of AutoAttendant instances for the Organization
-        """
-        log.info("auto_attendants() started")
-        if not self.locations:
-            self.get_locations()
-        api_resp = webex_api_call("get", "v1/telephony/config/autoAttendants",
-                                  headers=self._headers, params=self._params)
-        for aa in api_resp['autoAttendants']:
-            id = aa.get("id")
-            name = aa.get("name")
-            location = self.get_location_by_name(aa['locationName'])
-
-            auto_attendant = AutoAttendant(self, location=location, id=id, name=name)
-            self._auto_attendants.append(auto_attendant)
-        return self._auto_attendants
 
     def get_call_queue_by_id(self, id: str):
         """ Get the :class:`CallQueue` instance with the requested ID
@@ -934,5 +805,3 @@ class Org:
         }
         response = webex_api_call('get', '/v1/adminAudit/events', params=params)
         return response
-
-

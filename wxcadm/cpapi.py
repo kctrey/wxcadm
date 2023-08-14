@@ -174,7 +174,7 @@ class CPAPI:
         r = requests.get(self._url_base + f"places/{workspace_id}", headers=self._headers)
         if r.status_code == 200:
             response = r.json()
-            location = self._parent.get_location_by_name(response['location']['name'])
+            location = self._parent.locations.get(name=response['location']['name'])
         elif r.status_code == 403:
             raise TokenError("Your API Access Token doesn't have permission to use this API call")
         else:

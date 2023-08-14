@@ -2,8 +2,16 @@
 
 What's New
 ==========
+
+.. note::
+
+    v4.0.0 is a significant rewrite of a lot of the methods and API calls to reduce the number of API calls needed in large Orgs with a lot of Users/Locations/Workspaces. I have tried to document all the breaking changes, but there may be some I haven't realized yet. The v4.0.0 series is changing rapidly as I find them.
+
 v4.0.0
 ------
+- *BREAKING CHANGE* - :py:meth:`Org.get_location_by_name()` has been deprecated for a while, but a lot of people still used it, including me. The recommended :py:meth:`Org.get_location()` has been moved to :py:meth:`Org.locations.get()` (:py:meth:`LocationList.get()`) and should be used instead.
+- New :py:class:`LocationList` class access with :py:meth:`Org.locations`. All list functions have been moved to this class.
+- Deprecated :py:meth:`Org.get_auto_attendants()`. Use :py:meth:`Org.auto_attendants` instead.
 - The ``location_features.py`` file was getting hard to manage, so some features (Call Queue, Hunt Group, Auto Attendant) have been split to their own files. This will probably the standard moving forward.
 - With Unified Locations, it is now necessary to check every Location to ensure Calling is enabled before performing any Calling APIs. All of this is handled within the :py:class:`Location` class internally.
 - Deprecated :py:meth:`Org.get_recorded_people()`. Use :py:meth:`Org.people.recorded()` instead.

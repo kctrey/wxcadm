@@ -46,6 +46,6 @@ class Bifrost:
 
         for location in locations:
             if "name" in location:
-                webex_location = self._parent.get_location_by_name(location['name'])
+                webex_location = self._parent.locations.get(name=location['name'])
                 webex_location.bifrost_config = location
         return locations

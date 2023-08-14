@@ -90,19 +90,6 @@ except:
 else:
     pass_test()
 
-# Test with fast_mode=True to see the timing differences
-test = "Webex instance - Fast Mode"
-start_test()
-try:
-    webex_fast = wxcadm.Webex(access_token, get_locations=False, fast_mode=True)
-except:
-    fail_test()
-    print("Cannot continue without valid token and Webex instance.")
-    exit(1)
-else:
-    pass_test()
-    del webex_fast
-
 # Count of manageable orgs and org report
 print(f"This token can access {len(webex.orgs)} Orgs")
 for org in webex.orgs:
@@ -117,7 +104,7 @@ print(f"People Count: {people_count}")
 test = "Get Locations"
 start_test()
 try:
-    org_locations = webex.orgs[0].get_locations()
+    org_locations = webex.orgs[0].locations
     locations_count = len(webex.orgs[0].locations)
     print(f"Locations Count: {locations_count}")
 except:
@@ -138,7 +125,7 @@ else:
     test = "Location ID to User Location match"
     start_test()
     person = random.choice(webex.orgs[0].wxc_people)
-    person_location = webex.orgs[0].get_location(id=person.location)
+    person_location = webex.orgs[0].locations.get(id=person.location)
     if person_location is None:
         fail_test()
     else:
@@ -213,7 +200,7 @@ else:
 # Person tests
 test = "Person full config"
 start_test()
-person: wxcadm.person.Person = random.choice(webex.orgs[0].wxc_people)
+person: wxcadm.person.Person = random.choice(webex.orgs[0].people.webex_calling())
 try:
     full_config = person.get_full_config()
 except:
@@ -222,7 +209,7 @@ else:
     pass_test()
 test = "Person by email"
 start_test()
-found_person = webex.orgs[0].get_person_by_email(person.email)
+found_person = webex.orgs[0].people.get_by_email(person.email)
 if person.id == found_person.id:
     pass_test()
 else:

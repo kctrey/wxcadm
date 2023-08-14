@@ -27,7 +27,7 @@ class Terminus:
         if r.ok:
             locations = r.json()
             for location in locations:
-                webex_location = self._parent.get_location_by_name(location['name'])
+                webex_location = self._parent.locations.get(name=location['name'])
                 webex_location.terminus_config = location
             return locations
         else:

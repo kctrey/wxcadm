@@ -1,15 +1,102 @@
 from __future__ import annotations
 
 from typing import Optional
+from collections import UserList
+
+import wxcadm
 from wxcadm import log
-from .location_features import LocationSchedule, CallParkExtension, HuntGroup, CallQueue, AutoAttendant
+from .location_features import LocationSchedule, CallParkExtension, HuntGroup, CallQueue
+from .auto_attendant import AutoAttendant, AutoAttendantList
 from .workspace import WorkspaceList
 from .common import *
 from .exceptions import APIError
 
 
+class LocationList(UserList):
+    def __init__(self, parent: wxcadm.Org):
+        super().__init__()
+        log.debug("Initializing LocationtList instance")
+        self.parent: wxcadm.Org = parent
+        self.data: list = self._get_items()
+
+    def refresh(self):
+        """ Refresh the list of Locations from Webex """
+        self.data = self._get_items()
+
+    def _get_items(self):
+        if isinstance(self.parent, wxcadm.Org):
+            log.debug("Using Org ID as data filter")
+            params = {'orgId': self.parent.id}
+        else:
+            raise ValueError("Unsupported parent class")
+
+        log.debug("Getting Location list")
+        response = webex_api_call('get', f'v1/locations', params=params)
+        log.debug(f"Received {len(response)} entries")
+        items = []
+        for entry in response:
+            items.append(Location(parent=self.parent,
+                                  location_id=entry['id'],
+                                  name=entry['name'],
+                                  address=entry['address'],
+                                  time_zone=entry['timeZone'],
+                                  preferred_language=entry['preferredLanguage']))
+        return items
+
+    def get(self, id: str = None, name: str = None, spark_id: str = None):
+        """ Get the Location instance associated with a given ID, Name, or Spark ID
+
+        Only one parameter should be supplied in normal cases. If multiple arguments are provided, the Locations will be
+        searched in order by ID, Name, and finally Spark ID. If no arguments are provided, the method will raise an
+        Exception.
+
+        Args:
+            id (str, optional): The Location ID to find
+            name (str, optional): The Location Name to find
+            spark_id (str, optional): The Spark ID to find
+
+        Returns:
+            Location: The Location instance correlating to the given search argument.
+
+        Raises:
+            ValueError: Raised when the method is called with no arguments
+
+        """
+        if id is None and name is None and spark_id is None:
+            raise ValueError("A search argument must be provided")
+        if id is not None:
+            for location in self.data:
+                if location.id == id:
+                    return location
+        if name is not None:
+            for location in self.data:
+                if location.name == name:
+                    return location
+        if spark_id is not None:
+            for location in self.data:
+                if location.spark_id == spark_id:
+                    return location
+        return None
+
+    def create(self,
+               name: str,
+               time_zone: str,
+               preferred_language: str,
+               announcement_language: str,
+               address: dict):
+        payload = {
+            'name': name,
+            'timeZone': time_zone,
+            'preferredLanguage': preferred_language,
+            'announcementLanguage': announcement_language,
+            'address': address
+        }
+        response = webex_api_call('post', 'v1/locations', payload=payload)
+        return response
+
+
 class Location:
-    def __init__(self, parent: Org, location_id: str,
+    def __init__(self, parent: wxcadm.Org, location_id: str,
                  name: str,
                  time_zone: str,
                  preferred_language: str,
@@ -106,20 +193,7 @@ class Location:
     def auto_attendants(self):
         """ List of AutoAttendant instances for this Location"""
         log.info(f"Getting Auto Attendants for Location: {self.name}")
-        if self.calling_enabled is False:
-            log.debug("Not a Webex Calling Location")
-            return None
-        auto_attendants = []
-        response = webex_api_call("get", "v1/telephony/config/autoAttendants", params={"locationId": self.id})
-        log.debug(response)
-        for aa in response['autoAttendants']:
-            this_instance = AutoAttendant(self,
-                                          self,
-                                          id=aa['id'],
-                                          name=aa['name'])
-            auto_attendants.append(this_instance)
-
-        return auto_attendants
+        return AutoAttendantList(self)
 
     @property
     def call_queues(self):

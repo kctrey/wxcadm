@@ -75,9 +75,8 @@ The purpose of this module is to simplify that so the user doesn't have to have 
 we are faced with a decision: keep the flexibility provided by the raw data or simplify it, at the cost of compatibility
 when the Webex API is changed.
 
-My goal is to find a happy medium, where the attributes get populated dynamically, but I feel that it is going to be a
-heavy lift, changing the structure of all the classes and building a lot of "helper" functions to convert between
-the two. Stay tuned...
+Nearly every instance of all classes has a :py:attr`config` attribute that contains the JSON configuration from Webex.
+Properties are exposed for most commonly-used attributes.
 
 .. toctree::
    :maxdepth: 2
