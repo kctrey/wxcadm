@@ -364,13 +364,10 @@ class Person:
             self._parent._cpapi.reset_vm_pin(self, pin=pin)
             return True
         else:
-            r = requests.post(_url_base + f"v1/people/{self.id}/features/voicemail/actions/resetPin/invoke",
-                              headers=self._headers)
-            if r.ok:
-                return True
-            else:
-                log.warning("Reset VM PIN API call failed")
-                return False
+            response = webex_api_call("post", f"v1/people/{self.id}/features/voicemail/actions/resetPin/invoke",
+                                      params={"orgId": self._parent.id})
+            return response
+
 
     def get_full_config(self):
         """

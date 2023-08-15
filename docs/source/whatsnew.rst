@@ -9,6 +9,7 @@ What's New
 
 v4.0.0
 ------
+- :py:meth:`Webex.get_person_by_email()` and :py:meth:`Webex.get_person_by_id()` have been optimized to work much faster for tokens with access to many Orgs.
 - :py:meth:`LocationList.webex_calling()` filters Locations by whether or not Webex Calling is enabled.
 - *BREAKING CHANGE* - :py:meth:`Org.get_location_by_name()` has been deprecated for a while, but a lot of people still used it, including me. The recommended :py:meth:`Org.get_location()` has been moved to :py:meth:`Org.locations.get()` (:py:meth:`LocationList.get()`) and should be used instead.
 - New :py:class:`LocationList` class access with :py:meth:`Org.locations`. All list functions have been moved to this class.

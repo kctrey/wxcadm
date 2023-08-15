@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import requests
 from typing import Optional, Type
+
+import wxcadm.person
 from wxcadm import log
 from .common import *
 from .exceptions import *
 from .org import Org
-from .person import Me
+from .person import Me, Person
 
 
 class Webex:
@@ -233,7 +235,7 @@ class Webex:
                 return org
         raise KeyError("Org not found")
 
-    def get_person_by_email(self, email: str):
+    def get_person_by_email(self, email: str) -> Optional[wxcadm.person.Person]:
         """ Get the person instance  of a user with the given email address
 
         Unlike the :class:`Org` method of the same name, this method searches across all the Orgs that the token
@@ -246,11 +248,19 @@ class Webex:
             :class:`Person`: The Person instance. None is returned if no match is found
 
         """
-        for org in self.orgs:
-            person = org.people.get_by_email(email)
-            if person is not None:
-                return person
-        return None
+        log.info(f"Getting Person record for email: {email}")
+        response = webex_api_call("get", "v1/people", params={"email": email})
+        if len(response) > 1:
+            log.warn(f"Webex returned more than one record for email: {email}")
+            raise APIError("Webex returned more than one Person with the specified email")
+        elif len(response) == 1:
+            log.debug(f"User data: {response[0]}")
+            org = self.get_org_by_id(response[0]['orgId'])
+            log.debug(f"User in Org: {org.name}")
+            person = Person(response[0]['id'], parent=org, config=response[0])
+            return person
+        else:
+            return None
 
     def get_person_by_id(self, id: str):
         """ Get the Person instance for a user with the given ID
@@ -265,11 +275,19 @@ class Webex:
             Person: The Person instance. None is returned if no match is found
 
         """
-        for org in self.orgs:
-            person = org.people.get_by_id(id)
-            if person is not None:
-                return person
-        return None
+        log.info(f"Getting Person record for ID: {id}")
+        response = webex_api_call("get", "v1/people", params={"id": id})
+        if len(response) > 1:
+            log.warn(f"Webex returned more than one record for email: {email}")
+            raise APIError("Webex returned more than one Person with the specified ID")
+        elif len(response) == 1:
+            log.debug(f"User data: {response[0]}")
+            org = self.get_org_by_id(response[0]['orgId'])
+            log.debug(f"User in Org: {org.name}")
+            person = Person(response[0]['id'], parent=org, config=response[0])
+            return person
+        else:
+            return None
 
     @property
     def me(self):

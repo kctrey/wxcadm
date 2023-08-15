@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 
-import wxcadm.org
 from .common import *
 from typing import Optional, Union
 from .exceptions import *
