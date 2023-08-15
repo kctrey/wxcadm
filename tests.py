@@ -375,6 +375,53 @@ else:
     fail_test()
     print("XSI not enabled. Skipping XSI tests.")
 
+### PickupGroupList and PickupGroup
+test = "Pickup Groups"
+start_test()
+try:
+    all_pickup_groups = {}
+    location: wxcadm.Location
+    for location in webex.org.locations.webex_calling():
+        if len(location.pickup_groups) > 0:
+            all_pickup_groups[location.name] = location.pickup_groups
+except:
+    fail_test()
+else:
+    pass_test()
+    test = "Pickup Group Users"
+    start_test()
+    try:
+        random_location = random.choice(list(all_pickup_groups.keys()))
+        random_pickup_group = random.choice(all_pickup_groups[random_location])
+        pickup_group_users = random_pickup_group.users
+    except:
+        fail_test()
+    else:
+        pass_test()
+
+### AutoAttendantList and AutoAttendant
+test = "Auto Attendant - Org Wide"
+start_test()
+try:
+    org_aa = webex.org.auto_attendants
+except:
+    fail_test()
+else:
+    pass_test()
+test = "Auto Attendant - Locations"
+start_test()
+try:
+    all_auto_attendants = {}
+    location: wxcadm.Location
+    for location in webex.org.locations.webex_calling():
+        if len(location.auto_attendants) > 0:
+            all_auto_attendants[location.name] = location.auto_attendants
+except:
+    fail_test()
+else:
+    pass_test()
+
+
 logging.info("Tests Complete")
 logging.info(f"Passed Tests: {passed_tests}")
 logging.info(f"Failed Tests: {failed_tests}")

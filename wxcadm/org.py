@@ -10,7 +10,7 @@ from .common import _url_base
 from .exceptions import *
 from .cpapi import CPAPI
 from .location import Location, LocationList
-from .location_features import PagingGroup, PickupGroup, HuntGroup, CallQueue
+from .location_features import PagingGroup, HuntGroup, CallQueue
 from .auto_attendant import AutoAttendantList
 from .webhooks import Webhooks
 from .person import UserGroups, Person, PersonList
@@ -52,8 +52,6 @@ class Org:
         self._numbers = None
         self._paging_groups = None
         self._parent = parent
-        self.pickup_groups: Optional[list] = None
-        'A list of the PickupGroup instances for this Org'
         self.name: str = name
         'The name of the Organization'
         self.id: str = id
@@ -613,32 +611,6 @@ class Org:
         else:
             return None
         return self.xsi
-
-    def get_pickup_groups(self):
-        """Get all of the Call Pickup Groups for an Organization.
-
-        Also stores them in the Org.pickup_groups attribute.
-
-        Returns:
-            list[PickupGroup]: List of Call Pickup Groups as a list of dictionaries.
-            See the PickupGroup class for attributes.
-
-        """
-        log.info("get_pickup_groups() started")
-        self.pickup_groups = []
-        # First we need to know if we already have locations, because they are needed
-        # for the pickup groups call
-        if not self.locations:
-            self.get_locations()
-        # Loop through all of the locations and get their pickup groups
-        # We will create a new instance of the PickupGroup class when we find one
-        for location in self.locations:
-            api_resp = webex_api_call("get", "v1/telephony/config/locations/" + location.id + "/callPickups",
-                                      headers=self._headers)
-            for item in api_resp['callPickups']:
-                pg = PickupGroup(self, location.id, item['id'], item['name'])
-                self.pickup_groups.append(pg)
-        return self.pickup_groups
 
     @property
     def call_queues(self):

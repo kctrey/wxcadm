@@ -9,46 +9,6 @@ import wxcadm.location
 from wxcadm import log
 from .common import *
 
-
-class PickupGroup:
-    def __init__(self, parent, location, id, name, users=None):
-        self._parent: object = parent
-        self.location_id: str = location
-        """The Webex ID of the Location associated with this Pickup Group"""
-        self.id: str = id
-        """The Webex ID of the Pickup Group"""
-        self.name: str = name
-        """The name of the Pickup Group"""
-        self.users: list = []
-        """All of the users (agents) assigned to this Pickup Group"""
-        # If no agents were passed, we need to go get the configuration of the PickupGroup
-        if users is None:
-            response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/callPickups/{self.id}")
-            # TODO It doesn't make sense to create a new Person instance for the below.
-            #      Once we have an API and a class for Workspaces, it would make sense to tie
-            #      the agents to the Person or Workspace instance
-            # For now, we just write the values that we get back and the user can find the people with the
-            # Person-specific methods
-            for agent in response['agents']:
-                self.users.append(agent)
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return self.id
-
-    def get_config(self):
-        """Gets the configuration of the Pickup Group from Webex
-
-        Returns:
-            dict: The configuration of the Pickup Group
-
-        """
-        config = {**self}
-        return config
-
-
 class CallQueue:
     def __init__(self, parent, id, name, location, phone_number, extension, enabled):
         """

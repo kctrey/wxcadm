@@ -7,6 +7,7 @@ import wxcadm
 from wxcadm import log
 from .location_features import LocationSchedule, CallParkExtension, HuntGroup, CallQueue
 from .auto_attendant import AutoAttendant, AutoAttendantList
+from .pickup_group import PickupGroupList
 from .workspace import WorkspaceList
 from .common import *
 from .exceptions import APIError
@@ -94,6 +95,25 @@ class LocationList(UserList):
         response = webex_api_call('post', 'v1/locations', payload=payload)
         return response
 
+    def webex_calling(self, enabled: bool = True) -> list[Location]:
+        """ Return a list of :py:class:`Location` where Webex Calling is enabled/disabled
+
+        Args:
+            enabled (bool, optional): True (default) returns Webex Calling people. False returns Locations without
+                Webex Calling
+
+        Returns:
+            list[:py:class:`Location`]: List of :py:class:`Location` instances. An empty list is returned if none match
+            the given criteria
+
+        """
+        locations = []
+        entry: Location
+        for entry in self.data:
+            if entry.calling_enabled is enabled:
+                locations.append(entry)
+        return locations
+
 
 class Location:
     def __init__(self, parent: wxcadm.Org, location_id: str,
@@ -138,6 +158,7 @@ class Location:
         """ Whether or not the Location is enabled for Webex Calling """
         self.calling_config: Optional[dict] = None
         """ The Webex Calling config for the Location, if enabled """
+        self._pickup_groups: Optional[PickupGroupList] = None
 
         # Get the Webex Calling config and determine if the Location is Calling-enabled
         self._get_calling_config()
@@ -664,3 +685,14 @@ class Location:
                                   params={'orgId': self._parent.id}, payload=payload)
         log.debug(f"Response:\n\t{response}")
         return response['id']
+
+    @property
+    def pickup_groups(self) -> PickupGroupList:
+        """ :py:class:`PickupGroupList` list of :py:class:`PickupGroup`s for this Location """
+        log.info(f"Getting Pickup Groups for Location {self.name}")
+        if self.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
+        if self._pickup_groups is None:
+            self._pickup_groups = PickupGroupList(self)
+        return self._pickup_groups
