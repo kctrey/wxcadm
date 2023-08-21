@@ -27,6 +27,15 @@ class PersonList(UserList):
     def _get_people(self):
         log.debug("_get_people() started")
         params = {"callingData": "true"}
+
+        if isinstance(self.parent, wxcadm.Org):
+            log.debug(f"Using Org ID {self.parent.id} as Person filter")
+            params['orgId'] = self.parent.id
+        elif isinstance(self.parent, wxcadm.Location):
+            log.debug(f"Using Location ID {self.parent.id} as Person filter")
+            params['locationId'] = self.parent.id
+        else:
+            log.warn("Parent class is not Org or Location, so all People will be returned")
         response = webex_api_call("get", "v1/people", params=params)
         log.info(f"Found {len(response)} People")
 
@@ -114,9 +123,94 @@ class PersonList(UserList):
                 people.append(entry)
         return people
 
+    def create(self, email: str,
+               location: Optional[Union[str, Location]] = None,
+               licenses: list = None,
+               calling: bool = True,
+               phone_number: str = None,
+               extension: str = None,
+               first_name: str = None,
+               last_name: str = None,
+               display_name: str = None,
+               ):
+        """ Create a new user in Webex.
+
+        Args:
+            email (str): The email address of the user
+            location (Location): The Location instance to assign the user to. Also accepts the Location ID as a string.
+                This argument is not needed when the PeopleList parent is an Org.
+            licenses (list, optional): List of license IDs to assign to the user. Use this when the license IDs
+                are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
+                meetings` parameters.
+            calling (bool, optional): BETA - Whether to assign Calling licenses to the user. Defaults to True.
+            phone_number (str, optional): The phone number to assign to the user.
+            extension (str, optional): The extension to assign to the user
+            first_name (str, optional): The user's first name. Defaults to empty string.
+            last_name (str, optional): The users' last name. Defaults to empty string.
+            display_name (str, optional): The full name of the user as displayed in Webex. If first name and last name
+                are passed without display_name, the display name will be the concatenation of first and last name.
+
+        Returns:
+            Person: The Person instance of the newly-created user.
+
+        """
+        log.info(f"Creating new user: {email}")
+        if (first_name or last_name) and display_name is None:
+            log.debug("No display_name provided. Setting default.")
+            display_name = f"{first_name} {last_name}"
+        elif (first_name is None and last_name is None) and display_name is None:
+            log.debug("No names provided. Using email as display_name")
+            display_name = email
+
+        # Find the license IDs for each requested service, unless licenses was passed
+        if not licenses:
+            log.debug("No licenses specified. Finding licenses.")
+            licenses = []
+            if calling:
+                log.debug("Calling requested. Finding Calling licenses.")
+                if isinstance(self.parent, wxcadm.Org):
+                    calling_license = self.parent.get_wxc_person_license()
+                elif isinstance(self.parent, wxcadm.Location):
+                    calling_license = self.parent.parent.get_wxc_person_license()
+                else:
+                    raise wxcadm.exceptions.LicenseError("No Calling Licenses found")
+                log.debug(f"Using Calling License: {calling_license}")
+                licenses.append(calling_license)
+
+        # Build the payload to send to the API
+        log.debug("Building payload.")
+        if isinstance(self.parent, wxcadm.Org):
+            if isinstance(location, Location):
+                location_id = location.id
+            else:
+                location_id = location
+            org_id = self.parent.id
+        elif isinstance(self.parent, wxcadm.Location):
+            location_id = self.parent.id
+            org_id = self.parent.parent.id
+
+        payload = {"emails": [email], "locationId": location_id, "orgId": org_id, "licenses": licenses}
+        if phone_number is not None:
+            payload["phoneNumbers"] = [{"type": "work", "value": phone_number}]
+        if extension is not None:
+            payload["extension"] = extension
+        if first_name is not None:
+            payload["firstName"] = first_name
+        if last_name is not None:
+            payload["lastName"] = last_name
+        if display_name is not None:
+            payload["displayName"] = display_name
+        log.debug(f"Payload: {payload}")
+        response = webex_api_call("post", "v1/people", params={'callingData': "true"}, payload=payload)
+        if response:
+            new_person = Person(response['id'], self.parent, response)
+            return new_person
+        else:
+            raise wxcadm.exceptions.PutError("Something went wrong while creating the user")
+
 
 class Person:
-    def __init__(self, user_id, parent: Type["Org"] = None, config: dict = None):
+    def __init__(self, user_id, parent: Union[wxcadm.Org, wxcadm.Location] = None, config: dict = None):
         """ Initialize a new Person instance.
 
         If only the `user_id` is provided, the API calls will be made to get
@@ -368,7 +462,6 @@ class Person:
                                       params={"orgId": self._parent.id})
             return response
 
-
     def get_full_config(self):
         """
         Fetches all Webex Calling settings for the Person. Due to the number of API calls, this
@@ -475,7 +568,7 @@ class Person:
             if model.upper() == "GENERIC" or model.upper() == "Generic IPPhone Customer Managed":
                 payload['model'] = "Generic IPPhone Customer Managed"  # Hard-code what the API expects (for now)
                 data_needed = True
-                if password is None:    # Generate a unique password
+                if password is None:  # Generate a unique password
                     response = webex_api_call('POST',
                                               f'/v1/telephony/config/locations/{self.location}/actions/'
                                               f'generatePassword/invoke')
@@ -1338,8 +1431,8 @@ class Person:
                        "repeat": {
                            "enabled": reminder_tone,
                            "interval": reminder_interval
-                           }
                        }
+                   }
                    }
         success = self.push_call_recording(payload)
         if success:
@@ -1395,6 +1488,7 @@ class Person:
 
 class Me(Person):
     """ The class representing the token owner. Some methods are only available at an owner scope. """
+
     def __init__(self, user_id, parent: "Org" = None, config: dict = None):
         super().__init__(user_id, parent, config)
 
@@ -1510,6 +1604,7 @@ class VoiceMessage:
 
 class UserGroups(UserList):
     """ UserGroups is the parent class for :py:class:`UserGroup`, providing methods for the list of Groups """
+
     def __init__(self, parent: "Org"):
         log.info("Initializing UserGroups instance")
         super().__init__()

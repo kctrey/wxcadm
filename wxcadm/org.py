@@ -489,15 +489,15 @@ class Org:
                       ):
         """Create a new user in Webex.
 
-        Also creates a new Person instance for the created user.
+        .. deprecated:: 4.0.0
+            Use :py:meth:`Org.people.create()` instead.
 
         Args:
             email (str): The email address of the user
             location (Location): The Location instance to assign the user to. Also accepts the Location ID as a string
             licenses (list, optional): List of license IDs to assign to the user. Use this when the license IDs
-            are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
-            meetings` parameters.
-
+                are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
+                meetings` parameters.
             calling (bool, optional): BETA - Whether to assign Calling licenses to the user. Defaults to True.
             messaging (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
             meetings (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
@@ -553,7 +553,6 @@ class Org:
         response = r.json()
         if r.status_code == 200:
             person = Person(response['id'], self, response)
-            self._people.append(person)
             return person
         else:
             raise PutError(response['message'])

@@ -18,7 +18,7 @@ class WebexApplications(UserList):
 
     def _get_applications(self):
         app_list = []
-        apps = webex_api_call("get", "v1/applications")
+        apps = webex_api_call("get", "v1/applications", params={"orgId": self.parent.id})
         for app in apps:
             this_app = WebexApplication(parent=self.parent, **app)
             app_list.append(this_app)

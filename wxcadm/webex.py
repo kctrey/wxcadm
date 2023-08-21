@@ -213,7 +213,7 @@ class Webex:
 
         """
         for org in self.orgs:
-            if name in org.name:
+            if name.lower() in org.name.lower():
                 return org
         raise KeyError("Org not found")
 
@@ -231,7 +231,7 @@ class Webex:
 
         """
         for org in self.orgs:
-            if org.id == id:
+            if org.id == id or org.spark_id.split("/")[-1] == id:
                 return org
         raise KeyError("Org not found")
 

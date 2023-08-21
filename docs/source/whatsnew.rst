@@ -9,6 +9,9 @@ What's New
 
 v4.0.0
 ------
+- Deprecated :py:meth:`Org.create_person()`. Use :py:meth:`Org.people.create()` instead.
+- :py:meth:`Webex.get_org_by_name()` is now case-insensitive. Partial matches are also still supported.
+- :py:meth:`Webex.get_org_by_id()` now supports UUID Org IDs as well as Webex API IDs
 - :py:meth:`Webex.get_person_by_email()` and :py:meth:`Webex.get_person_by_id()` have been optimized to work much faster for tokens with access to many Orgs.
 - :py:meth:`LocationList.webex_calling()` filters Locations by whether or not Webex Calling is enabled.
 - *BREAKING CHANGE* - :py:meth:`Org.get_location_by_name()` has been deprecated for a while, but a lot of people still used it, including me. The recommended :py:meth:`Org.get_location()` has been moved to :py:meth:`Org.locations.get()` (:py:meth:`LocationList.get()`) and should be used instead.

@@ -141,6 +141,7 @@ class Location:
 
         """
         self._parent = parent
+        self.parent = parent
         self._headers = parent._headers
         self.id: str = location_id
         """The Webex ID of the Location"""

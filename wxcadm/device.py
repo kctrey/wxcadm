@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 
+import wxcadm
 from .common import *
 from typing import Optional, Union
 from .exceptions import *
@@ -51,10 +52,10 @@ class Device:
         self.owner = None
         """ The :py:class:`Person` or :py:class:`Workspace` that owns the device primarily """
 
-        if 'personId' in config.keys() and isinstance(self.parent, wxcadm.org.Org):
+        if 'personId' in config.keys() and isinstance(self.parent, wxcadm.Org):
             self.owner = self.parent.get_person_by_id(config['personId'])
-        elif 'workspaceId' in config.keys() and isinstance(self.parent, wxcadm.org.Org):
-            self.owner = self.parent.get_workspace_by_id(config['workspaceId'])
+        elif 'workspaceId' in config.keys() and isinstance(self.parent, wxcadm.Org):
+            self.owner = self.parent.workspaces.get_by_id(config['workspaceId'])
 
     def change_tags(self, operation: str, tag: Optional[Union[str, list]] = None):
         """ Add a tag to the list of tags for this device
