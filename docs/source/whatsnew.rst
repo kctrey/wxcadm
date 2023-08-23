@@ -14,7 +14,7 @@ v4.0.0
 - :py:meth:`Webex.get_org_by_id()` now supports UUID Org IDs as well as Webex API IDs
 - :py:meth:`Webex.get_person_by_email()` and :py:meth:`Webex.get_person_by_id()` have been optimized to work much faster for tokens with access to many Orgs.
 - :py:meth:`LocationList.webex_calling()` filters Locations by whether or not Webex Calling is enabled.
-- *BREAKING CHANGE* - :py:meth:`Org.get_location_by_name()` has been deprecated for a while, but a lot of people still used it, including me. The recommended :py:meth:`Org.get_location()` has been moved to :py:meth:`Org.locations.get()` (:py:meth:`LocationList.get()`) and should be used instead.
+- **BREAKING CHANGE** - :py:meth:`Org.get_location_by_name()` has been deprecated for a while, but a lot of people still used it, including me. The recommended :py:meth:`Org.get_location()` has been moved to :py:meth:`Org.locations.get()` (:py:meth:`LocationList.get()`) and should be used instead.
 - New :py:class:`LocationList` class access with :py:meth:`Org.locations`. All list functions have been moved to this class.
 - Deprecated :py:meth:`Org.get_auto_attendants()`. Use :py:meth:`Org.auto_attendants` instead.
 - The ``location_features.py`` file was getting hard to manage, so some features (Call Queue, Hunt Group, Auto Attendant) have been split to their own files. This will probably the standard moving forward.

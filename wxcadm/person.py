@@ -570,7 +570,7 @@ class Person:
                 data_needed = True
                 if password is None:  # Generate a unique password
                     response = webex_api_call('POST',
-                                              f'/v1/telephony/config/locations/{self.location}/actions/'
+                                              f'v1/telephony/config/locations/{self.location}/actions/'
                                               f'generatePassword/invoke')
                     password = response['exampleSipPassword']
                 payload['password'] = password
