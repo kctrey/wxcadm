@@ -284,8 +284,8 @@ def console_logging(level: str = "debug", formatter: Optional[logging.Formatter]
     to function at their current logging level.
 
     Args:
-        level (str, optional): The logging level. Valid values are ``"debug"``, ``"info"``, ``"warning"`` and
-            ``"critical"``. Defaults to ``debug`` for full debug output.
+        level (str, optional): The logging level. Valid values are ``"none"``, ``"debug"``, ``"info"``, ``"warning"``
+            and ``"critical"``. Defaults to ``debug`` for full debug output.
         formatter (logging.Formatter, optional): A :py:class:`logging.Formatter` object defining the log format for
             logging to the console. If omitted, the format will be the message level and the message.
     """
@@ -294,18 +294,24 @@ def console_logging(level: str = "debug", formatter: Optional[logging.Formatter]
                  "warning": logging.WARNING,
                  "debug": logging.DEBUG,
                  "critical": logging.CRITICAL}
-    handler.setLevel(level_map[level])
-    if formatter is not None:
-        if isinstance(formatter, logging.Formatter):
-            handler.setFormatter(formatter)
+    if level.lower() != "none":
+        handler.setLevel(level_map[level])
+        if formatter is not None:
+            if isinstance(formatter, logging.Formatter):
+                handler.setFormatter(formatter)
+            else:
+                log.warning("Did not receive logging.Formatter object for formatter argument")
+                formatter = logging.Formatter('%(levelname)s:\t%(message)s')
+                handler.setFormatter(formatter)
         else:
-            log.warning("Did not receive logging.Formatter object for formatter argument")
             formatter = logging.Formatter('%(levelname)s:\t%(message)s')
             handler.setFormatter(formatter)
+        log.addHandler(handler)
     else:
-        formatter = logging.Formatter('%(levelname)s:\t%(message)s')
-        handler.setFormatter(formatter)
-    log.addHandler(handler)
+        log.debug("Removing Console Logging handlers")
+        for handler in log.handlers:
+            if isinstance(handler, logging.StreamHandler) and handler.stream.name == "<stdout>":
+                log.removeHandler(handler)
 
 
 def decode_spark_id(id: str):
