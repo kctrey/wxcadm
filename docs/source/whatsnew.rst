@@ -9,6 +9,9 @@ What's New
 
 v4.0.0
 ------
+- Deprecated :meth:`Org.get_call_queue_by_id()`. Use :meth:`Org.call_queues.get(id=)` instead.
+- New List Class :class:`CallQueueList` accessed with :attr:`Org.call_queues` and :attr:`Location.call_queues`
+- :meth:`wxcadm.console_logging()` now supports ``"none"`` as a ``level`` argument to turn off STDOUT logging
 - Deprecated :py:meth:`Org.create_person()`. Use :py:meth:`Org.people.create()` instead.
 - :py:meth:`Webex.get_org_by_name()` is now case-insensitive. Partial matches are also still supported.
 - :py:meth:`Webex.get_org_by_id()` now supports UUID Org IDs as well as Webex API IDs

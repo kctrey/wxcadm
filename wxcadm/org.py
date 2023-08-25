@@ -10,8 +10,9 @@ from .common import _url_base
 from .exceptions import *
 from .cpapi import CPAPI
 from .location import Location, LocationList
-from .location_features import PagingGroup, HuntGroup, CallQueue
+from .location_features import PagingGroup, HuntGroup
 from .auto_attendant import AutoAttendantList
+from .call_queue import CallQueueList
 from .webhooks import Webhooks
 from .person import UserGroups, Person, PersonList
 from .applications import WebexApplications
@@ -67,7 +68,7 @@ class Org:
         self._roles: Optional[dict] = None
         self._announcements: Optional[AnnouncementList] = None
         self._hunt_groups = []
-        self._call_queues = []
+        self._call_queues: Optional[CallQueueList] = None
         self._workspaces: Optional[WorkspaceList] = None
         self._workspace_locations: Optional[WorkspaceLocationList] = None
         self._people: Optional[PersonList] = None
@@ -612,32 +613,24 @@ class Org:
         return self.xsi
 
     @property
-    def call_queues(self):
+    def call_queues(self) -> CallQueueList:
         """The Call Queues for an Organization.
 
         Returns:
-            list[CallQueue]: List of CallQueue instances for the Organization
+            CallQueueList: List of CallQueue instances for the Organization
 
         """
-        log.info("Getting Call Queues for Organization")
-        call_queues = []
-        api_resp = webex_api_call("get", "v1/telephony/config/queues", params={"orgId": self.id})
-        log.debug(api_resp)
-        for queue in api_resp['queues']:
-            id = queue.get("id")
-            name = queue.get("name", None)
-            location_id = queue.get("locationId")
-            phone_number = queue.get("phoneNumber", None)
-            extension = queue.get("extension", None)
-            enabled = queue.get("enabled")
-
-            this_queue = CallQueue(self, id, name, location_id, phone_number, extension, enabled)
-            call_queues.append(this_queue)
-        self._call_queues = call_queues
-        return call_queues
+        if self._call_queues is None:
+            log.info("Getting Call Queues for Organization")
+            self._call_queues = CallQueueList(self)
+        return self._call_queues
 
     def get_call_queue_by_id(self, id: str):
         """ Get the :class:`CallQueue` instance with the requested ID
+
+        .. deprecated:: 4.0.0
+            Use :meth:`Org.call_queues.get()` instead
+
         Args:
             id (str): The CallQueue ID
 

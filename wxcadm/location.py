@@ -5,7 +5,8 @@ from collections import UserList
 
 import wxcadm
 from wxcadm import log
-from .location_features import LocationSchedule, CallParkExtension, HuntGroup, CallQueue
+from .location_features import LocationSchedule, CallParkExtension, HuntGroup
+from .call_queue import CallQueueList
 from .auto_attendant import AutoAttendant, AutoAttendantList
 from .pickup_group import PickupGroupList
 from .workspace import WorkspaceList
@@ -160,6 +161,7 @@ class Location:
         self.calling_config: Optional[dict] = None
         """ The Webex Calling config for the Location, if enabled """
         self._pickup_groups: Optional[PickupGroupList] = None
+        self._call_queues: Optional[CallQueueList] = None
 
         # Get the Webex Calling config and determine if the Location is Calling-enabled
         self._get_calling_config()
@@ -213,30 +215,20 @@ class Location:
 
     @property
     def auto_attendants(self):
-        """ List of AutoAttendant instances for this Location"""
+        """ List of AutoAttendant instances for this Location """
         log.info(f"Getting Auto Attendants for Location: {self.name}")
         return AutoAttendantList(self)
 
     @property
-    def call_queues(self):
-        """List of CallQueue instances for this Location"""
-        log.info(f"Getting Call Queues for Location: {self.name}")
-        if self.calling_enabled is False:
-            log.debug("Not a Webex Calling Location")
-            return None
-        hunt_groups = []
-        response = webex_api_call("get", "v1/telephony/config/queues", params={"locationId": self.id})
-        log.debug(response)
-        for cq in response['queues']:
-            this_instance = CallQueue(self,
-                                      id=cq['id'],
-                                      name=cq['name'],
-                                      location=self.id,
-                                      enabled=cq['enabled'],
-                                      phone_number=cq.get("phoneNumber", ""),
-                                      extension=cq.get("extension", ""))
-            hunt_groups.append(this_instance)
-        return hunt_groups
+    def call_queues(self) -> CallQueueList:
+        """ :class:`CallQueueList` of :class:`CallQueue` instances for this Location """
+        if self._call_queues is None:
+            log.info(f"Getting Call Queues for Location: {self.name}")
+            if self.calling_enabled is False:
+                log.warn("Not a Webex Calling Location")
+                return None
+            self._call_queues = CallQueueList(self)
+        return self._call_queues
 
     @property
     def numbers(self):
