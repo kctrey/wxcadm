@@ -233,7 +233,8 @@ class Org:
 
     @property
     def announcements(self):
-        """ The :py:class:`AnnouncementList` list with the :py:class:`Announcement` instances for this Org """
+        """ The :py:class:`wxcadm.announcements.AnnouncementList` list with the :py:class:`Announcement` instances
+        for this Org"""
         if self._announcements is None:
             self._announcements = AnnouncementList(parent=self)
         return self._announcements
