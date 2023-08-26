@@ -103,6 +103,7 @@ Properties are exposed for most commonly-used attributes.
    reference/Location
    reference/LocationSchedule
    reference/AutoAttendant
+   reference/CallQueue
    reference/Person
    reference/Me
    reference/VoiceMessage
