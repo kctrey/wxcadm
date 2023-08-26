@@ -4,7 +4,7 @@ The Announcement classes
 AnnouncementList
 ----------------
 
-.. autoclass:: wxcadm.workspace.AnnouncementList
+.. autoclass:: wxcadm.announcements.AnnouncementList
     :members:
     :undoc-members:
 
@@ -12,6 +12,6 @@ AnnouncementList
 Announcement
 ------------
 
-.. autoclass:: wxcadm.workspace.Announcement
+.. autoclass:: wxcadm.announcements.Announcement
     :members:
     :undoc-members:
