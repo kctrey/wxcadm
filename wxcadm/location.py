@@ -7,6 +7,7 @@ import wxcadm
 from wxcadm import log
 from .location_features import LocationSchedule, CallParkExtension, HuntGroup
 from .call_queue import CallQueueList
+from .hunt_group import HuntGroupList
 from .auto_attendant import AutoAttendant, AutoAttendantList
 from .pickup_group import PickupGroupList
 from .workspace import WorkspaceList
@@ -162,6 +163,7 @@ class Location:
         """ The Webex Calling config for the Location, if enabled """
         self._pickup_groups: Optional[PickupGroupList] = None
         self._call_queues: Optional[CallQueueList] = None
+        self._hunt_groups: Optional[HuntGroupList] = None
 
         # Get the Webex Calling config and determine if the Location is Calling-enabled
         self._get_calling_config()
@@ -188,19 +190,13 @@ class Location:
 
     @property
     def hunt_groups(self):
-        """List of HuntGroup instances for this Location"""
+        """ :class:`HuntGroupList` list of :class:`HuntGroup` instances for this Location """
         log.info(f"Getting Hunt Groups for Location: {self.name}")
         if self.calling_enabled is False:
             log.debug("Not a Webex Calling Location")
             return None
-        hunt_groups = []
-        response = webex_api_call("get", "v1/telephony/config/huntGroups", params={"locationId": self.id})
-        log.debug(response)
-        for hg in response['huntGroups']:
-            this_instance = HuntGroup(self, hg['id'], hg['name'], hg['locationId'], hg['enabled'],
-                                      hg.get("phoneNumber", ""), hg.get("extension", ""))
-            hunt_groups.append(this_instance)
-        return hunt_groups
+        self._hunt_groups = HuntGroupList(self)
+        return self._hunt_groups
 
     @property
     def announcements(self):

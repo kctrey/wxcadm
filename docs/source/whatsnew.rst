@@ -9,6 +9,8 @@ What's New
 
 v4.0.0
 ------
+- Deprecated :meth:`Org.get_hunt_group_by_id()`. Use :meth:`Org.hunt_groups.get(id=)` instead.
+- New List Class :class:`HuntGroupList` accessed with :attr:`Org.hunt_groups` and :attr:`Location.hunt_groups`
 - Deprecated :meth:`Org.get_call_queue_by_id()`. Use :meth:`Org.call_queues.get(id=)` instead.
 - New List Class :class:`CallQueueList` accessed with :attr:`Org.call_queues` and :attr:`Location.call_queues`
 - :meth:`wxcadm.console_logging()` now supports ``"none"`` as a ``level`` argument to turn off STDOUT logging

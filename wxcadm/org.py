@@ -13,6 +13,7 @@ from .location import Location, LocationList
 from .location_features import PagingGroup, HuntGroup
 from .auto_attendant import AutoAttendantList
 from .call_queue import CallQueueList
+from .hunt_group import HuntGroupList
 from .webhooks import Webhooks
 from .person import UserGroups, Person, PersonList
 from .applications import WebexApplications
@@ -67,7 +68,7 @@ class Org:
         self._usergroups: Optional[list] = None
         self._roles: Optional[dict] = None
         self._announcements: Optional[AnnouncementList] = None
-        self._hunt_groups = []
+        self._hunt_groups: Optional[HuntGroupList] = None
         self._call_queues: Optional[CallQueueList] = None
         self._workspaces: Optional[WorkspaceList] = None
         self._workspace_locations: Optional[WorkspaceLocationList] = None
@@ -648,6 +649,9 @@ class Org:
 
     def get_hunt_group_by_id(self, id: str):
         """ Get the :class:`HuntGroup` instance with the requested ID
+
+        .. deprecated:: 4.0.0
+            Use :meth:`Org.hunt_groups.get(id=)` instead
         Args:
             id (str): The HuntGroup ID
 
@@ -681,20 +685,17 @@ class Org:
             return None
 
     @property
-    def hunt_groups(self):
-        """ Get the Hunt Groups for an Organization """
-        log.info("Getting Hunt Groups for Org")
-        hunt_groups = []
-        if not self.locations:
-            self.get_locations()
+    def hunt_groups(self) -> HuntGroupList:
+        """The :class:`HuntGroupList` for the Organization.
 
-        api_resp = webex_api_call("get", "v1/telephony/config/huntGroups", params={"orgId": self.id})
-        for hg in api_resp['huntGroups']:
-            hunt_group = HuntGroup(self, hg['id'], hg['name'], hg['locationId'], hg['enabled'],
-                                   hg.get("phoneNumber", ""), hg.get("extension", ""))
-            hunt_groups.append(hunt_group)
-        self._hunt_groups = hunt_groups
-        return hunt_groups
+        Returns:
+            HuntGroupList: List of :class:`HuntGroup` instances for the Organization
+
+        """
+        if self._hunt_groups is None:
+            log.info("Getting Hunt Groups for Organization")
+            self._hunt_groups = HuntGroupList(self)
+        return self._hunt_groups
 
     @property
     def wxc_people(self):

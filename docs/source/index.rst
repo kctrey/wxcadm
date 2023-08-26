@@ -104,6 +104,7 @@ Properties are exposed for most commonly-used attributes.
    reference/LocationSchedule
    reference/AutoAttendant
    reference/CallQueue
+   reference/HuntGroup
    reference/Person
    reference/Me
    reference/VoiceMessage
