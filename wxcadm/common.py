@@ -80,10 +80,12 @@ def webex_api_call(method: str,
             r = session.get(url_base + url, params=params)
             if r.ok:
                 response = r.json()
-                # With an 'items' array, we know we are getting multiple values. Without it, we are getting a singe entity
+                # With an 'items' array, we know we are getting multiple values.
+                # Without it, we are getting a singe entity
                 if "items" in response:
                     log.debug(f"Webex returned {len(response['items'])} items")
                 else:
+                    session.close()
                     return response
             else:
                 log.warning("Webex API returned an error")
@@ -95,8 +97,10 @@ def webex_api_call(method: str,
                     continue
                 if r.status_code == 400 and kwargs.get('ignore_400', False) is True:
                     log.info("Ignoring 400 Error due to ignore_400=True")
+                    session.close()
                     return None
                 else:
+                    session.close()
                     raise APIError(f"The Webex API returned an error: [{r.status_code}] {r.text}")
 
             # Now we look for pagination and get any additional pages as part of the same Session
