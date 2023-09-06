@@ -157,24 +157,24 @@ class HuntGroupList(UserList):
             extension (str, optional): The extension for the Hunt Group
             call_policies (dict): The Hunt Group Call Policy. The dict has the following format::
 
-            {
-                'policy': 'REGULAR',
-                'waitingEnabled': True,
-                'noAnswer': {
-                    'nextAgentEnabled': False,
-                    'nextAgentRings': 2,
-                    'forwardEnabled': True,
-                    'destination': '5050',
-                    'numberOfRings': 3,
-                    'systemMaxNumberOfRings': 20,
-                    'destinationVoicemailEnabled': False
-                },
-                'businessContinuity': {
-                    'enabled': False,
-                    'destination': '6312128008',
-                    'destinationVoicemailEnabled': False
+                {
+                    'policy': 'REGULAR',
+                    'waitingEnabled': True,
+                    'noAnswer': {
+                        'nextAgentEnabled': False,
+                        'nextAgentRings': 2,
+                        'forwardEnabled': True,
+                        'destination': '5050',
+                        'numberOfRings': 3,
+                        'systemMaxNumberOfRings': 20,
+                        'destinationVoicemailEnabled': False
+                    },
+                    'businessContinuity': {
+                        'enabled': False,
+                        'destination': '6312128008',
+                        'destinationVoicemailEnabled': False
+                    }
                 }
-            }
 
             enabled (bool, optional): Whether the Hunt Group is enabled. Defaults to True
             language (str, optional): The language for audio prompts. Defaults to ``Location.announcement_language``
