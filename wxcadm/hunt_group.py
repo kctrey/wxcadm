@@ -160,8 +160,8 @@ class HuntGroupList(UserList):
             language (str, optional): The language for audio prompts. Defaults to ``Location.announcement_language``
             time_zone (str, optional): The time zone of the Hunt Group. Defaults to ``Location.time_zone``
             location (Location, optional): The Location at which to create the Hunt Group. Only required when the
-            :class:`HuntGroupList` is at the Org level. If at the Location level, the selected :class:`Location`
-            will be used.
+                :class:`HuntGroupList` is at the Org level. If at the Location level, the selected :class:`Location`
+                will be used.
 
         Returns:
 
