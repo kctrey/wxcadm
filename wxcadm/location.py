@@ -344,9 +344,9 @@ class Location:
         or features.
 
         When using this method, setting either ``update_users`` or ``update_features`` will only change the
-            Announcement Language for existing users/features. It does not change the Location default that will be used
-            for any new users or features. To ensure that the default language is changed, the method should be called
-            without those arguments.
+        Announcement Language for existing users/features. It does not change the Location default that will be used
+        for any new users or features. To ensure that the default language is changed, the method should be called
+        without those arguments.
 
         Args:
             language (str): The language code (e.g. ``en_US``) to assign

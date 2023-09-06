@@ -147,6 +147,25 @@ class HuntGroupList(UserList):
                time_zone: Optional[str] = None,
                location: Optional[wxcadm.Location] = None
                ):
+        """ Create a Hunt Group
+
+        Args:
+            name (str): The name of the Hunt Group
+            first_name (str): The first name to be used for Caller ID
+            last_name (str): The last name to be used for Caller ID
+            phone_number (str, optional): The phone number (e.g. DID) for the Hunt Group
+            extension (str, optional): The extension for the Hunt Group
+            call_policies:
+            enabled (bool, optional): Whether the Hunt Group is enabled. Defaults to True
+            language (str, optional): The language for audio prompts. Defaults to ``Location.announcement_language``
+            time_zone (str, optional): The time zone of the Hunt Group. Defaults to ``Location.time_zone``
+            location (Location, optional): The Location at which to create the Hunt Group. Only required when the
+            :class:`HuntGroupList` is at the Org level. If at the Location level, the selected :class:`Location`
+            will be used.
+
+        Returns:
+
+        """
         if location is None and isinstance(self.parent, wxcadm.Org):
             raise ValueError("location is required for Org-level HuntGroupList")
         elif location is None and isinstance(self.parent, wxcadm.Location):
