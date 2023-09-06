@@ -143,10 +143,12 @@ def webex_api_call(method: str,
                 if response:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    session.close()
                     return response
                 else:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    session.close()
                     return True
             else:
                 log.warning("Webex API returned an error")
@@ -156,6 +158,7 @@ def webex_api_call(method: str,
                     time.sleep(retry_after)
                     continue
                 else:
+                    session.close()
                     raise APIError(f"The Webex API returned an error: {r.text}")
         elif method.lower() == "put_upload":
             log.debug("Putting a file upload")
@@ -169,10 +172,12 @@ def webex_api_call(method: str,
                 except requests.exceptions.JSONDecodeError:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    session.close()
                     return True
                 else:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    session.close()
                     return response
             else:
                 log.warning("Webex API returned an error")
@@ -182,6 +187,7 @@ def webex_api_call(method: str,
                     time.sleep(retry_after)
                     continue
                 else:
+                    session.close()
                     raise APIError(f"The Webex API returned an error: {r.text}")
         elif method.lower() == "post":
             log.debug(f"Post body: {payload}")
@@ -192,10 +198,12 @@ def webex_api_call(method: str,
                 except requests.exceptions.JSONDecodeError:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    session.close()
                     return True
                 else:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    session.close()
                     return response
             else:
                 log.warning(f"Webex API returned an error: {r.text}")
@@ -205,6 +213,7 @@ def webex_api_call(method: str,
                     time.sleep(retry_after)
                     continue
                 else:
+                    session.close()
                     raise APIError(f"The Webex API returned an error: {r.text}")
         elif method.lower() == "post_upload":
             log.debug("Posting a file upload")
@@ -218,10 +227,12 @@ def webex_api_call(method: str,
                 except requests.exceptions.JSONDecodeError:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    session.close()
                     return True
                 else:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    session.close()
                     return response
             else:
                 log.warning("Webex API returned an error")
@@ -231,6 +242,7 @@ def webex_api_call(method: str,
                     time.sleep(retry_after)
                     continue
                 else:
+                    session.close()
                     raise APIError(f"The Webex API returned an error: {r.text}")
         elif method.lower() == "delete":
             r = session.delete(url_base + url, params=params)
@@ -240,10 +252,12 @@ def webex_api_call(method: str,
                 except requests.exceptions.JSONDecodeError:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    session.close()
                     return True
                 else:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    session.close()
                     return response
             else:
                 log.warning("Webex API returned an error")
@@ -253,6 +267,7 @@ def webex_api_call(method: str,
                     time.sleep(retry_after)
                     continue
                 else:
+                    session.close()
                     raise APIError(f"The Webex API returned an error: {r.text}")
         elif method.lower() == "patch":
             r = session.patch(url_base + url, params=params, json=payload)
@@ -262,10 +277,12 @@ def webex_api_call(method: str,
                 except requests.exceptions.JSONDecodeError:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    session.close()
                     return True
                 else:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
+                    session.close()
                     return response
             else:
                 log.info(f"Webex API returned an error")
@@ -275,6 +292,7 @@ def webex_api_call(method: str,
                     time.sleep(retry_after)
                     continue
                 else:
+                    session.close()
                     raise APIError(f"The Webex API returned an error: {r.text}")
         else:
             return False
