@@ -1,5 +1,8 @@
 from __future__ import annotations
-
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .person import Person
+    from .workspace import Workspace
 import logging
 
 import wxcadm
@@ -9,7 +12,7 @@ from .exceptions import *
 
 
 class Device:
-    def __init__(self, parent: Union[Person, Workspace], config: dict):
+    def __init__(self, parent: Person | Workspace, config: dict):
         self.parent = parent
         """ The :py:class:`Org`, :py:class:`Person` or :py:class:`Workspace` that created this instance """
         self.id: str = config['id']

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from collections import UserList
+import wxcadm
 from wxcadm import log
 
 import requests
@@ -117,7 +118,7 @@ class RedSky:
 
         return None
 
-    def get_building_by_webex_location(self, location: Location):
+    def get_building_by_webex_location(self, location: wxcadm.Location):
         """Get the RedSkyBuilding instance for a given Location instance.
 
         This method will first try to match on the Location ID in Webex, which will work if the Building was created
@@ -140,7 +141,7 @@ class RedSky:
                 return building
         return None
 
-    def add_building(self, webex_location: Optional[Location] = None,
+    def add_building(self, webex_location: Optional[wxcadm.Location] = None,
                      address_string: Optional[str] = None, create_location: bool = True):
         """ Add a new Building to RedSky
 

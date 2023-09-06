@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Type, Union
+from typing import Optional, Union
 from collections import UserList
 
 import wxcadm.exceptions
@@ -40,8 +40,6 @@ class HuntGroup:
         """The DID for the Hunt Group"""
         self.extension: str = config.get('extension', '')
         """The extension of the Hunt Group"""
-
-
 
     def __str__(self):
         return self.name
@@ -136,3 +134,49 @@ class HuntGroupList(UserList):
                 if item.spark_id == spark_id:
                     return item
         return None
+
+    def create(self,
+               name: str,
+               first_name: str,
+               last_name: str,
+               phone_number: Optional[str],
+               extension: Optional[str],
+               call_policies: dict,
+               enabled: bool = True,
+               language: Optional[str] = None,
+               time_zone: Optional[str] = None,
+               location: Optional[wxcadm.Location] = None
+               ):
+        if location is None and isinstance(self.parent, wxcadm.Org):
+            raise ValueError("location is required for Org-level HuntGroupList")
+        elif location is None and isinstance(self.parent, wxcadm.Location):
+            location = self.parent
+        log.info(f"Creating Hunt Group at Location {location.name} with name: {name}")
+        if location.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
+        # Get some values if they weren't passed
+        if phone_number is None and extension is None:
+            raise ValueError("phone_number and/or extension are required")
+        if time_zone is None:
+            log.debug(f"Using Location time_zone {location.time_zone}")
+            time_zone = location.time_zone
+        if language is None:
+            log.debug(f"Using Location announcement_language {location.announcement_language}")
+            language = location.announcement_language
+
+        payload = {
+            "name": name,
+            "firstName": first_name,
+            "lastName": last_name,
+            "extension": extension,
+            "phoneNumber": phone_number,
+            "timeZone": time_zone,
+            "languageCode": language,
+            "callPolicies": call_policies
+        }
+        response = webex_api_call("post", f"v1/telephony/config/locations/{location.id}/huntGroups",
+                                  payload=payload)
+        new_hg_id = response['id']
+        self.refresh()
+        return self.get(id=new_hg_id)

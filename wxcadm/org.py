@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import requests
 import re
+import wxcadm
 from typing import Union, Optional
 from wxcadm import log
 from .common import *
@@ -10,7 +11,7 @@ from .common import _url_base
 from .exceptions import *
 from .cpapi import CPAPI
 from .location import Location, LocationList
-from .location_features import PagingGroup, HuntGroup
+from .location_features import PagingGroup
 from .auto_attendant import AutoAttendantList
 from .call_queue import CallQueueList
 from .hunt_group import HuntGroupList
@@ -29,7 +30,7 @@ class Org:
     def __init__(self,
                  name: str,
                  id: str,
-                 parent: Webex = None,
+                 parent: wxcadm.Webex = None,
                  locations: bool = False,
                  hunt_groups: bool = False,
                  call_queues: bool = False,
@@ -90,17 +91,6 @@ class Org:
 
         if xsi:
             self.get_xsi_endpoints()
-
-    def get_org_data(self):
-        """ Get the Locations, Call Queues and Hunt Groups for the Org
-
-        Returns:
-            None: Doesn't return any values. Simply populates the Org attributes with the data
-
-        """
-        self.get_call_queues()
-        self.get_hunt_groups()
-        return None
 
     @property
     def workspace_locations(self):

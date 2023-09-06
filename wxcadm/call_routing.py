@@ -2,15 +2,17 @@ from __future__ import annotations
 
 from collections import UserList
 from dataclasses import dataclass, field
-from typing import Union, Optional
+from typing import Optional
 
+import wxcadm
 import wxcadm.location
+import wxcadm.person
 from wxcadm import log
 from .common import *
 
 
 class CallRouting:
-    def __init__(self, org: Org):
+    def __init__(self, org: wxcadm.Org):
         self.org = org
         """ The Org to which the Call Routing is associated """
         pass
@@ -35,7 +37,7 @@ class CallRouting:
         """ The :py:class:`DialPlans` instance for this Org """
         return DialPlans(self.org)
 
-    def test(self, originator: Union[wxcadm.person.Person, Trunk],
+    def test(self, originator: wxcadm.person.Person | Trunk,
              destination: str,
              orig_number: Optional[str] = None) -> dict:
         """ Test the Call Routing for a call.
@@ -78,7 +80,7 @@ class CallRouting:
 
 class Trunks(UserList):
     """ Trunks is a class that behaves as an array. Each item in the array is a :py:class:`Trunk` instance."""
-    def __init__(self, org: Org):
+    def __init__(self, org: wxcadm.Org):
         log.info('Initializing Trunks instance')
         super().__init__()
         self.org = org
@@ -90,7 +92,7 @@ class Trunks(UserList):
             self.data.append(this_trunk)
 
     def add_trunk(self, name: str,
-                  location: Union[Location, str],
+                  location: wxcadm.Location | str,
                   password: str,
                   dual_identity_support: bool,
                   type: str,
@@ -157,13 +159,13 @@ class Trunks(UserList):
 
 @dataclass
 class Trunk:
-    org: Org = field(repr=False)
+    org: wxcadm.Org = field(repr=False)
     """ The Org to which the Trunk belongs """
     id: str
     """ The unique identifier of the Trunk """
     name: str
     """ The text name of the Trunk """
-    location: Union[dict, Location]
+    location: dict | wxcadm.Location
     """ The Location instance associated with the Trunk """
     inUse: bool
     """ Whether the Trunk is in use """
@@ -173,14 +175,14 @@ class Trunk:
     def __post_init__(self):
         log.debug(f'Finding Location instance: {self.location}')
         # Since we only have a dict of the trunk location, go get the actual Location instance
-        my_location = self.org.get_location(id=self.location['id'])
+        my_location = self.org.locations.get(id=self.location['id'])
         if my_location is not None:
             self.location = my_location
 
 
 class RouteGroups(UserList):
     """ RouteGroups is a class that behaves as an array. Each item in the array is a :py:class:`RouteGroup` instance."""
-    def __init__(self, org: Org):
+    def __init__(self, org: wxcadm.Org):
         log.info('Initializing RouteGroups instance')
         super().__init__()
         self.org = org
@@ -210,7 +212,7 @@ class RouteGroups(UserList):
 
 @dataclass
 class RouteGroup:
-    org: Org = field(repr=False)
+    org: wxcadm.Org = field(repr=False)
     """ The Org to which the RouteGroup belongs """
     id: str
     """ The unique identifier for the RouteGroup """
@@ -223,7 +225,7 @@ class RouteGroup:
 class RouteLists(UserList):
     """ RouteLists is a class that behaves as an array. Each item in the array is a :py:class:`RouteList` instance."""
     # TODO - Create Route List, Delete Route List
-    def __init__(self, org: Org):
+    def __init__(self, org: wxcadm.Org):
         log.info('Initializing RouteLists instance')
         super().__init__()
         self.org = org
@@ -238,7 +240,7 @@ class RouteLists(UserList):
 @dataclass
 class RouteList:
     # TODO - Delete Route List
-    org: Org = field(repr=False)
+    org: wxcadm.Org = field(repr=False)
     """ The Org to which the RouteList belongs """
     id: str = field(repr=False)
     """ The unique identifier for the RouteList """
@@ -253,7 +255,7 @@ class RouteList:
         # This cleans up the Location and Route Group references so that they get the wxcadm instances for each
         self.route_group = self.org.call_routing.route_groups.get_route_group(id=self.routeGroupId)
         del self.routeGroupId, self.routeGroupName
-        self.location = self.org.get_location(id=self.locationId)
+        self.location = self.org.locations.get(id=self.locationId)
         del self.locationId, self.locationName
 
     @property
@@ -265,7 +267,7 @@ class RouteList:
 
 class DialPlans(UserList):
     """ DialPlans is a class that behaves as an array. Each item in the array is a :py:class:`DialPlan` instance."""
-    def __init__(self, org: Org):
+    def __init__(self, org: wxcadm.Org):
         log.info('Initializing DialPlans instance')
         super().__init__()
         self.org = org
@@ -278,7 +280,7 @@ class DialPlans(UserList):
 
 @dataclass
 class DialPlan:
-    org: Org = field(repr=False)
+    org: wxcadm.Org = field(repr=False)
     id: str = field(repr=False)
     name: str
     routeId: str

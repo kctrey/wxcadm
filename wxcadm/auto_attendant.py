@@ -35,6 +35,16 @@ class AutoAttendantList(UserList):
             items.append(AutoAttendant(parent=self.parent, id=entry['id'], data=entry))
         return items
 
+    def refresh(self):
+        """ Refresh the list of Auto Attendants from Webex
+
+        Returns:
+            bool: True on success, False otherwise.
+
+        """
+        self.data = self._get_items()
+        return True
+
     def get(self, id: str = None, name: str = None, spark_id: str = None):
         """ Get the AutoAttendant instance associated with a given ID, Name, or Spark ID
 
@@ -68,6 +78,61 @@ class AutoAttendantList(UserList):
                 return aa
         return None
 
+    def create(self,
+               name: str,
+               first_name: str,
+               last_name: str,
+               phone_number: Optional[str],
+               extension: Optional[str],
+               business_hours_schedule: str,
+               holiday_schedule: Optional[str],
+               business_hours_menu: dict,
+               after_hours_menu: dict,
+               extension_dialing_scope: str = "GROUP",
+               name_dialing_scope: str = "GROUP",
+               language: Optional[str] = None,
+               time_zone: Optional[str] = None,
+               location: Optional[wxcadm.Location] = None
+               ):
+        if location is None and isinstance(self.parent, wxcadm.Org):
+            raise ValueError("location is required for Org-level AutoAttendantList")
+        elif location is None and isinstance(self.parent, wxcadm.Location):
+            location = self.parent
+        log.info(f"Creating Auto Attendant at Location {location.name} with name: {name}")
+        if location.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
+        # Get some values if they weren't passed
+        if phone_number is None and extension is None:
+            raise ValueError("phone_number and/or extension are required")
+        if time_zone is None:
+            log.debug(f"Using Location time_zone {location.time_zone}")
+            time_zone = location.time_zone
+        if language is None:
+            log.debug(f"Using Location announcement_language {location.announcement_language}")
+            language = location.announcement_language
+
+        payload = {
+            "name": name,
+            "firstName": first_name,
+            "lastName": last_name,
+            "extension": extension,
+            "phoneNumber": phone_number,
+            "timeZone": time_zone,
+            "languageCode": language,
+            "businessSchedule": business_hours_schedule,
+            "holidaySchedule": holiday_schedule,
+            "extensionDialing": extension_dialing_scope,
+            "nameDialing": name_dialing_scope,
+            "businessHoursMenu": business_hours_menu,
+            "afterHoursMenu": after_hours_menu
+        }
+        response = webex_api_call("post", f"v1/telephony/config/locations/{location.id}/autoAttendants",
+                                  payload=payload)
+        new_aa_id = response['id']
+        self.refresh()
+        return self.get(id=new_aa_id)
+
 
 @dataclass
 class AutoAttendant:
@@ -81,10 +146,9 @@ class AutoAttendant:
         self.name = self.data.get('name', '')
         self.location_id = self.data.get('locationId', '')
 
-
     @property
     def config(self) -> dict:
-        """ The config of the AutoAtteandant """
+        """ The config of the AutoAttendant """
         response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/autoAttendants/{self.id}")
         return response
 

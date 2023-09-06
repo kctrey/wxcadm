@@ -2,13 +2,14 @@ from __future__ import annotations
 from typing import Optional
 import requests
 from .common import *
+import wxcadm
 from wxcadm import log
 from datetime import datetime, timedelta
 
 
 class Reports:
     """ The Reports class provides an interface to all reports available via the Webex API """
-    def __init__(self, org: Org):
+    def __init__(self, org: wxcadm.Org):
         self.org = org
         self._templates: Optional[list] = None
         self.created_reports: list = []

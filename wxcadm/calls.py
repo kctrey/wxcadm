@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from typing import Optional
 from datetime import datetime, timedelta, timezone
-
-import wxcadm.org
+import wxcadm
 from wxcadm import log
 from .common import *
 
 
 class Calls:
-    def __init__(self, parent: Org):
+    def __init__(self, parent: wxcadm.Org):
         self.parent = parent
 
     def cdr(self, start: Optional[str] = None, end: Optional[str] = None, days: Optional[int] = None,

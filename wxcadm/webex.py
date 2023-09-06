@@ -278,7 +278,7 @@ class Webex:
         log.info(f"Getting Person record for ID: {id}")
         response = webex_api_call("get", "v1/people", params={"id": id})
         if len(response) > 1:
-            log.warn(f"Webex returned more than one record for email: {email}")
+            log.warn(f"Webex returned more than one record for id: {id}")
             raise APIError("Webex returned more than one Person with the specified ID")
         elif len(response) == 1:
             log.debug(f"User data: {response[0]}")

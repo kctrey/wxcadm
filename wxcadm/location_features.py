@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import requests
-from typing import Optional, Union
+from typing import Optional
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -10,85 +9,9 @@ from wxcadm import log
 from .common import *
 
 
-
-class HuntGroup:
-    def __init__(self, parent: Location | Org,
-                 id: str,
-                 name: str,
-                 location: str,
-                 enabled: bool,
-                 phone_number: str = None,
-                 extension: str = None,
-                 config: bool = True
-                 ):
-        """Initialize a HuntGroup instance
-
-        Args:
-            parent (Location|Org): The Location or Org instance to which the Hunt Group belongs
-            id (str): The Webex ID for the Hunt Group
-            name (str): The name of the Hunt Group
-            location (str): The Location ID associated with the Hunt Group
-            enabled (bool): Boolean indicating whether the Hunt Group is enabled
-            phone_number (str, optional): The DID for the Hunt Group
-            extension (str, optional): The extension of the Hunt Group
-
-        Returns:
-            HuntGroup: The HuntGroup instance
-
-        """
-
-        # Instance attrs
-        self.parent: Org = parent
-        self.id: str = id
-        """The Webex ID of the Hunt Group"""
-        self.name: str = name
-        """The name of the Hunt Group"""
-        self.location_id: str = location
-        """The Location ID associated with the Hunt Group"""
-        self.enabled: bool = enabled
-        """Whether the Hunt Group is enabled or not"""
-        self.phone_number: str = phone_number
-        """The DID for the Hunt Group"""
-        self.extension: str = extension
-        """The extension of the Hunt Group"""
-        self.distinctive_ring: bool = False
-        """Whether or not the Hunt Group has Distinctive Ring enabled"""
-        self.alternate_numbers_settings: dict = {}
-        """List of alternate numbers for this Hunt Group"""
-        self.language: str = ""
-        """The language name for the Hunt Group"""
-        self.language_code: str = ""
-        """The short name for the language of the Hunt Group"""
-        self.first_name: str = ""
-        """The Caller ID first name for the Hunt Group"""
-        self.last_name: str = ""
-        """The Caller ID last name for the Hunt Group"""
-        self.time_zone: str = ""
-        """The time zone for the Hunt Group"""
-        self.call_policy: dict = {}
-        """The Call Policy for the Hunt Group"""
-
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return self.id
-
-    @property
-    def config(self) -> dict:
-        """ The config of the Hunt Group """
-        response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/huntGroups/{self.id}")
-        return response
-
-    @property
-    def agents(self) -> list:
-        return self.config['agents']
-
-
 @dataclass
 class PagingGroup:
-    parent: Location
+    parent: wxcadm.Location
     id: str
     name: str
     spark_id: str = field(init=False, repr=False)
@@ -100,9 +23,7 @@ class PagingGroup:
 
     def refresh_config(self):
         """ Pull a fresh copy of the Paging Group config from Webex, in case it has changed. """
-        api_resp: dict = webex_api_call("get", f"v1/telephony/config/locations/{self.parent.id}/paging/"
-                                        f"{self.id}",
-                                        headers=self.parent._headers)
+        api_resp: dict = webex_api_call("get", f"v1/telephony/config/locations/{self.parent.id}/paging/{self.id}")
         self.config = api_resp
 
 
@@ -120,10 +41,10 @@ class LocationSchedule:
         parent (Location): The `Location` instance to which the LocationSchedule is assigned.
         id (str): The Webex ID of the LocationSchedule
         name (str): The name of the LocationSchedule
-        type (str): The type of LocationShedule, either 'businessHours' or 'Holidays'
+        type (str): The type of LocationSchedule, either 'businessHours' or 'Holidays'
 
     """
-    parent: Location
+    parent: wxcadm.Location
     """ The `Location` instance to which the LocationSchedule is assigned """
     id: str
     """ The Webex ID of the LocationSchedule """
@@ -140,8 +61,7 @@ class LocationSchedule:
     def refresh_config(self):
         """ Pull a fresh copy of the schedule configuration from Webex, in case it has changed. """
         api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.parent.id}/schedules/"
-                                         f"{self.type}/{self.id}",
-                                  headers=self.parent._headers)
+                                         f"{self.type}/{self.id}")
         self.config = api_resp
 
     def add_holiday(self, name: str, date: str, recur: bool = False, recurrence: Optional[dict] = None):
@@ -199,8 +119,7 @@ class LocationSchedule:
                                                                  }
                                            }
         api_resp = webex_api_call("post", f"v1/telephony/config/locations/"
-                                         f"{self.parent.id}/schedules/{self.type}/{self.id}/events",
-                                  headers=self.parent._headers, payload=new_event)
+                                          f"{self.parent.id}/schedules/{self.type}/{self.id}/events", payload=new_event)
         if api_resp:
             self.refresh_config()
             return True
@@ -224,8 +143,7 @@ class LocationSchedule:
         for e in self.config['events']:
             if e['name'] == event or e['id'] == event:
                 api_resp = webex_api_call("delete", f"v1/telephony/config/locations/{self.parent.id}"
-                                                    f"/schedules/{self.type}/{self.id}/events/{e['id']}",
-                                          headers=self.parent._headers)
+                                                    f"/schedules/{self.type}/{self.id}/events/{e['id']}")
                 if api_resp is True:
                     # Get a new copy of the config
                     self.refresh_config()
@@ -271,11 +189,7 @@ class LocationSchedule:
             raise ValueError("If all_day == False, both start_time and end_time are required.")
 
         # Build the payload
-        payload = {}
-        payload['name'] = name
-        payload['startDate'] = start_date
-        payload['endDate'] = end_date
-        payload['allDay'] = all_day
+        payload = {'name': name, 'startDate': start_date, 'endDate': end_date, 'allDay': all_day}
         if all_day is False:
             payload['startTime'] = start_time
             payload['endTime'] = end_time
@@ -284,7 +198,7 @@ class LocationSchedule:
 
         api_resp = webex_api_call("post", f"v1/telephony/config/locations/{self.parent.id}/"
                                           f"schedules/{self.type}/{self.id}/events",
-                                  headers=self.parent._headers, payload=payload)
+                                  payload=payload)
         if api_resp:
             self.refresh_config()
             return True
@@ -292,7 +206,8 @@ class LocationSchedule:
             self.refresh_config()
             return False
 
-    def update_event(self, id: str, name: str = None, start_date: str = None, end_date: str = None, start_time: str = None,
+    def update_event(self, id: str, name: str = None, start_date: str = None, end_date: str = None,
+                     start_time: str = None,
                      end_time: str = None, all_day: bool = None, recurrence: dict = None):
         log.debug("update_event() started")
         # Input validation
@@ -344,6 +259,7 @@ class LocationSchedule:
 class CallParkGroup:
     pass
 
+
 @dataclass
 class CallParkExtension:
     parent: wxcadm.location.Location
@@ -354,4 +270,3 @@ class CallParkExtension:
     """ The name of the Call Park Extension """
     extension: str
     """ The Call Park Extension number (as a string) """
-

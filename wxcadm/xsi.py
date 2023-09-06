@@ -20,7 +20,7 @@ from .xsi_response import XSIResponse
 
 
 class XSIEvents:
-    def __init__(self, parent: Org):
+    def __init__(self, parent: wxcadm.Org):
         """ Initialize an XSIEvents instance to provide access to XSI-Events
 
         Args:
@@ -568,7 +568,7 @@ class XSIEventsSubscription:
 
 
 class XSICallQueue:
-    def __init__(self, call_queue_id: str, org: Org):
+    def __init__(self, call_queue_id: str, org: wxcadm.Org):
         """ Initialize an instance to control calls within a Webex Calling Call Queue.
 
         This class is used primarily when monitoring XSI Events where there is a need to control calls that come

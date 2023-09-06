@@ -1,7 +1,10 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from wxcadm.person import Person
+    from wxcadm.workspace import Workspace
 
-import requests
-from typing import Optional, Type, Union
+from typing import Optional, Union
 from collections import UserList
 
 import wxcadm.exceptions
@@ -84,7 +87,6 @@ class CallQueue:
 
         """
         pass
-
 
     def push(self):
         """Push the contents of the CallQueue.config back to Webex
@@ -180,3 +182,88 @@ class CallQueueList(UserList):
                 if item.spark_id == spark_id:
                     return item
         return None
+
+    def create(self,
+               name: str,
+               first_name: str,
+               last_name: str,
+               phone_number: Optional[str],
+               extension: Optional[str],
+               call_policies: dict,
+               queue_settings: dict,
+               language: Optional[str] = None,
+               time_zone: Optional[str] = None,
+               allow_agent_join: Optional[bool] = False,
+               allow_did_for_outgoing_calls: Optional[bool] = False,
+               location: Optional[wxcadm.Location] = None
+               ):
+        """ Create a new Call Queue at the Location
+
+        Args:
+            name (str): The name of the Call Queue
+            first_name (str): The first name of the Call Queue in the directory and for Caller ID
+            last_name (str): The last name of the Call Queue in the directory and for Caller ID
+            phone_number (str, None): The DID for the Call Queue. None indicates no DID.
+            extension (str, None): The extension for the Call Queue. None indicates no extension.
+            call_policies (dict): The callPolicies dict for the Call Queue. Because the format of this dict changes
+                often, see the documentation at developer.webex.com for values.
+            queue_settings (dict): The queueSettings dict for the Call Queue. Because the format of this dict changes
+                often, see the documentation at developer.webex.com for values.
+            language (str, optional): The language code (e.g. 'en_us') for the Call Queue. Defaults to the
+                announcement_language of the Location.
+            time_zone (str, optional): The time zone (e.g. 'America/Phoenix') for the Call Queue. Defaults to the
+                time_zone of the Location.
+            allow_agent_join (bool, optional): Whether to allow agents to join/leave the Call Queue. Default False.
+            allow_did_for_outgoing_calls (bool, optional): Whether to allow the Call Queue DID to be used for
+                outgoing calls. Default False.
+            location (:class:`Location`, optional): The Location to create the Call Queue at. This is required when the
+                :class:`CallQueueList` exists at the :class:`Org` level, but not at the :class:`Location` level, because
+                the Location is implied at the Location level.
+
+        Returns:
+            CallQueue: The created CallQueue instance
+
+        Raises:
+            ValueError: Raised when phone_number and extension are both None. One or both is required. Also raised when
+                ``location`` is None and the :class:`CallQueueList` is at the Org level.
+
+        """
+        # Get some values if they weren't passed
+        if phone_number is None and extension is None:
+            raise ValueError("phone_number and/or extension are required")
+        if location is None and isinstance(self.parent, wxcadm.Org):
+            raise ValueError("location is required for Org-level CallQueueList")
+        elif location is None and isinstance(self.parent, wxcadm.Location):
+            location = self.parent
+        log.info(f"Creating Call Queue at Location {location.name} with name: {name}")
+        if location.calling_enabled is False:
+            log.debug("Not a Webex Calling Location")
+            return None
+        if time_zone is None:
+            log.debug(f"Using Location time_zone {location.time_zone}")
+            time_zone = location.time_zone
+        if language is None:
+            log.debug(f"Using Location announcement_language {location.announcement_language}")
+            language = location.announcement_language
+
+        payload = {
+            "name": name,
+            "firstName": first_name,
+            "lastName": last_name,
+            "extension": extension,
+            "phoneNumber": phone_number,
+            "callPolicies": call_policies,
+            "queueSettings": queue_settings,
+            "timeZone": time_zone,
+            "languageCode": language,
+            "allowAgentJoinEnabled": allow_agent_join,
+            "phoneNumberForOutgoingCallsEnabled": allow_did_for_outgoing_calls
+        }
+        response = webex_api_call("post", f"v1/telephony/config/locations/{location.id}/queues",
+                                  payload=payload)
+        new_queue_id = response['id']
+
+        # Get the details of the new Queue
+        response = webex_api_call("get", f"v1/telephony/config/locations/{location.id}/queues/{new_queue_id}")
+        self.refresh()
+        return self.get(id=new_queue_id)

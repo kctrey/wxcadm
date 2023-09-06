@@ -1,9 +1,12 @@
 from __future__ import annotations
-
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .person import Person
 import requests
 import base64
 import os
 from requests_toolbelt import MultipartEncoder
+import wxcadm
 from wxcadm import log
 from .exceptions import *
 from .common import *
@@ -20,7 +23,7 @@ class CPAPI:
             All the methods in this class require an API Access Token with the CP-API scope.
     """
 
-    def __init__(self, org: Org, access_token: str):
+    def __init__(self, org: wxcadm.Org, access_token: str):
         self._parent = org
         self._access_token = access_token
         self._headers = {"Authorization": f"Bearer {access_token}"}

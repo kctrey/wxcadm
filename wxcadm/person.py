@@ -394,7 +394,7 @@ class Person:
             else:
                 return None
 
-    def assign_wxc(self, location: Type["Location"], phone_number: str = None, extension: str = None):
+    def assign_wxc(self, location: wxcadm.Location, phone_number: str = None, extension: str = None):
         """ Assign Webex Calling to the user, along with a phone number and/or an extension.
 
         Args:
@@ -608,9 +608,6 @@ class Person:
 
         """
         log.info(f"Getting Hunt Groups for {self.email}")
-        # First, we need to make sure we know about the Org Hunt Groups. If not, pull them.
-        if self._parent.hunt_groups is None:
-            self._parent.get_hunt_groups()
         hunt_groups = []
         for hg in self._parent.hunt_groups:
             # Step through the agents for the Hunt Group to see if this person is there
@@ -629,9 +626,6 @@ class Person:
 
         """
         log.info(f"Getting Hunt Groups for {self.email}")
-        # First, we need to make sure we know about the Org Hunt Groups. If not, pull them.
-        if self._parent.call_queues is None:
-            self._parent.get_call_queues()
         call_queues = []
         for cq in self._parent.call_queues:
             # Step through the agents for the Hunt Group to see if this person is there

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Union
 import os
 from dataclasses import dataclass, field
 from collections import UserList
@@ -11,10 +10,10 @@ from wxcadm import log
 from .common import *
 
 class AnnouncementList(UserList):
-    def __init__(self, parent: Org):
+    def __init__(self, parent: wxcadm.Org):
         super().__init__()
         log.debug("Initializing AnnouncementList instance")
-        self.parent: Org = parent
+        self.parent: wxcadm.Org = parent
         self.data: list = self._get_announcements()
 
     def _get_announcements(self):
@@ -95,7 +94,7 @@ class AnnouncementList(UserList):
         log.debug(f"Location is: {type(location)}")
 
         if location is not None:
-            # Uplaod at the Location level
+            # Upload at the Location level
             if isinstance(location, wxcadm.location.Location):
                 log.info(f"Uploading to Location: {location.name}")
                 location_id = location.id
@@ -122,7 +121,7 @@ class AnnouncementList(UserList):
 
 @dataclass
 class Announcement:
-    parent: Org = field(repr=False)
+    parent: wxcadm.Org = field(repr=False)
     id: str
     name: str
     fileName: str

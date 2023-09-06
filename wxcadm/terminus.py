@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import requests
+import wxcadm
 from wxcadm import log
 from .common import *
 from .exceptions import *
@@ -9,7 +10,7 @@ from .exceptions import *
 class Terminus:
     """The Terminus class handles API calls using the Terminus API."""
 
-    def __init__(self, org: Org, access_token: str):
+    def __init__(self, org: wxcadm.Org, access_token: str):
         self._parent = org
         self._access_token = access_token
         self._headers = {"Authorization": f"Bearer {access_token}"}

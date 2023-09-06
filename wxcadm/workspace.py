@@ -5,6 +5,7 @@ from collections import UserList
 from typing import Optional, Union
 
 import wxcadm.location
+import wxcadm
 from wxcadm import log
 from .common import *
 from .exceptions import *
@@ -12,10 +13,10 @@ from .device import Device
 
 
 class WorkspaceLocationList(UserList):
-    def __init__(self, parent: Union["Org"]):
+    def __init__(self, parent: wxcadm.Org):
         super().__init__()
         log.debug("Initializing WorkspaceLocationList")
-        self.parent: Org = parent
+        self.parent: wxcadm.Org = parent
         self.data: list = self._get_workspace_locations()
 
     def _get_workspace_locations(self):
@@ -51,7 +52,7 @@ class WorkspaceList(UserList):
     def __init__(self, parent: Union["Org", "WorkspaceLocation"]):
         super().__init__()
         log.debug("Initializing WorkspaceList instance")
-        self.parent: Org = parent
+        self.parent: wxcadm.Org = parent
         self.data: list = self._get_workspaces()
 
     def _get_workspaces(self):
@@ -97,7 +98,7 @@ class WorkspaceList(UserList):
 
 
 class Workspace:
-    def __init__(self, parent: Org, id: str, config: Optional[dict] = None):
+    def __init__(self, parent: wxcadm.Org, id: str, config: Optional[dict] = None):
         """Initialize a Workspace instance
 
         If only the `id` is provided, the configuration will be fetched from
@@ -111,7 +112,7 @@ class Workspace:
         """
         self.id: str = id
         """The Webex ID of the Workspace"""
-        self._parent: Org = parent
+        self._parent: wxcadm.Org = parent
         # Attributes inherited from the Org parent
         self._headers = self._parent._headers
         self._params = self._parent._params
@@ -295,7 +296,7 @@ class Workspace:
 
 
 class WorkspaceLocation:
-    def __init__(self, parent: Org, id: str, config: dict = None):
+    def __init__(self, parent: wxcadm.Org, id: str, config: dict = None):
         """Initialize a WorkspaceLocation instance.
 
         If only the `id` is provided, the configuration will be fetched from
@@ -309,7 +310,7 @@ class WorkspaceLocation:
         """
         self.id: str = id
         """The Webex ID of the Workspace"""
-        self._parent: Org = parent
+        self._parent: wxcadm.Org = parent
         # Attributes inherited from the Org parent
         self._headers = self._parent._headers
         self._params = self._parent._params

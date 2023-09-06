@@ -10,10 +10,10 @@ from .common import *
 
 
 class WebexApplications(UserList):
-    def __init__(self, parent: Org):
+    def __init__(self, parent: wxcadm.Org):
         super().__init__()
         log.debug("Initializing WebexApps instance")
-        self.parent: Org = parent
+        self.parent: wxcadm.Org = parent
         self.data: list = self._get_applications()
 
     def _get_applications(self):
@@ -111,7 +111,7 @@ class WebexApplications(UserList):
 
 @dataclass
 class WebexApplication:
-    parent: Org = field(repr=False)
+    parent: wxcadm.Org = field(repr=False)
     isNative: bool = field(repr=False)
     id: str
     friendlyId: str
@@ -175,7 +175,7 @@ class WebexApplication:
         response = webex_api_call('delete', f'/v1/applications/{self.id}')
         return response
 
-    def get_token(self, client_secret: str, target_org: Union[Org, str]):
+    def get_token(self, client_secret: str, target_org: wxcadm.Org | str):
         """ Get the access and refresh tokens to utilize the application in the target Org
 
         Args:
