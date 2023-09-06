@@ -86,6 +86,28 @@ class LocationList(UserList):
                preferred_language: str,
                announcement_language: str,
                address: dict):
+        """ Create a new Location
+
+        Args:
+            name (str): The name of the Location
+            time_zone (str): The Time Zone of the Location (e.g. America/Chicago)
+            preferred_language (str): The preferred language for phones and menus (i.e. en_US)
+            announcement_language (str): The language for audio announcements (i.e. en_US)
+            address (dict): A dictionary containing the address elements. The format of this dict should be::
+
+                {
+                    "address1": "100 N. Main",
+                    "address2": "Suite 200",
+                    "city": "Houston",
+                    "state": "TX",
+                    "postalCode": "32123",
+                    "country": "US"
+                }
+
+        Returns:
+            dict: The response from Webex with the Location details.
+
+        """
         payload = {
             'name': name,
             'timeZone': time_zone,
@@ -94,6 +116,7 @@ class LocationList(UserList):
             'address': address
         }
         response = webex_api_call('post', 'v1/locations', payload=payload)
+        self.refresh()
         return response
 
     def webex_calling(self, enabled: bool = True) -> list[Location]:

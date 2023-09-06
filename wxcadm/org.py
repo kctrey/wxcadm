@@ -249,7 +249,7 @@ class Org:
 
         Returns:
             PagingGroup: The PagingGroup instance correlating to the given search argument. None is returned if no
-                Location is found.
+            Location is found.
 
         Raises:
             ValueError: Raised when the method is called with no arguments
