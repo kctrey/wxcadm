@@ -155,7 +155,27 @@ class HuntGroupList(UserList):
             last_name (str): The last name to be used for Caller ID
             phone_number (str, optional): The phone number (e.g. DID) for the Hunt Group
             extension (str, optional): The extension for the Hunt Group
-            call_policies:
+            call_policies (dict): The Hunt Group Call Policy. The dict has the following format::
+
+            {
+                'policy': 'REGULAR',
+                'waitingEnabled': True,
+                'noAnswer': {
+                    'nextAgentEnabled': False,
+                    'nextAgentRings': 2,
+                    'forwardEnabled': True,
+                    'destination': '5050',
+                    'numberOfRings': 3,
+                    'systemMaxNumberOfRings': 20,
+                    'destinationVoicemailEnabled': False
+                },
+                'businessContinuity': {
+                    'enabled': False,
+                    'destination': '6312128008',
+                    'destinationVoicemailEnabled': False
+                }
+            }
+
             enabled (bool, optional): Whether the Hunt Group is enabled. Defaults to True
             language (str, optional): The language for audio prompts. Defaults to ``Location.announcement_language``
             time_zone (str, optional): The time zone of the Hunt Group. Defaults to ``Location.time_zone``
@@ -164,6 +184,7 @@ class HuntGroupList(UserList):
                 will be used.
 
         Returns:
+            HuntGroup: The :class:`HuntGroup` instance of the created Hunt Group
 
         """
         if location is None and isinstance(self.parent, wxcadm.Org):
