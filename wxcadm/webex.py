@@ -97,6 +97,7 @@ class Webex:
         # Handle invalid access token
         if r.status_code != 200:
             log.critical("The Access Token was not accepted by Webex")
+            log.debug(f"Response: {r.text}")
             raise TokenError("The Access Token was not accepted by Webex")
         response = r.json()
         # Handle when no Orgs are returned. This is pretty rare
