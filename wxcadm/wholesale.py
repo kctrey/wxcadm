@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from wxcadm import log
+from wxcadm import log, Org
 from .common import *
 from .location import Location
 
@@ -17,6 +17,7 @@ class Wholesale:
         log.debug(f"Setting Global _webex_headers")
         global _webex_headers
         _webex_headers['Authorization'] = "Bearer " + access_token
+        self._orgs = None
 
     @property
     def headers(self):
@@ -31,6 +32,15 @@ class Wholesale:
             this_customer = WholesaleCustomer(self, customer)
             customer_list.append(this_customer)
         return customer_list
+
+    @property
+    def orgs(self):
+        if self._orgs is None:
+            orgs = []
+            for customer in self.customers:
+                orgs.append(Org(name=customer.external_id, id=customer.id, parent=self))
+            self._orgs = orgs
+        return self._orgs
 
     def get_customer(self, id: str = None, name: str = None, spark_id: str = None):
         if id is None and name is None and spark_id is None:
