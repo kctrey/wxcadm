@@ -84,7 +84,6 @@ class LocationList(UserList):
                name: str,
                time_zone: str,
                preferred_language: str,
-               announcement_language: str,
                address: dict):
         """ Create a new Location
 
@@ -92,7 +91,6 @@ class LocationList(UserList):
             name (str): The name of the Location
             time_zone (str): The Time Zone of the Location (e.g. America/Chicago)
             preferred_language (str): The preferred language for phones and menus (i.e. en_US)
-            announcement_language (str): The language for audio announcements (i.e. en_US)
             address (dict): A dictionary containing the address elements. The format of this dict should be::
 
                 {
@@ -112,12 +110,12 @@ class LocationList(UserList):
             'name': name,
             'timeZone': time_zone,
             'preferredLanguage': preferred_language,
-            'announcementLanguage': announcement_language,
+            'announcementLanguage': None,
             'address': address
         }
         response = webex_api_call('post', 'v1/locations', payload=payload)
         self.refresh()
-        return response
+        return self.get(id=response['id'])
 
     def webex_calling(self, enabled: bool = True) -> list[Location]:
         """ Return a list of :py:class:`Location` where Webex Calling is enabled/disabled
@@ -204,6 +202,43 @@ class Location:
                 self.calling_config = response
         except APIError:
             return None
+
+    def enable_webex_calling(self) -> bool:
+        """ Enable the Location for Webex Calling
+
+        If the Location is already a Webex Calling Location, no action will be taken and the method will return True.
+
+        Returns:
+            bool: True on success
+
+        """
+        log.info(f"Enabling Webex Calling for Location {self.name}")
+        payload = {
+            "id": self.id,
+            "name": self.name,
+            "timeZone": self.time_zone,
+            "preferredLanguage": self.preferred_language.lower(),
+            "announcementLanguage": self.preferred_language.lower(),
+            "address": self.address
+        }
+        response = webex_api_call("post", "v1/telephony/config/locations", payload=payload)
+        self._get_calling_config()
+        return True
+
+    def delete(self):
+        """ Delete a Location
+
+        .. warning::
+
+            There is currently no way to delete a Location outside of Control Hub. The method is defined here so users
+            aren't looking for it expecting it to be there. It will always return False. When the API is exposed,
+            this method will be updated to support it.
+
+        Returns:
+            bool: Always returns False and no action is taken on Webex
+
+        """
+        return False
 
     @property
     def spark_id(self):
