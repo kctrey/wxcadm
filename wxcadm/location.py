@@ -212,17 +212,18 @@ class Location:
             bool: True on success
 
         """
-        log.info(f"Enabling Webex Calling for Location {self.name}")
-        payload = {
-            "id": self.id,
-            "name": self.name,
-            "timeZone": self.time_zone,
-            "preferredLanguage": self.preferred_language.lower(),
-            "announcementLanguage": self.preferred_language.lower(),
-            "address": self.address
-        }
-        response = webex_api_call("post", "v1/telephony/config/locations", payload=payload)
-        self._get_calling_config()
+        if self.calling_enabled is False:
+            log.info(f"Enabling Webex Calling for Location {self.name}")
+            payload = {
+                "id": self.id,
+                "name": self.name,
+                "timeZone": self.time_zone,
+                "preferredLanguage": self.preferred_language.lower(),
+                "announcementLanguage": self.preferred_language.lower(),
+                "address": self.address
+            }
+            webex_api_call("post", "v1/telephony/config/locations", payload=payload)
+            self._get_calling_config()
         return True
 
     def delete(self):
