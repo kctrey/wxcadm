@@ -9,6 +9,11 @@ What's New
 
 v4.0.0
 ------
+- Ensured that all HTTPS sessions/requests are closed prior to returning the value to the caller.
+- :meth:`Location.enable_webex_calling()` added.
+- A placeholder method :meth:`Location.delete()` was added even though it doesn't work. Users were looking for it, so I added it to ensure the docs are correct and users know they need to use Control Hub.
+- **BREAKING CHANGE** - :meth:`LocationList.create()` no longer requires an ``announcement_language`` argument since it isn't used on Webex anyway.
+- Started building real unit and integration tests in the tests directory. This effort will be ongoing, but it's time to start making testing a little more effective.
 - Deprecated :meth:`Org.get_hunt_group_by_id()`. Use :meth:`Org.hunt_groups.get(id=)` instead.
 - New List Class :class:`HuntGroupList` accessed with :attr:`Org.hunt_groups` and :attr:`Location.hunt_groups`
 - Deprecated :meth:`Org.get_call_queue_by_id()`. Use :meth:`Org.call_queues.get(id=)` instead.
