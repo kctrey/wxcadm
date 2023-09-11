@@ -784,6 +784,7 @@ class XSI:
             return_data = False
         else:
             return_data = False
+        r.close()
         return return_data
 
     @property
