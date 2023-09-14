@@ -24,6 +24,7 @@ from .call_routing import CallRouting
 from .reports import Reports
 from .calls import Calls
 from .device import Device
+from .recording import ComplianceAnnouncementSettings
 
 
 class Org:
@@ -76,6 +77,7 @@ class Org:
         self._people: Optional[PersonList] = None
         self._auto_attendants: Optional[AutoAttendantList] = None
         self._locations: Optional[LocationList] = None
+        self._compliance_announcement_settings: Optional[ComplianceAnnouncementSettings] = None
 
 
         self.call_routing = CallRouting(self)
@@ -111,6 +113,20 @@ class Org:
 
     def __repr__(self):
         return self.id
+
+    @property
+    def compliance_announcement_settings(self):
+        """ The Call Recording Compliance Announcement settings for the Org
+
+        Returns:
+            ComplianceAnnouncementSettings: The settings for the Org
+
+        """
+        if self._compliance_announcement_settings is None:
+            response = webex_api_call('get', 'v1/telephony/config/callRecording/complianceAnnouncement',
+                                      params={'orgId': self.id})
+            self._compliance_announcement_settings = ComplianceAnnouncementSettings(self, **response)
+        return self._compliance_announcement_settings
 
     @property
     def auto_attendants(self):
