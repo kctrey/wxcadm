@@ -9,6 +9,8 @@ What's New
 
 v4.0.0
 ------
+- :class:`ComplianceAnnouncementSettings` at the :class:`Org` and :class:`Location` level for the new Recording Compliance Announcement
+- :class:`NumberManagementJob` with List Class :class:`NumberManagementJobList` accessible via :attr:`Org.number_management_jobs`. These classes deal with the ability to move (and eventually delete) numbers.
 - Ensured that all HTTPS sessions/requests are closed prior to returning the value to the caller.
 - :meth:`Location.enable_webex_calling()` added.
 - A placeholder method :meth:`Location.delete()` was added even though it doesn't work. Users were looking for it, so I added it to ensure the docs are correct and users know they need to use Control Hub.

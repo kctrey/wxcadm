@@ -25,6 +25,7 @@ from .reports import Reports
 from .calls import Calls
 from .device import Device
 from .recording import ComplianceAnnouncementSettings
+from .jobs import NumberManagementJobList
 
 
 class Org:
@@ -78,6 +79,7 @@ class Org:
         self._auto_attendants: Optional[AutoAttendantList] = None
         self._locations: Optional[LocationList] = None
         self._compliance_announcement_settings: Optional[ComplianceAnnouncementSettings] = None
+        self._number_management_jobs = None
 
 
         self.call_routing = CallRouting(self)
@@ -163,6 +165,14 @@ class Org:
                 roles[role['id']] = role['name']
             self._roles = roles
         return self._roles
+
+    @property
+    def number_management_jobs(self):
+        """ :class:`NumberManagementJobList` for this Organization """
+        if self._number_management_jobs is None:
+            self._number_management_jobs = NumberManagementJobList(self)
+        return self._number_management_jobs
+
 
     def __get_licenses(self):
         """Gets all licenses for the Organization
