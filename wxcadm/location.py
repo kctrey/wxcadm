@@ -203,6 +203,11 @@ class Location:
         except APIError:
             return None
 
+    @property
+    def org_id(self):
+        """ The Org ID to which the Location belongs. :attr:`parent.id` can also be used. """
+        return self.parent.id
+
     def enable_webex_calling(self) -> bool:
         """ Enable the Location for Webex Calling
 

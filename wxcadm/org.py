@@ -110,6 +110,11 @@ class Org:
         spark_id = org_id_bytes.decode("utf-8")
         return spark_id
 
+    @property
+    def org_id(self):
+        """ The Org ID of the Org. :attr:`id` should be used in most cases. :attr:`org_id` just simplifies API calls """
+        return self.id
+
     def __str__(self):
         return self.name
 
