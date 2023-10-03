@@ -194,6 +194,17 @@ class Location:
     def __repr__(self):
         return self.id
 
+    @property
+    def workspace_location(self):
+        """ Get the :class:`WorkspaceLocation` associated with this Location
+
+        Returns:
+            WorkspaceLocation: The WorkspaceLocation associated with this Location
+
+        """
+        return self.parent.workspace_locations.get(name=self.name)
+
+
     def _get_calling_config(self):
         try:
             response = webex_api_call("get", f"v1/telephony/config/locations/{self.id}")

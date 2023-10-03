@@ -9,6 +9,7 @@ What's New
 
 v4.0.0
 ------
+- New method :meth:`WorkspaceList.create()` to allow Workspace creation with Webex Calling capability
 - :class:`Location` and :class:`Org` now both have an :attr:`org_id` property since it is needed often by the API and some things can exist at the Org or Location level
 - :class:`ComplianceAnnouncementSettings` at the :class:`Org` and :class:`Location` level for the new Recording Compliance Announcement
 - :class:`NumberManagementJob` with List Class :class:`NumberManagementJobList` accessible via :attr:`Org.number_management_jobs`. These classes deal with the ability to move (and eventually delete) numbers.

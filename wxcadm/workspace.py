@@ -48,8 +48,28 @@ class WorkspaceLocationList(UserList):
                 return entry
         return None
 
+    def get(self, id: Optional[str] = None, name: Optional[str] = None):
+        """ Get a WorkspaceLocation instance by ID or name
+
+        Args:
+            id (str, optional): The WorkspaceLocation ID
+            name (str, optional): The WorkspaceLocation name
+
+        Returns:
+            WorkspaceLocation: The :class:`WorkspaceLocation` for the given value.
+            None is returned if no match is found.
+
+        """
+        if name is None and id is None:
+            raise ValueError("Method requires id or name argument")
+        entry: WorkspaceLocation
+        for entry in self.data:
+            if entry.id == id or entry.name == name:
+                return entry
+        return None
+
 class WorkspaceList(UserList):
-    def __init__(self, parent: Union["Org", "WorkspaceLocation"]):
+    def __init__(self, parent: Union["Org", "WorkspaceLocation", wxcadm.Location]):
         super().__init__()
         log.debug("Initializing WorkspaceList instance")
         self.parent: wxcadm.Org = parent
@@ -95,6 +115,67 @@ class WorkspaceList(UserList):
             if entry.id == id:
                 return entry
         return None
+
+    def create(self, location: wxcadm.Location,
+               name: str,
+               floor: Optional[WorkspaceLocationFloor] = None,
+               capacity: Optional[int] = None,
+               type: Optional[str] = 'notSet',
+               phone_number: Optional[str] = None,
+               extension: Optional[str] = None,
+               notes: Optional[str] = None,
+               hotdesking: Optional[bool] = False,
+               supported_devices: Optional[str] = 'phones'
+               ):
+        """
+
+        Args:
+            location (Location): The :class:`Location` where the Workspace will be located
+            name (str): The name of the Workspace
+            floor (WorkspaceLocationFloor, optional): The :class:`WorkspaceLocationFloor` where the Workspace is located
+            capacity (int, optional): The capacity of the Workspace
+            type: The type of Workspace. See the developer documentation for options. Defaults to `noteSet`
+            phone_number: The Webex Calling phone number for the Workspace
+            extension: The Webex Calling extension for the Workspace
+            notes: Free-form text notes
+            hotdesking (bool, optional): Whether the workspace is enabled for Hot Desking. Defaults to False.
+            supported_devices: `phones` or `collaborationDevices`. Defaults to `phones`
+
+        Returns:
+            Workspace: The :class:`Workspace` instance that is created in Control Hub
+
+        """
+        if location.workspace_location is None:
+            raise KeyError(f"Location {location.name} does not have a Workspace Location")
+        if hotdesking is True:
+            hotdesking = 'on'
+        else:
+            hotdesking = 'off'
+
+        payload = {
+            'orgId': self.parent.org_id,
+            'displayName': name,
+            'workspaceLocationId': location.workspace_location.id,
+            'floorId': floor,
+            'capacity': capacity,
+            'type': type,
+            'calling': {
+                'type': 'webexCalling',
+                'webexCalling': {
+                    'phoneNumber': phone_number,
+                    'extension': extension,
+                    'locationId': location.id
+                }
+            },
+            'notes': notes,
+            'hotdeskingStatus': hotdesking,
+            'supportedDevices': supported_devices
+        }
+        response = webex_api_call('post', 'v1/workspaces', payload=payload)
+        new_workspace_id = response['id']
+        self.parent.workspaces.refresh()
+        new_workspace = self.parent.workspaces.get_by_id(new_workspace_id)
+        return new_workspace
 
 
 class Workspace:
