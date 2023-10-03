@@ -7,6 +7,10 @@ What's New
 
     v4.0.0 is a significant rewrite of a lot of the methods and API calls to reduce the number of API calls needed in large Orgs with a lot of Users/Locations/Workspaces. I have tried to document all the breaking changes, but there may be some I haven't realized yet. The v4.0.0 series is changing rapidly as I find them.
 
+v4.0.1
+------
+- Changed :meth:`XSI.get_fac()` to a property :attr:`XSI.fac_list` to make it similar to other XSI methods and cleaned up the response as a :class:`FeatureAccessCode` list
+
 v4.0.0
 ------
 - New method :meth:`WorkspaceList.create()` to allow Workspace creation with Webex Calling capability

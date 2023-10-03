@@ -19,6 +19,17 @@ from .exceptions import *
 from .xsi_response import XSIResponse
 
 
+class FeatureAccessCode:
+    """ Class for Feature Access Code definitions to make them easier to report on """
+    def __init__(self, config: dict):
+        """ Init should never be called manually. The instances are created with the :attr:`XSI.fac_list` property """
+        self.feature = config['codeName']['$']
+        self.code = config['code']['$']
+        if 'alternateCode' in config.keys():
+            self.alternate_code = config['alternateCode']['$']
+        else:
+            self.alternate_code = None
+
 class XSIEvents:
     def __init__(self, parent: wxcadm.Org):
         """ Initialize an XSIEvents instance to provide access to XSI-Events
@@ -638,7 +649,6 @@ class XSI:
         """The XSI Profile for this Person"""
         self._registrations: dict = {}
         """The Registrations associated with this Person"""
-        self.fac = None
         self.services = {}
         self._alternate_numbers: dict = {}
         """The Alternate Numbers for the Person"""
@@ -869,15 +879,18 @@ class XSI:
             self._registrations = self.__get_xsi_data(self._profile['registrations_url'])
         return self._registrations
 
-    def get_fac(self):
+    @property
+    def fac_list(self):
         # If we don't have a FAC URL, go get it
         if "fac_url" not in self._profile:
             self.profile
         r = requests.get(self.xsi_endpoints['actions_endpoint'] + self._profile['fac_url'],
                          headers=self._headers, params=self._params)
         response = r.json()
-        self.fac = response
-        return self.fac
+        fac_list = []
+        for entry in response['FAC']['featureAccessCode']:
+            fac_list.append(FeatureAccessCode(entry))
+        return fac_list
 
     def get_services(self):
         # TODO There are still some services that we should collect more data for. For example, BroadWorks
