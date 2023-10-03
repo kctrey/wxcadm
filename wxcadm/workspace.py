@@ -252,6 +252,20 @@ class Workspace:
         """ The internal identifier used by Webex """
         return decode_spark_id(self.id)
 
+    def delete(self):
+        """ Delete the Workspace
+
+        Returns:
+            bool: True on success. In failure conditions, an exception will be raised
+
+        Raises:
+            APIError: Raised when the API call fails for any reason
+
+        """
+        response = webex_api_call('delete', f'v1/workspaces/{self.id}')
+        self._parent.workspaces.refresh()
+        return True
+
     @property
     def devices(self):
         log.info(f"Collecting devices for {self.name}")
