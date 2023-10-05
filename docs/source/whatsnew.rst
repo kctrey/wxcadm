@@ -7,9 +7,12 @@ What's New
 
     v4.0.0 is a significant rewrite of a lot of the methods and API calls to reduce the number of API calls needed in large Orgs with a lot of Users/Locations/Workspaces. I have tried to document all the breaking changes, but there may be some I haven't realized yet. The v4.0.0 series is changing rapidly as I find them.
 
-v4.0.1
+v4.1.0
 ------
+- New methods :meth:`Person.remove_did()` and :meth:`Person.add_did()` to allow easy unassignment of the DID and the ability to add one, especially useful in User/Number moves between Locations because the number has to be unassigned to move.
+- :class:`UserMoveJob` with List Class :class:`UserMoveJobList` accessible via :attr:`Org.user_move_jobs`. These classes deal with the ability to move users between Locations.
 - Changed :meth:`XSI.get_fac()` to a property :attr:`XSI.fac_list` to make it similar to other XSI methods and cleaned up the response as a :class:`FeatureAccessCode` list
+- :class:`APIError` now returns the exception rather than just a string showing what failed so it can be parsed.
 
 v4.0.0
 ------

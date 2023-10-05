@@ -1479,6 +1479,40 @@ class Person:
         """
         return webex_api_call('get', f'/v1/people/{self.id}/features/numbers')
 
+    def remove_did(self) -> str:
+        """ Remove the DID (phone number) from the Person
+
+        Returns:
+            str: The phone number that was removed. Returned to make it easier to add after a User Move, for example.
+
+        """
+        old_numbers = self.numbers
+        new_numbers = []
+        removed_number: Optional[str] = None
+        for number in old_numbers:
+            if number['type'].lower() != 'work':
+                new_numbers.append(number)
+            else:
+                removed_number = number['value']
+        self.update_person(numbers=new_numbers)
+        return removed_number
+
+    def add_did(self, phone_number: str, primary: Optional[bool] = True):
+        """ Add a DID (phone number) to the Person
+
+        Args:
+            phone_number (str): The phone number to add
+            primary (bool, optional): Whether the number will be the Primary phone number. Defauils to True.
+
+        Returns:
+
+        """
+        numbers = self.numbers
+        numbers.append({'type': 'work', 'value': phone_number, 'primary': primary})
+        self.update_person(numbers=numbers)
+        self.refresh_person()
+        return self.numbers
+
 
 class Me(Person):
     """ The class representing the token owner. Some methods are only available at an owner scope. """
