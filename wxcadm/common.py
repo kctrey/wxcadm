@@ -101,7 +101,10 @@ def webex_api_call(method: str,
                     return None
                 else:
                     session.close()
-                    raise APIError(f"The Webex API returned an error: [{r.status_code}] {r.text}")
+                    try:
+                        raise APIError(r.json())
+                    except requests.exceptions.JSONDecodeError:
+                        raise APIError(r.text)
 
             # Now we look for pagination and get any additional pages as part of the same Session
             if "next" in r.links:
@@ -159,7 +162,10 @@ def webex_api_call(method: str,
                     continue
                 else:
                     session.close()
-                    raise APIError(f"The Webex API returned an error: {r.text}")
+                    try:
+                        raise APIError(r.json())
+                    except requests.exceptions.JSONDecodeError:
+                        raise APIError(r.text)
         elif method.lower() == "put_upload":
             log.debug("Putting a file upload")
             log.debug(payload)
@@ -188,7 +194,10 @@ def webex_api_call(method: str,
                     continue
                 else:
                     session.close()
-                    raise APIError(f"The Webex API returned an error: {r.text}")
+                    try:
+                        raise APIError(r.json())
+                    except requests.exceptions.JSONDecodeError:
+                        raise APIError(r.text)
         elif method.lower() == "post":
             log.debug(f"Post body: {payload}")
             r = session.post(url_base + url, params=params, json=payload)
@@ -214,7 +223,10 @@ def webex_api_call(method: str,
                     continue
                 else:
                     session.close()
-                    raise APIError(f"The Webex API returned an error: {r.text}")
+                    try:
+                        raise APIError(r.json())
+                    except requests.exceptions.JSONDecodeError:
+                        raise APIError(r.text)
         elif method.lower() == "post_upload":
             log.debug("Posting a file upload")
             log.debug(payload)
@@ -243,7 +255,10 @@ def webex_api_call(method: str,
                     continue
                 else:
                     session.close()
-                    raise APIError(f"The Webex API returned an error: {r.text}")
+                    try:
+                        raise APIError(r.json())
+                    except requests.exceptions.JSONDecodeError:
+                        raise APIError(r.text)
         elif method.lower() == "delete":
             r = session.delete(url_base + url, params=params)
             if r.ok:
@@ -268,7 +283,10 @@ def webex_api_call(method: str,
                     continue
                 else:
                     session.close()
-                    raise APIError(f"The Webex API returned an error: {r.text}")
+                    try:
+                        raise APIError(r.json())
+                    except requests.exceptions.JSONDecodeError:
+                        raise APIError(r.text)
         elif method.lower() == "patch":
             r = session.patch(url_base + url, params=params, json=payload)
             if r.ok:
@@ -293,7 +311,10 @@ def webex_api_call(method: str,
                     continue
                 else:
                     session.close()
-                    raise APIError(f"The Webex API returned an error: {r.text}")
+                    try:
+                        raise APIError(r.json())
+                    except requests.exceptions.JSONDecodeError:
+                        raise APIError(r.text)
         else:
             return False
     return False
