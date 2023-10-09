@@ -1315,8 +1315,8 @@ class Person:
         payload['licenses'] = licenses
 
         params = {"callingData": "true"}
-        success = self.__put_webex_data(f"v1/people/{self.id}", payload, params)
-        if success:
+        response = webex_api_call('put', f'v1/people{self.id}', payload=payload, params=params)
+        if response:
             self.refresh_person()
             return True
         else:
@@ -1488,13 +1488,16 @@ class Person:
         """
         old_numbers = self.numbers
         new_numbers = []
+        update_needed = False
         removed_number: Optional[str] = None
         for number in old_numbers:
             if number['type'].lower() != 'work':
                 new_numbers.append(number)
             else:
+                update_needed = True
                 removed_number = number['value']
-        self.update_person(numbers=new_numbers)
+        if update_needed is True:
+            self.update_person(numbers=new_numbers)
         return removed_number
 
     def add_did(self, phone_number: str, primary: Optional[bool] = True):
