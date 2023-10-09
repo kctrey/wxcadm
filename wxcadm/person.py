@@ -1315,7 +1315,7 @@ class Person:
         payload['licenses'] = licenses
 
         params = {"callingData": "true"}
-        response = webex_api_call('put', f'v1/people{self.id}', payload=payload, params=params)
+        response = webex_api_call('put', f'v1/people/{self.id}', payload=payload, params=params)
         if response:
             self.refresh_person()
             return True

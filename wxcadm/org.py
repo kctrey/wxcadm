@@ -25,7 +25,7 @@ from .reports import Reports
 from .calls import Calls
 from .device import Device
 from .recording import ComplianceAnnouncementSettings
-from .jobs import NumberManagementJobList
+from .jobs import NumberManagementJobList, UserMoveJobList
 
 
 class Org:
@@ -80,6 +80,7 @@ class Org:
         self._locations: Optional[LocationList] = None
         self._compliance_announcement_settings: Optional[ComplianceAnnouncementSettings] = None
         self._number_management_jobs = None
+        self._user_move_jobs = None
 
 
         self.call_routing = CallRouting(self)
@@ -177,6 +178,13 @@ class Org:
         if self._number_management_jobs is None:
             self._number_management_jobs = NumberManagementJobList(self)
         return self._number_management_jobs
+
+    @property
+    def user_move_jobs(self):
+        """ :class:`UserMoveJobList for this Organization """
+        if self._user_move_jobs is None:
+            self._user_move_jobs = UserMoveJobList(self)
+        return self._user_move_jobs
 
 
     def __get_licenses(self):
