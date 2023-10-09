@@ -479,6 +479,7 @@ class XSIEventsChannel:
                       f"Channel Delete response: {r.text}")
             return False
 
+
 class XSIEventsSubscription:
     def __init__(self, parent: XSIEventsChannelSet, event_package: str, person: Person = None):
         """ Initialize an XSIEventsSubscription
@@ -725,7 +726,6 @@ class XSI:
             return call
         else:
             return None
-
 
     @property
     def calls(self):
@@ -1044,7 +1044,6 @@ class XSI:
                 more_records = False
 
         return return_records
-
 
 
 class Call:
