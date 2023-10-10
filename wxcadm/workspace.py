@@ -116,6 +116,23 @@ class WorkspaceList(UserList):
                 return entry
         return None
 
+    def get(self, id: Optional[str] = None, name: Optional[str] = None):
+        """ Get a Workspace instance by ID or name
+
+        Args:
+            id (str, optional): The Workspace ID
+            name (str, optional): The Workspace name
+
+        Returns:
+            Workspace: The :class:`Workspace` for the given criteria
+
+        """
+        entry: Workspace
+        for entry in self.data:
+            if entry.id == id or (entry.name is not None and entry.name == name):
+                return entry
+        return None
+
     def create(self, location: wxcadm.Location,
                name: str,
                floor: Optional[WorkspaceLocationFloor] = None,
