@@ -563,7 +563,7 @@ class Location:
 
     @property
     def pickup_groups(self) -> Optional[PickupGroupList]:
-        """ :py:class:`PickupGroupList` list of :py:class:`PickupGroup`s for this Location """
+        """ :class:`PickupGroupList` list of :py:class:`PickupGroup` for this Location """
         log.info(f"Getting Pickup Groups for Location {self.name}")
         if self.calling_enabled is False:
             log.debug("Not a Webex Calling Location")
