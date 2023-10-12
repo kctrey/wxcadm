@@ -5,7 +5,7 @@ from collections import UserList
 
 import wxcadm
 from wxcadm import log
-from .location_features import LocationSchedule, CallParkExtension
+from .location_features import LocationSchedule, CallParkExtension, VoicePortal
 from .call_queue import CallQueueList
 from .hunt_group import HuntGroupList
 from .auto_attendant import AutoAttendantList
@@ -571,3 +571,8 @@ class Location:
         if self._pickup_groups is None:
             self._pickup_groups = PickupGroupList(self)
         return self._pickup_groups
+
+    @property
+    def voice_portal(self) -> VoicePortal:
+        """ :class:`VoicePortal` instance for this Location """
+        return VoicePortal(self)

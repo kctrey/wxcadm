@@ -9,6 +9,8 @@ What's New
 
 v4.1.1
 ------
+- Added `pyhumps` to the requirements. 'pyhumps' is the library I have elected to use to convert between the Webex camelCase to the Python snake_case. Over the next few versions, I am going to be looking at all existing classes to determine the best way to convert them.
+- There is now a superclass :class:`RealtimeClass`, which allows the subclass to call the Webex API as soon as an instance attribute is changed. The first class to utilize this functionality is the :class:`VoicePortal` class, so, for example, setting :attr:`VoicePortal.extension` to a new value will puss the new extension immediately.
 - BUG FIX: :meth:`Workspace.add_device()` did not work correctly with `model='Imagicle Customer Managed'`
 
 v4.1.0

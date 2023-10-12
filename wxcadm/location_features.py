@@ -4,7 +4,9 @@ from typing import Optional
 from dataclasses import dataclass, field
 from datetime import datetime
 
+
 import wxcadm.location
+from .realtime import RealtimeClass
 from wxcadm import log
 from .common import *
 
@@ -270,3 +272,39 @@ class CallParkExtension:
     """ The name of the Call Park Extension """
     extension: str
     """ The Call Park Extension number (as a string) """
+
+
+@dataclass
+class VoicePortal(RealtimeClass):
+    """ The class for the Voice Portal at the Location
+
+    .. note::
+
+        Unlike all other methods, changing an attribute of this class will immediately push the change to Webex. This
+        is being done to test a new API logic which performs real-time changes.
+
+    """
+    log.info("Getting Voice Portal data")
+    location: wxcadm.Location = field(repr=False)
+    """ The :class:`Location` of the Voice Portal """
+    id: str = field(repr=True, init=False, default=None)
+    """ The identifier for the Voice Portal """
+    language: str = field(repr=True, init=False, default=None)
+    """ The language to use for announcements """
+    language_code: str = field(repr=True, init=False, default=None)
+    """ Language code for voicemail group audio announcement """
+    extension: str = field(repr=True, init=False, default=None)
+    """ The Voice Portal extension """
+    phone_number: str = field(repr=True, init=False, default=None)
+    """ The Voice Portal DID """
+    first_name: str = field(repr=True, init=False, default=None)
+    """ The first name of the Voice Portal in the directory """
+    last_name: str = field(repr=True, init=False, default=None)
+    """ The last name of the Voice Portal in the directory """
+    _api_fields = []
+    _initialized = False
+
+    def __post_init__(self):
+        self.data_url: str = f'v1/telephony/config/locations/{self.location.id}/voicePortal'
+        super().__init__()
+

@@ -18,7 +18,8 @@ requires = [
     'requests-toolbelt>=0.9.1',
     'srvlookup>=2.0.0',
     'xmltodict>=0.12.0',
-    'meraki==1.27.0'
+    'meraki==1.27.0',
+    'pyhumps==3.8.0'
 ]
 
 with open('README.md', 'r', encoding='utf-8') as f:
