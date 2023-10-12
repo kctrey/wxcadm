@@ -151,12 +151,12 @@ class WorkspaceList(UserList):
             name (str): The name of the Workspace
             floor (WorkspaceLocationFloor, optional): The :class:`WorkspaceLocationFloor` where the Workspace is located
             capacity (int, optional): The capacity of the Workspace
-            type: The type of Workspace. See the developer documentation for options. Defaults to `noteSet`
-            phone_number: The Webex Calling phone number for the Workspace
-            extension: The Webex Calling extension for the Workspace
-            notes: Free-form text notes
+            type (str, optional): The type of Workspace. See the developer documentation for options. Defaults to `noteSet`
+            phone_number (str, optional): The Webex Calling phone number for the Workspace
+            extension (str, optional): The Webex Calling extension for the Workspace
+            notes (str, optional): Free-form text notes
             hotdesking (bool, optional): Whether the workspace is enabled for Hot Desking. Defaults to False.
-            supported_devices: `phones` or `collaborationDevices`. Defaults to `phones`
+            supported_devices (str, optional): `phones` or `collaborationDevices`. Defaults to `phones`
 
         Returns:
             Workspace: The :class:`Workspace` instance that is created in Control Hub
@@ -325,7 +325,7 @@ class Workspace:
             "model": model
         }
         data_needed = False  # Flag that we need to get platform data once we have a Device ID
-        if mac is None:
+        if mac is None and model != 'Imagicle Customer Managed':
             # If no MAC address is provided, just generate an activation code for the device
             try:
                 response = webex_api_call('post',
@@ -345,12 +345,14 @@ class Workspace:
             }
         else:
             payload['mac'] = mac
-            if model.upper() == "GENERIC" or model.upper() == "Generic IPPhone Customer Managed":
+            if model.upper() == "GENERIC" or model == "Generic IPPhone Customer Managed" or model == 'Imagicle ' \
+                                                                                                     'Customer Managed':
                 payload['model'] = "Generic IPPhone Customer Managed"  # Hard-code what the API expects (for now)
                 data_needed = True
                 if password is None:    # Generate a unique password
+                    password_location = self._parent.locations.webex_calling()[0].id
                     response = webex_api_call('POST',
-                                                  f'/v1/telephony/config/locations/{self.location}/actions/'
+                                                  f'/v1/telephony/config/locations/{password_location}/actions/'
                                                   f'generatePassword/invoke')
                     password = response['exampleSipPassword']
                 payload['password'] = password

@@ -7,6 +7,10 @@ What's New
 
     v4.0.0 is a significant rewrite of a lot of the methods and API calls to reduce the number of API calls needed in large Orgs with a lot of Users/Locations/Workspaces. I have tried to document all the breaking changes, but there may be some I haven't realized yet. The v4.0.0 series is changing rapidly as I find them.
 
+v4.1.1
+------
+- BUG FIX: :meth:`Workspace.add_device()` did not work correctly with `model='Imagicle Customer Managed'`
+
 v4.1.0
 ------
 - New methods :meth:`Person.remove_did()` and :meth:`Person.add_did()` to allow easy unassignment of the DID and the ability to add one, especially useful in User/Number moves between Locations because the number has to be unassigned to move.
