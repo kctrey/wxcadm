@@ -75,8 +75,8 @@ class AnnouncementList(UserList):
         Args:
             name (str): The unique name of the Announcement
             filename (str): The path to the WAV file to upload
-            location (str|Location, optional): The Location ID or Location instance to associate the uploaded
-                announcement to
+            location (str | Location, optional): The Location ID or Location instance to associate the uploaded
+                announcement to. If not present, the announcement will be uploaded at the Organization level.
 
         Returns:
             str: The ID of the created Announcement
