@@ -41,8 +41,8 @@ class LocationList(UserList):
                                   location_id=entry['id'],
                                   name=entry['name'],
                                   address=entry['address'],
-                                  time_zone=entry['timeZone'],
-                                  preferred_language=entry['preferredLanguage']))
+                                  time_zone=entry.get('timeZone', 'Unknown'),
+                                  preferred_language=entry.get('preferredLanguage', 'en_US')))
         return items
 
     def get(self, id: str = None, name: str = None, spark_id: str = None):
