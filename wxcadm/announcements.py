@@ -19,7 +19,7 @@ class AnnouncementList(UserList):
     def _get_announcements(self):
         annc_list = []
         announcements = webex_api_call("get", "v1/telephony/config/announcements", params={'locationId': 'all'})
-        for annc in announcements['announcements']:
+        for annc in announcements.get('announcements', []):
             this_annc = Announcement(parent=self.parent, **annc)
             annc_list.append(this_annc)
         return annc_list
