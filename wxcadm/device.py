@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import UserList
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .person import Person
@@ -107,7 +108,7 @@ class Device:
     @settings.setter
     def settings(self, config: dict):
         try:
-            webex_api_call('put', f'/v1/telephony/config/devices/{self.id}/settings',
+            webex_api_call('put', f'v1/telephony/config/devices/{self.id}/settings',
                                   payload=config)
         except APIError:
             logging.warning("The API call to set the device settings failed")
@@ -122,7 +123,7 @@ class Device:
 
         """
         try:
-            webex_api_call('post', f'/v1/telephony/config/devices/{self.id}/actions/applyChanges/invoke')
+            webex_api_call('post', f'v1/telephony/config/devices/{self.id}/actions/applyChanges/invoke')
         except APIError:
             return False
 
@@ -135,7 +136,6 @@ class Device:
             bool: True on success. An exception will be thrown otherwise
 
         """
-        response = webex_api_call("delete", f"/v1/devices/{self.id}")
+        response = webex_api_call("delete", f"v1/devices/{self.id}")
 
         return True
-

@@ -329,7 +329,7 @@ class Workspace:
             # If no MAC address is provided, just generate an activation code for the device
             try:
                 response = webex_api_call('post',
-                                          '/v1/devices/activationCode',
+                                          'v1/devices/activationCode',
                                           payload=payload,
                                           params={'orgId': self._parent.id})
                 log.debug(f"\t{response}")
@@ -347,16 +347,17 @@ class Workspace:
             payload['mac'] = mac
             if model.upper() == "GENERIC" or model == "Generic IPPhone Customer Managed" or model == 'Imagicle ' \
                                                                                                      'Customer Managed':
-                payload['model'] = "Generic IPPhone Customer Managed"  # Hard-code what the API expects (for now)
+                if payload['model'] != 'Imagicle Customer Managed':
+                    payload['model'] = "Generic IPPhone Customer Managed"  # Hard-code what the API expects (for now)
                 data_needed = True
                 if password is None:    # Generate a unique password
                     password_location = self._parent.locations.webex_calling()[0].id
                     response = webex_api_call('POST',
-                                                  f'/v1/telephony/config/locations/{password_location}/actions/'
+                                                  f'v1/telephony/config/locations/{password_location}/actions/'
                                                   f'generatePassword/invoke')
                     password = response['exampleSipPassword']
                 payload['password'] = password
-            response = webex_api_call('post', '/v1/devices', payload=payload)
+            response = webex_api_call('post', 'v1/devices', payload=payload)
             log.debug(f"\t{response}")
 
             # Get the ID of the device we just inserted

@@ -137,6 +137,7 @@ def webex_api_call(method: str,
             log.debug(f"__webex_api_call() completed in {end - start} seconds")
             return response['items']
         elif method.lower() == "put":
+            log.debug(f"\tPayload: {payload}")
             r = session.put(url_base + url, params=params, json=payload)
             if r.ok:
                 try:
