@@ -117,22 +117,29 @@ class LocationList(UserList):
         self.refresh()
         return self.get(id=response['id'])
 
-    def webex_calling(self, enabled: bool = True) -> list[Location]:
+    def webex_calling(self, enabled: bool = True, single: bool = False) -> Location | list[Location]:
         """ Return a list of :py:class:`Location` where Webex Calling is enabled/disabled
 
         Args:
             enabled (bool, optional): True (default) returns Webex Calling people. False returns Locations without
-                Webex Calling
+            Webex Calling
+
+            single (bool, optional): When True, returns only a single Location, which can be useful for some API calls,
+            such as the Device Password API.
 
         Returns:
             list[:py:class:`Location`]: List of :py:class:`Location` instances. An empty list is returned if none match
             the given criteria
+
+            :py:class:`Location`: When ``single=True`` is present, a single Location will be returned.
 
         """
         locations = []
         entry: Location
         for entry in self.data:
             if entry.calling_enabled is enabled:
+                if single is True:
+                    return entry
                 locations.append(entry)
         return locations
 
@@ -177,16 +184,11 @@ class Location:
         """ The preferred language at the Location"""
         self.announcement_language: str = announcement_language
         """ The language for audio announcements at the Location"""
-        self.calling_enabled: bool = False
-        """ Whether or not the Location is enabled for Webex Calling """
-        self.calling_config: Optional[dict] = None
-        """ The Webex Calling config for the Location, if enabled """
+        self._calling_enabled: Optional[bool] = None
+        self._calling_config: Optional[dict] = None
         self._pickup_groups: Optional[PickupGroupList] = None
         self._call_queues: Optional[CallQueueList] = None
         self._hunt_groups: Optional[HuntGroupList] = None
-
-        # Get the Webex Calling config and determine if the Location is Calling-enabled
-        self._get_calling_config()
 
     def __str__(self):
         return self.name
@@ -204,15 +206,33 @@ class Location:
         """
         return self.parent.workspace_locations.get(name=self.name)
 
+    @property
+    def calling_enabled(self) -> bool:
+        """ Whether the Location is enabled for Webex Calling """
+        if self._calling_enabled is None:
+            try:
+                response = webex_api_call("get", f"v1/telephony/config/locations/{self.id}")
+                if 'id' in response.keys():
+                    self._calling_enabled = True
+                    self._calling_config = response
+            except APIError:
+                self._calling_enabled = False
+                self._calling_config = None
+        return self._calling_enabled
 
-    def _get_calling_config(self):
-        try:
-            response = webex_api_call("get", f"v1/telephony/config/locations/{self.id}")
-            if 'id' in response.keys():
-                self.calling_enabled = True
-                self.calling_config = response
-        except APIError:
-            return None
+    @property
+    def calling_config(self) -> dict:
+        """ The Webex Calling configuration dict """
+        if self._calling_config is None:
+            try:
+                response = webex_api_call("get", f"v1/telephony/config/locations/{self.id}")
+                if 'id' in response.keys():
+                    self._calling_enabled = True
+                    self._calling_config = response
+            except APIError:
+                self._calling_enabled = False
+                self._calling_config = None
+        return self._calling_config
 
     @property
     def org_id(self):
@@ -239,7 +259,7 @@ class Location:
                 "address": self.address
             }
             webex_api_call("post", "v1/telephony/config/locations", payload=payload)
-            self._get_calling_config()
+            self._calling_enabled = True
         return True
 
     def delete(self):

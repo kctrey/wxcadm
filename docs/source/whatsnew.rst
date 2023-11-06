@@ -7,6 +7,13 @@ What's New
 
     v4.0.0 is a significant rewrite of a lot of the methods and API calls to reduce the number of API calls needed in large Orgs with a lot of Users/Locations/Workspaces. I have tried to document all the breaking changes, but there may be some I haven't realized yet. The v4.0.0 series is changing rapidly as I find them.
 
+v4.2.0
+------
+- Added a new ``single=True`` argument to :meth:`LocationList.webex_calling()`. There are a few API calls that need a Webex Calling Location, but it doesn't matter which one. This will return a single Location where :attr:`calling_enabled` is True.
+- When a :class:`Location` is initialized, it now will not automatically pull the Webex Calling config until it is needed. This speeds up responses when just finding a Location by Name/ID when you don't care whether it is Calling-enabled
+- Changed the :class:`Webex` class to add an `org_id` param to the initialization for admins who want to act on a specific Org. This param takes either the Base64 or UUID format Org ID and simply maps that Org from Webex.orgs[x] to the :attr:`Webex.org` attribute.
+- Changed the :class:`Webex` class to remove some of the options to pre-collect data. Data is only collected, and the API calls made, when the data is requested, so there is no need to pre-fetch data.
+
 v4.1.1
 ------
 - Added `pyhumps` to the requirements. 'pyhumps' is the library I have elected to use to convert between the Webex camelCase to the Python snake_case. Over the next few versions, I am going to be looking at all existing classes to determine the best way to convert them.

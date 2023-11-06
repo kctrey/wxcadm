@@ -15,7 +15,6 @@ class Webex:
     """The base class for working with wxcadm"""
     def __init__(self,
                  access_token: str,
-                 get_org_data: bool = True,
                  get_locations: bool = True,
                  get_xsi: bool = False,
                  get_hunt_groups: bool = False,
@@ -23,16 +22,13 @@ class Webex:
                  fast_mode: bool = False,
                  client_id: Optional[str] = None,
                  client_secret: Optional[str] = None,
-                 refresh_token: Optional[str] = None
+                 refresh_token: Optional[str] = None,
+                 org_id: Optional[str] = None
                  ) -> None:
         """Initialize a Webex instance to communicate with Webex and store data
 
         Args:
             access_token (str): The Webex API Access Token to authenticate the API calls
-            get_org_data (bool, optional): Whether to automatically fetch the data for all Orgs. Setting this to
-                False allows you to get a list of Orgs without collecting all the people and data for each. This
-                reduces processing time and API calls. Once the desired Org is identified, you can collect the
-                data directly from the :py:class:`Org` instance
             get_locations (bool, optional): Whether to get all Locations and create instances for them. Defaults to
                 True when there is only one Org. When more than one Org is present, setting this value to True has
                 no effect and the Org-level method must be used.
@@ -55,6 +51,8 @@ class Webex:
                 only useful if you are planning to call the :py:math:`refresh_token()` method to refresh the token.
             refresh_token (str, optional): The Refresh Token associated with the Access Token. This argument is needed
                 if you are planning to call the :py:meth:`refresh_token()` method to refresh the Access Token.
+            org_id (str, optional): The Org ID to use as the default Org for the session. Other Orgs are still available
+                in the :attr:`Webex.orgs` list.
 
         Returns:
             Webex: The Webex instance
@@ -86,9 +84,8 @@ class Webex:
         '''A list of the Org instances that this Webex instance can manage'''
         self.org: Optional[Org] = None
         """
-        If there is only one Org in :py:attr:`Webex.orgs`, this attribute is an alias for Webex.orgs[0]. This attribute
-        will be None if there are more than one Org accessible by the token, to prevent accidental changes to the
-        incorrect Org.
+        If there is only one Org in :py:attr:`Webex.orgs` or if the ``org_id`` param was passed, this attribute will be
+        the first or selected Org.
         """
         self._me: Optional[Type[Me]] = None
         # Get the orgs that this token can manage
@@ -104,38 +101,22 @@ class Webex:
         if len(response['items']) == 0:
             log.warning("No Orgs were returned by the Webex API")
             raise OrgError
-        # If a token can manage a lot of orgs, you might not want to create them all, because
-        # it can take some time to do all the API calls and get the data back
-        if get_org_data is False:
-            log.info("Org data collection not requested. Storing orgs.")
-            for org in response['items']:
-                log.debug(f"Creating Org instance: {org['displayName']}")
-                this_org = Org(name=org['displayName'], id=org['id'], parent=self,
-                               locations=False, xsi=False, hunt_groups=False, call_queues=False)
-                self.orgs.append(this_org)
-            return
+
+        orgs = response['items']
+        for org in orgs:
+            log.debug(f"Processing org: {org['displayName']}")
+            this_org = Org(name=org['displayName'], id=org['id'], parent=self,
+                           locations=False, xsi=False, hunt_groups=False, call_queues=False)
+            self.orgs.append(this_org)
+        if org_id is not None:
+            log.info(f"Setting Org ID {org_id} as default Org")
+            self.org = self.get_org_by_id(org_id)
+            if self.org is None:
+                log.warning("Org not found")
+                raise OrgError
         else:
-            log.info("Org initialization requested. Collecting orgs")
-            if len(response['items']) == 1:
-                for org in response['items']:
-                    log.debug(f"Processing org: {org['displayName']}")
-                    org = Org(org['displayName'], org['id'],
-                              locations=get_locations, xsi=get_xsi, parent=self,
-                              call_queues=get_call_queues, hunt_groups=get_hunt_groups)
-                    self.orgs.append(org)
-                # Most users have only one org, so to make that easier for them to work with
-                # we are also going to put the orgs[0] instance in the org attr
-                # That way both .org and .orgs[0] are the same if they only have one Org
-                log.debug(f"Only one org found. Storing as Webex.org")
-                self.org = self.orgs[0]
-            elif len(response['items']) > 1:
-                log.debug("Multiple Orgs present. Skipping data collection during Org init")
-                for org in response['items']:
-                    log.debug(f"Processing org: {org['displayName']}")
-                    this_org = Org(name=org['displayName'], id=org['id'], parent=self,
-                                   locations=False, xsi=False, hunt_groups=False, call_queues=False)
-                    self.orgs.append(this_org)
-                self.org = self.orgs[0]
+            self.org = self.orgs[0]
+
 
     @property
     def headers(self):

@@ -190,6 +190,7 @@ class WorkspaceList(UserList):
         }
         response = webex_api_call('post', 'v1/workspaces', payload=payload)
         new_workspace_id = response['id']
+        #TODO - Eventually I would like to remove the refresh() and just add the new Workspace directly
         self.parent.workspaces.refresh()
         new_workspace = self.parent.workspaces.get_by_id(new_workspace_id)
         return new_workspace
@@ -351,7 +352,7 @@ class Workspace:
                     payload['model'] = "Generic IPPhone Customer Managed"  # Hard-code what the API expects (for now)
                 data_needed = True
                 if password is None:    # Generate a unique password
-                    password_location = self._parent.locations.webex_calling()[0].id
+                    password_location = self._parent.locations.webex_calling(single=True).id
                     response = webex_api_call('POST',
                                                   f'v1/telephony/config/locations/{password_location}/actions/'
                                                   f'generatePassword/invoke')
