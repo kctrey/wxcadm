@@ -194,7 +194,7 @@ class DeviceMemberList(UserList):
             members (list, Workspace, Person): The Workspace, Person, or a list of both to add as configured lines.
 
             line_type (str, optional): Allowed values are ``'primary'`` for the primary device for a Person or Workspace
-                or ``'shared`'' for Shared Line Appearances on non-primary devices. Defaults to ``'shared'``
+                or ``'shared'`` for Shared Line Appearances on non-primary devices. Defaults to ``'shared'``
 
             line_label (str, optional): A text label for the line on the device. Note that this is only supported for
                 Cisco MPP devices. Attempting to set a line label on a Customer or Partner Managed Device will fail.
