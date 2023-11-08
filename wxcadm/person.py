@@ -70,6 +70,43 @@ class PersonList(UserList):
                 return entry
         return None
 
+    def get(self, id: Optional[str] = None, email: Optional[str] = None, name: Optional[str] = None):
+        """ Get the :py:class:`Person` (or list) that matches the provided arguments
+
+        This method was added after the :meth:`get_by_email()` and :meth:`get_by_id()` to match other List Classes.
+        When the method is called with a ``name`` argument, a list *can* be returned if more than one Person matches
+        the argument. Only the :attr:`Person.display_name` is checked for ``name`` matches. Name matches are
+        case-insensitive and must match the entire Display Name.
+
+        Args:
+            id (str, optional): The Webex ID of the Person
+            email (str, optional): The email address of the Person
+            name (str, optional): The Display Name of the Person
+
+        Returns:
+            Person: The :class:`Person` instance. None is returned if no match is found. If multiple matches are found
+                for a ``name``, a list of :class:`Person` instances is returned.
+
+        """
+        if id is not None:
+            return self.get_by_id(id)
+        if email is not None:
+            return self.get_by_email(email)
+        if name is not None:
+            entry: Person
+            matches = []
+            for entry in self.data:
+                if entry.display_name.lower() == name.lower():
+                    matches.append(entry)
+            if len(matches) == 0:
+                return None
+            elif len(matches) == 1:
+                return matches[0]
+            else:
+                return matches
+        raise KeyError("No valid search arguments provided")
+
+
     def get_by_email(self, email: str) -> Optional[Person]:
         """ Get the :py:class:`Person` with the given email address
 
