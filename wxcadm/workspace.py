@@ -190,7 +190,7 @@ class WorkspaceList(UserList):
         }
         response = webex_api_call('post', 'v1/workspaces', payload=payload)
         new_workspace_id = response['id']
-        #TODO - Eventually I would like to remove the refresh() and just add the new Workspace directly
+        # TODO - Eventually I would like to remove the refresh() and just add the new Workspace directly
         self.parent.workspaces.refresh()
         new_workspace = self.parent.workspaces.get_by_id(new_workspace_id)
         return new_workspace

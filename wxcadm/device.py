@@ -5,11 +5,12 @@ if TYPE_CHECKING:
     from .person import Person
     from .workspace import Workspace
 import logging
-
+import json
 import wxcadm
 from .common import *
 from typing import Optional, Union
 from .exceptions import *
+from wxcadm import log
 
 
 class Device:
@@ -55,6 +56,7 @@ class Device:
         """ The date and time that the device was last seen online """
         self.owner = None
         """ The :py:class:`Person` or :py:class:`Workspace` that owns the device primarily """
+        self._device_members = None
 
         if 'personId' in config.keys() and isinstance(self.parent, wxcadm.Org):
             self.owner = self.parent.get_person_by_id(config['personId'])
@@ -139,3 +141,162 @@ class Device:
         response = webex_api_call("delete", f"v1/devices/{self.id}")
 
         return True
+
+    @property
+    def members(self):
+        """ :class:`DeviceMembersList` of the configured lines (i.e. memmbers) on the device """
+        if self._device_members is None:
+            self._device_members = DeviceMemberList(self)
+        return self._device_members
+
+
+class DeviceMemberList(UserList):
+    def __init__(self, device: Device):
+        log.info(f"Collecting Device Members for {device.display_name}")
+        super().__init__()
+        log.info("Initializing DeviceMemberList")
+        self.device = device
+        self.max_line_count: Optional[int] = None
+        self.data = self._get_data()
+
+    def _get_data(self):
+        response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.id}/members")
+        log.debug(response)
+        members = []
+        for entry in response['members']:
+            members.append(DeviceMember(self.device, entry))
+        self.max_line_count = response['maxLineCount']
+        return members
+
+    def refresh(self):
+        """ Refresh the list of configured lines from Webex """
+        self.data = self._get_data()
+
+    def available(self) -> list:
+        response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.id}/availableMembers")
+        return response['members']
+
+    def add(self, members: Union[list, Workspace, Person],
+            line_type: str = 'shared',
+            line_label: Optional[str] = None,
+            hotline_enabled: bool = False,
+            hotline_destination: Optional[str] = None,
+            allow_call_decline: bool = False) -> bool:
+        """ Add a new configured line (member) to the Device
+
+        .. note::
+
+            When using the ``line_type``, ``hotline_enabled`` or ``allow_call_decline`` arguments, those will be
+            applied to all members in the list, if provided. If you need different settings for each member, call the
+            add() method multiple times with the relevant settings.
+
+        Args:
+            members (list, Workspace, Person): The Workspace, Person, or a list of both to add as configured lines.
+
+            line_type (str, optional): Allowed values are ``'primary'`` for the primary device for a Person or Workspace
+                or ``'shared`'' for Shared Line Appearances on non-primary devices. Defaults to ``'shared'``
+
+            line_label (str, optional): A text label for the line on the device. Note that this is only supported for
+                Cisco MPP devices. Attempting to set a line label on a Customer or Partner Managed Device will fail.
+
+            hotline_enabled (bool, optional): Whether Hotline should be enabled for the line. Default False.
+            hotline_destination (str, optional): The Hotline destination number. Required when ``hotline_enabled``
+                is True
+
+            allow_call_decline (bool, optional): Whether declining a call will decline across all devices or just
+                silence this device. Defaults to False, which silences this device only.
+
+        Returns:
+            bool: True on success, False otherwise.
+
+        """
+        log.info(f"Adding to Device Members to {self.device.display_name}")
+        ports_available = self.ports_available()
+        members_list_json: list = self._json_list()
+        # If a Workspace or Person was provided, put it into a list anyway
+        if isinstance(members, (wxcadm.person.Person, wxcadm.workspace.Workspace)):
+            members = [members]
+        # The following section was removed because port assignment doesn't seem to do anything, at least with MPP
+        # if port is not None:
+        #     # Check to make sure the port is available, or the whole port range
+        #     for i in range(port, port + len(members), 1):
+        #         if i not in ports_available:
+        #             log.warning(f"Requested port {port} is already in use.")
+        #             raise ValueError(f"Port {port} is already in use")
+
+        port = ports_available[0]
+        log.debug(f"Using port {port} as the starting port number")
+
+        # Set some defaults to the right values for the API call
+        line_type = 'PRIMARY' if line_type.lower() == 'primary' else 'SHARED_CALL_APPEARANCE'
+
+        for new_member in members:
+            members_list_json.append({
+                'port': port,
+                'id': new_member.id,
+                'primaryOwner': False,
+                'lineType': line_type,
+                'lineWeight': 1,
+                'hotlineEnabled': hotline_enabled,
+                'hotlineDestination': hotline_destination,
+                'allowCallDeclineEnabled': allow_call_decline,
+                'lineLabel': line_label
+            })
+
+        response = wxcadm.webex_api_call('put',
+                                         f"v1/telephony/config/devices/{self.device.id}/members",
+                                         payload={'members': members_list_json})
+        return True
+
+    def _json_list(self) -> list:
+        json_list = []
+        entry: DeviceMember
+        for entry in self.data:
+            json_list.append({
+                'port': entry.port,
+                'id': entry.id,
+                'primaryOwner': entry.primary_owner,
+                'lineType': entry.line_type,
+                'lineWeight': entry.line_weight,
+                'hotlineEnabled': entry.hotline_enabled,
+                'hotlineDestination': entry.hotline_destination,
+                'allowCallDeclineEnabled': entry.allow_call_decline,
+                'lineLabel': entry.line_label
+            })
+        return json_list
+
+    def ports_available(self) -> list:
+        """ Returns a list of available port numbers. """
+        ports_available = []
+        for port, member in self.port_map().items():
+            if member is None:
+                ports_available.append(port)
+        return ports_available
+
+    def port_map(self) -> dict:
+        """ Returns a dict mapping of all ports and their assigned :class:`DeviceMember` """
+        port_map = {}
+        for i in range(1, self.max_line_count + 1, 1):
+            port_map[i] = None
+        member: DeviceMember
+        for member in self.data:
+            log.debug("Starting loop")
+            for p in range(member.port, member.port + member.line_weight, 1):
+                log.debug(f"In Loop: {p}")
+                port_map[p] = member
+        return port_map
+
+
+class DeviceMember:
+    def __init__(self, device: Device, member_info: dict):
+        self.device: Device = device
+        self.member_type: str = member_info['memberType']
+        self.id: str = member_info['id']
+        self.port: int = member_info['port']
+        self.primary_owner: bool = member_info['primaryOwner']
+        self.line_type: str = member_info['lineType']
+        self.line_weight: int = member_info['lineWeight']
+        self.hotline_enabled: bool = member_info['hotlineEnabled']
+        self.hotline_destination: str = member_info.get('hotlineDestination', None)
+        self.allow_call_decline: bool = member_info['allowCallDeclineEnabled']
+        self.line_label: Optional[str] = member_info.get('lineLabel', None)
