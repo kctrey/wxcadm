@@ -172,7 +172,16 @@ class DeviceMemberList(UserList):
         """ Refresh the list of configured lines from Webex """
         self.data = self._get_data()
 
-    def available(self) -> list:
+    def available_members(self) -> list:
+        """ Get a list of available members, which are Workspaces and People that can be assigned to this device.
+
+        This returns a dict, which is what is returned by Webex. I am not sure what the purpose of this API call is,
+        but I see it used in Control Hub, so I am including it in case it provides some value.
+
+        Returns:
+            dict: A list of available members to add to the device
+
+        """
         response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.id}/availableMembers")
         return response['members']
 
@@ -300,3 +309,11 @@ class DeviceMember:
         self.hotline_destination: str = member_info.get('hotlineDestination', None)
         self.allow_call_decline: bool = member_info['allowCallDeclineEnabled']
         self.line_label: Optional[str] = member_info.get('lineLabel', None)
+        self.first_name: Optional[str] = member_info.get('firstName', None)
+        self.last_name: Optional[str] = member_info.get('lastName', None)
+        self.phone_number = Optional[str] = member_info.get('phoneNumber', None)
+        self.extension: Optional[str] = member_info.get('extension', None)
+        self.host_ip: Optional[str] = member_info.get('hostIP', None)
+        self.remote_ip: Optional[str] = member_info.get('remoteIP', None)
+        self.line_port: Optional[str] = member_info.get('linePort', None)
+

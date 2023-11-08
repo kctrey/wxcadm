@@ -9,6 +9,7 @@ What's New
 
 v4.2.0
 ------
+- :class:`Device` now supports :class:`DeviceMemberList` accessible via the :attr:`Device.members` property
 - Added a new ``single=True`` argument to :meth:`LocationList.webex_calling()`. There are a few API calls that need a Webex Calling Location, but it doesn't matter which one. This will return a single Location where :attr:`calling_enabled` is True.
 - When a :class:`Location` is initialized, it now will not automatically pull the Webex Calling config until it is needed. This speeds up responses when just finding a Location by Name/ID when you don't care whether it is Calling-enabled
 - Changed the :class:`Webex` class to add an `org_id` param to the initialization for admins who want to act on a specific Org. This param takes either the Base64 or UUID format Org ID and simply maps that Org from Webex.orgs[x] to the :attr:`Webex.org` attribute.
