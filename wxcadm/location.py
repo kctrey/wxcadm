@@ -122,10 +122,10 @@ class LocationList(UserList):
 
         Args:
             enabled (bool, optional): True (default) returns Webex Calling people. False returns Locations without
-            Webex Calling
+                Webex Calling
 
             single (bool, optional): When True, returns only a single Location, which can be useful for some API calls,
-            such as the Device Password API.
+                such as the Device Password API.
 
         Returns:
             list[:py:class:`Location`]: List of :py:class:`Location` instances. An empty list is returned if none match
