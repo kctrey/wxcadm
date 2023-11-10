@@ -160,7 +160,10 @@ class DeviceMemberList(UserList):
         self.data = self._get_data()
 
     def _get_data(self):
-        response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.id}/members")
+        try:
+            response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.id}/members")
+        except:
+            return []
         log.debug(response)
         members = []
         for entry in response['members']:
@@ -311,7 +314,7 @@ class DeviceMember:
         self.line_label: Optional[str] = member_info.get('lineLabel', None)
         self.first_name: Optional[str] = member_info.get('firstName', None)
         self.last_name: Optional[str] = member_info.get('lastName', None)
-        self.phone_number = Optional[str] = member_info.get('phoneNumber', None)
+        self.phone_number: Optional[str] = member_info.get('phoneNumber', None)
         self.extension: Optional[str] = member_info.get('extension', None)
         self.host_ip: Optional[str] = member_info.get('hostIP', None)
         self.remote_ip: Optional[str] = member_info.get('remoteIP', None)
