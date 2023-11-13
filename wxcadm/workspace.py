@@ -9,7 +9,7 @@ import wxcadm
 from wxcadm import log
 from .common import *
 from .exceptions import *
-from .device import Device
+from .device import Device, DeviceList
 
 
 class WorkspaceLocationList(UserList):
@@ -133,6 +133,14 @@ class WorkspaceList(UserList):
                 return entry
         return None
 
+    def webex_calling(self) -> list:
+        """ Return a list of Workspaces that have Webex Calling enabled """
+        wxc_workspaces = []
+        for entry in self.data:
+            if entry.calling.lower() == 'webexcalling':
+                wxc_workspaces.append(entry)
+        return wxc_workspaces
+
     def create(self, location: wxcadm.Location,
                name: str,
                floor: Optional[WorkspaceLocationFloor] = None,
@@ -144,7 +152,9 @@ class WorkspaceList(UserList):
                hotdesking: Optional[bool] = False,
                supported_devices: Optional[str] = 'phones'
                ):
-        """
+        """ Create a new Workspace
+
+        In order to enable Webex Calling, a Location must be provided as well as an extension, phone number, or both.
 
         Args:
             location (Location): The :class:`Location` where the Workspace will be located
@@ -161,7 +171,12 @@ class WorkspaceList(UserList):
         Returns:
             Workspace: The :class:`Workspace` instance that is created in Control Hub
 
+        Raises:
+            ValueError: Raised when an ``extension`` or ``phone_number`` is not provided.
+
         """
+        if extension is None and phone_number is None:
+            raise ValueError("Must provide extension, phone_number, or both")
         if location.workspace_location is None:
             raise KeyError(f"Location {location.name} does not have a Workspace Location")
         if hotdesking is True:
@@ -253,6 +268,7 @@ class Workspace:
         """The type of calendar connector assigned to the Workspace"""
         self.notes: Optional[str] = None
         """Notes associated with the Workspace"""
+        self._devices: Optional[DeviceList] = None
 
         if config:
             self.__process_config(config)
@@ -286,14 +302,17 @@ class Workspace:
 
     @property
     def devices(self):
-        log.info(f"Collecting devices for {self.name}")
-        devices = []
-        response = webex_api_call('get', f'/v1/telephony/config/workspaces/{self.id}/devices')
-        log.debug(f"{response}")
-        for item in response['devices']:
-            this_device = Device(self, item)
-            devices.append(this_device)
-        return devices
+        if self._devices is None:
+            self._devices = DeviceList(self)
+        return self._devices
+        # log.info(f"Collecting devices for {self.name}")
+        # devices = []
+        # response = webex_api_call('get', f'/v1/telephony/config/workspaces/{self.id}/devices')
+        # log.debug(f"{response}")
+        # for item in response['devices']:
+        #     this_device = Device(self, item)
+        #     devices.append(this_device)
+        # return devices
 
     def add_device(self, model: str, mac: Optional[str] = None, password: Optional[str] = None):
         """ Add a new device to the Workspace

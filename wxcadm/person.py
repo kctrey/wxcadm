@@ -11,7 +11,7 @@ from collections import UserList
 import wxcadm.exceptions
 from .common import *
 from .xsi import XSI
-from .device import Device
+from .device import DeviceList, Device
 from .location import Location
 
 from wxcadm import log
@@ -320,6 +320,7 @@ class Person:
         self.applications_settings = None
         """ The Application Services Settings for this Person"""
         self.executive_assistant = None
+        self._devices: Optional[DeviceList] = None
 
         # API-related attributes
         self._headers = parent._headers
@@ -415,6 +416,11 @@ class Person:
         user_id_bytes = base64.b64decode(self.id + "===")
         spark_id = user_id_bytes.decode("utf-8")
         return spark_id
+
+    @property
+    def name(self):
+        """ The name of the Person. This is an alias for :attr:`display_name` and will return the same value """
+        return self.display_name
 
     def role_names(self):
         """ Returns a list of the user's Roles, using the Role Name rather than the Role ID
@@ -536,20 +542,15 @@ class Person:
 
     @property
     def devices(self):
-        """ List of :py:class:`Device` instances for the Person
+        """ :class:`DevieList` of :py:class:`Device` instances for the Person
 
         Returns:
-            List
+            DeviceList
 
         """
-        log.info(f"Collecting devices for {self.display_name}")
-        devices = []
-        response = webex_api_call('get', f'/v1/telephony/config/people/{self.id}/devices')
-        log.debug(f"{response}")
-        for item in response['devices']:
-            this_device = Device(self, item)
-            devices.append(this_device)
-        return devices
+        if self._devices is None:
+            self._devices = DeviceList(self)
+        return self._devices
 
     def add_device(self, model: str, mac: Optional[str] = None, password: Optional[str] = None):
         """ Add a new device to the Person

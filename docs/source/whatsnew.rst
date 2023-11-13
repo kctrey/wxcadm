@@ -9,6 +9,8 @@ What's New
 
 v4.2.0
 ------
+- :meth:`DeviceList.create()` to add new devices. This will deprecate the :meth:`Person.add_device()` and :meth:`Workspace.add_device()` methods, which will remain for now.
+- New List Class :class:`DeviceList` for use with :attr:`Org.devices`, :attr:`Person.devices` and :attr:`Workspace.devices`
 - :class:`Device` now supports :class:`DeviceMemberList` accessible via the :attr:`Device.members` property
 - Added a new ``single=True`` argument to :meth:`LocationList.webex_calling()`. There are a few API calls that need a Webex Calling Location, but it doesn't matter which one. This will return a single Location where :attr:`calling_enabled` is True.
 - When a :class:`Location` is initialized, it now will not automatically pull the Webex Calling config until it is needed. This speeds up responses when just finding a Location by Name/ID when you don't care whether it is Calling-enabled

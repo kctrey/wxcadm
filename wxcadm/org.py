@@ -23,7 +23,7 @@ from .workspace import Workspace, WorkspaceList, WorkspaceLocationList
 from .call_routing import CallRouting
 from .reports import Reports
 from .calls import Calls
-from .device import Device
+from .device import DeviceList
 from .recording import ComplianceAnnouncementSettings
 from .jobs import NumberManagementJobList, UserMoveJobList
 
@@ -67,7 +67,6 @@ class Org:
         self._licenses: Optional[list] = None
         self._wxc_licenses: Optional[list] = None
         self._devices: Optional[list] = None
-        """A list of the Devce instances for this Org"""
         self._usergroups: Optional[list] = None
         self._roles: Optional[dict] = None
         self._announcements: Optional[AnnouncementList] = None
@@ -410,14 +409,13 @@ class Org:
         """All the Device instances for the Org
 
         Returns:
-            list[Device]: List of all Device instances
+            DeviceList: List of all Device instances
+
         """
-        devices = []
-        response = webex_api_call("get", "/v1/devices", params={"orgId": self.id})
-        for device in response:
-            this_device = Device(self, config=device)
-            devices.append(this_device)
-        return devices
+        if self._devices is None:
+            self._devices = DeviceList(self)
+        return self._devices
+
 
     def get_device_by_id(self, device_id: str):
         """ Get the :py:class:`Device` instance for a specific Device ID

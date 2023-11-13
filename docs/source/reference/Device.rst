@@ -1,6 +1,13 @@
 The Device classes
 ==================
 
+DeviceList
+----------
+
+.. autoclass:: wxcadm.device.DeviceList
+    :members:
+    :undoc-members:
+
 Device
 ------
 
