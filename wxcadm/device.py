@@ -243,7 +243,7 @@ class DeviceMemberList(UserList):
         line_type = 'PRIMARY' if line_type.lower() == 'primary' else 'SHARED_CALL_APPEARANCE'
 
         for new_member in members:
-            members_list_json.append({
+            member_config = {
                 'port': port,
                 'id': new_member.id,
                 'primaryOwner': False,
@@ -252,8 +252,11 @@ class DeviceMemberList(UserList):
                 'hotlineEnabled': hotline_enabled,
                 'hotlineDestination': hotline_destination,
                 'allowCallDeclineEnabled': allow_call_decline,
-                'lineLabel': line_label
-            })
+            }
+            # lineLabel cannot be passed to non-MPP devices, so don't add it unless we need to
+            if line_label is not None:
+                member_config['lineLabel'] = line_label
+            members_list_json.append(member_config)
 
         response = wxcadm.webex_api_call('put',
                                          f"v1/telephony/config/devices/{self.device.id}/members",
@@ -264,7 +267,7 @@ class DeviceMemberList(UserList):
         json_list = []
         entry: DeviceMember
         for entry in self.data:
-            json_list.append({
+            new_entry = {
                 'port': entry.port,
                 'id': entry.id,
                 'primaryOwner': entry.primary_owner,
@@ -273,8 +276,11 @@ class DeviceMemberList(UserList):
                 'hotlineEnabled': entry.hotline_enabled,
                 'hotlineDestination': entry.hotline_destination,
                 'allowCallDeclineEnabled': entry.allow_call_decline,
-                'lineLabel': entry.line_label
-            })
+            }
+            # lineLabel is weird, so we have to only add it back when it is not None
+            if entry.line_label is not None:
+                new_entry['lineLabel'] = entry.line_label
+            json_list.append(new_entry)
         return json_list
 
     def ports_available(self) -> list:
@@ -522,7 +528,8 @@ class DeviceList(UserList):
 
             results = {
                 'device_id': device_id,
-                'mac': response['mac']
+                'mac': response['mac'],
+                'device_object': Device(self.parent, config=response)
             }
 
             if data_needed is True:
@@ -536,7 +543,5 @@ class DeviceList(UserList):
                 results['sip_outbound_proxy_srv'] = f"_sips._tcp.{response['proxy']['outboundProxy']}"
 
         # Provide the Device instance in the response as well
-        self.refresh()
-        results['device_object'] = self.get(id=device_id)
         return results
 
