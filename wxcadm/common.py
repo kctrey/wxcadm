@@ -205,6 +205,7 @@ def webex_api_call(method: str,
             if r.ok:
                 try:
                     response = r.json()
+                    log.debug(f"Response: {response}")
                 except requests.exceptions.JSONDecodeError:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
