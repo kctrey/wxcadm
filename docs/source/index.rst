@@ -110,6 +110,7 @@ Properties are exposed for most commonly-used attributes.
    reference/VoiceMessage
    reference/Workspace
    reference/Device
+   reference/DECT
    reference/Webhooks
    reference/UserGroups
    reference/Announcements

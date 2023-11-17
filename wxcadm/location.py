@@ -12,6 +12,7 @@ from .auto_attendant import AutoAttendantList
 from .pickup_group import PickupGroupList
 from .common import *
 from .exceptions import APIError
+from .dect import DECTNetworkList
 
 
 class LocationList(UserList):
@@ -189,6 +190,7 @@ class Location:
         self._pickup_groups: Optional[PickupGroupList] = None
         self._call_queues: Optional[CallQueueList] = None
         self._hunt_groups: Optional[HuntGroupList] = None
+        self._dect_networks: Optional[DECTNetworkList] = None
 
     def __str__(self):
         return self.name
@@ -596,3 +598,10 @@ class Location:
     def voice_portal(self) -> VoicePortal:
         """ :class:`VoicePortal` instance for this Location """
         return VoicePortal(self)
+
+    @property
+    def dect_networks(self):
+        """ :class:`DECTNetworkList` for this Location """
+        if self._dect_networks is None:
+            self._dect_networks = DECTNetworkList(self)
+        return self._dect_networks
