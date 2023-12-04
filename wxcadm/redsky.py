@@ -575,13 +575,14 @@ class RedSky:
             return None
         return mappings
 
-    def add_bssid_discovery(self, bssid: str, location: "RedSkyLocation", description: str = ""):
+    def add_bssid_discovery(self, bssid: str, location: "RedSkyLocation", description: str = "", masking: bool = True):
         """ Add a new BSSID mapping to RedSky Horizon
 
         Args:
             bssid (str): The BSSID to add. RedSky isn't picky about formatting or case, so any MAC format should work
             location (RedSkyLocation): The RedSkyLocation instance to add the mapping to
             description (str, optional): A description of the device or any other information to store
+            masking (bool, optional): Whether to apply the default last-digit masking to the BSSID
 
         Returns:
             dict: The configuration of the mapping after processing by RedSky
@@ -591,6 +592,7 @@ class RedSky:
 
         """
         payload = {"bssid": bssid,
+                   "bssidMasking": masking,
                    "locationId": location.id,
                    "orgId": self.org_id,
                    "description": description}

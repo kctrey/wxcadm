@@ -320,7 +320,8 @@ class MerakiNetwork:
                         if simulate is False:
                             self._redsky.add_bssid_discovery(bssid=bss['bssid'].upper(),
                                                              location=ap_redsky_location,
-                                                             description=f"{bss['ssid_name']} {bss['band']}")
+                                                             description=f"{bss['ssid_name']} {bss['band']}",
+                                                             masking=False)
                         audit_results.added_bssid.append(bss['bssid'])
 
         return audit_results
