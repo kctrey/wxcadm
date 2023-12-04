@@ -264,6 +264,6 @@ class CallQueueList(UserList):
         new_queue_id = response['id']
 
         # Get the details of the new Queue
-        response = webex_api_call("get", f"v1/telephony/config/locations/{location.id}/queues/{new_queue_id}")
+        webex_api_call("get", f"v1/telephony/config/locations/{location.id}/queues/{new_queue_id}")
         self.refresh()
         return self.get(id=new_queue_id)

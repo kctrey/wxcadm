@@ -33,7 +33,7 @@ class WebexApplications(UserList):
                 org_apps.append(app)
         return org_apps
 
-    def get_app_by_name(self, name: str) -> Union[WebexApplication, list]:
+    def get_app_by_name(self, name: str) -> Union[WebexApplication, list, None]:
         """ Get a :py:class:`WebexApplication` instance by application name
 
         .. note::
@@ -190,7 +190,7 @@ class WebexApplication:
             org_id = target_org.id
         else:
             org_id = target_org
-            #TODO - Eventually we should take the Org ID in both Base64 (current) and the UUID format
+            # TODO - Eventually we should take the Org ID in both Base64 (current) and the UUID format
 
         payload = {
             'clientId': self.clientId,

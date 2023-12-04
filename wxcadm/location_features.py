@@ -307,4 +307,3 @@ class VoicePortal(RealtimeClass):
     def __post_init__(self):
         self.data_url: str = f'v1/telephony/config/locations/{self.location.id}/voicePortal'
         super().__init__()
-

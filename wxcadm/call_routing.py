@@ -76,8 +76,6 @@ class CallRouting:
         return response
 
 
-
-
 class Trunks(UserList):
     """ Trunks is a class that behaves as an array. Each item in the array is a :py:class:`Trunk` instance."""
     def __init__(self, org: wxcadm.Org):
@@ -193,7 +191,7 @@ class RouteGroups(UserList):
             this_rg = RouteGroup(self.org, **item)
             self.data.append(this_rg)
 
-    def get_route_group(self, id: Optional[str] = None, name: Optional[str] = None) -> RouteGroup:
+    def get_route_group(self, id: Optional[str] = None, name: Optional[str] = None) -> Optional[RouteGroup]:
         """ Return a RouteGroup instance with the given ID or name.
 
         Args:
@@ -278,6 +276,7 @@ class DialPlans(UserList):
             this_dp = DialPlan(self.org, **item)
             self.data.append(this_dp)
 
+
 @dataclass
 class DialPlan:
     org: wxcadm.Org = field(repr=False)
@@ -331,4 +330,3 @@ class DialPlan:
             return True
         else:
             return False
-

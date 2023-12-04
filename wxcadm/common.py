@@ -6,7 +6,9 @@ import uuid
 import time
 import requests
 import sys
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from requests_toolbelt import MultipartEncoder
 
 from .exceptions import *
 from wxcadm import log
@@ -22,10 +24,10 @@ _webex_headers = {"Authorization": "",
 
 def webex_api_call(method: str,
                    url: str,
-                   headers: dict = None,
-                   params: dict = None,
-                   payload: dict = None,
-                   retry_count: int = 3,
+                   headers: Optional[dict] = None,
+                   params: Optional[dict] = None,
+                   payload: dict | MultipartEncoder | None = None,
+                   retry_count: Optional[int] = 3,
                    domain: Optional[str] = None,
                    **kwargs):
     """ Generic handler for all Webex API requests
@@ -45,7 +47,7 @@ def webex_api_call(method: str,
         retry_count (int, optional): Controls the number of times an API call will be retried if the API returns a
             429 Too Many Requests. The wait time between retries will be based on the Retry-After header sent by Webex.
             Default is 3.
-        donmain (str, optional): The domain name to use if anything other than https://webexapis.com
+        domain (str, optional): The domain name to use if anything other than https://webexapis.com
 
     Returns:
         The return value will vary based on the API response. If a list of items are returned, a list will be returned.

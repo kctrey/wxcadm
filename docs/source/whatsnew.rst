@@ -9,6 +9,8 @@ What's New
 
 v4.2.0
 ------
+- The :meth:`MerakiNetwork.redsky_audit()` now correctly handles BSSID masking by setting the "bssidMasking" to False
+- BUG FIX: In the event that an Org with no People is accessed, the :attr:`Org.people` will no longer throw a KeyError
 - New List Class :class:`DECTNetworkList` accessed with :attr:`Location.dect_networks`. For this release, only the creation of DECT Networks, Base Stations, and Handsets is supported.
 - :meth:`DeviceList.create()` to add new devices. This will deprecate the :meth:`Person.add_device()` and :meth:`Workspace.add_device()` methods, which will remain for now.
 - New List Class :class:`DeviceList` for use with :attr:`Org.devices`, :attr:`Person.devices` and :attr:`Workspace.devices`

@@ -5,7 +5,6 @@ if TYPE_CHECKING:
     from .person import Person
     from .workspace import Workspace
 import logging
-import json
 import wxcadm
 from .common import *
 from typing import Optional, Union
@@ -90,7 +89,7 @@ class Device:
             "path": "tags",
             "value": tag
         }
-        response = webex_api_call("patch", f"/v1/devices/{self.id}", payload=payload)
+        webex_api_call("patch", f"/v1/devices/{self.id}", payload=payload)
 
         return True
 
@@ -138,13 +137,12 @@ class Device:
             bool: True on success. An exception will be thrown otherwise
 
         """
-        response = webex_api_call("delete", f"v1/devices/{self.id}")
-
+        webex_api_call("delete", f"v1/devices/{self.id}")
         return True
 
     @property
     def members(self):
-        """ :class:`DeviceMembersList` of the configured lines (i.e. memmbers) on the device """
+        """ :class:`DeviceMembersList` of the configured lines (i.e. members) on the device """
         if self._device_members is None:
             self._device_members = DeviceMemberList(self)
         return self._device_members
@@ -258,9 +256,9 @@ class DeviceMemberList(UserList):
                 member_config['lineLabel'] = line_label
             members_list_json.append(member_config)
 
-        response = wxcadm.webex_api_call('put',
-                                         f"v1/telephony/config/devices/{self.device.id}/members",
-                                         payload={'members': members_list_json})
+        wxcadm.webex_api_call('put',
+                              f"v1/telephony/config/devices/{self.device.id}/members",
+                              payload={'members': members_list_json})
         return True
 
     def _json_list(self) -> list:
@@ -544,4 +542,3 @@ class DeviceList(UserList):
 
         # Provide the Device instance in the response as well
         return results
-

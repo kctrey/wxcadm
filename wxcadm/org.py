@@ -33,10 +33,8 @@ class Org:
                  name: str,
                  id: str,
                  parent: wxcadm.Webex = None,
-                 locations: bool = False,
-                 hunt_groups: bool = False,
-                 call_queues: bool = False,
                  xsi: bool = False,
+                 **kwargs
                  ):
         """Initialize an Org instance
 
@@ -44,9 +42,6 @@ class Org:
             name (str): The Organization name
             id (str): The Webex ID of the Organization
             parent (Webex, optional): The parent Webex instance that owns this Org.
-            locations (bool, optional): Whether to get all Locations for the Org. Default True.
-            hunt_groups (bool, optional): Whether to get all Hunt Groups for the Org. Default False.
-            call_queues (bool, optional): Whether to get all Call Queues for the Org. Default False.
             xsi (bool, optional): Whether to get the XSI Endpoints for the Org. Default False.
 
         Returns:
@@ -80,7 +75,6 @@ class Org:
         self._compliance_announcement_settings: Optional[ComplianceAnnouncementSettings] = None
         self._number_management_jobs = None
         self._user_move_jobs = None
-
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -185,7 +179,6 @@ class Org:
             self._user_move_jobs = UserMoveJobList(self)
         return self._user_move_jobs
 
-
     def __get_licenses(self):
         """Gets all licenses for the Organization
 
@@ -271,7 +264,6 @@ class Org:
     def calls(self):
         """ The :py:class:`Calls` instance for this Org"""
         return Calls(parent=self)
-
 
     def get_paging_group(self, id: str = None, name: str = None, spark_id: str = None):
         """ Get the PagingGroup instance associated with a given ID, Name, or Spark ID
@@ -403,7 +395,6 @@ class Org:
                     workspaces.append(workspace)
         return workspaces
 
-
     @property
     def devices(self):
         """All the Device instances for the Org
@@ -415,7 +406,6 @@ class Org:
         if self._devices is None:
             self._devices = DeviceList(self)
         return self._devices
-
 
     def get_device_by_id(self, device_id: str):
         """ Get the :py:class:`Device` instance for a specific Device ID
@@ -451,8 +441,6 @@ class Org:
             if location.name == name:
                 return location
         return None
-
-
 
     @property
     def people(self):

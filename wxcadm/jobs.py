@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .person import Person
 from collections import UserList
 
 import wxcadm.org
@@ -396,5 +398,3 @@ class UserMoveValidationResults:
             if message['severity'].lower() == 'error':
                 return False
         return True
-
-

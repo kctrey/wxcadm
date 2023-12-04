@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    pass
 from dataclasses import dataclass, field
 from collections import UserList
 from requests_toolbelt import MultipartEncoder
@@ -8,6 +11,7 @@ from requests_toolbelt import MultipartEncoder
 import wxcadm.org
 from wxcadm import log
 from .common import *
+
 
 class AnnouncementList(UserList):
     def __init__(self, parent: wxcadm.Org):
@@ -69,7 +73,7 @@ class AnnouncementList(UserList):
         response = webex_api_call("get", "v1/telephony/config/announcements/usage", params={"orgId": self.parent.id})
         return response
 
-    def upload(self, name: str, filename: str, location = None):
+    def upload(self, name: str, filename: str, location: str | wxcadm.Location = None):
         """ Upload a new announcement file
 
         Args:
@@ -119,6 +123,7 @@ class AnnouncementList(UserList):
         self._refresh_announcements()
         return response['id']
 
+
 @dataclass
 class Announcement:
     parent: wxcadm.Org = field(repr=False)
@@ -140,6 +145,8 @@ class Announcement:
             url = f"v1/telephony/config/announcements/{self.id}"
         elif self.level.lower() == "location":
             url = f"v1/telephony/config/locations/{self.location['id']}/announcements/{self.id}"
+        else:
+            raise ValueError("Cannot determine Announcement level")
 
         response = webex_api_call("get", url)
         if response.get('featureReferences', None) is not None:
@@ -148,7 +155,7 @@ class Announcement:
                     "id": usage['id'],
                     "name": usage['name'],
                     "type": usage['type'],
-                    "location": self.parent.get_location(id=usage['locationId']),
+                    "location": self.parent.locations.get(id=usage['locationId']),
                 }
                 if usage['type'] == 'Call Queue':
                     cq = self.parent.get_call_queue_by_id(usage['id'])
@@ -187,6 +194,8 @@ class Announcement:
             url = f"v1/telephony/config/announcements/{self.id}"
         elif self.level.lower() == "location":
             url = f"v1/telephony/config/locations/{self.location['id']}/announcements/{self.id}"
+        else:
+            raise ValueError("Cannot determine Announcement level")
 
         response = webex_api_call("put_upload", url, payload=encoder)
 
@@ -212,6 +221,8 @@ class Announcement:
             url = f"v1/telephony/config/announcements/{self.id}"
         elif self.level.lower() == "location":
             url = f"v1/telephony/config/locations/{self.location['id']}/announcements/{self.id}"
+        else:
+            raise ValueError("Cannot determine Announcement level")
 
         response = webex_api_call("delete", url)
         log.debug(f"Response: {response}")

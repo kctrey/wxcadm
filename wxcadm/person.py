@@ -340,7 +340,7 @@ class Person:
             data (dict): A dictionary of the raw data returned by the `v1/people` API call
 
         """
-        self.email = data['emails'][0]
+        self.email = data.get('emails', [''])[0]
         self.extension = data.get("extension", "")
         self.location = data.get("locationId", "")
         self.display_name = data.get("displayName", "")

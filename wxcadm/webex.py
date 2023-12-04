@@ -105,8 +105,7 @@ class Webex:
         orgs = response['items']
         for org in orgs:
             log.debug(f"Processing org: {org['displayName']}")
-            this_org = Org(name=org['displayName'], id=org['id'], parent=self,
-                           locations=False, xsi=False, hunt_groups=False, call_queues=False)
+            this_org = Org(name=org['displayName'], id=org['id'], parent=self, xsi=False)
             self.orgs.append(this_org)
         if org_id is not None:
             log.info(f"Setting Org ID {org_id} as default Org")

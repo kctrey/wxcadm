@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import requests
 from collections import UserList
-from typing import Optional, Union
-
+from typing import Optional, Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from wxcadm import Org
 import wxcadm.location
 import wxcadm
 from wxcadm import log
 from .common import *
 from .exceptions import *
-from .device import Device, DeviceList
+from .device import DeviceList
 
 
 class WorkspaceLocationList(UserList):

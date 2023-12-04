@@ -79,7 +79,6 @@ class WholesaleCustomer:
         """ The decoded "Spark ID" of the Org ID"""
         return decode_spark_id(self.id)
 
-
     @property
     def locations(self):
         locations = []
@@ -128,13 +127,13 @@ class WholesaleCustomer:
         return None
 
     def add_subscriber(self,
-                      email: str,
-                      package: str,
-                      first_name: str,
-                      last_name: str,
-                      phone_number: str,
-                      extension: str,
-                      location: Location):
+                       email: str,
+                       package: str,
+                       first_name: str,
+                       last_name: str,
+                       phone_number: str,
+                       extension: str,
+                       location: Location):
         payload = {
             'customerId': self.id,
             'email': email,

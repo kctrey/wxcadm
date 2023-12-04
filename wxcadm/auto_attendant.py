@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Optional, Union
-from dataclasses import dataclass, field
-from datetime import datetime
+from typing import Optional, Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from wxcadm import Org, Location
+from dataclasses import dataclass
 from collections import UserList
 
 import wxcadm.location
@@ -11,7 +12,7 @@ from .common import *
 
 
 class AutoAttendantList(UserList):
-    def __init__(self, parent: Union["Org", "Location"]):
+    def __init__(self, parent: Union[Org, Location]):
         super().__init__()
         log.debug("Initializing AutoAttendantLisa instance")
         self.parent: Union["Org", "Location"] = parent
@@ -159,7 +160,7 @@ class AutoAttendant:
                                          f"/callForwarding")
         return response
 
-    def copy_menu_from_template(self, source: object, menu_type: str = "both"):
+    def copy_menu_from_template(self, source: AutoAttendant, menu_type: str = "both"):
         """ Copy the Business Hours, After Hours, or both menus from another :class:`AutoAttendant` instance.
 
         Note that this copy functionality will not work (yet) if the source Auto Attendant uses a CUSTOM announcement,
