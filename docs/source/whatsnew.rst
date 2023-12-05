@@ -7,6 +7,10 @@ What's New
 
     v4.0.0 is a significant rewrite of a lot of the methods and API calls to reduce the number of API calls needed in large Orgs with a lot of Users/Locations/Workspaces. I have tried to document all the breaking changes, but there may be some I haven't realized yet. The v4.0.0 series is changing rapidly as I find them.
 
+v4.2.1
+------
+- BUG FIX: All of the :class:`RedSky` methods had a problem with API pagination and had to be reworked
+
 v4.2.0
 ------
 - The :meth:`MerakiNetwork.redsky_audit()` now correctly handles BSSID masking by setting the "bssidMasking" to False
