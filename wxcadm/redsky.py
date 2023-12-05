@@ -207,6 +207,7 @@ class RedSky:
         """All the HELD devices known to RedSky"""
         more_data = True
         page = 1
+        held_devices = []
         while more_data is True:
             r = requests.get(f"https://api.wxc.e911cloud.com/admin-service/held/org/{self.org_id}",
                              headers=self._headers,
@@ -215,15 +216,14 @@ class RedSky:
                 self._token_refresh()
                 continue
             if r.status_code == 200:
-                self._held_devices = []
                 response = r.json()
                 for device in response:
-                    self._held_devices.append(device)
+                    held_devices.append(device)
             else:
                 raise APIError(f"Something went wrong getting the HELD devices {r.text}")
             more_data = page < int(r.headers.get('X-Pagination-Count', 1))
             page += 1
-        return self._held_devices
+        return held_devices
 
     def phones_without_location(self):
         """Get a list of phone (HELD) devices that don't have a RedSkyLocation associated
