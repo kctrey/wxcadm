@@ -80,6 +80,28 @@ class Reports:
         self.created_reports.append(report_id)
         return report_id
 
+    def delete_report(self, report_id: str) -> bool:
+        """ Delete a specified report
+
+        Args:
+            report_id (str): The ID of the report to delete
+
+        Returns:
+            bool: True if deletion was successful, False otherwise
+        """
+        log.info(f'Deleting report with ID {report_id}')
+        try:
+            response = webex_api_call('delete', f'/v1/reports/{report_id}')
+            if response.status_code == 204:
+                log.info(f'Successfully deleted report with ID: {report_id}')
+                return True
+            else:
+                log.error(f'Failed to delete report with ID: {report_id}, Status Code: {response.status_code}')
+                return False
+        except Exception as e:
+            log.error(f'Exception occurred while deleting report: {e}')
+            return False
+
     @staticmethod
     def report_status(report_id: str):
         """ The text status of the provided report_id
