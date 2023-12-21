@@ -69,6 +69,9 @@ class RedSky:
         while more_data is True:
             r = requests.get(f"https://api.wxc.e911cloud.com/geography-service/locations/parent/{self.org_id}",
                              headers=self._headers, params={'page': page})
+            if r.status_code == 401:
+                self._token_refresh()
+                continue
             response['corporate'].extend(r.json())
             for user in self.users:
                 response['personal'].extend(user.user_locations)
@@ -279,7 +282,11 @@ class RedSky:
                 for item in response:
                     mappings.append(item)
             else:
-                raise APIError(f"There was a problem getting MAC mapping: {r.text}")
+                if r.status_code == 401:
+                    self._token_refresh()
+                    continue
+                else:
+                    raise APIError(f"There was a problem getting MAC mapping: {r.text}")
             more_data = page < int(r.headers.get('X-Pagination-Count', 1))
             page += 1
 
@@ -403,7 +410,11 @@ class RedSky:
                         port_page += 1
                     mappings.append(item)
             else:
-                raise APIError(f"There was a problem getting Chassis mapping: {r.text}")
+                if r.status_code == 401:
+                    self._token_refresh()
+                    continue
+                else:
+                    raise APIError(f"There was a problem getting Chassis mapping: {r.text}")
             more_data = page < int(r.headers.get('X-Pagination-Count', 1))
             page += 1
         return mappings
@@ -590,7 +601,11 @@ class RedSky:
                 for item in response:
                     mappings.append(item)
             else:
-                raise APIError(f"There was a problem getting BSSID mapping: {r.text}")
+                if r.status_code == 401:
+                    self._token_refresh()
+                    continue
+                else:
+                    raise APIError(f"There was a problem getting BSSID mapping: {r.text}")
             more_data = page < int(r.headers.get('X-Pagination-Count', 1))
             page += 1
 
@@ -729,7 +744,11 @@ class RedSky:
                 for item in response:
                     mappings.append(item)
             else:
-                raise APIError(f"There was a problem getting IP Range mapping: {r.text}")
+                if r.status_code == 401:
+                    self._token_refresh()
+                    continue
+                else:
+                    raise APIError(f"There was a problem getting IP Range mapping: {r.text}")
             more_data = page < int(r.headers.get('X-Pagination-Count', 1))
             page += 1
 
