@@ -55,5 +55,27 @@ class TestDevice(unittest.TestCase):
         self.assertIsInstance(members, wxcadm.device.DeviceMemberList)
 
 
+class TestSupportedDevices(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        load_dotenv()
+        cls.access_token = os.getenv("WEBEX_ACCESS_TOKEN")
+        if not cls.access_token:
+            print("No WEBEX_ACCESS_TOKEN found. Cannot continue.")
+            exit(1)
+
+    def setUp(self) -> None:
+        self.webex = wxcadm.Webex(self.access_token)
+
+    def test_supported_device_list(self):
+        device_list = self.webex.org.devices.supported_devices
+        self.assertIsInstance(device_list, wxcadm.device.SupportedDeviceList)
+        with self.subTest("Devices in SupportedDeviceList"):
+            self.assertGreater(len(device_list), 0)
+        with self.subTest("SupportedDevice typing"):
+            device = choice(device_list)
+            self.assertIsInstance(device, wxcadm.device.SupportedDevice)
+
+
 if __name__ == '__main__':
     unittest.main()

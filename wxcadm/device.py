@@ -1,15 +1,19 @@
 from __future__ import annotations
 from collections import UserList
 from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from .person import Person
-    from .workspace import Workspace
+import json
+from dataclasses import dataclass
+from dataclasses_json import dataclass_json, LetterCase
 import logging
 import wxcadm
 from .common import *
 from typing import Optional, Union
 from .exceptions import *
 from wxcadm import log
+from .virtual_line import VirtualLine
+if TYPE_CHECKING:
+    from .person import Person
+    from .workspace import Workspace
 
 
 class Device:
@@ -56,9 +60,13 @@ class Device:
         self.owner = None
         """ The :py:class:`Person` or :py:class:`Workspace` that owns the device primarily """
         self._device_members = None
+        log.debug(f"Processing config: {config}")
 
         if 'personId' in config.keys() and isinstance(self.parent, wxcadm.Org):
+            log.debug(f"There is a personId value of {config['personId']}")
             self.owner = self.parent.get_person_by_id(config['personId'])
+            if self.owner is None:
+                self.owner = config['personId']
         elif 'workspaceId' in config.keys() and isinstance(self.parent, wxcadm.Org):
             self.owner = self.parent.workspaces.get_by_id(config['workspaceId'])
 
@@ -186,7 +194,7 @@ class DeviceMemberList(UserList):
         response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.id}/availableMembers")
         return response['members']
 
-    def add(self, members: Union[list, Workspace, Person],
+    def add(self, members: Union[list, Workspace, Person, VirtualLine],
             line_type: str = 'shared',
             line_label: Optional[str] = None,
             hotline_enabled: bool = False,
@@ -201,7 +209,8 @@ class DeviceMemberList(UserList):
             add() method multiple times with the relevant settings.
 
         Args:
-            members (list, Workspace, Person): The Workspace, Person, or a list of both to add as configured lines.
+            members (list, Workspace, Person, VirtualLine): The Workspace, Person, VirtualLine or a list of those to
+                add as configured lines.
 
             line_type (str, optional): Allowed values are ``'primary'`` for the primary device for a Person or Workspace
                 or ``'shared'`` for Shared Line Appearances on non-primary devices. Defaults to ``'shared'``
@@ -224,7 +233,7 @@ class DeviceMemberList(UserList):
         ports_available = self.ports_available()
         members_list_json: list = self._json_list()
         # If a Workspace or Person was provided, put it into a list anyway
-        if isinstance(members, (wxcadm.person.Person, wxcadm.workspace.Workspace)):
+        if isinstance(members, (wxcadm.person.Person, wxcadm.workspace.Workspace, wxcadm.virtual_line.VirtualLine)):
             members = [members]
         # The following section was removed because port assignment doesn't seem to do anything, at least with MPP
         # if port is not None:
@@ -336,6 +345,7 @@ class DeviceList(UserList):
         log.debug("Initializing DeviceList")
         self.parent: wxcadm.Org | wxcadm.person.Person | wxcadm.workspace.Workspace | wxcadm.Location = parent
         self.data: list = self._get_data()
+        self._supported_devices: Optional[SupportedDeviceList] = None
 
     def _get_data(self) -> list:
         log.debug("_get_data() started")
@@ -378,7 +388,11 @@ class DeviceList(UserList):
         self.data = self._get_data()
         return True
 
-    def get(self, id: Optional[str] = None, name: Optional[str] = None, spark_id: Optional[str] = None):
+    def get(self,
+            id: Optional[str] = None,
+            name: Optional[str] = None,
+            spark_id: Optional[str] = None,
+            connection_status: Optional[str] = None):
         """ Get the instance associated with a given ID, Name, or Spark ID
 
         Only one parameter should be supplied in normal cases. If multiple arguments are provided, the Locations will be
@@ -389,15 +403,16 @@ class DeviceList(UserList):
             id (str, optional): The Call Queue ID to find
             name (str, optional): The Call Queue Name to find. Case-insensitive.
             spark_id (str, optional): The Spark ID to find
+            connection_status(str, optional): The connection status of the device (e.g. "disconnected", "connected")
 
         Returns:
-            CallQueue: The CallQueue instance correlating to the given search argument.
+            Device: The Device instance, or list of instances correlating to the given search argument.
 
         Raises:
             ValueError: Raised when the method is called with no arguments
 
         """
-        if id is None and name is None and spark_id is None:
+        if id is None and name is None and spark_id is None and connection_status is None:
             raise ValueError("A search argument must be provided")
         if id is not None:
             for item in self.data:
@@ -411,6 +426,12 @@ class DeviceList(UserList):
             for item in self.data:
                 if item.spark_id == spark_id:
                     return item
+        if connection_status is not None:
+            item_list: list = []
+            for item in self.data:
+                if item.connection_status.lower() == connection_status.lower():
+                    item_list.append(item)
+            return item_list
         return None
 
     def create(self, model: str,
@@ -542,3 +563,62 @@ class DeviceList(UserList):
 
         # Provide the Device instance in the response as well
         return results
+
+    @property
+    def supported_devices(self):
+        """ The list of supported devices for the Org along with the capabilities of each """
+        if self._supported_devices is None:
+            self._supported_devices = SupportedDeviceList()
+        return self._supported_devices
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class SupportedDevice:
+    model: str
+    display_name: str
+    type: str
+    manufacturer: str
+    managed_by: str
+    supported_for: list
+    onboarding_method: list
+    allow_configure_layout_enabled: bool
+    number_of_line_ports: bool
+    kem_support_enabled: bool
+    upgrade_channel_enabled: bool
+    customized_behaviors_enabled: bool
+    allow_configure_ports_enabled: bool
+    customizable_line_label_enabled: bool
+    kem_module_count: Optional[int] = None
+    kem_module_type: Optional[list] = None
+    default_upgrade_channel: Optional[str] = None
+    additional_primary_line_appearances_enabled: Optional[bool] = None
+    basic_emergency_nomadic_enabled: Optional[bool] = None
+
+
+class SupportedDeviceList(UserList):
+    _endpoint = "v1/telephony/config/supportedDevices"
+    _endpoint_items_key = 'devices'
+    _item_endpoint = None
+    _item_class = SupportedDevice
+
+    def __init__(self):
+        super().__init__()
+        log.info('Collecting SupportedDeviceList')
+        self.data: list = self._get_data()
+
+    def _get_data(self) -> list:
+        log.debug('_get_data() started')
+        response = webex_api_call('get', self._endpoint)
+        items = []
+        if self._endpoint_items_key is not None:
+            log.info(f"Found {len(response[self._endpoint_items_key])} items")
+            for entry in response[self._endpoint_items_key]:
+                items.append(self._item_class.from_dict(entry))
+        else:
+            log.info(f"Found {len(response)} items")
+            for entry in response:
+                items.append(self._item_class(**entry))
+        return items
+
+

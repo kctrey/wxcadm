@@ -26,6 +26,7 @@ from .calls import Calls
 from .device import DeviceList
 from .recording import ComplianceAnnouncementSettings
 from .jobs import NumberManagementJobList, UserMoveJobList
+from .virtual_line import VirtualLineList
 
 
 class Org:
@@ -75,6 +76,7 @@ class Org:
         self._compliance_announcement_settings: Optional[ComplianceAnnouncementSettings] = None
         self._number_management_jobs = None
         self._user_move_jobs = None
+        self._virtual_lines = None
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -251,6 +253,13 @@ class Org:
     def applications(self):
         """ The :py:class:`WebexApplications` list with the :py:class:`WebexApplication` instances for this Org """
         return WebexApplications(parent=self)
+
+    @property
+    def virtual_lines(self):
+        """ The :class:`VirtualLineList` list with the :class:`VirtualLine` instances for this Org """
+        if self._virtual_lines is None:
+            self._virtual_lines = VirtualLineList(self)
+        return self._virtual_lines
 
     @property
     def announcements(self):
