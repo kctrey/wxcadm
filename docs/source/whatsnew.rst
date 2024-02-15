@@ -9,6 +9,8 @@ What's New
 
 v4.2.2
 ------
+- The :class:`Device` class now has a :attr:`Device.workspace_location_id` property to determine the primary :class:`WorkspaceLocation` of the device. Note that at this time, the ID returned by the Webex API does not exactly match the `workspaceLocationId` value of the :class:`WorkspaceLocation` so you have to decode the Spark ID with :meth:`decode_spark_id` and use the UUID to match.
+- Virtual Lines are now supported with the :class:`VirtualLineList` and :class:`VirtualLine` classes, accessed with the :attr:`Org.virtual_lines` property
 - New :meth:`Reports.delete_report()` to allow reports to be deleted.
 
 v4.2.1

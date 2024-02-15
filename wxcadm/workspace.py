@@ -512,6 +512,19 @@ class WorkspaceLocation:
         self.longitude = config.get("longitude", "")
         self.notes = config.get("notes", "")
 
+    def get_uuid(self):
+        """ Returns just the UUID portion of the `id` property.
+
+        .. versionadded:: 4.2.2
+            Added because the Base64 ID does not match the :attr:`Device.workspace_location_id`. The assumption is
+            that this will be resolved in the future, but needs to be supported until then.
+
+        Returns:
+            str: The UUID component of the :attr:`id`
+
+        """
+        return decode_spark_id(self.id).split("/")[-1]
+
 
 class WorkspaceLocationFloor:
     def __init__(self, config: dict):

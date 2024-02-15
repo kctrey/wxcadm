@@ -121,7 +121,7 @@ class DECTNetworkList(UserList):
         self.data = []
         self.location: wxcadm.Location = location
         # Note that there is no GET for exiting Networks, Bases or Handsets, so this is really a useless
-        # list until they get that figured out.
+        # list until they get that figured out. Any device created with .create() will get added, though.
 
     def create(self,
                name: str,
@@ -169,4 +169,6 @@ class DECTNetworkList(UserList):
 
         response = webex_api_call('post', f"v1/telephony/config/locations/{self.location.id}/dectNetworks",
                                   payload=payload)
-        return DECTNetwork(location=self.location, id=response['id'])
+        new_network = DECTNetwork(location=self.location, id=response['id'])
+        self.data.append(new_network)
+        return new_network

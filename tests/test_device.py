@@ -49,10 +49,17 @@ class TestDevice(unittest.TestCase):
         self.random_location = choice(self.webex.org.locations.webex_calling())
 
     def test_device_members(self):
-        device = choice(self.webex.org.devices)
+        device = choice(self.webex.org.devices.webex_calling())
         self.assertIsInstance(device, wxcadm.device.Device)
         members = device.members
         self.assertIsInstance(members, wxcadm.device.DeviceMemberList)
+
+    def test_device_workspace_location_id(self):
+        device = choice(self.webex.org.devices.webex_calling())
+        self.assertIsNotNone(device.workspace_location_id)
+        # The following test ensures that the .workspace_location_id can be decoded and matched to the WorkspaceLocation
+
+
 
 
 class TestSupportedDevices(unittest.TestCase):

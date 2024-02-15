@@ -59,11 +59,12 @@ class Device:
         """ The date and time that the device was last seen online """
         self.owner = None
         """ The :py:class:`Person` or :py:class:`Workspace` that owns the device primarily """
+        self.workspace_location_id: Optional[str] = config.get('workspaceLocationId', None)
+        """ The WorkspaceLocation ID of the device, which indicates the WorkspaceLocation of the primary
+            Person or Workspace """
         self._device_members = None
-        log.debug(f"Processing config: {config}")
 
         if 'personId' in config.keys() and isinstance(self.parent, wxcadm.Org):
-            log.debug(f"There is a personId value of {config['personId']}")
             self.owner = self.parent.get_person_by_id(config['personId'])
             if self.owner is None:
                 self.owner = config['personId']
@@ -154,6 +155,19 @@ class Device:
         if self._device_members is None:
             self._device_members = DeviceMemberList(self)
         return self._device_members
+
+    def get_workspace_location_uuid(self):
+        """ Returns just the UUID portion of the `workspace_location_id` property.
+
+        .. versionadded:: 4.2.2
+            Added because the Base64 ID does not match the ID values for :class:`WorkspaceLocation`. The assumption is
+            that this will be resolved in the future, but needs to be supported until then
+
+        Returns:
+            str: The UUID component of the :attr:`workspace_location_id`
+
+        """
+        return decode_spark_id(self.workspace_location_id).split("/")[-1]
 
 
 class DeviceMemberList(UserList):
@@ -570,6 +584,27 @@ class DeviceList(UserList):
         if self._supported_devices is None:
             self._supported_devices = SupportedDeviceList()
         return self._supported_devices
+
+    def webex_calling(self, enabled = True) -> list:
+        """ Returns a list of Device instances where Webex Calling is enabled or disabled.
+
+        Args:
+            enabled(bool, optional): Whether Webex Calling is enabled on the Device. Defaults to True.
+
+        Returns:
+            list: List of :class:`Device` instances matching the requested argument.
+
+        """
+        device_list = []
+        device: Device
+        for device in self.data:
+            if device.workspace_location_id is not None:
+                wxc_device = True
+            else:
+                wxc_device = False
+            if wxc_device is enabled:
+                device_list.append(device)
+        return device_list
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
