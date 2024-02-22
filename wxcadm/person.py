@@ -106,7 +106,6 @@ class PersonList(UserList):
                 return matches
         raise KeyError("No valid search arguments provided")
 
-
     def get_by_email(self, email: str) -> Optional[Person]:
         """ Get the :py:class:`Person` with the given email address
 
@@ -478,32 +477,23 @@ class Person:
     def reset_vm_pin(self, pin: str = None):
         """Resets the user's voicemail PIN.
 
-        If no PIN is provided, the reset command is sent, and assumes that
-        a default PIN exists for the organization. Because of the operation of Webex, if a PIN is provided, the
-        method will temporarily set the Org-wide PIN to the chosen PIN, then does the reset, then un-sets the
-        Org default in Control Hub. ***This can cause unintended consequences if a PIN is provided and the Org
-        already has a default PIN** because that PIN will be un-set at the end of this method.
+        If no PIN is provided, the reset command is sent and the temporary PIN will be provided to the user via email.
 
         Args:
-            pin (str): The new temporary PIN to set for the Person
+            pin (str, optional): The new temporary PIN to set for the Person
 
         Returns:
-            bool: True on success, False otherwise
-
-        .. warning::
-
-            This method requires the CP-API access scope if you are going to specify the PIN. A "reset only" does not
-            require any special access.
+            bool: True on success, False otherwise.
 
         """
         log.info(f"Resetting VM PIN for {self.email}")
         if pin is not None:
-            self._parent._cpapi.reset_vm_pin(self, pin=pin)
-            return True
+            webex_api_call('put', f'v1/telephony/config/people/{self.id}/voicemail/passcode',
+                           payload={'passcode': pin})
         else:
-            response = webex_api_call("post", f"v1/people/{self.id}/features/voicemail/actions/resetPin/invoke",
-                                      params={"orgId": self._parent.id})
-            return response
+            webex_api_call("post", f"v1/people/{self.id}/features/voicemail/actions/resetPin/invoke",
+                           params={"orgId": self._parent.id})
+        return True
 
     def get_full_config(self):
         """
