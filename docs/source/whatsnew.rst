@@ -5,10 +5,12 @@ What's New
 
 .. note::
 
-    v4.0.0 is a significant rewrite of a lot of the methods and API calls to reduce the number of API calls needed in large Orgs with a lot of Users/Locations/Workspaces. I have tried to document all the breaking changes, but there may be some I haven't realized yet. The v4.0.0 series is changing rapidly as I find them.
+    v4.0.0 is a significant rewrite of a lot of the methods and API calls to reduce the number of API calls needed in large Orgs with a many Users/Locations/Workspaces. I have tried to document all the breaking changes, but there may be some I haven't realized yet. The v4.0.0 series is changing rapidly as I find them.
 
 v4.2.2
 ------
+- New method :meth:`LocationSchedule.clone()` to allow schedules to be cloned within a Location and across Locations
+- :meth:`Person.reset_vm_pin()` previously used the CP-API permissions. A developer API was released that allows the method to work with "normal" scopes.
 - The :class:`Device` class now has a :attr:`Device.workspace_location_id` property to determine the primary :class:`WorkspaceLocation` of the device. Note that at this time, the ID returned by the Webex API does not exactly match the `workspaceLocationId` value of the :class:`WorkspaceLocation` so you have to decode the Spark ID with :meth:`decode_spark_id` and use the UUID to match.
 - Virtual Lines are now supported with the :class:`VirtualLineList` and :class:`VirtualLine` classes, accessed with the :attr:`Org.virtual_lines` property
 - New :meth:`Reports.delete_report()` to allow reports to be deleted.

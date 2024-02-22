@@ -257,6 +257,36 @@ class LocationSchedule:
                 return e
         return None
 
+    def clone(self, target_location: Optional[wxcadm.Location] = None, name: Optional[str] = None):
+        """ Clone the LocationSchedule to another Location or to the same Location with a new name
+
+        Either a `target_location` or a `name` must be specified. If both are specified, the Schedule will be cloned to
+        the new Location with the given name.
+
+        Args:
+            target_location (Location, optional): The Location to clone the Schedule to
+            name (str, optional): The name of the Schedule to create.
+
+        Returns:
+            str: The LocationSchedule ID of the newly-created Schedule
+
+        Raises:
+            ValueError: Raised when `target_location` and `name` are not provided
+
+        """
+        if target_location is None and name is None:
+            raise ValueError('target_location or name must be provided')
+        payload = dict(self.config)
+        del payload['id']
+        if name is not None:
+            payload['name'] = name
+        if target_location is not None:
+            target_locid = target_location.id
+        else:
+            target_locid = self.parent.id
+        response = webex_api_call('post', f'v1/telephony/config/locations/{target_locid}/schedules', payload=payload)
+        return response['id']
+
 
 class CallParkGroup:
     pass
