@@ -152,6 +152,10 @@ class AutoAttendant:
         self.location_id = self.data.get('locationId', '')
 
     @property
+    def spark_id(self) -> str:
+        return decode_spark_id(self.id)
+
+    @property
     def config(self) -> dict:
         """ The config of the AutoAttendant """
         response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/autoAttendants/{self.id}")

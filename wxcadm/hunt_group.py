@@ -57,6 +57,10 @@ class HuntGroup:
     def agents(self) -> list:
         return self.config['agents']
 
+    @property
+    def spark_id(self) -> str:
+        return decode_spark_id(self.id)
+
 
 class HuntGroupList(UserList):
     _endpoint = "v1/telephony/config/huntGroups"
