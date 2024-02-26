@@ -46,17 +46,18 @@ class AutoAttendantList(UserList):
         self.data = self._get_items()
         return True
 
-    def get(self, id: str = None, name: str = None, spark_id: str = None):
+    def get(self, id: str = None, name: str = None, spark_id: str = None, uuid: str = None):
         """ Get the AutoAttendant instance associated with a given ID, Name, or Spark ID
 
         Only one parameter should be supplied in normal cases. If multiple arguments are provided, the Auto
-        Attendants will be searched in order by ID, Name, and finally Spark ID. If no arguments are provided, the method
+        Attendants will be searched in order by ID, Name, UUID and Spark ID. If no arguments are provided, the method
         will raise an Exception.
 
         Args:
             id (str, optional): The AutoAttendant ID to find
             name (str, optional): The AutoAttendant Name to find
             spark_id (str, optional): The Spark ID to find
+            uuid (str, optional): The UUID to find
 
         Returns:
             AutoAttendant: The AutoAttendant instance correlating to the given search argument.
@@ -66,13 +67,16 @@ class AutoAttendantList(UserList):
             ValueError: Raised when the method is called with no arguments
 
         """
-        if id is None and name is None and spark_id is None:
+        if id is None and name is None and spark_id is None and uuid is None:
             raise ValueError("A search argument must be provided")
         for aa in self.data:
             if aa.id == id:
                 return aa
         for aa in self.data:
             if aa.name == name:
+                return aa
+        for aa in self.data:
+            if aa.spark_id.split('/')[-1].upper() == uuid.upper():
                 return aa
         for aa in self.data:
             if aa.spark_id == spark_id:

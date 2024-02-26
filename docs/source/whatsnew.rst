@@ -9,6 +9,10 @@ What's New
 
 v4.2.2
 ------
+- Added `uuid` to :meth:`HuntGroupList.get()` to support UUID lookup for CDR correlation
+- Added `uuid` to :meth:`WorkspaceList.get()` to support UUID lookup for CDR correlation
+- Added `uuid` to :meth:`CallQueueList.get()` to support UUID lookup for CDR correlation
+- Added `uuid` to :meth:`AutoAttendantList.get()` to support UUID lookup for CDR correlation
 - New method :meth:`LocationSchedule.clone()` to allow schedules to be cloned within a Location and across Locations
 - :meth:`Person.reset_vm_pin()` previously used the CP-API permissions. A developer API was released that allows the method to work with "normal" scopes.
 - The :class:`Device` class now has a :attr:`Device.workspace_location_id` property to determine the primary :class:`WorkspaceLocation` of the device. Note that at this time, the ID returned by the Webex API does not exactly match the `workspaceLocationId` value of the :class:`WorkspaceLocation` so you have to decode the Spark ID with :meth:`decode_spark_id` and use the UUID to match.

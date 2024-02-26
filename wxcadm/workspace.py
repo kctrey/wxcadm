@@ -117,12 +117,13 @@ class WorkspaceList(UserList):
                 return entry
         return None
 
-    def get(self, id: Optional[str] = None, name: Optional[str] = None):
-        """ Get a Workspace instance by ID or name
+    def get(self, id: Optional[str] = None, name: Optional[str] = None, uuid: Optional[str] = None):
+        """ Get a Workspace instance by ID, Name or UUID
 
         Args:
             id (str, optional): The Workspace ID
             name (str, optional): The Workspace name
+            uuid (str, optional): The Workspace UUID
 
         Returns:
             Workspace: The :class:`Workspace` for the given criteria
@@ -131,6 +132,8 @@ class WorkspaceList(UserList):
         entry: Workspace
         for entry in self.data:
             if entry.id == id or (entry.name is not None and entry.name == name):
+                return entry
+            if entry.spark_id.split('/')[-1].upper() == uuid.upper():
                 return entry
         return None
 

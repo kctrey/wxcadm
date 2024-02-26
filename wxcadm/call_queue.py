@@ -148,17 +148,19 @@ class CallQueueList(UserList):
         self.data = self._get_data()
         return True
 
-    def get(self, id: Optional[str] = None, name: Optional[str] = None, spark_id: Optional[str] = None):
+    def get(self, id: Optional[str] = None, name: Optional[str] = None, spark_id: Optional[str] = None,
+            uuid: Optional[str] = None):
         """ Get the instance associated with a given ID, Name, or Spark ID
 
         Only one parameter should be supplied in normal cases. If multiple arguments are provided, the Locations will be
-        searched in order by ID, Name, and finally Spark ID. If no arguments are provided, the method will raise an
+        searched in order by ID, Name, UUID, and Spark ID. If no arguments are provided, the method will raise an
         Exception.
 
         Args:
             id (str, optional): The Call Queue ID to find
             name (str, optional): The Call Queue Name to find. Case-insensitive.
             spark_id (str, optional): The Spark ID to find
+            uuid (str, optional): The UUID to find
 
         Returns:
             CallQueue: The CallQueue instance correlating to the given search argument.
@@ -167,7 +169,7 @@ class CallQueueList(UserList):
             ValueError: Raised when the method is called with no arguments
 
         """
-        if id is None and name is None and spark_id is None:
+        if id is None and name is None and spark_id is None and uuid is None:
             raise ValueError("A search argument must be provided")
         if id is not None:
             for item in self.data:
@@ -176,6 +178,10 @@ class CallQueueList(UserList):
         if name is not None:
             for item in self.data:
                 if item.name.lower() == name.lower():
+                    return item
+        if uuid is not None:
+            for item in self.data:
+                if item.spark_id.split('/')[-1].upper() == uuid.upper():
                     return item
         if spark_id is not None:
             for item in self.data:
