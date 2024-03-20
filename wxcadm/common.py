@@ -264,10 +264,12 @@ def webex_api_call(method: str,
                     except requests.exceptions.JSONDecodeError:
                         raise APIError(r.text)
         elif method.lower() == "delete":
+            log.debug(f"Post body: {payload}")
             r = session.delete(url_base + url, params=params)
             if r.ok:
                 try:
                     response = r.json()
+                    log.debug(f'Response: {response}')
                 except requests.exceptions.JSONDecodeError:
                     end = time.time()
                     log.debug(f"__webex_api_call() completed in {end - start} seconds")
