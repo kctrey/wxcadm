@@ -27,6 +27,7 @@ from .device import DeviceList
 from .recording import ComplianceAnnouncementSettings
 from .jobs import NumberManagementJobList, UserMoveJobList
 from .virtual_line import VirtualLineList
+from .dect import DECTNetworkList
 
 
 class Org:
@@ -77,6 +78,7 @@ class Org:
         self._number_management_jobs = None
         self._user_move_jobs = None
         self._virtual_lines = None
+        self._dect_networks = None
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -155,6 +157,12 @@ class Org:
         if self._locations is None:
             self._locations = LocationList(self)
         return self._locations
+
+    @property
+    def dect_networks(self):
+        if self._dect_networks is None:
+            self._dect_networks = DECTNetworkList(self)
+        return self._dect_networks
 
     @property
     def roles(self):
