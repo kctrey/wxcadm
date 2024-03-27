@@ -9,6 +9,10 @@ What's New
 
 v4.2.3
 ------
+- :class:`Reports` has become :class:`ReportList` and supports the standard list class functions from other classes.
+- :meth:`get_report_lines()` now supports both Zip and unzipped data
+- Logging enhancements to HTTP DELETE calls
+- :class:`DECTNetworkList` and the other DECT classes now support retrieval and updating
 - Fixed `spark_id` for :class:`AutoAttendant` and :class:`HuntGroup`
 
 v4.2.2

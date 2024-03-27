@@ -21,7 +21,7 @@ from .applications import WebexApplications
 from .announcements import AnnouncementList
 from .workspace import Workspace, WorkspaceList, WorkspaceLocationList
 from .call_routing import CallRouting
-from .reports import Reports
+from .reports import ReportList
 from .calls import Calls
 from .device import DeviceList
 from .recording import ComplianceAnnouncementSettings
@@ -82,8 +82,7 @@ class Org:
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
-        self.reports = Reports(self)
-        """ The :py:class:`Reports` instance for this Org """
+        self._reports = None
 
         # Set the Authorization header based on how the instance was built
         self._headers = parent.headers
@@ -100,6 +99,12 @@ class Org:
         if self._workspace_locations is None:
             self._workspace_locations = WorkspaceLocationList(self)
         return self._workspace_locations
+
+    @property
+    def reports(self) -> ReportList:
+        if self._reports is None:
+            self._reports = ReportList(self)
+        return self._reports
 
     @property
     def spark_id(self):
