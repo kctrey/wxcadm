@@ -73,6 +73,18 @@ class Report:
         return self._status
 
     def get_report_lines(self) -> list:
+        """ Get the lines of the Report as a list.
+
+        .. note::
+
+            No character processing is done by **wxcadm** other than splitting each line into an index. You will have to
+            parse the line and remove extraneous characters in most cases.
+
+
+        Returns:
+            list: The lines of the Report
+
+        """
         log.info(f'Getting Report lines: {self.id}')
         self.refresh()
         log.debug(f'Download URL: {self.download_url}')
@@ -96,11 +108,17 @@ class Report:
 class ReportTemplate:
     def __init__(self, config: dict):
         self.id: str = config.get('Id', None)
+        """ The Template ID """
         self.title: str = config.get('title', '')
+        """ The title of the Report """
         self.service: str = config.get('service', '')
+        """ Which Webex service the Template applies to """
         self.max_days: int = config.get('maxDays', 0)
+        """ The maximum number of days that can be included in the Report """
         self.identifier: str = config.get('identifier', '')
+        """ Any identifiers that can be passed to the Template """
         self.validations: list = config.get('validations', [])
+        """ A list of validations which are run against the Template when a Report is requested """
 
 
 class ReportList(UserList):
