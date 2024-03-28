@@ -153,6 +153,7 @@ class ReportList(UserList):
         """ List the reports available to the authorized user via the Webex API
 
         .. note::
+
             Webex isolates reports created via the API from reports created within Control Hub. The reports listed
             by this method will show only the reports created using the API.
 

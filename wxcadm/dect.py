@@ -248,7 +248,7 @@ class DECTNetwork:
         """ Enable the Default Access Code for handsets.
 
         If an Access Code has never been defined for the DECT Network, it should be provided using the
-        :param:`access_code` parameter. If an Access Code had previously been defined and disabled, it does not need to
+        `access_code` parameter. If an Access Code had previously been defined and disabled, it does not need to
         be provided, but can if desired. If a previous Access Code is not present and one is not provided, a
         ValueError will be raised.
 

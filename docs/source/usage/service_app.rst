@@ -105,11 +105,13 @@ for use in their Webex Org
     token_info = app.get_token(client_secret, admin_org_id)
 
 4. The token_info dict will have the following keys. The values should be recorded securely and used as needed.
+
   * ``access_token``: The OAuth token to access the Administrator's Webex Org
   * ``expires_in``: The expiry timer of the access token
   * ``refresh_token``: The OAuth refresh token, needed to generate a new access token
   * ``refresh_token_expires_in``: The expiry timer of the refresh token
   * ``token_type``: The type of token. For a Service Application, this will be set to 'Bearer'
+
 
 5. When the Developer needs to refresh the access token, the :py:meth:`wxcadm.org.applications.get_token_refresh()`
 method can be used:

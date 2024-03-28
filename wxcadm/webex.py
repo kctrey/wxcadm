@@ -48,7 +48,7 @@ class Webex:
             client_id (str, optional): The Client ID or Application ID to associate with the token. This value is only
                 useful if you are planning to call the :py:meth:`refresh_token()` method to refresh the token.
             client_secret (str, optional): The Client Secret for the Integration or Service Application. This value is
-                only useful if you are planning to call the :py:math:`refresh_token()` method to refresh the token.
+                only useful if you are planning to call the :py:meth:`refresh_token()` method to refresh the token.
             refresh_token (str, optional): The Refresh Token associated with the Access Token. This argument is needed
                 if you are planning to call the :py:meth:`refresh_token()` method to refresh the Access Token.
             org_id (str, optional): The Org ID to use as the default Org for the session. Other Orgs are still available

@@ -95,7 +95,7 @@ class Org:
 
     @property
     def workspace_locations(self):
-        """ :py:class:`WorkspaceLocationList of all :py:class:`WorkspaceLocation`s"""
+        """ :py:class:`WorkspaceLocationList` of all :py:class:`WorkspaceLocation`s"""
         if self._workspace_locations is None:
             self._workspace_locations = WorkspaceLocationList(self)
         return self._workspace_locations
@@ -189,7 +189,7 @@ class Org:
 
     @property
     def user_move_jobs(self):
-        """ :class:`UserMoveJobList for this Organization """
+        """ :class:`UserMoveJobList` for this Organization """
         if self._user_move_jobs is None:
             self._user_move_jobs = UserMoveJobList(self)
         return self._user_move_jobs
@@ -537,7 +537,7 @@ class Org:
             location (Location): The Location instance to assign the user to. Also accepts the Location ID as a string
             licenses (list, optional): List of license IDs to assign to the user. Use this when the license IDs
                 are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
-                meetings` parameters.
+                'meetings` parameters.
             calling (bool, optional): BETA - Whether to assign Calling licenses to the user. Defaults to True.
             messaging (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
             meetings (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
@@ -689,7 +689,10 @@ class Org:
         """ Get the :class:`HuntGroup` instance with the requested ID
 
         .. deprecated:: 4.0.0
+
             Use :meth:`Org.hunt_groups.get(id=)` instead
+
+
         Args:
             id (str): The HuntGroup ID
 
