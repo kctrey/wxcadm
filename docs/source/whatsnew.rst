@@ -7,12 +7,15 @@ What's New
 
     v4.0.0 is a significant rewrite of a lot of the methods and API calls to reduce the number of API calls needed in large Orgs with a many Users/Locations/Workspaces. I have tried to document all the breaking changes, but there may be some I haven't realized yet. The v4.0.0 series is changing rapidly as I find them.
 
-v4.2.3
+v4.2.4
 ------
 - :class:`Reports` has become :class:`ReportList` and supports the standard list class functions from other classes.
 - :meth:`get_report_lines()` now supports both Zip and unzipped data
 - Logging enhancements to HTTP DELETE calls
 - :class:`DECTNetworkList` and the other DECT classes now support retrieval and updating
+
+v4.2.3
+------
 - Fixed `spark_id` for :class:`AutoAttendant` and :class:`HuntGroup`
 
 v4.2.2
