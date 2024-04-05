@@ -7,6 +7,15 @@ What's New
 
     v4.0.0 is a significant rewrite of a lot of the methods and API calls to reduce the number of API calls needed in large Orgs with a many Users/Locations/Workspaces. I have tried to document all the breaking changes, but there may be some I haven't realized yet. The v4.0.0 series is changing rapidly as I find them.
 
+v4.2.5
+------
+- Added :meth:`DeviceMember.set_hotline()`
+- Added :meth:`DeviceMember.set_call_decline_all()`
+- Added :meth:`DeviceMember.set_line_label()`
+- Changed :meth:`DeviceList.get()` to allow `mac_address` as an argument to find a Device
+- Added :meth:`DeviceMemberList.get()` to allow the :class:`DeviceMember` to be found by :class:`Person` or :class:`Workspace`
+- Changed :attr:`DeviceMember.allow_call_decline` to :attr:`DeviceMember.call_decline_all` to reflect what it does and what Control Hub calls it
+
 v4.2.4
 ------
 - :class:`Reports` has become :class:`ReportList` and supports the standard list class functions from other classes.

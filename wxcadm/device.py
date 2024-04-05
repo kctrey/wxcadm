@@ -325,6 +325,18 @@ class DeviceMemberList(UserList):
                 port_map[p] = member
         return port_map
 
+    def get(self, person: Optional[Person] = None, workspace: Optional[Workspace] = None):
+        if person is not None and workspace is not None:
+            raise ValueError('Only person or workspace is accepted, not both')
+        if person is not None:
+            member_instance = person
+        if workspace is not None:
+            member_instance = workspace
+        for member in self.data:
+            if member.id is not None and (member.id == member_instance.id):
+                return member
+        return None
+
 
 class DeviceMember:
     def __init__(self, device: Device, member_info: dict):
@@ -337,7 +349,7 @@ class DeviceMember:
         self.line_weight: int = member_info['lineWeight']
         self.hotline_enabled: bool = member_info['hotlineEnabled']
         self.hotline_destination: str = member_info.get('hotlineDestination', None)
-        self.allow_call_decline: bool = member_info['allowCallDeclineEnabled']
+        self.call_decline_all: bool = member_info['allowCallDeclineEnabled']
         self.line_label: Optional[str] = member_info.get('lineLabel', None)
         self.first_name: Optional[str] = member_info.get('firstName', None)
         self.last_name: Optional[str] = member_info.get('lastName', None)
@@ -346,6 +358,118 @@ class DeviceMember:
         self.host_ip: Optional[str] = member_info.get('hostIP', None)
         self.remote_ip: Optional[str] = member_info.get('remoteIP', None)
         self.line_port: Optional[str] = member_info.get('linePort', None)
+
+    def set_line_label(self, label: str) -> DeviceMember:
+        """ Set/update the Line Label on the device
+
+        Args:
+            label (str): The new line label
+
+        Returns:
+            DeviceMember: The updated DeviceMember instance
+
+        """
+        # Rather than rebuild the member list from what we already have, it's quicker to just pull a fresh copy
+        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/members')
+        new_member_list = []
+        for member in old_member_list['members']:
+            if member['id'] == self.id:
+                member['lineLabel'] = label
+            # The PUT doesn't take all the fields that the GET has so we have to clean up
+            member.pop('remoteIP', None)
+            member.pop('linePort', None)
+            member.pop('firstName', None)
+            member.pop('lastName', None)
+            member.pop('phoneNumber', None)
+            member.pop('extension', None)
+            member.pop('hostIP', None)
+            member.pop('location', None)
+
+            new_member_list.append(member)
+
+        # Once we have rebuilt the list, just PUT it back
+        webex_api_call('put', f'v1/telephony/config/devices/{self.device.id}/members',
+                       payload={'members': new_member_list})
+        self.line_label = label
+        return self
+
+    def set_hotline(self, enabled: bool, destination: Optional[str] = None) -> DeviceMember:
+        """ Enable or disable Hotline for the Device Member
+
+        Args:
+            enabled (bool): True for Enabled, False for Disabled
+            destination (str, optional): The Hotline destination
+
+        Returns:
+            DeviceMember: The updated DeviceMember instance
+
+        """
+        # Rather than rebuild the member list from what we already have, it's quicker to just pull a fresh copy
+        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/members')
+        new_member_list = []
+        for member in old_member_list['members']:
+            if member['id'] == self.id:
+                member['hotlineEnabled'] = enabled
+                if destination is not None:
+                    member['hotlineDestination'] = destination
+
+            # The PUT doesn't take all the fields that the GET has so we have to clean up
+            member.pop('remoteIP', None)
+            member.pop('linePort', None)
+            member.pop('firstName', None)
+            member.pop('lastName', None)
+            member.pop('phoneNumber', None)
+            member.pop('extension', None)
+            member.pop('hostIP', None)
+            member.pop('location', None)
+
+            new_member_list.append(member)
+
+        # Once we have rebuilt the list, just PUT it back
+        webex_api_call('put', f'v1/telephony/config/devices/{self.device.id}/members',
+                       payload={'members': new_member_list})
+        self.hotline_enabled = enabled
+        if destination is not None:
+            self.hotline_destination = destination
+        return self
+
+    def set_call_decline_all(self, enabled: bool):
+        """ Set or change the Call Decline behavior of the Device Member.
+
+        When set to True, declining the call on the device will decline the call on all devices. When set to False,
+        declining the call on the device will only silence the device and allow other devices to keep ringing.
+
+        Args:
+            enabled (bool): True to decline on all devices, False to decline on this device
+
+        Returns:
+            DeviceMember: The updated DeviceMember instance
+
+        """
+        # Rather than rebuild the member list from what we already have, it's quicker to just pull a fresh copy
+        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/members')
+        new_member_list = []
+        for member in old_member_list['members']:
+            if member['id'] == self.id:
+                member['allowCallDeclineEnabled'] = enabled
+
+            # The PUT doesn't take all the fields that the GET has so we have to clean up
+            member.pop('remoteIP', None)
+            member.pop('linePort', None)
+            member.pop('firstName', None)
+            member.pop('lastName', None)
+            member.pop('phoneNumber', None)
+            member.pop('extension', None)
+            member.pop('hostIP', None)
+            member.pop('location', None)
+
+            new_member_list.append(member)
+
+        # Once we have rebuilt the list, just PUT it back
+        webex_api_call('put', f'v1/telephony/config/devices/{self.device.id}/members',
+                       payload={'members': new_member_list})
+        self.call_decline_all = enabled
+        return self
 
 
 class DeviceList(UserList):
@@ -405,6 +529,7 @@ class DeviceList(UserList):
     def get(self,
             id: Optional[str] = None,
             name: Optional[str] = None,
+            mac_address: Optional[str] = None,
             spark_id: Optional[str] = None,
             connection_status: Optional[str] = None):
         """ Get the instance associated with a given ID, Name, or Spark ID
@@ -414,8 +539,9 @@ class DeviceList(UserList):
         Exception.
 
         Args:
-            id (str, optional): The Call Queue ID to find
-            name (str, optional): The Call Queue Name to find. Case-insensitive.
+            id (str, optional): The Device ID to find
+            name (str, optional): The Device Name to find. Case-insensitive.
+            mac_address (str, optional): The Device MAC address
             spark_id (str, optional): The Spark ID to find
             connection_status(str, optional): The connection status of the device (e.g. "disconnected", "connected")
 
@@ -426,7 +552,7 @@ class DeviceList(UserList):
             ValueError: Raised when the method is called with no arguments
 
         """
-        if id is None and name is None and spark_id is None and connection_status is None:
+        if id is None and name is None and mac_address is None and spark_id is None and connection_status is None:
             raise ValueError("A search argument must be provided")
         if id is not None:
             for item in self.data:
@@ -435,6 +561,10 @@ class DeviceList(UserList):
         if name is not None:
             for item in self.data:
                 if item.display_name.lower() == name.lower():
+                    return item
+        if mac_address is not None:
+            for item in self.data:
+                if item.mac == mac_address.upper().replace(':', '').replace('-', ''):
                     return item
         if spark_id is not None:
             for item in self.data:
