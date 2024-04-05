@@ -319,6 +319,20 @@ class Person:
         self.applications_settings = None
         """ The Application Services Settings for this Person"""
         self.executive_assistant = None
+        self.avatar: Optional[str] = None
+        """ The URL of the Person's avatar """
+        self.department: Optional[str] = None
+        """ The department the Person belongs to """
+        self.manager: Optional[str] = None
+        """ The Person's manager """
+        self.manager_id: Optional[str] = None
+        """ The Person ID of the manager """
+        self.title: Optional[str] = None
+        """ The Person's title """
+        self.addresses: Optional[list] = None
+        """ A list of addresses for the Person """
+        self.status: Optional[str] = None
+        """ The current presence status of the Person """
         self._devices: Optional[DeviceList] = None
 
         # API-related attributes
@@ -345,6 +359,13 @@ class Person:
         self.display_name = data.get("displayName", "")
         self.first_name = data.get("firstName", "")
         self.last_name = data.get("lastName", "")
+        self.avatar = data.get('avatar', None)
+        self.department = data.get('department', None)
+        self.manager = data.get('manager', None)
+        self.manager_id = data.get('managerId', None)
+        self.title = data.get('title', None)
+        self.addresses = data.get('addresses', None)
+        self.status = data.get('status', None)
         self.roles = data.get("roles", [])
         self.numbers = data.get("phoneNumbers", [])
         self.licenses = data.get("licenses", [])
@@ -1287,7 +1308,13 @@ class Person:
                       first_name=None,
                       last_name=None,
                       roles=None,
-                      licenses=None):
+                      licenses=None,
+                      avatar: Optional[str] = None,
+                      department: Optional[str] = None,
+                      title: Optional[str] = None,
+                      manager: Optional[str] = None,
+                      manager_id: Optional[str] = None,
+                      addresses: Optional[list] = None):
         """Update the Person in Webex.
 
         Pass only the arguments that you want to change. Other attributes will be populated
@@ -1306,6 +1333,12 @@ class Person:
             last_name (str): The Person's last name
             roles (list): List of Role IDs
             licenses (list): List of License IDs
+            avatar (str): The URL of the Person's avatar
+            department (str): The Person's department
+            title (str): The Person's title
+            manager (str): The Person's manager
+            manager_id (str): The Person ID of the manager
+            addresses (list): A list of addresses, each defined as a dict
 
         Returns:
             bool: True if successful. False if not.
@@ -1341,6 +1374,24 @@ class Person:
         if licenses is None:
             licenses = self.licenses
         payload['licenses'] = licenses
+        if avatar is None:
+            avatar = self.avatar
+        payload['avatar'] = avatar
+        if department is None:
+            department = self.department
+        payload['department'] = department
+        if title is None:
+            title = self.title
+        payload['title'] = title
+        if manager is None:
+            manager = self.manager
+        payload['manager'] = manager
+        if manager_id is None:
+            manager_id = self.manager_id
+        payload['managerId'] = manager_id
+        if addresses is None:
+            addresses = self.addresses
+        payload['addresses'] = addresses
 
         params = {"callingData": "true"}
         response = webex_api_call('put', f'v1/people/{self.id}', payload=payload, params=params)

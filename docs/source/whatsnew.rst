@@ -9,6 +9,9 @@ What's New
 
 v4.2.5
 ------
+- Modified :meth:`Person.update_person()` to handle new attrs
+- Internal prep work for SCIM2 API, which may or may not replace the People API for some methods
+- Added :attr:`Person.avatar`, :attr:`Person.department`, :attr:`Person.title`, :attr:`Person.manager`, :attr:`Person.manager_id`, :attr:`Person.addresses` which are now handled by the People API
 - Added :meth:`DeviceMember.set_hotline()`
 - Added :meth:`DeviceMember.set_call_decline_all()`
 - Added :meth:`DeviceMember.set_line_label()`
