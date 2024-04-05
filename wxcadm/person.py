@@ -623,7 +623,7 @@ class Person:
                                               f'generatePassword/invoke')
                     password = response['exampleSipPassword']
                 payload['password'] = password
-            response = webex_api_call('post', '/v1/devices', payload=payload)
+            response = webex_api_call('post', 'v1/devices', payload=payload, params={'orgId': self._parent.id})
             log.debug(f"\t{response}")
 
             # Get the ID of the device we just inserted
