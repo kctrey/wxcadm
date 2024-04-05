@@ -3,9 +3,9 @@
 What's New
 ==========
 
-.. note::
-
-    v4.0.0 is a significant rewrite of a lot of the methods and API calls to reduce the number of API calls needed in large Orgs with a many Users/Locations/Workspaces. I have tried to document all the breaking changes, but there may be some I haven't realized yet. The v4.0.0 series is changing rapidly as I find them.
+v4.2.6
+------
+- Updated requirements to use the latest version of dataclasses-json
 
 v4.2.5
 ------
