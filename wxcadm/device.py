@@ -296,7 +296,7 @@ class DeviceMemberList(UserList):
                 'lineWeight': entry.line_weight,
                 'hotlineEnabled': entry.hotline_enabled,
                 'hotlineDestination': entry.hotline_destination,
-                'allowCallDeclineEnabled': entry.allow_call_decline,
+                'allowCallDeclineEnabled': entry.call_decline_all,
             }
             # lineLabel is weird, so we have to only add it back when it is not None
             if entry.line_label is not None:
