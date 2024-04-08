@@ -16,6 +16,31 @@ if TYPE_CHECKING:
     from .workspace import Workspace
 
 
+class DeviceLayout:
+    def __init__(self, device: Device, config: Optional[dict] = None):
+        self.device = device
+        self.layout_mode: str = ''
+        self.user_reorder_enabled: bool = False
+        self.line_keys: list = []
+        self.kem_type: str = ''
+        self.kem_keys: list = []
+
+        if config is None:
+            self._get_config()
+        else:
+            self._parse_config(config)
+
+    def _parse_config(self, config: dict):
+        self.layout_mode = config.get('layoutMode', '')
+        self.user_reorder_enabled = config.get('userReorderEnabled', False)
+        self.line_keys = config.get('lineKeys', [])
+        self.kem_type = config.get('kemModuleType', '')
+        self.kem_keys = config.get('kemKeys', [])
+
+    def _get_config(self):
+        response = webex_api_call('get', f'telephony/config/devices/{self.device.id}/layout')
+        self._parse_config(response)
+
 class Device:
     def __init__(self, parent: Person | Workspace, config: dict):
         self.parent = parent
@@ -63,6 +88,7 @@ class Device:
         """ The WorkspaceLocation ID of the device, which indicates the WorkspaceLocation of the primary
             Person or Workspace """
         self._device_members = None
+        self._layout = None
 
         if 'personId' in config.keys() and isinstance(self.parent, wxcadm.Org):
             self.owner = self.parent.get_person_by_id(config['personId'])
@@ -70,6 +96,20 @@ class Device:
                 self.owner = config['personId']
         elif 'workspaceId' in config.keys() and isinstance(self.parent, wxcadm.Org):
             self.owner = self.parent.workspaces.get_by_id(config['workspaceId'])
+
+    @property
+    def layout(self) -> DeviceLayout:
+        """ The :class:`DeviceLayout` for the Device
+
+        .. warning::
+
+            The API call that is required for this to function is not working correctly, so the method is more likely
+            than not to throw a wxcadm.APIError exception.
+
+        """
+        if self._layout is None:
+            self._layout = DeviceLayout(self)
+        return self._layout
 
     def change_tags(self, operation: str, tag: Optional[Union[str, list]] = None):
         """ Add a tag to the list of tags for this device

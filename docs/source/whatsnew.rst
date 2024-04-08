@@ -3,6 +3,11 @@
 What's New
 ==========
 
+v4.2.7
+------
+- All classes are now imported and exposed at the module level, so, for example, `wxcadm.people.Person` can be referenced as `wxcadm.Person`
+- BUG FIX - When adding devices on a secondary Org, the `orgId` param is now passed correctly
+
 v4.2.6
 ------
 - Updated requirements to use the latest version of dataclasses-json
