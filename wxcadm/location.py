@@ -5,7 +5,7 @@ from collections import UserList
 
 import wxcadm
 from wxcadm import log
-from .location_features import LocationSchedule, CallParkExtension, VoicePortal
+from .location_features import LocationSchedule, CallParkExtension, VoicePortal, OutgoingPermissionDigitPatternList
 from .call_queue import CallQueueList
 from .hunt_group import HuntGroupList
 from .auto_attendant import AutoAttendantList
@@ -191,12 +191,19 @@ class Location:
         self._call_queues: Optional[CallQueueList] = None
         self._hunt_groups: Optional[HuntGroupList] = None
         self._dect_networks: Optional[DECTNetworkList] = None
+        self._outgoing_permission_digit_patterns: Optional[OutgoingPermissionDigitPatternList] = None
 
     def __str__(self):
         return self.name
 
     def __repr__(self):
         return self.id
+
+    @property
+    def outgoing_permission_digit_patterns(self) -> OutgoingPermissionDigitPatternList:
+        if self._outgoing_permission_digit_patterns is None:
+            self._outgoing_permission_digit_patterns = OutgoingPermissionDigitPatternList(self)
+        return self._outgoing_permission_digit_patterns
 
     @property
     def workspace_location(self):

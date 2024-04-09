@@ -4,7 +4,6 @@ from typing import Optional
 from dataclasses import dataclass, field
 from datetime import datetime
 
-
 import wxcadm.location
 from .realtime import RealtimeClass
 from wxcadm import log
@@ -337,3 +336,129 @@ class VoicePortal(RealtimeClass):
     def __post_init__(self):
         self.data_url: str = f'v1/telephony/config/locations/{self.location.id}/voicePortal'
         super().__init__()
+
+
+class OutgoingPermissionDigitPatternList:
+    def __init__(self, location: wxcadm.Location):
+        log.info('Initializing OutgoingPermissionDigitPatternList')
+        self.location = location
+        self.patterns = self._get_data()
+
+    def _get_data(self) -> list:
+        pattern_list = []
+        log.debug('Getting data from Webex')
+        response = webex_api_call('get',
+                                  f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns')
+        for pattern in response['digitPatterns']:
+            pattern_list.append(OutgoingPermissionDigitPattern(self.location, config=pattern))
+        return pattern_list
+
+    def refresh(self):
+        self.patterns = self._get_data()
+        return self
+
+    def create(self, name: str, pattern: str, action: str, transfer_enabled: Optional[bool] = False):
+        """ Create a new Outgoing Permission Digit Pattern for the Location
+
+        Args:
+            name (str): The name of the pattern
+
+            pattern (str): The digit pattern. See Webex documentation for valid values.
+
+            action (str): The action to take. Valid values are `'ALLOW'`, `'BLOCK'`, `'AUTH_CODE'`,
+            `'TRANSFER_NUMBER_1'`, `'TRANSFER_NUMBER_2'`, `'TRANSFER_NUMBER_3'`
+
+            transfer_enabled (bool): Whether the setting is used for transferred or forwarded calls.
+
+        Returns:
+            OutgoingPermissionDigitPattern: The created pattern
+
+        Raises:
+            wxcadm.APIError: Raised when the API call fails
+
+        """
+        payload = {
+            'name': name,
+            'pattern': pattern,
+            'action': action,
+            'transferEnabled': transfer_enabled
+        }
+        response = webex_api_call('post',
+                                  f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns',
+                                  params={'orgId': self.location.org_id},
+                                  payload=payload)
+        # Use the ID that was returned to get the object we want to return
+        pattern_id = response['id']
+        response = webex_api_call(
+            'get',
+            f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns/{pattern_id}',
+            params={'orgId': self.location.org_id}
+        )
+        new_pattern = OutgoingPermissionDigitPattern(self.location, response)
+        self.patterns.append(new_pattern)
+        return new_pattern
+
+    def delete_all(self):
+        """ Delete all Outgoing Permission Digit Patterns for this Location
+
+        Returns:
+            bool: True on success
+
+        """
+        webex_api_call(
+            'delete',
+            f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns',
+            params={'orgId': self.location.org_id}
+        )
+        self.refresh()
+        return True
+
+
+class OutgoingPermissionDigitPattern:
+    def __init__(self, location: wxcadm.Location, config: dict):
+        self.location = location
+        self.id: str = config.get('id', '')
+        self.name: str = config.get('name', '')
+        self.pattern: str = config.get('pattern', '')
+        self.action: str = config.get('action', '')
+        self.transfer_enabled: bool = config.get('transferEnabled')
+
+    def delete(self) -> bool:
+        """ Delete the specified digit pattern
+
+        Returns:
+            bool: True on success
+
+        """
+        webex_api_call(
+            'delete',
+            f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns/{self.id}'
+        )
+        return True
+
+    def update(self,
+               name: Optional[str] = None,
+               pattern: Optional[str] = None,
+               action: Optional[str] = None,
+               transfer_enabled: Optional[bool] = None):
+        name = self.name if name is None else name
+        pattern = self.pattern if pattern is None else pattern
+        action = self.action if action is None else action
+        transfer_enabled = self.transfer_enabled if transfer_enabled is None else transfer_enabled
+        payload = {
+            'name': name,
+            'pattern': pattern,
+            'action': action,
+            'transferEnabled': transfer_enabled
+        }
+        webex_api_call(
+            'put',
+            f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns/{self.id}',
+            params={'orgId': self.location.org_id},
+            payload=payload
+        )
+        self.name = name
+        self.pattern = pattern
+        self.action = action
+        self.transfer_enabled = transfer_enabled
+        return self
