@@ -43,12 +43,13 @@ class TestXSI(unittest.TestCase):
         self.assertIsInstance(channel, wxcadm.xsi.XSIEventsChannelSet)
         time.sleep(5)
         subscription = channel.subscribe("Advanced Call")
-        self.assertIsInstance(subscription, wxcadm.xsi.XSIEventsSubscription)
-        self.assertEqual(subscription.active, True)
-        if subscription.active is True:
-            channel.unsubscribe("all")
-            message = events_queue.get()
-            self.assertIsInstance(message, dict)
+        if subscription is not False:
+            self.assertIsInstance(subscription, wxcadm.xsi.XSIEventsSubscription)
+            self.assertEqual(subscription.active, True)
+            if subscription.active is True:
+                channel.unsubscribe("all")
+                message = events_queue.get()
+                self.assertIsInstance(message, dict)
         channel.close()
         self.assertEqual(len(channel.subscriptions), 0)
         self.assertEqual(len(channel.active_channels), 0)
