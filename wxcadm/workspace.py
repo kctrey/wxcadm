@@ -133,8 +133,9 @@ class WorkspaceList(UserList):
         for entry in self.data:
             if entry.id == id or (entry.name is not None and entry.name == name):
                 return entry
-            if entry.spark_id.split('/')[-1].upper() == uuid.upper():
-                return entry
+            if uuid is not None:
+                if entry.spark_id.split('/')[-1].upper() == uuid.upper():
+                    return entry
         return None
 
     def webex_calling(self) -> list:
