@@ -1,4 +1,4 @@
-.. currentmodule:: wxcadm.wxcadm
+.. currentmodule:: wxcadm
 
 What's New
 ==========
