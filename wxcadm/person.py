@@ -457,13 +457,18 @@ class Person:
             else:
                 return None
 
-    def assign_wxc(self, location: wxcadm.Location, phone_number: str = None, extension: str = None):
+    def assign_wxc(self,
+                   location: wxcadm.Location,
+                   phone_number: str = None,
+                   extension: str = None,
+                   unassign_ucm: Optional[bool] = False):
         """ Assign Webex Calling to the user, along with a phone number and/or an extension.
 
         Args:
-            location (Location): The Location instance to assign the Person to.
-            phone_number (str, optional): The phone number to assign to the Person.
+            location (Location): The Location instance to assign the Person to
+            phone_number (str, optional): The phone number to assign to the Person
             extension (str, optional): The extension to assign to the Person
+            unassign_ucm (bool, optional): True if you also want to remove the UCM license for the user
 
         Returns:
             bool: True on success, False if otherwise
@@ -472,6 +477,17 @@ class Person:
         # To assign Webex Calling to a Person, we need to find the License ID for Webex Calling Professional
         license = self._parent.get_wxc_person_license()
         self.licenses.append(license)
+
+        if unassign_ucm is True:
+            # Figure out what the licenses are for UCM
+            ucm_licenses = []
+            for license in self._parent.licenses:
+                if license['name'] == 'Unified Communication Manager (UCM)':
+                    ucm_licenses.append(license['id'])
+            # Then remove them from the user
+            for license in self.licenses[:]:
+                if license in ucm_licenses:
+                    self.licenses.remove(license)
 
         # Call the update_person() method to update the new values.
         success = self.update_person(numbers=[{"type": "work", "value": phone_number}],

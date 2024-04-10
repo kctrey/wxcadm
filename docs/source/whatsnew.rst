@@ -5,6 +5,7 @@ What's New
 
 v4.3.0
 ------
+- :meth:`Person.assign_wxc()` now supports an `unassign_ucm` parameter to allow UCM licenses to be removed automatically when Webex Calling is added.
 - BUG FIX: :meth:`WorkspaceList.get()` now works correctly when UUID is not used by the search
 - Created :class:`VoicemailGroup` and :class:`VoicemailGroupList` which can be obtained from :attr:`Org.voicemail_groups` to manage Voicemail Groups
 - Created :class:`OutgoingPermissionDigitPattern` and :class:`OutgoingPermissionDigitPatternList` which can be obtained from :attr:`Location.outgoing_permission_digit_patterns` to manage the new capability
