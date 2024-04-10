@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Optional
 from dataclasses import dataclass, field
+from dataclasses_json import dataclass_json, LetterCase
+from collections import UserList
 from datetime import datetime
 
 import wxcadm.location
@@ -462,3 +464,332 @@ class OutgoingPermissionDigitPattern:
         self.action = action
         self.transfer_enabled = transfer_enabled
         return self
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class VoicemailGroup:
+    org: wxcadm.Org
+    id: str
+    name: str
+    location_name: str
+    location_id: str
+    extension: str
+    enabled: bool
+    esn: Optional[str] = None
+    _phone_number: Optional[str] = field(init=False, default=None)
+    _first_name: Optional[str] = field(init=False, default=None)
+    _last_name: Optional[str] = field(init=False, default=None)
+    _language_code: Optional[str] = field(init=False, default=None)
+    _greeting: Optional[str] = field(init=False, default=None)
+    _greeting_uploaded: Optional[bool] = field(init=False, default=None)
+    _greeting_description: Optional[str] = field(init=False, default=None)
+    _message_storage: Optional[dict] = field(init=False, default=None)
+    _notifications: Optional[dict] = field(init=False, default=None)
+    _fax_message: Optional[dict] = field(init=False, default=None)
+    _transfer_to_number: Optional[dict] = field(init=False, default=None)
+    _email_copy_of_message: Optional[dict] = field(init=False, default=None)
+    _message_forwarding_enabled: Optional[bool] = field(init=False, default=None)
+
+    def _get_details(self):
+        response = webex_api_call('get',
+                                  f'v1/telephony/config/locations/{self.location_id}/voicemailGroups/{self.id}',
+                                  params={'orgId': self.org.id})
+        self.name = response.get('name')
+        self.extension = response.get('extension')
+        self.enabled = response.get('enabled')
+        self._phone_number = response.get('phoneNumber', None)
+        self._first_name = response.get('firstName', '')
+        self._last_name = response.get('lastName', '')
+        self._language_code = response.get('languageCode', '')
+        self._greeting = response.get('greeting', '')
+        self._greeting_uploaded = response.get('greetingUploaded', '')
+        self._greeting_description = response.get('greetingDescription', '')
+        self._message_storage = response.get('messageStorage', None)
+        self._notifications = response.get('notifications', None)
+        self._fax_message = response.get('faxMessage', None)
+        self._transfer_to_number = response.get('transferToNumber', None)
+        self._email_copy_of_message = response.get('emailCopyOfMessage', None)
+        self._message_forwarding_enabled = response.get('voiceMessageForwardingEnabled', None)
+
+    @property
+    def phone_number(self):
+        """ The phone number of the Voicemail Group """
+        if self._phone_number is None:
+            self._get_details()
+        return self._phone_number
+
+    @property
+    def last_name(self):
+        """ The last name of the Voicemail Group """
+        if self._last_name is None:
+            self._get_details()
+        return self._last_name
+
+    @property
+    def first_name(self):
+        """ The firt name of the Voicemail Group """
+        if self._first_name is None:
+            self._get_details()
+        return self._first_name
+
+    @property
+    def language_code(self):
+        """ The language code of the Voicemail Group """
+        if self._language_code is None:
+            self._get_details()
+        return self._language_code
+
+    @property
+    def greeting_type(self):
+        """ The greeting type, either 'DEFAULT' or 'CUSTOM' """
+        if self._greeting is None:
+            self._get_details()
+        return self._greeting
+
+    @property
+    def greeting_uploaded(self):
+        """ True if CUSTOM greeting has been previously uploaded """
+        if self._greeting_uploaded is None:
+            self._get_details()
+        return self._
+
+    @property
+    def greeting_description(self):
+        """ CUSTOM greeting for previously uploaded greeting """
+        if self._greeting_description is None:
+            self._get_details()
+        return self._greeting_description
+
+    @property
+    def message_storage(self):
+        """ Message storage information as a dict """
+        if self._message_storage is None:
+            self._get_details()
+        return self._message_storage
+
+    @property
+    def notifications(self):
+        """ Notification settings as a dict """
+        if self._notifications is None:
+            self._get_details()
+        return self._notifications
+
+    @property
+    def fax_message(self):
+        """ Fax messaging settings as a dict """
+        if self._fax_message is None:
+            self._get_details()
+        return self._fax_message
+
+    @property
+    def transfer_to_number(self):
+        """ Transfer settings for the Voicemail Group as a dict """
+        if self._transfer_to_number is None:
+            self._get_details()
+        return self._transfer_to_number
+
+    @property
+    def email_copy_of_message(self):
+        """ Email CC settings as a dict """
+        if self._email_copy_of_message is None:
+            self._get_details()
+        return self._email_copy_of_message
+
+    @property
+    def message_forwarding_enabled(self):
+        """ Whether voice message forwarding is enabled """
+        if self._message_forwarding_enabled is None:
+            self._get_details()
+        return self._message_forwarding_enabled
+
+    def update(self,
+               name: Optional[str] = None,
+               phone_number: Optional[str] = None,
+               extension: Optional[str] = None,
+               first_name: Optional[str] = None,
+               last_name: Optional[str] = None,
+               enabled: Optional[bool] = None,
+               language_code: Optional[str] = None,
+               greeting_type: Optional[str] = None,
+               greeting_description: Optional[str] = None,
+               message_storage: Optional[dict] = None,
+               notifications: Optional[dict] = None,
+               fax_message: Optional[dict] = None,
+               transfer_to_number: Optional[dict] = None,
+               email_copy_of_message: Optional[dict] = None
+               ):
+        """ Update Voicmeail Group settings
+
+        When using this method, pass only the values that you wish to change. Values omitted from the parameters will
+        not be changed.
+
+        Args:
+            name (str, optional): The name of the Voicemail Group
+            phone_number (str, optional): The phone number of the Voicemail Group
+            extension (str, optional): The extension of the Voicemail Group
+            first_name (str, optional): The first name of the Voicemail Group
+            last_name (str, optional): The last name of the Voicemail Group
+            enabled (bool, optional): Whether the Voicemail Group is enabled
+            language_code (str, optional): The language code
+            greeting_type (str, optional): The greeting type, either 'CUSTOM' or 'DEFAULT'
+            greeting_description (str, optional): The greeting for CUSTOM greetings
+            message_storage (dict, optional): The message storage settings as a dict
+            notifications (dict, optional): The notification settings as a dict
+            fax_message (dict, optional): The fax settings as a dict
+            transfer_to_number (dict, optional): The transfer settings as a dict
+            email_copy_of_message (dict, optional): The email CC settings as a dict
+
+        Returns:
+            VoicemailGroup: The updated VoicemailGroup instance
+
+        Raises:
+            wxcadm.APIError: Raised when the update is rejected by Webex
+
+        """
+        name = self.name if name is None else name
+        phone_number = self.phone_number if phone_number is None else phone_number
+        extension = self.extension if extension is None else extension
+        first_name = self.first_name if first_name is None else first_name
+        last_name = self.last_name if last_name is None else last_name
+        enabled = self.enabled if enabled is None else enabled
+        language_code = self.language_code if language_code is None else language_code
+        greeting_type = self.greeting_type if greeting_type is None else greeting_type
+        greeting_description = self.greeting_description if greeting_description is None else greeting_description
+        message_storage = self.message_storage if message_storage is None else message_storage
+        notifications = self.notifications if notifications is None else notifications
+        fax_message = self.fax_message if fax_message is None else fax_message
+        transfer_to_number = self.transfer_to_number if transfer_to_number is None else transfer_to_number
+        email_copy_of_message = self.email_copy_of_message if email_copy_of_message is None else email_copy_of_message
+        payload = {
+            'name': name,
+            'phoneNumber': phone_number,
+            'extension': extension,
+            'firstName': first_name,
+            'lastName': last_name,
+            'enabled': enabled,
+            'languageCode': language_code,
+            'greeting': greeting_type,
+            'greetingDescription': greeting_description,
+            'messageStorage': message_storage,
+            'notifications': notifications,
+            'faxMessage': fax_message,
+            'transferToNumber': transfer_to_number,
+            'emailCopyOfMessage': email_copy_of_message
+        }
+        webex_api_call('put',
+                       f'v1/telephony/config/locations/{self.location_id}/voicemailGroups/{self.id}',
+                       payload=payload)
+        self._get_details()
+        return self
+
+    def delete(self):
+        """ Delete the Group Voicemail """
+        webex_api_call('delete',
+                       f'v1/telephony/config/locations/{self.location_id}/voicemailGroups/{self.id}')
+        return True
+
+    def enable_email_copy(self, email: str):
+        """ Enable sending of copies of voicemails to an email
+
+        This is a shortcut for calling the :meth:`update()` method with the `email_copy_of_message` argument dict
+
+        Args:
+             email (str): The email address to send copies of messages to
+
+        Returns:
+            VoicemailGroup: The updated VoicemailGroup instance
+
+        Raises:
+            wxcadm.APIError: Raised when the update is rejected by Webex
+
+        """
+        email_conf = {'enabled': True, 'emailId': email}
+        self.update(email_copy_of_message=email_conf)
+        return self
+
+
+class VoicemailGroupList(UserList):
+    def __init__(self, org: wxcadm.Org):
+        log.info(f'Initializing VoicemailGroupList for Org: {org.name}')
+        super().__init__()
+        self.org = org
+        self.data = self._get_data()
+
+    def _get_data(self) -> list:
+        log.debug('Getting data')
+        data = []
+        response = webex_api_call('get', 'v1/telephony/config/voicemailGroups', params={'orgId': self.org.id})
+        for group in response['voicemailGroups']:
+            group['org'] = self.org
+            data.append(VoicemailGroup.from_dict(group))
+        return data
+
+    def refresh(self):
+        self.data = self._get_data()
+        return self
+
+    def get(self, name: Optional[str] = None, id: Optional[str] = None):
+        """ Get the VoicemailGroup matching the given `id` or `name`
+
+        Args:
+             name (str, optional): The Voicemail Group name to retrieve
+             id (str, optional): The Voicemail Group ID to retrieve
+
+        Returns:
+            VoicemailGroup: The matching instance. None is returned if no match is found
+
+        """
+        for item in self.data:
+            if item.id == id or item.name == name:
+                return item
+        return None
+
+    def create(self,
+               location: wxcadm.Location,
+               name: str,
+               extension: str,
+               passcode: str,
+               phone_number: Optional[str] = None,
+               first_name: Optional[str] = None,
+               last_name: Optional[str] = None,
+               language_code: Optional[str] = 'en_us',
+               message_storage: Optional[dict] = None,
+               notifications: Optional[dict] = None,
+               fax_message: Optional[dict] = None,
+               transfer_to_number: Optional[dict] = None,
+               email_copy_of_message: Optional[dict] = None):
+        log.info(f'Creating Voicemail Group {name} in Location {location.name}')
+        if message_storage is None:
+            message_storage = {'storageType': 'INTERNAL'}
+        if notifications is None:
+            notifications = {'enabled': False}
+        if fax_message is None:
+            fax_message = {'enabled': False}
+        if transfer_to_number is None:
+            transfer_to_number = {'enabled': False}
+        if email_copy_of_message is None:
+            email_copy_of_message = {'enabled': False}
+
+        payload = {
+            'name': name,
+            'extension': extension,
+            'passcode': passcode,
+            'phoneNumber': phone_number,
+            'firstName': first_name,
+            'lastName': last_name,
+            'languageCode': language_code,
+            'messageStorage': message_storage,
+            'notifications': notifications,
+            'faxMessage': fax_message,
+            'transferToNumber': transfer_to_number,
+            'emailCopyOfMessage': email_copy_of_message
+        }
+        response = webex_api_call('post',
+                                  f'v1/telephony/config/locations/{location.id}/voicemailGroups',
+                                  params={'orgId': self.org.id},
+                                  payload=payload)
+        vg_id = response['id']
+        self.refresh()
+        return self.get(id=vg_id)
+

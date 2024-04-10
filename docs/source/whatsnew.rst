@@ -3,8 +3,9 @@
 What's New
 ==========
 
-v4.2.7
+v4.3.0
 ------
+- Created :class:`VoicemailGroup` and :class:`VoicemailGroupList` which can be obtained from :attr:`Org.voicemail_groups` to manage Voicemail Groups
 - Created :class:`OutgoingPermissionDigitPattern` and :class:`OutgoingPermissionDigitPatternList` which can be obtained from :attr:`Location.outgoing_permission_digit_patterns` to manage the new capability
 - All classes are now imported and exposed at the module level, so, for example, `wxcadm.people.Person` can be referenced as `wxcadm.Person`
 - BUG FIX - When adding devices on a secondary Org, the `orgId` param is now passed correctly

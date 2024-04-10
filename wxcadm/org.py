@@ -11,7 +11,7 @@ from .common import _url_base
 from .exceptions import *
 from .cpapi import CPAPI
 from .location import Location, LocationList
-from .location_features import PagingGroup
+from .location_features import PagingGroup, VoicemailGroupList
 from .auto_attendant import AutoAttendantList
 from .call_queue import CallQueueList
 from .hunt_group import HuntGroupList
@@ -79,6 +79,7 @@ class Org:
         self._user_move_jobs = None
         self._virtual_lines = None
         self._dect_networks = None
+        self._voicemail_groups = None
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -92,6 +93,12 @@ class Org:
 
         if xsi:
             self.get_xsi_endpoints()
+
+    @property
+    def voicemail_groups(self):
+        if self._voicemail_groups is None:
+            self._voicemail_groups = VoicemailGroupList(self)
+        return self._voicemail_groups
 
     @property
     def workspace_locations(self):

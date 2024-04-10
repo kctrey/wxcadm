@@ -9,6 +9,46 @@ if TYPE_CHECKING:
     from wxcadm.location_features import *
 
 
+class TestVoicemailGroups(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        load_dotenv()
+        cls.access_token = os.getenv("WEBEX_ACCESS_TOKEN")
+        if not cls.access_token:
+            print("No WEBEX_ACCESS_TOKEN found. Cannot continue.")
+            exit(1)
+
+    def setUp(self) -> None:
+        self.webex = wxcadm.Webex(self.access_token)
+        self.random_location: Location = choice(self.webex.org.locations.webex_calling())
+
+    def test_org_voicemail_group_list(self) -> None:
+        self.assertIsInstance(self.webex.org.voicemail_groups, wxcadm.VoicemailGroupList)
+
+    def test_create_update_delete_vm_group(self) -> None:
+        before_count = len(self.webex.org.voicemail_groups)
+        with self.subTest('Add Voicemail Group'):
+            new_group = self.webex.org.voicemail_groups.create(
+                location=self.random_location,
+                name='wxcadm Test',
+                extension='928807',
+                passcode='288547'
+            )
+            self.assertIsInstance(new_group, wxcadm.VoicemailGroup)
+            self.assertEqual(len(self.webex.org.voicemail_groups.refresh()), before_count + 1)
+
+        with self.subTest('Update VM Group Email'):
+            new_group.enable_email_copy('wxcadmautotest@wxcadm.com')
+            self.assertTrue(new_group.email_copy_of_message['enabled'])
+            self.assertEqual(new_group.email_copy_of_message['emailId'], 'wxcadmautotest@wxcadm.com')
+            new_group.update(first_name='Test')
+            self.assertEqual(new_group.first_name, 'Test')
+
+        with self.subTest('Delete VM Group'):
+            new_group.delete()
+            self.assertEqual(len(self.webex.org.voicemail_groups.refresh()), before_count)
+
+
 class TestOutgoingDigitPatterns(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
