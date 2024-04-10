@@ -468,7 +468,7 @@ class Person:
             location (Location): The Location instance to assign the Person to
             phone_number (str, optional): The phone number to assign to the Person
             extension (str, optional): The extension to assign to the Person
-            unassign_ucm (bool, optional): True if you also want to remove the UCM license for the user
+            unassign_ucm (bool, optional): True if you also want to remove the UCM license for the user. Default: False
 
         Returns:
             bool: True on success, False if otherwise
