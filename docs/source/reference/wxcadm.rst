@@ -68,3 +68,48 @@ is provided as a view under the hood of the module for those interested in enhan
    :members:
    :undoc-members:
    :noindex:
+
+.. automodule:: wxcadm.call_queue
+   :members:
+   :undoc-members:
+   :noindex:
+
+.. automodule:: wxcadm.hunt_group
+   :members:
+   :undoc-members:
+   :noindex:
+
+.. automodule:: wxcadm.call_routing
+   :members:
+   :undoc-members:
+   :noindex:
+
+.. automodule:: wxcadm.calls
+   :members:
+   :undoc-members:
+   :noindex:
+
+.. automodule:: wxcadm.dect
+   :members:
+   :undoc-members:
+   :noindex:
+
+.. automodule:: wxcadm.reports
+   :members:
+   :undoc-members:
+   :noindex:
+
+.. automodule:: wxcadm.virtual_line
+   :members:
+   :undoc-members:
+   :noindex:
+
+.. automodule:: wxcadm.workspace
+   :members:
+   :undoc-members:
+   :noindex:
+
+.. automodule:: wxcadm.number
+   :members:
+   :undoc-members:
+   :noindex:
