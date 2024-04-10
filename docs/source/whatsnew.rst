@@ -5,6 +5,7 @@ What's New
 
 v4.3.0
 ------
+- BUG FIX: :meth:`WorkspaceList.get()` now works correctly when UUID is not used by the search
 - Created :class:`VoicemailGroup` and :class:`VoicemailGroupList` which can be obtained from :attr:`Org.voicemail_groups` to manage Voicemail Groups
 - Created :class:`OutgoingPermissionDigitPattern` and :class:`OutgoingPermissionDigitPatternList` which can be obtained from :attr:`Location.outgoing_permission_digit_patterns` to manage the new capability
 - All classes are now imported and exposed at the module level, so, for example, `wxcadm.people.Person` can be referenced as `wxcadm.Person`
