@@ -4,6 +4,7 @@ import base64
 import logging
 import uuid
 import time
+import re
 import requests
 import sys
 from typing import Optional, TYPE_CHECKING
@@ -27,7 +28,7 @@ def webex_api_call(method: str,
                    headers: Optional[dict] = None,
                    params: Optional[dict] = None,
                    payload: dict | MultipartEncoder | None = None,
-                   retry_count: Optional[int] = 3,
+                   retry_count: Optional[int] = 5,
                    domain: Optional[str] = None,
                    **kwargs):
     """ Generic handler for all Webex API requests
@@ -46,7 +47,7 @@ def webex_api_call(method: str,
             API call
         retry_count (int, optional): Controls the number of times an API call will be retried if the API returns a
             429 Too Many Requests. The wait time between retries will be based on the Retry-After header sent by Webex.
-            Default is 3.
+            Default is 5.
         domain (str, optional): The domain name to use if anything other than https://webexapis.com
 
     Returns:
@@ -101,6 +102,17 @@ def webex_api_call(method: str,
                     log.info("Ignoring 400 Error due to ignore_400=True")
                     session.close()
                     return None
+                # The following was added to handle cross-region analytics and CDR
+                if r.status_code == 451:
+                    log.info("Retrying GET in different API region")
+                    message = r.json()
+                    log.debug(message['message'])
+                    m = re.search('Please use (.*)', message['message'])
+                    if m:
+                        new_domain = m.group(1)
+                        log.info(f'Using {new_domain} as new domain')
+                        url_base = f'https://{new_domain}'
+                        continue
                 else:
                     session.close()
                     try:

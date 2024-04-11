@@ -5,6 +5,7 @@ What's New
 
 v4.3.0
 ------
+- :meth:`webex_api_call()` now supports the HTTP 451 which is used to redirect analytics calls to the correct region
 - :meth:`Person.assign_wxc()` now supports an `unassign_ucm` parameter to allow UCM licenses to be removed automatically when Webex Calling is added.
 - BUG FIX: :meth:`WorkspaceList.get()` now works correctly when UUID is not used by the search
 - Created :class:`VoicemailGroup` and :class:`VoicemailGroupList` which can be obtained from :attr:`Org.voicemail_groups` to manage Voicemail Groups
