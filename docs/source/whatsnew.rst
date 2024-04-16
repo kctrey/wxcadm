@@ -5,6 +5,7 @@ What's New
 
 v4.3.0
 ------
+- BREAKING CHANGE: :attr:`Org.numbers` and :attr:`Location.numbers` now uses :class:`NumberList`
 - :meth:`AutoAttendantList.create()` now supports ``business_hours_menu`` and ``after_hours_menu`` as optional arguments, building an empty menu when omitted
 - The :class:`Number` and :class:`NumberList` classes have been added to handle all number-management and search functions
 - :meth:`webex_api_call()` now supports the HTTP 451 which is used to redirect analytics calls to the correct region
