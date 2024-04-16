@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .number import NumberList
 from collections import UserList
 
 import wxcadm
@@ -13,6 +15,7 @@ from .pickup_group import PickupGroupList
 from .common import *
 from .exceptions import APIError
 from .dect import DECTNetworkList
+from .number import NumberList
 
 
 class LocationList(UserList):
@@ -192,6 +195,7 @@ class Location:
         self._hunt_groups: Optional[HuntGroupList] = None
         self._dect_networks: Optional[DECTNetworkList] = None
         self._outgoing_permission_digit_patterns: Optional[OutgoingPermissionDigitPatternList] = None
+        self._numbers: Optional[NumberList] = None
 
     def __str__(self):
         return self.name
@@ -330,44 +334,20 @@ class Location:
         return self._call_queues
 
     @property
-    def numbers(self):
+    def numbers(self) -> Optional[NumberList]:
         """ All the Numbers for the Location
 
         Returns:
-            list[dict]: List of dict containing information about each number
+            NumberList: The :class:`NumberList` for the Location
 
         """
         log.info("Getting Location numbers from Webex")
         if self.calling_enabled is False:
             log.debug("Not a Webex Calling Location")
             return None
-        params = {'locationId': self.id}
-        response = webex_api_call("get", "v1/telephony/config/numbers", params=params)
-        loc_numbers = response['phoneNumbers']
-        for num in loc_numbers:
-            if "owner" in num:
-                if "id" in num['owner']:
-                    person = self._parent.get_person_by_id(num['owner']['id'])
-                    if person is not None:
-                        num['owner'] = person
-                    else:
-                        if num['owner']['type'].upper() == "HUNT_GROUP":
-                            hunt_group = self._parent.get_hunt_group_by_id(num['owner']['id'])
-                            if hunt_group is not None:
-                                num['owner'] = hunt_group
-                        elif num['owner']['type'].upper() == "GROUP_PAGING":
-                            paging_group = self._parent.get_paging_group(id=num['owner']['id'])
-                            if paging_group is not None:
-                                num['owner'] = paging_group
-                        elif num['owner']['type'].upper() == "CALL_CENTER":
-                            call_queue = self._parent.get_call_queue_by_id(num['owner']['id'])
-                            if call_queue is not None:
-                                num['owner'] = call_queue
-                        elif num['owner']['type'].upper() == "AUTO_ATTENDANT":
-                            auto_attendant = self._parent.auto_attendants.get(id=num['owner']['id'])
-                            if auto_attendant is not None:
-                                num['owner'] = auto_attendant
-        return loc_numbers
+        if self._numbers is None:
+            self._numbers = NumberList(self)
+        return self._numbers
 
     @property
     def available_numbers(self):

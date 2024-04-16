@@ -28,6 +28,7 @@ from .recording import ComplianceAnnouncementSettings
 from .jobs import NumberManagementJobList, UserMoveJobList
 from .virtual_line import VirtualLineList
 from .dect import DECTNetworkList
+from .number import NumberList
 
 
 class Org:
@@ -80,6 +81,7 @@ class Org:
         self._virtual_lines = None
         self._dect_networks = None
         self._voicemail_groups = None
+        self._numbers = None
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -94,8 +96,17 @@ class Org:
         if xsi:
             self.get_xsi_endpoints()
 
+
+    @property
+    def numbers(self):
+        """ :class:`NumberList` of all numbers for the Org """
+        if self._numbers is None:
+            self._numbers = NumberList(self)
+        return self._numbers
+
     @property
     def voicemail_groups(self):
+        """ :class:`VoicemailGroupList of all Voicemail Groups for the Org """
         if self._voicemail_groups is None:
             self._voicemail_groups = VoicemailGroupList(self)
         return self._voicemail_groups
@@ -326,47 +337,6 @@ class Org:
             if pg.spark_id == spark_id:
                 return pg
         return None
-
-    @property
-    def numbers(self):
-        """ All the Numbers for the Org
-
-        Returns:
-            list[dict]: List of dict containing information about each number
-
-        """
-        log.info("Getting Org numbers from Webex")
-        response = webex_api_call("get", "v1/telephony/config/numbers", headers=self._headers, params=self._params)
-        org_numbers = response['phoneNumbers']
-        for num in org_numbers:
-            if "owner" in num:
-                if "id" in num['owner']:
-                    person = self.get_person_by_id(num['owner']['id'])
-                    if person is not None:
-                        num['owner'] = person
-                    else:
-                        if num['owner']['type'].upper() == "HUNT_GROUP":
-                            hunt_group = self.get_hunt_group_by_id(num['owner']['id'])
-                            if hunt_group is not None:
-                                num['owner'] = hunt_group
-                        elif num['owner']['type'].upper() == "GROUP_PAGING":
-                            paging_group = self.get_paging_group(id=num['owner']['id'])
-                            if paging_group is not None:
-                                num['owner'] = paging_group
-                        elif num['owner']['type'].upper() == "CALL_CENTER":
-                            call_queue = self.get_call_queue_by_id(num['owner']['id'])
-                            if call_queue is not None:
-                                num['owner'] = call_queue
-                        elif num['owner']['type'].upper() == "AUTO_ATTENDANT":
-                            auto_attendant = self.auto_attendants.get(id=num['owner']['id'])
-                            if auto_attendant is not None:
-                                num['owner'] = auto_attendant
-            if "location" in num:
-                location = self.locations.get(name=num['location']['name'])
-                if location is not None:
-                    num['location'] = location
-        self._numbers = org_numbers
-        return org_numbers
 
     def get_number_assignment(self, number: str):
         """ Get the object to which a phone number is assigned.

@@ -5,6 +5,8 @@ What's New
 
 v4.3.0
 ------
+- :meth:`AutoAttendantList.create()` now supports ``business_hours_menu`` and ``after_hours_menu`` as optional arguments, building an empty menu when omitted
+- The :class:`Number` and :class:`NumberList` classes have been added to handle all number-management and search functions
 - :meth:`webex_api_call()` now supports the HTTP 451 which is used to redirect analytics calls to the correct region
 - :meth:`Person.assign_wxc()` now supports an `unassign_ucm` parameter to allow UCM licenses to be removed automatically when Webex Calling is added.
 - BUG FIX: :meth:`WorkspaceList.get()` now works correctly when UUID is not used by the search
