@@ -91,14 +91,42 @@ class AutoAttendantList(UserList):
                extension: Optional[str],
                business_hours_schedule: str,
                holiday_schedule: Optional[str],
-               business_hours_menu: dict,
-               after_hours_menu: dict,
+               business_hours_menu: Optional[dict] = None,
+               after_hours_menu: Optional[dict] = None,
                extension_dialing_scope: str = "GROUP",
                name_dialing_scope: str = "GROUP",
                language: Optional[str] = None,
                time_zone: Optional[str] = None,
                location: Optional[wxcadm.Location] = None
                ):
+        """ Create a new Auto Attendant
+
+        Args:
+            name (str): The name of the Auto Attendant
+            first_name (str): The first name of the Auto Attendant in the directory
+            last_name (str): The last name of the Auto Attendant in the directory
+            phone_number (str, optional): The phone number of the Auto Attendant
+            extension (str, optional): The extension of the Auto Attendant
+            business_hours_schedule (str): The name of the Business Hours Schedule to appy to the Auto Attendant
+            holiday_schedule (str, optional): The name of the Holiday Schedule to apply to the Auto Attendant
+            business_hours_menu (dict, optional): The Business Hours menu configuration. See the Webex Developer docs
+                for details. Defaults to a menu with a zero (0) to exit the menu.
+            after_hours_menu (dict, optional): The After Hours menu configuration. See the Webex Developer docs for
+                details. Defaults to a menu with 1 zero (0) to exit the menu.
+            extension_dialing_scope (str, optional): Whether extension dialing matches at the `'GROUP'` (i.e. Location)
+                or `'ENTERPRISE'`. Defaults to `'GROUP'`
+            name_dialing_scope (str, optional): Whether name dialing matches at the `'GROUP'` (i.e. Location) or
+                `'ENTERPRISE'`. Defaults to `'GROUP'`
+            language (str, optional): The language code for the Auto Attendant. Defaults to the Location language
+            time_zone (str, optional): The time zone for the Auto Attendant. Defaults to the Location time zone
+            location (Location, optional): The Location to build the Auto Attendant at. If the
+                :class:`AutoAttendantList` is at the Location level, this parameter is optional. If it is at the
+                Org level, it is required.
+
+        Returns:
+            AutoAttendant: The :class:`AutoAttendant` that is created.
+
+        """
         if location is None and isinstance(self.parent, wxcadm.Org):
             raise ValueError("location is required for Org-level AutoAttendantList")
         elif location is None and isinstance(self.parent, wxcadm.Location):
@@ -116,6 +144,20 @@ class AutoAttendantList(UserList):
         if language is None:
             log.debug(f"Using Location announcement_language {location.announcement_language}")
             language = location.announcement_language
+        if business_hours_menu is None or after_hours_menu is None:
+            default_menu = {
+                'greeting': 'DEFAULT',
+                'extensionEnabled': True,
+                'keyConfigurations': [
+                    {'key': '0', 'action': 'EXIT'}
+                ]
+            }
+            if business_hours_menu is None:
+                log.debug('Using default menu for Business Hours')
+                business_hours_menu = default_menu
+            if after_hours_menu is None:
+                log.debug('Using default menu for After Hours')
+                after_hours_menu = default_menu
 
         payload = {
             "name": name,
