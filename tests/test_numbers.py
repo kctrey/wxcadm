@@ -20,6 +20,7 @@ class TestNumbers(unittest.TestCase):
     def setUp(self) -> None:
         self.webex = wxcadm.Webex(self.access_token)
         self.random_location = choice(self.webex.org.locations.webex_calling())
+        wxcadm.console_logging()
 
     def test_number_lists(self):
         with self.subTest('Org Numbers'):
@@ -49,7 +50,6 @@ class TestNumbers(unittest.TestCase):
             self.assertIsInstance(random_number.phone_number, str)
             got_number = org_number_list.get(extension=random_number.extension)
             self.assertEqual(random_number, got_number)
-
 
 
 if __name__ == '__main__':
