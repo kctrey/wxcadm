@@ -42,7 +42,11 @@ class DeviceLayout:
         self._parse_config(response)
 
 class Device:
-    def __init__(self, parent: Person | Workspace, config: dict):
+    def __init__(self, parent: wxcadm.Org | Person | Workspace,
+                 config: Optional[dict] = None,
+                 id: Optional[str] = None):
+        if config is None and id is not None:
+            config = webex_api_call('get', f'/v1/devices/{id}')
         self.parent = parent
         """ The :py:class:`Org`, :py:class:`Person` or :py:class:`Workspace` that created this instance """
         self.id: str = config['id']
