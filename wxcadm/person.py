@@ -569,7 +569,7 @@ class Person:
 
     @property
     def devices(self):
-        """ :class:`DevieList` of :py:class:`Device` instances for the Person
+        """ :class:`DeviceList` of :py:class:`Device` instances for the Person
 
         Returns:
             DeviceList
@@ -590,6 +590,9 @@ class Person:
         If the MAC address is passed, a device will be created with the provided MAC address. If no MAC address is
         passed, an Activation Code will be generated and returned as part of the response. Your integration/token must
         have the ``identity:placeonetimepassword_create`` scope to create Activation Codes for devices.
+
+        .. deprecated:: 4.3.0
+            Use :meth:`Person.devices.create()` instead
 
         Args:
             model (str): The model name of the device being added
@@ -661,7 +664,7 @@ class Person:
                 results['sip_outbound_proxy_srv'] = f"_sips._tcp.{response['proxy']['outboundProxy']}"
 
         # Provide the Device instance in the response as well
-        results['device_object'] = self._parent.get_device_by_id(device_id)
+        results['device_object'] = Device(parent=self, id=device_id)
         return results
 
     @property
