@@ -114,6 +114,7 @@ Properties are exposed for most commonly-used attributes.
    reference/Webhooks
    reference/UserGroups
    reference/Announcements
+   reference/Jobs
 
 .. toctree::
    :maxdepth: 2
