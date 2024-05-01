@@ -30,7 +30,8 @@ class NumberManagementJob:
             self.details = details
 
     def _get_details(self):
-        response = webex_api_call('get', f'v1/telephony/config/jobs/numbers/manageNumbers/{self.id}')
+        response = webex_api_call('get', f'v1/telephony/config/jobs/numbers/manageNumbers/{self.id}',
+                                  params={'orgId': self.parent.id})
         return response
 
     @property
@@ -196,7 +197,8 @@ class UserMoveJob:
             self.details = details
 
     def _get_details(self):
-        response = webex_api_call('get', f'v1/telephony/config/jobs/person/moveLocation/{self.id}')
+        response = webex_api_call('get', f'v1/telephony/config/jobs/person/moveLocation/{self.id}',
+                                  params={'orgId': self.parent.id})
         return response
 
     @property

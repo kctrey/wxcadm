@@ -5,6 +5,8 @@ What's New
 
 v4.3.0
 ------
+- BUG FIX: All of the :class:`UserMoveJob` methods now send ``orgId`` for tokens with access to multiple Orgs
+- BUG FIX: :meth:`DeviceList.create()` now sends ``orgId`` with the POST for tokens with access to multiple Orgs
 - DEPRECATION: :meth:`Person.add_device()` has been deprecated. Use :meth:`Person.devices.create()` instead
 - BREAKING CHANGE: :attr:`Org.numbers` and :attr:`Location.numbers` now uses :class:`NumberList`
 - :meth:`AutoAttendantList.create()` now supports ``business_hours_menu`` and ``after_hours_menu`` as optional arguments, building an empty menu when omitted
