@@ -670,24 +670,30 @@ class DeviceList(UserList):
                 "workspaceId": self.parent.id,
                 "model": model
             }
+            params = {'orgId': self.parent._parent.id}
         elif isinstance(self.parent, (wxcadm.person.Person, wxcadm.person.Me)):
             payload = {
                 "personId": self.parent.id,
                 "model": model
             }
+            params = {'orgId': self.parent._parent.id}
         elif isinstance(self.parent, wxcadm.org.Org):
             if person is not None:
                 payload = {
                     "personId": person.id,
                     "model": model
                 }
+                params = {'orgId': self.parent.id}
             elif workspace is not None:
                 payload = {
                     "workspaceId": workspace.id,
                     "model": model
                 }
+                params = {'orgId': self.parent.id}
             else:
-                raise ValueError("Device or Workspace must be provided")
+                raise ValueError("Person or Workspace must be provided")
+        else:
+            raise ValueError("Cannot determine Person or Workspace from given argument")
 
         data_needed = False  # Flag that we need to get platform data once we have a Device ID
         if mac is None and model != 'Imagicle Customer Managed':
@@ -695,7 +701,7 @@ class DeviceList(UserList):
             try:
                 response = webex_api_call('post',
                                           'v1/devices/activationCode',
-                                          payload=payload)
+                                          payload=payload, params=params)
                 log.debug(f"\t{response}")
             except APIError:
                 return False
@@ -727,7 +733,7 @@ class DeviceList(UserList):
                                               f'generatePassword/invoke')
                     password = response['exampleSipPassword']
                 payload['password'] = password
-            response = webex_api_call('post', 'v1/devices', payload=payload)
+            response = webex_api_call('post', 'v1/devices', payload=payload, params=params)
             log.debug(f"\t{response}")
 
             # Get the ID of the device we just inserted
