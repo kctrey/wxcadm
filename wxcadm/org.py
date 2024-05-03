@@ -25,7 +25,7 @@ from .reports import ReportList
 from .calls import Calls
 from .device import DeviceList
 from .recording import ComplianceAnnouncementSettings
-from .jobs import NumberManagementJobList, UserMoveJobList
+from .jobs import NumberManagementJobList, UserMoveJobList, RebuildPhonesJobList
 from .virtual_line import VirtualLineList
 from .dect import DECTNetworkList
 from .number import NumberList
@@ -78,6 +78,7 @@ class Org:
         self._compliance_announcement_settings: Optional[ComplianceAnnouncementSettings] = None
         self._number_management_jobs = None
         self._user_move_jobs = None
+        self._rebuild_phones_jobs = None
         self._virtual_lines = None
         self._dect_networks = None
         self._voicemail_groups = None
@@ -211,6 +212,13 @@ class Org:
         if self._user_move_jobs is None:
             self._user_move_jobs = UserMoveJobList(self)
         return self._user_move_jobs
+
+    @property
+    def rebuild_phones_jobs(self):
+        """ :class:`RebuildPhonesJobList` for this Organization """
+        if self._rebuild_phones_jobs is None:
+            self._rebuild_phones_jobs = RebuildPhonesJobList(self)
+        return self._rebuild_phones_jobs
 
     def __get_licenses(self):
         """Gets all licenses for the Organization

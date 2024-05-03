@@ -400,3 +400,147 @@ class UserMoveValidationResults:
             if message['severity'].lower() == 'error':
                 return False
         return True
+
+
+class RebuildPhonesJob:
+    """ The class for Rebuild Phones Jobs
+
+    This class is never instantiated directly. It is created with the :class:`RebuildPhonesJobList`
+
+    """
+
+    def __init__(self, parent: wxcadm.Org, id: str, details: Optional[dict] = None):
+        self.parent = parent
+        self.id = id
+        """ The Rebuild Phones Job ID """
+        self.details: dict
+        """ The full details of the Rebuild Phones Job from Webex """
+        if details is None:
+            self.details = self._get_details()
+        else:
+            self.details = details
+
+    def _get_details(self):
+        response = webex_api_call('get', f'v1/telephony/config/jobs/devices/rebuildPhones/{self.id}',
+                                  params={'orgId': self.parent.id})
+        return response
+
+    @property
+    def completed(self) -> bool:
+        """ Whether the job has completed execution
+
+        Note that this does not indicate that the job was successful. The :attr:`success` attribute should be used to
+        determine whether the job was successful or not
+
+        """
+        self.details = self._get_details()
+        if self.details['latestExecutionStatus'] == 'COMPLETED':
+            return True
+        else:
+            return False
+
+    @property
+    def device_count(self) -> int:
+        """ The count of devices that were included in this Rebuild Phones Job
+
+        Returns:
+            int: The count of phones
+
+        """
+        return self.details['deviceCount']
+
+
+class RebuildPhonesJobList(UserList):
+    _endpoint = "v1/telephony/config/jobs/devices/rebuildPhones"
+    _endpoint_items_key = "items"
+    _item_endpoint = "v1/telephony/config/jobs/devices/rebuildPhones/{item_id}"
+    _item_class = RebuildPhonesJob
+
+    def __init__(self, parent: wxcadm.Org):
+        super().__init__()
+        log.debug("Initializing RebuildPhonesJobList")
+        self.parent: wxcadm.Org = parent
+        self.data: list = self._get_data()
+
+    def _get_data(self) -> list:
+        log.debug("_get_data() started")
+        params = {}
+
+        if isinstance(self.parent, wxcadm.Org):
+            log.debug(f"Using Org ID {self.parent.id} as Data filter")
+            params['orgId'] = self.parent.id
+            params['max'] = 1000
+        else:
+            log.warn("Parent class is not Org so all items will be returned")
+        response = webex_api_call('get', self._endpoint, params=params)
+        log.info(f"Found {len(response)} items")
+
+        items = []
+        for entry in response:
+            items.append(self._item_class(parent=self.parent, id=entry['id'], details=entry))
+        return items
+
+    def refresh(self):
+        """ Refresh the list of instances from Webex
+
+        Returns:
+            bool: True on success, False otherwise.
+
+        """
+        self.data = self._get_data()
+        return True
+
+    def get(self, id: str):
+        """ Get the instance associated with a given Job ID
+
+        Args:
+            id (str): The Number Management Job ID to find
+
+        Returns:
+            RebuildPhonesJob: The Number Management Job instance correlating with the given ID
+
+        """
+        for item in self.data:
+            if item.id == id:
+                return item
+        return None
+
+    def create(self,
+               location: wxcadm.Location | str
+               ):
+        """ Create a Rebuild Phones Job
+
+        .. note::
+
+            At this time, the API only supports rebuild at a Location level.
+
+        Args:
+            location (Location | str): A :class:`Location` instance or a string representing the Location ID for the
+            rebuild
+
+        Returns:
+            RebuildPhonesJob: The created :class:`RebuildPhonesJob`
+
+        """
+        log.info(f"Creating Rebuild Phones Job")
+        if isinstance(location, wxcadm.Location):
+            target_location_id = location.id
+        else:
+            target_location_id = location
+
+        # If we create a job, we'll store it. Otherwise, we'll return None
+        job = None
+
+        # Build the payload for the move job validation
+        payload = {'locationId': target_location_id}
+        response = wxcadm.webex_api_call('post', 'v1/telephony/config/jobs/devices/rebuildPhones',
+                                         params={'orgId': self.parent.id},
+                                         payload=payload)
+        log.debug(f"API response: {response}")
+        job_id = response['id']
+        log.debug(f"Received Job ID {job_id}")
+        self.refresh()
+        job = RebuildPhonesJob(parent=self.parent, id=job_id, details=response)
+
+        return job
+

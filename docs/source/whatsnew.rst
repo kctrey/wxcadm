@@ -5,6 +5,8 @@ What's New
 
 v4.3.0
 ------
+- :class:`Device` now has a ``layout`` property, which is a :class:`DeviceLayout`
+- Added :class:`RebuildPhonesJob` and :class:`RebuildPhonesJobList` which can be accessed from :attr:`Org.rebuild_phones_jobs`
 - BUG FIX: All of the :class:`UserMoveJob` methods now send ``orgId`` for tokens with access to multiple Orgs
 - BUG FIX: :meth:`DeviceList.create()` now sends ``orgId`` with the POST for tokens with access to multiple Orgs
 - DEPRECATION: :meth:`Person.add_device()` has been deprecated. Use :meth:`Person.devices.create()` instead
