@@ -225,7 +225,8 @@ class DeviceMemberList(UserList):
 
     def _get_data(self):
         try:
-            response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.id}/members")
+            response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.id}/members",
+                                      params={'orgId': self.device.parent.org_id})
         except:
             return []
         log.debug(response)
