@@ -287,6 +287,11 @@ class Workspace:
         return self.id
 
     @property
+    def org_id(self) -> str:
+        """ The Org ID of the Workspace """
+        return self._parent.org_id
+
+    @property
     def spark_id(self):
         """ The internal identifier used by Webex """
         return decode_spark_id(self.id)

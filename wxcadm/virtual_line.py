@@ -80,6 +80,11 @@ class VirtualLine:
         return True
 
     @property
+    def org_id(self) -> str:
+        """ The Org ID of the Virtual Line """
+        return self.parent.org_id
+
+    @property
     def display_name(self) -> str:
         """ The Display Name of the Virtual Line"""
         if self._display_name is None:
