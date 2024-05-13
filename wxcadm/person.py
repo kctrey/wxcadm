@@ -431,6 +431,16 @@ class Person:
             return False
 
     @property
+    def org_id(self) -> str:
+        """ The Org ID for the Person """
+        if isinstance(self._parent, wxcadm.Org):
+            return self._parent.org_id
+        elif isinstance(self._parent, wxcadm.Location):
+            return self._parent.org_id
+        else:
+            return None
+
+    @property
     def spark_id(self):
         """ The internal identifier used within Webex """
         user_id_bytes = base64.b64decode(self.id + "===")
@@ -1377,7 +1387,7 @@ class Person:
         payload['extension'] = extension
         if location is None:
             location = self.location
-        payload['location'] = location
+        payload['locationId'] = location
         if display_name is None:
             display_name = self.display_name
         payload['displayName'] = display_name
