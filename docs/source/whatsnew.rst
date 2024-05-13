@@ -5,6 +5,9 @@ What's New
 
 v4.3.0
 ------
+- BUG FIX: :meth:`Person.update_person()` now sends ``locationId`` correctly
+- All API calls in the :class:`Device` class will now send ``orgId`` as a query parameter
+- Added :attr:`Person.org_id`, :attr:`VirtualLine.org_id` and :attr:`Workspace.org_id` to make API calls easier
 - :class:`Device` now has a ``layout`` property, which is a :class:`DeviceLayout`
 - Added :class:`RebuildPhonesJob` and :class:`RebuildPhonesJobList` which can be accessed from :attr:`Org.rebuild_phones_jobs`
 - BUG FIX: All of the :class:`UserMoveJob` methods now send ``orgId`` for tokens with access to multiple Orgs
