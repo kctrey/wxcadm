@@ -38,17 +38,21 @@ class DeviceLayout:
         self.kem_keys = config.get('kemKeys', [])
 
     def _get_config(self):
-        response = webex_api_call('get', f'telephony/config/devices/{self.device.id}/layout')
+        response = webex_api_call('get', f'telephony/config/devices/{self.device.id}/layout',
+                                  params={'orgId': self.device.parent.org_id})
         self._parse_config(response)
+
 
 class Device:
     def __init__(self, parent: wxcadm.Org | Person | Workspace,
                  config: Optional[dict] = None,
                  id: Optional[str] = None):
-        if config is None and id is not None:
-            config = webex_api_call('get', f'/v1/devices/{id}')
         self.parent = parent
         """ The :py:class:`Org`, :py:class:`Person` or :py:class:`Workspace` that created this instance """
+
+        if config is None and id is not None:
+            config = webex_api_call('get', f'/v1/devices/{id}', params={'orgId': self.parent.org_id})
+
         self.id: str = config['id']
         """ The Device ID """
         self.tags: list = config.get('tags', config.get('description', ''))
@@ -142,7 +146,7 @@ class Device:
             "path": "tags",
             "value": tag
         }
-        webex_api_call("patch", f"/v1/devices/{self.id}", payload=payload)
+        webex_api_call("patch", f"/v1/devices/{self.id}", payload=payload, params={'orgId': self.parent.org_id})
 
         return True
 
@@ -155,7 +159,7 @@ class Device:
         """
         if self._settings is None:
             response = webex_api_call('get', f'/v1/telephony/config/devices/{self.id}/settings',
-                                      params={'model': self.model})
+                                      params={'model': self.model, 'orgId': self.parent.org_id})
             self._settings = response
         return self._settings
 
@@ -163,7 +167,7 @@ class Device:
     def settings(self, config: dict):
         try:
             webex_api_call('put', f'v1/telephony/config/devices/{self.id}/settings',
-                                  payload=config)
+                                  payload=config, params={'orgId': self.parent.org_id})
         except APIError:
             logging.warning("The API call to set the device settings failed")
 
@@ -177,7 +181,8 @@ class Device:
 
         """
         try:
-            webex_api_call('post', f'v1/telephony/config/devices/{self.id}/actions/applyChanges/invoke')
+            webex_api_call('post', f'v1/telephony/config/devices/{self.id}/actions/applyChanges/invoke',
+                           params={'orgId': self.parent.org_id})
         except APIError:
             return False
 
@@ -190,7 +195,7 @@ class Device:
             bool: True on success. An exception will be thrown otherwise
 
         """
-        webex_api_call("delete", f"v1/devices/{self.id}")
+        webex_api_call("delete", f"v1/devices/{self.id}", params={'orgId': self.parent.org_id})
         return True
 
     @property
@@ -250,7 +255,8 @@ class DeviceMemberList(UserList):
             dict: A list of available members to add to the device
 
         """
-        response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.id}/availableMembers")
+        response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.id}/availableMembers",
+                                  params={'orgId': self.device.parent.org_id})
         return response['members']
 
     def add(self, members: Union[list, Workspace, Person, VirtualLine],
@@ -326,7 +332,8 @@ class DeviceMemberList(UserList):
 
         wxcadm.webex_api_call('put',
                               f"v1/telephony/config/devices/{self.device.id}/members",
-                              payload={'members': members_list_json})
+                              payload={'members': members_list_json},
+                              params={'orgId': self.device.parent.org_id})
         return True
 
     def _json_list(self) -> list:
@@ -415,7 +422,8 @@ class DeviceMember:
 
         """
         # Rather than rebuild the member list from what we already have, it's quicker to just pull a fresh copy
-        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/members')
+        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/members',
+                                         params={'orgId': self.device.parent.org_id})
         new_member_list = []
         for member in old_member_list['members']:
             if member['id'] == self.id:
@@ -434,7 +442,7 @@ class DeviceMember:
 
         # Once we have rebuilt the list, just PUT it back
         webex_api_call('put', f'v1/telephony/config/devices/{self.device.id}/members',
-                       payload={'members': new_member_list})
+                       payload={'members': new_member_list}, params={'orgId': self.device.parent.org_id})
         self.line_label = label
         return self
 
@@ -450,7 +458,8 @@ class DeviceMember:
 
         """
         # Rather than rebuild the member list from what we already have, it's quicker to just pull a fresh copy
-        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/members')
+        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/members',
+                                         params={'orgId': self.device.parent.org_id})
         new_member_list = []
         for member in old_member_list['members']:
             if member['id'] == self.id:
@@ -472,7 +481,7 @@ class DeviceMember:
 
         # Once we have rebuilt the list, just PUT it back
         webex_api_call('put', f'v1/telephony/config/devices/{self.device.id}/members',
-                       payload={'members': new_member_list})
+                       payload={'members': new_member_list}, params={'orgId': self.device.parent.org_id})
         self.hotline_enabled = enabled
         if destination is not None:
             self.hotline_destination = destination
@@ -492,7 +501,8 @@ class DeviceMember:
 
         """
         # Rather than rebuild the member list from what we already have, it's quicker to just pull a fresh copy
-        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/members')
+        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/members',
+                                         params={'orgId': self.device.parent.org_id})
         new_member_list = []
         for member in old_member_list['members']:
             if member['id'] == self.id:
@@ -512,7 +522,7 @@ class DeviceMember:
 
         # Once we have rebuilt the list, just PUT it back
         webex_api_call('put', f'v1/telephony/config/devices/{self.device.id}/members',
-                       payload={'members': new_member_list})
+                       payload={'members': new_member_list}, params={'orgId': self.device.parent.org_id})
         self.call_decline_all = enabled
         return self
 
@@ -747,7 +757,8 @@ class DeviceList(UserList):
             }
 
             if data_needed is True:
-                response = webex_api_call('get', f'/v1/telephony/config/devices/{device_id}')
+                response = webex_api_call('get', f'/v1/telephony/config/devices/{device_id}',
+                                          params={'orgId': self.parent.org_id})
                 results['sip_auth_user'] = response['owner']['sipUserName']
                 results['line_port'] = response['owner']['linePort']
                 results['password'] = password
