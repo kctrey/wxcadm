@@ -24,7 +24,7 @@ from .call_routing import CallRouting
 from .reports import ReportList
 from .calls import Calls
 from .device import DeviceList
-from .recording import ComplianceAnnouncementSettings
+from .recording import ComplianceAnnouncementSettings, RecordingList
 from .jobs import NumberManagementJobList, UserMoveJobList, RebuildPhonesJobList
 from .virtual_line import VirtualLineList
 from .dect import DECTNetworkList
@@ -193,7 +193,7 @@ class Org:
         """ A dict of user roles with the ID as the key and the Role name as the value """
         if self._roles is None:
             roles = {}
-            response = webex_api_call('get', 'v1/roles')
+            response = webex_api_call('get', 'v1/roles', params={'orgId': self.id})
             for role in response:
                 roles[role['id']] = role['name']
             self._roles = roles
@@ -594,7 +594,7 @@ class Org:
             bool: True on success, False otherwise
 
         """
-        success = webex_api_call("delete", f"v1/people/{person.id}")
+        success = webex_api_call("delete", f"v1/people/{person.id}", params={'orgId': self.id})
         if success:
             self._people = []
             return True
@@ -796,3 +796,6 @@ class Org:
         }
         response = webex_api_call('get', '/v1/adminAudit/events', params=params)
         return response
+
+    def get_recordings(self, **kwargs):
+        return RecordingList(parent=self, **kwargs)
