@@ -20,6 +20,8 @@ class TestSomething(unittest.TestCase):
     def setUp(self) -> None:
         self.webex = wxcadm.Webex(self.access_token)
         self.random_location = choice(self.webex.org.locations.webex_calling())
+        # Enable for test debugging
+        # wxcadm.console_logging()
 
     def test_something(self):
         device_list = self.webex.org.devices
