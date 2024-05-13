@@ -793,6 +793,8 @@ class XSI:
         elif r.status_code == 404:
             return_data = False
         else:
+            log.warning(f'Headers: {r.headers}')
+            log.warning(f'Body: {r.text}')
             return_data = False
         r.close()
         return return_data

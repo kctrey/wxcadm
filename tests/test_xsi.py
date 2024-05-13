@@ -28,10 +28,16 @@ class TestXSI(unittest.TestCase):
     def test_person_profile(self):
         if self.xsi_capable is False:
             self.skipTest("Not an XSI Token")
-        person = choice(self.webex.org.people.webex_calling())
-        person.start_xsi()
-        profile = person.xsi.profile
-        self.assertIsInstance(profile, dict)
+        with self.subTest("My Profile"):
+            me = self.webex.me
+            me.start_xsi()
+            my_profile = me.xsi.profile
+            self.assertIsInstance(my_profile, dict)
+        with self.subTest('Random Person Profile'):
+            person = choice(self.webex.org.people.webex_calling())
+            person.start_xsi()
+            profile = person.xsi.profile
+            self.assertIsInstance(profile, dict)
 
     def test_enterprise_events(self):
         if self.xsi_capable is False:
