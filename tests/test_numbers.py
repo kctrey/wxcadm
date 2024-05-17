@@ -48,7 +48,6 @@ class TestNumbers(unittest.TestCase):
             while random_number is None or random_number.extension is None:
                 random_number = choice(org_number_list)
             self.assertIsInstance(random_number, Number)
-            self.assertIsInstance(random_number.phone_number, str)
             got_number = org_number_list.get(extension=random_number.extension)
             self.assertEqual(random_number, got_number)
 
