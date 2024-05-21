@@ -5,6 +5,9 @@ What's New
 
 v4.3.0
 ------
+- Added :meth:`Workspace.set_ecbn()`, :meth:`Person.set_ecbn()`, :meth:`VirtualLine.set_ecbn()` to set Emergency Callback Number for each
+- Added :attr:`Workspace.ecbn`, :attr:`Person.ecbn`, :attr:`VirtualLine.ecbn` to view Emergency Callback Number for each
+- Added :attr:`Location.virtual_lines`
 - BUG FIX: :meth:`Person.update_person()` now sends ``locationId`` correctly
 - All API calls in the :class:`Device` class will now send ``orgId`` as a query parameter
 - Added :attr:`Person.org_id`, :attr:`VirtualLine.org_id` and :attr:`Workspace.org_id` to make API calls easier

@@ -16,6 +16,7 @@ from .common import *
 from .exceptions import APIError
 from .dect import DECTNetworkList
 from .number import NumberList
+from .virtual_line import VirtualLineList
 
 
 class LocationList(UserList):
@@ -196,6 +197,7 @@ class Location:
         self._dect_networks: Optional[DECTNetworkList] = None
         self._outgoing_permission_digit_patterns: Optional[OutgoingPermissionDigitPatternList] = None
         self._numbers: Optional[NumberList] = None
+        self._virtual_lines: Optional[VirtualLineList] = None
 
     def __str__(self):
         return self.name
@@ -218,6 +220,17 @@ class Location:
 
         """
         return self.parent.workspace_locations.get(name=self.name)
+
+    @property
+    def virtual_lines(self) -> VirtualLineList:
+        """ The :class:`VirtualLineList` of Virtual Lines for this Location
+
+        Returns:
+            VirtualLineList: The list of Virtual Lines
+        """
+        if self._virtual_lines is None:
+            self._virtual_lines = VirtualLineList(self)
+        return self._virtual_lines
 
     @property
     def calling_enabled(self) -> bool:
