@@ -15,12 +15,26 @@ from .device import DeviceList
 
 class WorkspaceLocationList(UserList):
     def __init__(self, parent: wxcadm.Org):
+        """
+
+        .. deprecated:: 3.4.0
+            The Workspace Location concept is being removed from the Webex APIs. All Workspace Locations are now simply
+            :class:`Location`s now. This class will still show up in come cases until it is completely removed.
+
+        """
         super().__init__()
         log.debug("Initializing WorkspaceLocationList")
         self.parent: wxcadm.Org = parent
         self.data: list = self._get_workspace_locations()
 
     def _get_workspace_locations(self):
+        """
+
+        .. deprecated:: 3.4.0
+            The Workspace Location concept is being removed from the Webex APIs. All Workspace Locations are now simply
+            :class:`Location`s now. This class will still show up in come cases until it is completely removed.
+
+        """
         log.debug("Getting list of Workspace Locations")
         workspace_locations = []
         log.debug(f"Using Org {self.parent.name} as WorkspaceLocation filter")
@@ -71,6 +85,14 @@ class WorkspaceLocationList(UserList):
 
 class WorkspaceList(UserList):
     def __init__(self, parent: Union["Org", "WorkspaceLocation", wxcadm.Location]):
+        """
+
+        .. deprecated:: 3.4.0
+            The Workspace Location concept is being removed from the Webex APIs. All Workspace Locations are now simply
+            :class:`Location`s now. This class will still show up in come cases until it is completely removed.
+
+        """
+
         super().__init__()
         log.debug("Initializing WorkspaceList instance")
         self.parent: wxcadm.Org = parent
@@ -164,7 +186,7 @@ class WorkspaceList(UserList):
         Args:
             location (Location): The :class:`Location` where the Workspace will be located
             name (str): The name of the Workspace
-            floor (WorkspaceLocationFloor, optional): The :class:`WorkspaceLocationFloor` where the Workspace is located
+            floor (LocationFloor, optional): The :class:`LocationFloor` where the Workspace is located
             capacity (int, optional): The capacity of the Workspace
             type (str, optional): The type of Workspace. See the developer documentation for options. Defaults to `noteSet`
             phone_number (str, optional): The Webex Calling phone number for the Workspace
@@ -182,8 +204,9 @@ class WorkspaceList(UserList):
         """
         if extension is None and phone_number is None:
             raise ValueError("Must provide extension, phone_number, or both")
-        if location.workspace_location is None:
-            raise KeyError(f"Location {location.name} does not have a Workspace Location")
+        # Removed 3.4.0 when Workspace Locations were deprecated
+        # if location.workspace_location is None:
+        #     raise KeyError(f"Location {location.name} does not have a Workspace Location")
         if hotdesking is True:
             hotdesking = 'on'
         else:
@@ -192,7 +215,7 @@ class WorkspaceList(UserList):
         payload = {
             'orgId': self.parent.org_id,
             'displayName': name,
-            'workspaceLocationId': location.workspace_location.id,
+            'locationId': location.id,
             'floorId': floor,
             'capacity': capacity,
             'type': type,
@@ -236,10 +259,10 @@ class Workspace:
         self._headers = self._parent._headers
         self._params = self._parent._params
         # Instance attributes
-        self.location: Optional[str] = None
-        """The Webex ID of the Workspace Location (note this is a Workspace Location, not a Calling Location."""
-        self.floor: Optional[str] = None
-        """The Webex ID of the Floor ID"""
+        self.location_id: Optional[str] = None
+        """The Location ID of the Workspace """
+        self.floor_id: Optional[str] = None
+        """The Webex ID of the Location Floor ID"""
         self.name: str = ""
         """The name of the Workspace"""
         self.capacity: Optional[int] = None
@@ -425,7 +448,10 @@ class Workspace:
     def __process_config(self, config: dict):
         """Processes the config dict, whether passed in init or from an API call"""
         self.name = config.get("displayName", "")
-        self.location = config.get("workspaceLocationId", "")
+        if 'locationId' in config.keys():
+            self.location_id = self._parent.locations.get(id=config['locationId'])
+        else:
+            self.location_id = config.get("workspaceLocationId", "")
         self.floor = config.get("floorId", "")
         self.capacity = config.get("capacity", 0)
         if 'type' in config:
@@ -489,6 +515,10 @@ class WorkspaceLocation:
             parent (Org): The Organization to which this WorkspaceLocation belongs
             id (str): The Webex ID of the WorkspaceLocation
             config (dict): The configuration of the WorkspaceLocation as returned by the Webex API
+
+        .. deprecated:: 3.4.0
+            The Workspace Location concept is being removed from the Webex APIs. All Workspace Locations are now simply
+            :class:`Location`s now. This class will still show up in come cases until it is completely removed.
 
         """
         self.id: str = id
@@ -579,6 +609,10 @@ class WorkspaceLocationFloor:
 
         Args:
             config (dict): The config as returned by the Webex API
+
+        .. deprecated:: 3.4.0
+            The Workspace Location concept is being removed from the Webex APIs. All Workspace Location Floors are now
+            :class:`LocationFloor`s now. This class will still show up in come cases until it is completely removed.
 
         """
         self.name = config.get("displayName")

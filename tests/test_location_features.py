@@ -101,6 +101,27 @@ class TestOutgoingDigitPatterns(unittest.TestCase):
                 before_len
             )
 
+class TestLocationFloors(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        load_dotenv()
+        cls.access_token = os.getenv("WEBEX_ACCESS_TOKEN")
+        if not cls.access_token:
+            print("No WEBEX_ACCESS_TOKEN found. Cannot continue.")
+            exit(1)
+
+    def setUp(self) -> None:
+        self.webex = wxcadm.Webex(self.access_token)
+        self.random_location: Location = choice(self.webex.org.locations.webex_calling())
+
+    def test_floor_list(self) -> None:
+        self.assertIsInstance(self.random_location.floors, wxcadm.LocationFloorList)
+        if len(self.random_location.floors) == 0:
+            self.skipTest("No floors at location")
+        self.assertIsInstance(self.random_location.floors[0], LocationFloor)
+        self.assertIsInstance(self.random_location.floors[0].floor_number, int)
+
+
 
 if __name__ == '__main__':
     unittest.main()

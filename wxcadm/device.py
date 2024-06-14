@@ -94,7 +94,16 @@ class Device:
         """ The :py:class:`Person` or :py:class:`Workspace` that owns the device primarily """
         self.workspace_location_id: Optional[str] = config.get('workspaceLocationId', None)
         """ The WorkspaceLocation ID of the device, which indicates the WorkspaceLocation of the primary
-            Person or Workspace """
+            Person or Workspace
+            
+            .. deprecated:: 3.4.0
+            The Workspace Location concept is being removed from the Webex APIs. All Workspace Locations are now simply
+            :class:`Location`s now. This class will still show up in come cases until it is completely removed. Use
+            :attr:`Device.location_id` instead. 
+            
+        """
+        self.location_id: Optional[str] = config.get('locationId', None)
+        """ The Location ID of the device, which indicates the Location of the primary Person or Workspace """
         self._device_members = None
         self._layout = None
 
@@ -149,6 +158,11 @@ class Device:
         webex_api_call("patch", f"/v1/devices/{self.id}", payload=payload, params={'orgId': self.parent.org_id})
 
         return True
+
+    @property
+    def config(self) -> dict:
+        response = webex_api_call('get', f'/v1/telephony/config/devices/{self.id}')
+        return response
 
     @property
     def settings(self):

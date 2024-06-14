@@ -198,6 +198,7 @@ class Location:
         self._outgoing_permission_digit_patterns: Optional[OutgoingPermissionDigitPatternList] = None
         self._numbers: Optional[NumberList] = None
         self._virtual_lines: Optional[VirtualLineList] = None
+        self._floors: Optional[LocationFloorList] = None
 
     def __str__(self):
         return self.name
@@ -231,6 +232,13 @@ class Location:
         if self._virtual_lines is None:
             self._virtual_lines = VirtualLineList(self)
         return self._virtual_lines
+
+    @property
+    def floors(self) -> LocationFloorList:
+        """ The :class:`LocationFloorList` of floors for this Location """
+        if self._floors is None:
+            self._floors = LocationFloorList(self)
+        return self._floors
 
     @property
     def calling_enabled(self) -> bool:
@@ -605,3 +613,102 @@ class Location:
         if self._dect_networks is None:
             self._dect_networks = DECTNetworkList(self)
         return self._dect_networks
+
+
+class LocationFloor:
+    """ A Floor within a Location """
+    def __init__(self, parent: Location, config: Optional[dict] = None, id: Optional[str] = None):
+        self.parent = parent
+        if config is None and id is not None:
+            config = self._get_data(id)
+        self.id: str = config['id']
+        self.floor_number: int = config['floorNumber']
+        self.name: str = config['displayName']
+
+    def _get_data(self, id: str):
+        response = webex_api_call('get', f'v1/locations/{self.parent.id}/floors/{id}')
+        return response
+
+    def update(self, floor_number: Optional[int] = None, name: Optional[str] = None) -> bool:
+        """ Update the floor number and/or name of the floor
+
+        Args:
+            floor_number (int, optional): The new floor number
+            name (str, optional): The new name for the floor
+
+        Returns:
+            bool: True on success
+
+        """
+        payload = {}
+        if floor_number is not None:
+            payload['floorNumber'] = floor_number
+        if name is not None:
+            payload['displayName'] = name
+        response = webex_api_call('put', f'v1/locations/{self.parent.id}/floors/{self.id}', payload=payload,
+                                  params={'orgId': self.parent.org_id})
+        self.floor_number = response['floorNumber']
+        self.name = response['displayName']
+        return True
+
+    def delete(self) -> bool:
+        """ Delete the floor
+
+        Returns:
+            bool: True on success
+
+        """
+        webex_api_call('delete', f'v1/locations/{self.parent.id}/floors/{self.id}',
+                       params={'orgId': self.parent.org_id})
+        return True
+
+
+class LocationFloorList(UserList):
+    def __init__(self, parent: Location):
+        super().__init__()
+        """ List of :class:`LocationFloor` instances for the :class:`Location` """
+        self.parent = parent
+        self.data: list = []
+
+        self._get_data()
+
+    def _get_data(self):
+        self.data = []
+        response = webex_api_call('get', f'v1/locations/{self.parent.id}/floors',
+                                  params={'orgId': self.parent.org_id})
+        for floor in response:
+            self.data.append(LocationFloor(self.parent, floor))
+
+    def refresh(self):
+        self._get_data()
+
+    def create(self, floor_number: int, name: str):
+        """ Create a new floor in the Location
+
+        Args:
+            floor_number (int): The floor number within the building
+            name (str): The descriptive name of the floor (e.g. 'Basement', '2nd Floor')
+
+        Returns:
+            LocationFloor: The :class:`LocationFloor` instance that was created.
+
+        Raises:
+            ValueError: Raised when the ``floor_number`` already exists
+
+        """
+        # Validate the floor number doesn't exist
+        for floor in self.data:
+            if floor.floor_number == floor_number:
+                raise ValueError('Duplicate floor number')
+        payload = {
+            'floorNumber': floor_number,
+            'displayName': name
+        }
+        response = webex_api_call('post', f'v1/locations/{self.parent.id}/floors', payload=payload,
+                                  params={'orgId': self.parent.org_id})
+        self.data.append(LocationFloor(self.parent, config=response))
+
+
+
+
+

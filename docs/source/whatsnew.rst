@@ -5,6 +5,7 @@ What's New
 
 v4.3.0
 ------
+- DEPRECATION: :class:`WorkspaceLocation` (and the entire Workspace Location concept) is being replaced with the existing Location ID
 - Added :meth:`Workspace.set_ecbn()`, :meth:`Person.set_ecbn()`, :meth:`VirtualLine.set_ecbn()` to set Emergency Callback Number for each
 - Added :attr:`Workspace.ecbn`, :attr:`Person.ecbn`, :attr:`VirtualLine.ecbn` to view Emergency Callback Number for each
 - Added :attr:`Location.virtual_lines`
@@ -20,12 +21,12 @@ v4.3.0
 - :meth:`AutoAttendantList.create()` now supports ``business_hours_menu`` and ``after_hours_menu`` as optional arguments, building an empty menu when omitted
 - The :class:`Number` and :class:`NumberList` classes have been added to handle all number-management and search functions
 - :meth:`webex_api_call()` now supports the HTTP 451 which is used to redirect analytics calls to the correct region
-- :meth:`Person.assign_wxc()` now supports an `unassign_ucm` parameter to allow UCM licenses to be removed automatically when Webex Calling is added.
+- :meth:`Person.assign_wxc()` now supports an ``unassign_ucm`` parameter to allow UCM licenses to be removed automatically when Webex Calling is added.
 - BUG FIX: :meth:`WorkspaceList.get()` now works correctly when UUID is not used by the search
 - Created :class:`VoicemailGroup` and :class:`VoicemailGroupList` which can be obtained from :attr:`Org.voicemail_groups` to manage Voicemail Groups
 - Created :class:`OutgoingPermissionDigitPattern` and :class:`OutgoingPermissionDigitPatternList` which can be obtained from :attr:`Location.outgoing_permission_digit_patterns` to manage the new capability
-- All classes are now imported and exposed at the module level, so, for example, `wxcadm.people.Person` can be referenced as `wxcadm.Person`
-- BUG FIX - When adding devices on a secondary Org, the `orgId` param is now passed correctly
+- All classes are now imported and exposed at the module level, so, for example, ``wxcadm.people.Person`` can be referenced as ``wxcadm.Person``
+- BUG FIX - When adding devices on a secondary Org, the ``orgId`` param is now passed correctly
 
 v4.2.6
 ------

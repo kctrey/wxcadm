@@ -69,18 +69,22 @@ class AutoAttendantList(UserList):
         """
         if id is None and name is None and spark_id is None and uuid is None:
             raise ValueError("A search argument must be provided")
-        for aa in self.data:
-            if aa.id == id:
-                return aa
-        for aa in self.data:
-            if aa.name == name:
-                return aa
-        for aa in self.data:
-            if aa.spark_id.split('/')[-1].upper() == uuid.upper():
-                return aa
-        for aa in self.data:
-            if aa.spark_id == spark_id:
-                return aa
+        if id is not None:
+            for aa in self.data:
+                if aa.id == id:
+                    return aa
+        if name is not None:
+            for aa in self.data:
+                if aa.name == name:
+                    return aa
+        if uuid is not None:
+            for aa in self.data:
+                if aa.spark_id.split('/')[-1].upper() == uuid.upper():
+                    return aa
+        if spark_id is not None:
+            for aa in self.data:
+                if aa.spark_id == spark_id:
+                    return aa
         return None
 
     def create(self,
