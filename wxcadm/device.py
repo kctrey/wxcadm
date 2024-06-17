@@ -547,7 +547,7 @@ class DeviceList(UserList):
     _item_endpoint = "v1/devices/{item_id}"
     _item_class = Device
 
-    def __init__(self, parent: Union[wxcadm.Org, wxcadm.Location]):
+    def __init__(self, parent: Union[wxcadm.Org, wxcadm.Location, wxcadm.Workspace, wxcadm.Person]):
         super().__init__()
         log.debug("Initializing DeviceList")
         self.parent: wxcadm.Org | wxcadm.person.Person | wxcadm.workspace.Workspace | wxcadm.Location = parent
@@ -647,28 +647,28 @@ class DeviceList(UserList):
             return item_list
         return None
 
-    def create(self, model: str,
+    def create(self, model: SupportedDevice,
                mac: Optional[str] = None,
                password: Optional[str] = None,
                person: Optional[wxcadm.person.Person] = None,
                workspace: Optional[wxcadm.workspace.Workspace] = None):
         """ Add a new device to the Workspace, Person or Org
 
-        In order to use this method, you must know the model of the device that you are adding, as expected by the
-        Webex API. If you are adding a "Generic IPPhone Customer Managed" device, you can use that value or simply
-        send ``model='GENERIC'`` as an alias. You can find the full list of models with the
-        :py:meth:`Org.get_supported_devices()` method.
+        In order to use this method, you must know the model of the device that you are adding, which is a
+        :class:`SupportedDevice` from the :attr:`Org.supported_devices` :class:`SupportedDeviceList`.
 
         If the MAC address is passed, a device will be created with the provided MAC address. If no MAC address is
         passed, an Activation Code will be generated and returned as part of the response. Your integration/token must
-        have the ``identity:placeonetimepassword_create`` scope to create Activation Codes for devices.
+        have the ``identity:placeonetimepassword_create`` scope to create Activation Codes for devices. Some supported
+        devices do not allow onboarding by Activation Code, which will raise a ValueError. You can check the
+        :attr:`SupportedDevice.onboarding_method` attribute to determine what onboarding methods are allowed.
 
         Args:
-            model (str): The model name of the device being added
+            model (SupportedDevice): The :class:`SupportedDevice` model that is being added
 
             mac (str, optional): The MAC address of the device being added
 
-            password (str, optional): Only valid when creating a Generic IPPhone Customer Managed device. If a
+            password (str, optional): Only valid when creating devices that are not managed by Cisco. If a
                 password is not provided, the Webex API will generate a unique, compliant SIP password and return it
                 in the response.
 
@@ -686,42 +686,54 @@ class DeviceList(UserList):
         Raises:
             ValueError: Raised when the DeviceList cannot determine which Person or Workspace to add the device to.
                 This is normally when the DeviceList was created at the Org level with :attr:`Org.devices`. Ensure you
-                are passing a ``workspace`` or ``person`` argument to the method.
+                are passing a ``workspace`` or ``person`` argument to the method. It may also be raised if the device
+                type does not support the requested onboarding method.
 
         """
         log.info(f"Adding a device to {self.parent.name}")
+        payload = {}
+        if isinstance(model, SupportedDevice):
+            log.debug(f"Checking SupportedDevice requirements for {model.model}")
+            log.debug(f"Setting model name to {model.model}")
+            payload['model'] = model.model
+            if model.managed_by.upper() == 'CISCO':
+                log.debug("Cisco-managed device. No password needed.")
+                password_needed = False
+                data_needed = False
+            else:
+                log.debug(f"{model.managed_by.title()}-managed device. Password needed.")
+                password_needed = True
+                data_needed = True
+            if 'ACTIVATION_CODE' not in model.onboarding_method and mac is None:
+                raise ValueError("Activation Code not supported")
+            if isinstance(self.parent, wxcadm.Workspace) or workspace is not None:
+                if 'PLACE' not in model.supported_for:
+                    raise ValueError("Device does not support Workspaces")
+            if isinstance(self.parent, wxcadm.Person) or person is not None:
+                if 'PEOPLE' not in model.supported_for:
+                    raise ValueError("Device does not support People")
+        else:
+            raise ValueError("model argument must be a SupportedDevice object")
+
         if isinstance(self.parent, wxcadm.workspace.Workspace):
-            payload = {
-                "workspaceId": self.parent.id,
-                "model": model
-            }
-            params = {'orgId': self.parent._parent.id}
+            payload['workspaceId'] = self.parent.id
+            params = {'orgId': self.parent.org_id}
         elif isinstance(self.parent, (wxcadm.person.Person, wxcadm.person.Me)):
-            payload = {
-                "personId": self.parent.id,
-                "model": model
-            }
-            params = {'orgId': self.parent._parent.id}
+            payload['personId'] = self.parent.id
+            params = {'orgId': self.parent.org_id}
         elif isinstance(self.parent, wxcadm.org.Org):
             if person is not None:
-                payload = {
-                    "personId": person.id,
-                    "model": model
-                }
+                payload['personId'] = person.id
                 params = {'orgId': self.parent.id}
             elif workspace is not None:
-                payload = {
-                    "workspaceId": workspace.id,
-                    "model": model
-                }
+                payload['workspaceId'] = workspace.id
                 params = {'orgId': self.parent.id}
             else:
                 raise ValueError("Person or Workspace must be provided")
         else:
-            raise ValueError("Cannot determine Person or Workspace from given argument")
+            raise ValueError("Cannot determine Person or Workspace from given arguments")
 
-        data_needed = False  # Flag that we need to get platform data once we have a Device ID
-        if mac is None and model != 'Imagicle Customer Managed':
+        if mac is None and 'ACTIVATION_CODE' in model.onboarding_method:
             # If no MAC address is provided, just generate an activation code for the device
             try:
                 response = webex_api_call('post',
@@ -732,7 +744,9 @@ class DeviceList(UserList):
                 return False
 
             # Get the ID of the device we just inserted
-            device_id = response.get('id', None).replace('=', '')
+            device_id = response.get('id', None)
+            if device_id is not None:
+                device_id = device_id.replace('=', '')
 
             results = {
                 'device_id': device_id,
@@ -740,12 +754,7 @@ class DeviceList(UserList):
             }
         else:
             payload['mac'] = mac
-            if model.upper() == "GENERIC" or model == "Generic IPPhone Customer Managed" or model == 'Imagicle ' \
-                                                                                                     'Customer Managed':
-                if payload['model'] != 'Imagicle Customer Managed':
-                    payload[
-                        'model'] = "Generic IPPhone Customer Managed"  # Hard-code what the API expects (for now)
-                data_needed = True
+            if password_needed is True:
                 if password is None:  # Generate a unique password
                     if isinstance(self.parent, (wxcadm.person.Person, wxcadm.person.Me)):
                         password_location = self.parent.location
@@ -758,6 +767,7 @@ class DeviceList(UserList):
                                               f'generatePassword/invoke')
                     password = response['exampleSipPassword']
                 payload['password'] = password
+
             response = webex_api_call('post', 'v1/devices', payload=payload, params=params)
             log.debug(f"\t{response}")
 
@@ -862,4 +872,25 @@ class SupportedDeviceList(UserList):
                 items.append(self._item_class(**entry))
         return items
 
+    def get(self, model_name: str):
+        """ Get a :class:`SupportedDevice` of list of :class:`SupportedDevices`s matching given model name
+        
+        Matches will match on a partial model name. For example ``model='Cisco 8841'`` will match a
+        :class:`SupportedDevice` with model 'DMS Cisco 8841'.
 
+        Args:
+            model_name (str): The name or partial model name. Not case-sensitive.
+
+        Returns:
+            SupportedDevice: If only a single entry matches, that Device will be returned. If multiple Devices match,
+            a list of devices will be returned.
+
+        """
+        supported_devices = []
+        for dev in self.data:
+            if model_name.upper() in dev.model.upper():
+                supported_devices.append(dev)
+        if len(supported_devices) == 1:
+            return supported_devices[0]
+        else:
+            return supported_devices

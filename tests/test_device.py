@@ -59,9 +59,6 @@ class TestDevice(unittest.TestCase):
         self.assertIsNotNone(device.workspace_location_id)
         # The following test ensures that the .workspace_location_id can be decoded and matched to the WorkspaceLocation
 
-
-
-
 class TestSupportedDevices(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -82,6 +79,15 @@ class TestSupportedDevices(unittest.TestCase):
         with self.subTest("SupportedDevice typing"):
             device = choice(device_list)
             self.assertIsInstance(device, wxcadm.device.SupportedDevice)
+
+    def test_supported_device_get(self) -> None:
+        # These test cases ensure that a SupportedDevice can be retrieved by name
+        cisco_8851 = self.webex.org.supported_devices.get('8851')
+        self.assertIsInstance(cisco_8851, wxcadm.SupportedDevice)
+        self.assertEqual(cisco_8851.managed_by, 'CISCO')
+        generic_phone = self.webex.org.supported_devices.get('generic ipphone')
+        self.assertIsInstance(generic_phone, wxcadm.SupportedDevice)
+        self.assertEqual(generic_phone.managed_by, 'CUSTOMER')
 
 
 if __name__ == '__main__':

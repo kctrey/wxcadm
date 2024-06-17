@@ -23,7 +23,7 @@ from .workspace import Workspace, WorkspaceList, WorkspaceLocationList
 from .call_routing import CallRouting
 from .reports import ReportList
 from .calls import Calls
-from .device import DeviceList
+from .device import DeviceList, SupportedDeviceList
 from .recording import ComplianceAnnouncementSettings, RecordingList
 from .jobs import NumberManagementJobList, UserMoveJobList, RebuildPhonesJobList
 from .virtual_line import VirtualLineList
@@ -83,6 +83,7 @@ class Org:
         self._dect_networks = None
         self._voicemail_groups = None
         self._numbers = None
+        self._supported_devices = None
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -274,9 +275,12 @@ class Org:
             self._paging_groups = paging_groups
         return self._paging_groups
 
-    def get_supported_devices(self):
-        response = webex_api_call('get', f"/v1/telephony/config/supportedDevices", params={'orgId': self.id})
-        return response['devices']
+    @property
+    def supported_devices(self) -> SupportedDeviceList:
+        """ The :class:`SupportedDeviceList` of :class:`SupportedDevice` models for this Org """
+        if self._supported_devices is None:
+            self._supported_devices = SupportedDeviceList()
+        return self._supported_devices
 
     @property
     def webhooks(self):

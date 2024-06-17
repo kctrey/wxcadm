@@ -5,6 +5,8 @@ What's New
 
 v4.3.0
 ------
+- **BREAKING CHANGE**: :meth:`Person.add_device()` and :meth:`Workspace.add_device()` has been removed in favor of :meth:`Person.devices.create()` and :meth:`Workspace.devices.create()` which matches the list-class logic used elsewhere.
+- **BREAKING CHANGE**: Adding a new device to a Person or Workspace now requires the :class:`SupportedDevice` to be passed to the :meth:`DeviceList.create()`. As more device types are supported, this provides a way to determine what onboarding methods are supported and what data is required.
 - DEPRECATION: :class:`WorkspaceLocation` (and the entire Workspace Location concept) is being replaced with the existing Location ID
 - Added :meth:`Workspace.set_ecbn()`, :meth:`Person.set_ecbn()`, :meth:`VirtualLine.set_ecbn()` to set Emergency Callback Number for each
 - Added :attr:`Workspace.ecbn`, :attr:`Person.ecbn`, :attr:`VirtualLine.ecbn` to view Emergency Callback Number for each
