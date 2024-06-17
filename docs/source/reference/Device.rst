@@ -28,3 +28,17 @@ DeviceMember
 .. autoclass:: wxcadm.device.DeviceMember
     :members:
     :undoc-members:
+
+SupportedDeviceList
+-------------------
+
+.. autoclass:: wxcadm.device.SupportedDeviceList
+    :members:
+    :undoc-members:
+
+SupportedDevice
+---------------
+
+.. autoclass:: wxcadm.device.SupportedDevice
+    :members:
+    :undoc-members:
