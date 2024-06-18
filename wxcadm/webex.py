@@ -230,7 +230,7 @@ class Webex:
 
         """
         log.info(f"Getting Person record for email: {email}")
-        response = webex_api_call("get", "v1/people", params={"email": email})
+        response = webex_api_call("get", "v1/people", params={"email": email, "callingData": True})
         if len(response) > 1:
             log.warn(f"Webex returned more than one record for email: {email}")
             raise APIError("Webex returned more than one Person with the specified email")
@@ -257,7 +257,7 @@ class Webex:
 
         """
         log.info(f"Getting Person record for ID: {id}")
-        response = webex_api_call("get", "v1/people", params={"id": id})
+        response = webex_api_call("get", "v1/people", params={"id": id, "callingData": True})
         if len(response) > 1:
             log.warn(f"Webex returned more than one record for id: {id}")
             raise APIError("Webex returned more than one Person with the specified ID")

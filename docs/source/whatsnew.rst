@@ -3,6 +3,10 @@
 What's New
 ==========
 
+v4.3.1
+------
+- BUG FIX: :meth:`Webex.get_person_by_email()` and :meth:`Webex.get_person_by_id()` now returns Calling-related data
+
 v4.3.0
 ------
 - **BREAKING CHANGE**: :meth:`Person.add_device()` and :meth:`Workspace.add_device()` has been removed in favor of :meth:`Person.devices.create()` and :meth:`Workspace.devices.create()` which matches the list-class logic used elsewhere.
