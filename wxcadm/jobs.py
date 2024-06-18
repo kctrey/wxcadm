@@ -296,7 +296,7 @@ class UserMoveJobList(UserList):
                people: list[wxcadm.person.Person],
                validate_only: Optional[bool] = False
                ):
-        """ Create a Number Management Job
+        """ Create a User Move Job
 
         .. note::
 
@@ -306,8 +306,10 @@ class UserMoveJobList(UserList):
 
         Args:
             target_location (Location | str): A :class:`Location` instance or a string representing the Location ID to
-            move the numbers to
+                move the numbers to
+
             people (list[Person]): A list of :class:`Person` instances to move to the target Location
+
             validate_only (bool, optional): Whether to only perform the validation of the User Move, not actually move
             the users. Defaults to False. False wll perform both a validation and create a User Move Job
 
