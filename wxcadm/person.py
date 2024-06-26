@@ -325,6 +325,8 @@ class Person:
         """ The department the Person belongs to """
         self.manager: Optional[str] = None
         """ The Person's manager """
+        self.login_enabled: Optional[bool] = None
+        """ Whether the person is allowed to sign in """
         self.manager_id: Optional[str] = None
         """ The Person ID of the manager """
         self.title: Optional[str] = None
@@ -366,6 +368,7 @@ class Person:
         self.title = data.get('title', None)
         self.addresses = data.get('addresses', None)
         self.status = data.get('status', None)
+        self.login_enabled = data.get('loginEnabled', None)
         self.roles = data.get("roles", [])
         self.numbers = data.get("phoneNumbers", [])
         self.licenses = data.get("licenses", [])
@@ -1785,7 +1788,7 @@ class UserGroup:
                 people.append(item['id'])
             else:
                 people.append(person)
-        self.members = people
+        return people
 
     def delete(self) -> bool:
         """ Delete the Group
