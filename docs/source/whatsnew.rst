@@ -5,6 +5,7 @@ What's New
 
 v4.3.1
 ------
+- BUG FIX: :class:`DeviceLayout` now uses the correct API endpoint and works correctly
 - BUG FIX: :meth:`Webex.get_person_by_email()` and :meth:`Webex.get_person_by_id()` now returns Calling-related data
 
 v4.3.0

@@ -38,7 +38,7 @@ class DeviceLayout:
         self.kem_keys = config.get('kemKeys', [])
 
     def _get_config(self):
-        response = webex_api_call('get', f'telephony/config/devices/{self.device.id}/layout',
+        response = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/layout',
                                   params={'orgId': self.device.parent.org_id})
         self._parse_config(response)
 
@@ -116,14 +116,7 @@ class Device:
 
     @property
     def layout(self) -> DeviceLayout:
-        """ The :class:`DeviceLayout` for the Device
-
-        .. warning::
-
-            The API call that is required for this to function is not working correctly, so the method is more likely
-            than not to throw a wxcadm.APIError exception.
-
-        """
+        """ The :class:`DeviceLayout` for the Device """
         if self._layout is None:
             self._layout = DeviceLayout(self)
         return self._layout
