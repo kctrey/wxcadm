@@ -3,6 +3,10 @@
 What's New
 ==========
 
+v4.3.2
+------
+- BUG FIX: :meth:`Person.assign_wxc()` has been fixed to support the new API syntax when a phone number is not present
+
 v4.3.1
 ------
 - BUG FIX: :attr:`Person.user_groups` is now a property and correctly returns the list of UserGroups that the Person is assigned to

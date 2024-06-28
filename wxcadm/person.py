@@ -474,8 +474,8 @@ class Person:
 
     def assign_wxc(self,
                    location: wxcadm.Location,
-                   phone_number: str = None,
-                   extension: str = None,
+                   phone_number: Optional[str] = None,
+                   extension: Optional[str] = None,
                    unassign_ucm: Optional[bool] = False):
         """ Assign Webex Calling to the user, along with a phone number and/or an extension.
 
@@ -505,8 +505,11 @@ class Person:
                     self.licenses.remove(license)
 
         # Call the update_person() method to update the new values.
-        success = self.update_person(numbers=[{"type": "work", "value": phone_number}],
-                                     extension=extension, location=location.id)
+        if phone_number is None:
+            success = self.update_person(extension=extension, location=location.id)
+        else:
+            success = self.update_person(numbers=[{"type": "work", "value": phone_number}],
+                                         extension=extension, location=location.id)
         if success:
             return True
         else:
