@@ -5,6 +5,7 @@ What's New
 
 v4.3.1
 ------
+- BUG FIX: :attr:`Person.user_groups` is now a property and correctly returns the list of UserGroups that the Person is assigned to
 - :class:`Person` now supports :attr:`Person.login_enabled`
 - **wxcadm** now requires requests 2.32.3 to resolve the urllib discrepancy warning
 - BUG FIX: :class:`DeviceLayout` now uses the correct API endpoint and works correctly

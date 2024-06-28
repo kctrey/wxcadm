@@ -4,24 +4,24 @@ import requests
 from requests_toolbelt import MultipartEncoder
 import base64
 import os
-from typing import Optional, Type, Union
+from typing import Optional, Union
 from dataclasses import dataclass, field
 from collections import UserList
 
 import wxcadm.exceptions
 from .common import *
 from .xsi import XSI
-from .device import DeviceList, Device, SupportedDevice, SupportedDeviceList
+from .device import DeviceList
 from .location import Location
 
 from wxcadm import log
 
 
 class PersonList(UserList):
-    def __init__(self, parent: Union["Org", Location]):
+    def __init__(self, parent: Union[wxcadm.Org, wxcadm.Location]):
         super().__init__()
         log.debug("Initializing PersonList")
-        self.parent: Union["Org", Person] = parent
+        self.parent: Union[wxcadm.Org, wxcadm.Person] = parent
         self.data: list = self._get_people()
 
     def _get_people(self):
@@ -224,6 +224,8 @@ class PersonList(UserList):
         elif isinstance(self.parent, wxcadm.Location):
             location_id = self.parent.id
             org_id = self.parent.parent.id
+        else:
+            raise ValueError("Unknown parent instance type")
 
         payload = {"emails": [email], "locationId": location_id, "orgId": org_id, "licenses": licenses}
         if phone_number is not None:
@@ -434,7 +436,7 @@ class Person:
             return False
 
     @property
-    def org_id(self) -> str:
+    def org_id(self) -> Optional[str]:
         """ The Org ID for the Person """
         if isinstance(self._parent, wxcadm.Org):
             return self._parent.org_id
@@ -571,14 +573,15 @@ class Person:
         else:
             log.info(f"{self.email} is not a Webex Calling user.")
 
-    def user_group(self):
-        """ The :py:class:`UserGroup` that the Person is assigned to
+    @property
+    def user_groups(self):
+        """ List of the :py:class:`UserGroup` that the Person is assigned to
 
         Returns:
-            UserGroup: The :py:class:`UserGroup`. None is returned if the Person is not assigned to a Group
+            list[UserGroup]: A list of :py:class:`UserGroup`s.
 
         """
-        return self._parent.usergroups.find_person_assignment(self)
+        return self._parent.usergroups.find_person_assignments(self)
 
     @property
     def devices(self):
@@ -1581,7 +1584,7 @@ class Person:
 class Me(Person):
     """ The class representing the token owner. Some methods are only available at an owner scope. """
 
-    def __init__(self, user_id, parent: "Org" = None, config: dict = None):
+    def __init__(self, user_id, parent: wxcadm.Org = None, config: dict = None):
         super().__init__(user_id, parent, config)
 
     def get_voice_messages(self, unread: bool = False):
@@ -1697,12 +1700,12 @@ class VoiceMessage:
 class UserGroups(UserList):
     """ UserGroups is the parent class for :py:class:`UserGroup`, providing methods for the list of Groups """
 
-    def __init__(self, parent: "Org"):
+    def __init__(self, parent: wxcadm.Org):
         log.info("Initializing UserGroups instance")
         super().__init__()
         self.parent = parent
-        self.data = []
-        response = webex_api_call("get", "v1/groups")
+        self.data: list[UserGroup] = []
+        response = webex_api_call("get", "v1/groups", params={'orgId': self.parent.org_id})
         groups = response['groups']
         log.debug(f"Webex returned {len(groups)} Groups")
         for group in groups:
@@ -1738,18 +1741,20 @@ class UserGroups(UserList):
             log.info("Failed to create new UserGroup")
             return False
 
-    def find_person_assignment(self, person: Person):
+    def find_person_assignments(self, person: Person):
+        assignments = []
         for group in self.data:
             for member in group.members:
-                if member.id == person.id:
-                    return group
-        return None
+                if isinstance(member, wxcadm.Person):
+                    if member.id == person.id:
+                        assignments.append(group)
+        return assignments
 
 
 @dataclass()
 class UserGroup:
     """ The UserGroup class holds all the User Groups available within the Org"""
-    parent: "Org" = field(repr=False)
+    parent: wxcadm.Org = field(repr=False)
     """ The Org instance that owns the Group """
     id: str
     """ The unique ID of the Group """
@@ -1774,6 +1779,11 @@ class UserGroup:
         """ List of all members with this Group """
         return self._get_members()
 
+    @property
+    def name(self):
+        """ The name of the UserGroup """
+        return self.displayName
+
     def _get_members(self):
         response = webex_api_call("get", f"/v1/groups/{self.id}/members")
         items = response['members']
@@ -1783,11 +1793,16 @@ class UserGroup:
 
         people = []
         for item in items:
-            person = self.parent.get_person_by_id(item['id'])
-            if person is None:
-                people.append(item['id'])
-            else:
+            person = self.parent.people.get(id=item['id'])
+            if person is not None:
                 people.append(person)
+            else:
+                # Leaving the following here in case Groups ever support Workspaces
+                # workspace = self.parent.workspaces.get(id=item['id'])
+                # if workspace is not None:
+                #     people.append(workspace)
+                # else:
+                people.append(item['id'])
         return people
 
     def delete(self) -> bool:
@@ -1812,6 +1827,10 @@ class UserGroup:
             person (Person): The :py:class:`Person` instance to add
 
         Returns:
+            bool: True on success
+
+        Raises:
+            ValueError: Raised when trying to add a Person to a Location Group
 
         """
         payload = {"members": [{"id": person.id, "operation": "add"}]}
