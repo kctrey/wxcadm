@@ -197,7 +197,7 @@ class ReportList(UserList):
             site_list (list[str], optional): A list of Webex meeting sites
 
         Returns:
-            str: The Report ID that was created
+            Report: The Report that was created
 
         """
         log.info(f'Creating report with Template ID: {template.id}')
