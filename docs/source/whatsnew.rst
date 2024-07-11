@@ -5,6 +5,7 @@ What's New
 
 v4.3.2
 ------
+- :class:`DECTHandset` now has a :attr:`DECTHandset.mac` property with the MAC address of the handset
 - BUG FIX: :meth:`Person.assign_wxc()` has been fixed to support the new API syntax when a phone number is not present
 
 v4.3.1

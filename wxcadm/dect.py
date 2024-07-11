@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import UserList
 from typing import Optional, TYPE_CHECKING, Union
+
 if TYPE_CHECKING:
     from .person import Person
     from .workspace import Workspace
@@ -15,9 +16,20 @@ class DECTHandset:
     def __init__(self, dect_network: DECTNetwork, config: Optional[dict] = None):
         self.dect_network = dect_network
         self.id: Optional[str] = config.get('id', None)
+        self.index: str = config.get('index', '')
         self.display_name: str = config.get('displayName', '')
         self.access_code: str = config.get('accessCode')
         self.lines: list = config.get('lines', [])
+        self._mac: str = config.get('mac', None)
+
+    @property
+    def mac(self) -> str:
+        if self._mac is None:
+            response = webex_api_call("get",
+                                      f"v1/telephony/config/locations/{self.dect_network.location_id}/"
+                                      f"dectNetworks/{self.dect_network.id}/handsets/{self.id}")
+            self._mac = response['mac'].upper()
+        return self._mac
 
     def delete(self) -> bool:
         """ Delete the Handset
