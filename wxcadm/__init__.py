@@ -11,6 +11,7 @@ from .org import Org
 from .xsi import XSIEvents, Call, XSI, XSICallQueue
 from .redsky import RedSky
 from .meraki import Meraki
+from .cdr import CallDetailRecords
 from .exceptions import *
 from .common import *
 from .wholesale import Wholesale
