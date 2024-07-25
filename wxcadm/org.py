@@ -241,6 +241,8 @@ class Org:
                     wxc_type = "person"
                 elif "Workspace" in item['name']:
                     wxc_type = "workspace"
+                elif "Basic" in item['name']:
+                    wxc_type = "standard"
                 else:
                     wxc_type = "unknown"
             else:
@@ -498,9 +500,22 @@ class Org:
             str: The License ID
 
         """
-        log.info("__get_wxc_person_license started to find available license")
+        log.info("__get_wxc_person_license started to find available Professional license")
         for license in self.licenses:
             if license['wxc_type'] == "person":
+                return license['id']
+        raise LicenseError("No Webex Calling Professional license found")
+
+    def get_wxc_standard_license(self):
+        """Get the Webex Calling - Basic license ID
+
+        Returns:
+            str: The License ID
+
+        """
+        log.info("__get_wxc_standard_license started to find available Basic license")
+        for license in self.licenses:
+            if license['wxc_type'] == "standard":
                 return license['id']
         raise LicenseError("No Webex Calling Professional license found")
 

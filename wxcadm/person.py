@@ -476,7 +476,8 @@ class Person:
                    location: wxcadm.Location,
                    phone_number: Optional[str] = None,
                    extension: Optional[str] = None,
-                   unassign_ucm: Optional[bool] = False):
+                   unassign_ucm: Optional[bool] = False,
+                   license_type: Optional[str] = 'Professional'):
         """ Assign Webex Calling to the user, along with a phone number and/or an extension.
 
         Args:
@@ -484,14 +485,19 @@ class Person:
             phone_number (str, optional): The phone number to assign to the Person. Defaults to None
             extension (str, optional): The extension to assign to the Person. Defaults to None
             unassign_ucm (bool, optional): True if you also want to remove the UCM license for the user. Default: False
+            license_type (str, optional): 'Standard' or 'Professional'. Defaults to 'Professional'.
 
         Returns:
             bool: True on success, False if otherwise
 
         """
-        # To assign Webex Calling to a Person, we need to find the License ID for Webex Calling Professional
-        license = self._parent.get_wxc_person_license()
-        self.licenses.append(license)
+        if license_type.upper() == 'PROFESSIONAL':
+            # To assign Webex Calling to a Person, we need to find the License ID for Webex Calling Professional
+            license = self._parent.get_wxc_person_license()
+            self.licenses.append(license)
+        elif license_type.upper() == 'STANDARD':
+            license = self._parent.get_wxc_standard_license()
+            self.licenses.append((license))
 
         if unassign_ucm is True:
             # Figure out what the licenses are for UCM

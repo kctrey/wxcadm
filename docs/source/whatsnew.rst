@@ -5,7 +5,7 @@ What's New
 
 v4.3.3
 ------
-
+- :meth:`Person.assign_wxc()` now supports a ``license_type`` argument to allow Standard licenses to be applied.
 - Added ``Trackingid`` to debug logging for responses from Webex
 
 v4.3.2
