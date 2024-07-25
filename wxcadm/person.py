@@ -305,6 +305,8 @@ class Person:
         """Dictionary of Monitoring settings as returned by Webex API with :meth:`get_monitoring()`"""
         self.hoteling: dict = {}
         """Dictionary of Hoteling settings as returned by Webex API with :meth:`get_hoteling()`"""
+        self.ptt: Optional[dict] = None
+        """ Dictionary of Push-to-Talk settings as returned by Webex API with :meth:`get_ptt()` """
         self.xsi = None
         """Holds the XSI instance when created with the :meth:`start_xsi()` method."""
         self.numbers: list = []
@@ -578,6 +580,7 @@ class Person:
             self.get_intercept()
             self.get_monitoring()
             self.get_outgoing_permission()
+            self.get_ptt()
             return self
         else:
             log.info(f"{self.email} is not a Webex Calling user.")
@@ -930,6 +933,35 @@ class Person:
             return True
         else:
             log.warning("The Intercept config push failed")
+            return False
+
+    def get_ptt(self):
+        """ Gets Push-to-Talk config for the Person
+
+        Returns:
+            dict: The Push-to-Talk config for the Person instance
+
+        """
+        log.info("get_ptt() started")
+        self.ptt = self.__get_webex_data(f"v1/people/{self.id}/features/pushToTalk")
+        return self.ptt
+
+    def push_ptt(self, config: dict):
+        """ Push the Push-to-Talk config to Webex
+
+        Args:
+            config: The configuration to push
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Pushing PTT config for {self.email}")
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/pushToTalk", payload=config)
+        if success:
+            return True
+        else:
+            log.warning("The PTT config push failed")
             return False
 
     def get_call_recording(self):

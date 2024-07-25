@@ -5,6 +5,7 @@ What's New
 
 v4.3.3
 ------
+- Added :meth:`Person.get_ptt()` and :attr:`Person.ptt`, along with :meth:`Person.push_ptt()` to control Push-to-Talk settings
 - :meth:`Person.assign_wxc()` now supports a ``license_type`` argument to allow Standard licenses to be applied.
 - Added ``Trackingid`` to debug logging for responses from Webex
 
