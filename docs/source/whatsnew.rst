@@ -3,6 +3,11 @@
 What's New
 ==========
 
+v4.3.3
+------
+
+- Added ``Trackingid`` to debug logging for responses from Webex
+
 v4.3.2
 ------
 - Initial work started for CDR analysis in **wxcadm**
