@@ -8,13 +8,18 @@ import re
 import requests
 import sys
 from typing import Optional, TYPE_CHECKING
+
+import wxcadm
+
 if TYPE_CHECKING:
     from requests_toolbelt import MultipartEncoder
 
 from .exceptions import *
+import wxcadm
 from wxcadm import log
 
-__all__ = ['decode_spark_id', 'console_logging', 'tracking_id', 'webex_api_call', '_url_base', '_webex_headers']
+__all__ = ['decode_spark_id', 'console_logging', 'tracking_id', 'webex_api_call', '_url_base', '_webex_headers',
+           'location_finder']
 
 # Some functions available to all classes and instances (optionally)
 _url_base = "https://webexapis.com/"
@@ -404,3 +409,29 @@ def decode_spark_id(id: str):
 def tracking_id():
     id = f"WXCADM_{uuid.uuid4()}"
     return id
+
+
+def location_finder(location_id: str, parent):
+    """ Return the :class:`Location` for a given Location ID """
+    log.debug(f"location_finder: Finding {location_id}")
+    if isinstance(parent, wxcadm.Location):
+        log.debug("location_finder: Parent is a Location")
+        if parent.id == location_id:
+            log.debug(f"location_finder: Parent ID matches ({parent.name})")
+            return parent
+        else:
+            log.debug("location_finder: Parent ID doesn't match. Finding by ID at Org.")
+            location = parent.parent.locations.get(id=location_id)
+            if location is None:
+                log.debug("No match found. Returning None.")
+            else:
+                log.debug(f"Location found ({location.name})")
+            return location
+    elif isinstance(parent, wxcadm.Org):
+        log.debug("location_finder: Parent is an Org")
+        location = parent.locations.get(id=location_id)
+        if location is None:
+            log.debug("No match found. Returning None.")
+        else:
+            log.debug(f"Location found ({location.name})")
+        return location
