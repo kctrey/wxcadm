@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import requests
 from typing import Optional, Type
+from datetime import datetime, timedelta
 
 import wxcadm.person
 from wxcadm import log
@@ -23,7 +24,8 @@ class Webex:
                  client_id: Optional[str] = None,
                  client_secret: Optional[str] = None,
                  refresh_token: Optional[str] = None,
-                 org_id: Optional[str] = None
+                 org_id: Optional[str] = None,
+                 auto_refresh_token: bool = False
                  ) -> None:
         """Initialize a Webex instance to communicate with Webex and store data
 
@@ -53,6 +55,11 @@ class Webex:
                 if you are planning to call the :py:meth:`refresh_token()` method to refresh the Access Token.
             org_id (str, optional): The Org ID to use as the default Org for the session. Other Orgs are still available
                 in the :attr:`Webex.orgs` list.
+            auto_refresh_token (bool, optional): When True, any API call will first check the access token expiration
+                and automatically refresh the token if the expiration is within the next 30 minutes. Note that this
+                requires the ``client_id``, ``client_secret`` and ``refresh_token`` to be provided when the
+                :class:`Webex` instance is created, as those values are needed by the refresh process. **This feature
+                is still in development and should not be used until this warning is removed**
 
         Returns:
             Webex: The Webex instance
@@ -79,6 +86,11 @@ class Webex:
         """ The Client Secret value for the Integration or Service Application """
         self.refresh_token = refresh_token
         """ The Refresh Token associated with the Access Token """
+        self.access_token_expires = None
+        """ The datetime when the access token expires """
+        self.refresh_token_expires = None
+        """ The datetime when the refresh token expires """
+        self.auto_refresh_token: bool = auto_refresh_token
 
         self.orgs: list = []
         '''A list of the Org instances that this Webex instance can manage'''
@@ -176,6 +188,10 @@ class Webex:
             log.debug(f"Setting Global _webex_headers")
             global _webex_headers
             _webex_headers['Authorization'] = "Bearer " + self._access_token
+
+            log.debug("Setting token expiry for Org instance")
+            self.access_token_expires = datetime.now() + timedelta(seconds=response['expires_in'])
+            self.refresh_token_expires = datetime.now() + timedelta(seconds=response['refresh_token_expires_in'])
             return response
         else:
             return False
