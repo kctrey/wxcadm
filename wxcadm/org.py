@@ -29,6 +29,7 @@ from .jobs import NumberManagementJobList, UserMoveJobList, RebuildPhonesJobList
 from .virtual_line import VirtualLineList
 from .dect import DECTNetworkList
 from .number import NumberList
+from .events import AuditEventList
 
 
 class Org:
@@ -711,24 +712,6 @@ class Org:
                 return hg
         return None
 
-    def get_audit_events(self, start: str, end: str):
-        """ Get the Webex Admin Audit events within the given start and end times
-
-        Args:
-            start (str): Date/time to begin records in the format ```YYY-MM-DDTHH:MM:SS.XXXZ```
-            end (str): Date/time to begin records in the format ```YYY-MM-DDTHH:MM:SS.XXXZ```
-
-        Returns:
-            dict: The dict of the events is returned. If no events are found, None is returned.
-
-        """
-        params = {'from': start, 'to': end, **self._params}
-        response = webex_api_call("get", "v1/adminAudit/events", headers=self._headers, params=params)
-        if response:
-            return response
-        else:
-            return None
-
     @property
     def hunt_groups(self) -> HuntGroupList:
         """The :class:`HuntGroupList` for the Organization.
@@ -783,38 +766,25 @@ class Org:
                 return license['name']
         return None
 
-    def get_audit_events(self,
-                         start: str, end: str,
-                         actor: Optional[Person] = None) -> list[dict]:
+    def get_audit_events(self, start: str, end: str) -> AuditEventList:
         """ Get a list of Admin Audit Events for the Organization
 
         Args:
             start (str): The first date/time in the report, in the format `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM:SS.000Z`
             end (str): The first date/time in the report, in the format `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM:SS.000Z`
-            actor (Person, optional): Only show events performed by this Person
 
         Returns:
+            AuditEventList: The :class:`AuditEventList` of all matching events
 
         """
         # Normalize the start and end if only the date was provided
         if re.fullmatch(r"\d{4}-\d{2}-\d{2}", start):
-            start = start + "T00.00.00.000Z"
+            start = start + "T00:00:00.000Z"
         if re.fullmatch(r"\d{4}-\d{2}-\d{2}", end):
             end = end + "T23:59:59.999Z"
 
-        if actor is not None:
-            actor_id = actor.id
-        else:
-            actor_id = None
-
-        params = {
-            'orgId': self.id,
-            'from': start,
-            'to': end,
-            'actorId': actor_id,
-        }
-        response = webex_api_call('get', '/v1/adminAudit/events', params=params)
-        return response
+        event_list = AuditEventList(self, start, end)
+        return event_list
 
     def get_recordings(self, **kwargs):
         return RecordingList(parent=self, **kwargs)

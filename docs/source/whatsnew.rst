@@ -3,6 +3,12 @@
 What's New
 ==========
 
+v4.3.4
+------
+
+- Moved Audit Events to :class:`AuditEvent`, which is contained in :class:`AuditEventList` and still accessed via :meth:`Org.get_audit_events()`
+- Added :attr:`Webex.access_token_expires`, :attr:`Webex.refresh_token_expires` which are automatically updated by :meth:`Webex.get_new_token()` to prepare for upcoming keep-alive feature
+
 v4.3.3
 ------
 - Added :meth:`Person.get_ptt()` and :attr:`Person.ptt`, along with :meth:`Person.push_ptt()` to control Push-to-Talk settings
