@@ -44,6 +44,18 @@ ________
 .. autoclass:: wxcadm.call_routing.DialPlan
     :members:
 
+TranslationPatternList
+----------------------
+
+.. autoclass:: wxcadm.call_routing.TranslationPatternList
+    :members:
+
+TranslationPattern
+------------------
+
+.. autoclass:: wxcadm.call_routing.TranslationPattern
+    :members:
+
 RouteLists
 ----------
 

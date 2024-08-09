@@ -5,7 +5,7 @@ What's New
 
 v4.3.4
 ------
-
+- New :class:`TranslationPattern` and :class:`TranslationPatternList` accessed via :attr:`Org.translation_patterns` and :attr:`Location.translation_patterns`
 - Moved Audit Events to :class:`AuditEvent`, which is contained in :class:`AuditEventList` and still accessed via :meth:`Org.get_audit_events()`
 - Added :attr:`Webex.access_token_expires`, :attr:`Webex.refresh_token_expires` which are automatically updated by :meth:`Webex.get_new_token()` to prepare for upcoming keep-alive feature
 

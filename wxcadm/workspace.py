@@ -259,8 +259,8 @@ class Workspace:
         self._headers = self._parent._headers
         self._params = self._parent._params
         # Instance attributes
-        self.location_id: Optional[str] = None
-        """The Location ID of the Workspace """
+        self.location_id: Union[str, wxcadm.Location, None] = None
+        """ The Location ID of the Workspace """
         self.floor_id: Optional[str] = None
         """The Webex ID of the Location Floor ID"""
         self.name: str = ""
@@ -355,7 +355,7 @@ class Workspace:
         if 'locationId' in config.keys():
             self.location_id = self._parent.locations.get(id=config['locationId'])
         else:
-            self.location_id = config.get("workspaceLocationId", "")
+            self.location_id = config.get("workspaceLocationId", None)
         self.floor = config.get("floorId", "")
         self.capacity = config.get("capacity", 0)
         if 'type' in config:

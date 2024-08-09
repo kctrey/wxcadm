@@ -101,6 +101,7 @@ class TestOutgoingDigitPatterns(unittest.TestCase):
                 before_len
             )
 
+
 class TestLocationFloors(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -118,7 +119,7 @@ class TestLocationFloors(unittest.TestCase):
         self.assertIsInstance(self.random_location.floors, wxcadm.LocationFloorList)
         if len(self.random_location.floors) == 0:
             self.skipTest("No floors at location")
-        self.assertIsInstance(self.random_location.floors[0], LocationFloor)
+        self.assertIsInstance(self.random_location.floors[0], wxcadm.LocationFloor)
         self.assertIsInstance(self.random_location.floors[0].floor_number, int)
 
 

@@ -17,6 +17,7 @@ from .exceptions import APIError
 from .dect import DECTNetworkList
 from .number import NumberList
 from .virtual_line import VirtualLineList
+from .call_routing import TranslationPatternList
 
 
 class LocationList(UserList):
@@ -199,6 +200,7 @@ class Location:
         self._numbers: Optional[NumberList] = None
         self._virtual_lines: Optional[VirtualLineList] = None
         self._floors: Optional[LocationFloorList] = None
+        self._translation_patterns = None
 
     def __str__(self):
         return self.name
@@ -336,6 +338,13 @@ class Location:
         """
         annc_list = self._parent.announcements.get_by_location_id(self.id)
         return annc_list
+
+    @property
+    def translation_patterns(self):
+        """ The :class:`TranslationPatternList` with all Translation Patterns for the Location """
+        if self._translation_patterns is None:
+            self._translation_patterns = TranslationPatternList(self)
+        return self._translation_patterns
 
     @property
     def auto_attendants(self):

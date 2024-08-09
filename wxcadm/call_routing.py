@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import UserList
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union
 
 import wxcadm
 import wxcadm.location
@@ -330,3 +330,169 @@ class DialPlan:
             return True
         else:
             return False
+
+
+class TranslationPattern:
+    def __init__(self,
+                 parent: Union[wxcadm.Org, wxcadm.Location],
+                 config: Optional[dict] = None):
+        log.info("Creating TranslationsPattern instance")
+        self.parent = parent
+        self.id: Optional[str] = None
+        self.name: Optional[str] = None
+        self.match_pattern: Optional[str] = None
+        self.replacement_pattern: Optional[str] = None
+        self.location: Optional[wxcadm.Location] = None
+        self.__process_config(config)
+
+    def __process_config(self, config: dict):
+        log.debug(f"Processing config: {config}")
+        self.id = config.get('id')
+        self.name = config.get('name', '')
+        self.match_pattern = config.get('matchingPattern')
+        self.replacement_pattern = config.get('replacementPattern')
+        self.level = config.get('level', None)
+        if config.get('location', None) is not None:
+            self.location = location_finder(config['location']['id'], self.parent)
+
+    def update(self,
+               name: Optional[str] = None,
+               match_pattern: Optional[str] = None,
+               replacement_pattern: Optional[str] = None):
+        """ Update a Translation Pattern
+
+        Args:
+            name (str, optional): The new name of the Translation Pattern. Defaults to no change.
+            match_pattern (str, optional): The new match pattern. Defaults to no change.
+            replacement_pattern (str, optional): The new replacement pattern. Defaults to no change.
+
+        Returns:
+            bool: True on success
+
+        """
+        log.info(f"Updating TranslationPattern {self.id}")
+        payload = {'name': name if name is not None else self.name,
+                   'matchingPattern': match_pattern if match_pattern is not None else self.match_pattern,
+                   'replacementPattern': replacement_pattern if replacement_pattern is not None \
+                       else self.replacement_pattern}
+        url = f'v1/telephony/config/callRouting/translationPatterns/{self.id}' if self.location is None \
+            else f'v1/telephony/config/locations/{self.location.id}/callRouting/translationPatterns/{self.id}'
+        response = webex_api_call('put', url, params={'orgId': self.parent.org_id}, payload=payload)
+        log.debug(f"Response: {response}")
+        return True
+
+    def delete(self):
+        """ Delete the Translation Pattern
+
+        Returns:
+            bool: True on success
+
+        """
+        log.info(f"Deleting Translation Pattern {self.id}")
+        url = f'v1/telephony/config/callRouting/translationPatterns/{self.id}' if self.location is None \
+            else f'v1/telephony/config/locations/{self.location.id}/callRouting/translationPatterns/{self.id}'
+        webex_api_call('delete', url, params={'orgId': self.parent.org_id})
+        return True
+
+
+class TranslationPatternList(UserList):
+    def __init__(self, parent: Union[wxcadm.Org, wxcadm.Location]):
+        super().__init__()
+        self.parent: Union[wxcadm.Org, wxcadm.Location] = parent
+        self.data: list[wxcadm.TranslationPattern] = self._get_data()
+
+    def _get_data(self):
+        data = []
+        params = {
+            'orgId': self.parent.org_id
+        }
+        if isinstance(self.parent, wxcadm.Location):
+            params['limitToLocationId'] = self.parent.id
+        response = webex_api_call('get', "v1/telephony/config/callRouting/translationPatterns", params=params)
+        for entry in response['translationPatterns']:
+            data.append(TranslationPattern(self.parent, entry))
+        return data
+
+    def refresh(self):
+        """ Refresh the list of Translations Patterns """
+        self.data = self._get_data()
+        return self.data
+
+    def get(self,
+            id: Optional[str] = None,
+            name: Optional[str] = None,
+            match_pattern: Optional[str] = None,
+            replacement_pattern: Optional[str] = None,
+            ):
+
+        for entry in self.data:
+            if entry.id == id or id is None:
+                if entry.name == name or name is None:
+                    if entry.match_pattern == match_pattern or match_pattern is None:
+                        if entry.replacement_pattern == replacement_pattern or replacement_pattern is None:
+                            return entry
+
+        return None
+
+    def create(self,
+               name: str,
+               match_pattern: str,
+               replacement_pattern: str,
+               location: Optional[wxcadm.Location] = None):
+        """ Create a new Translation Pattern
+
+        If this method is called for a :class:`TranslationPatternList` at the Org level, the ``location`` argument is
+        optional, and, if omitted, the Translation Pattern will be created at the Org level. If the
+        :class:`TranslationPatternList` is at the Location level, the ``location`` argument is still optional but will
+        default to the Location of the list.
+
+        Args:
+            name (str): The name of the Translation Pattern
+            match_pattern (str): The pattern to match
+            replacement_pattern (str): The replacement pattern to apply to a match
+            location (Location, optional): The :class:`Location` to create the Translation Pattern for
+
+        Returns:
+            TranslationPattern: The newly-created Translation Pattern.
+
+        """
+        log.info(f"Creating Translation Pattern. Name: {name}, Match: {match_pattern}, Replace: {replacement_pattern}")
+        payload = {
+            'name': name,
+            'matchingPattern': match_pattern,
+            'replacementPattern': replacement_pattern
+        }
+        scope = 'org'
+        if location is not None:
+            log.info(f"Location received in arg: {location.name}")
+            url = f"v1/telephony/config/locations/{location.id}/callRouting/translationPatterns"
+            scope = 'location'
+            location_id = location.id
+        else:
+            if isinstance(self.parent, wxcadm.Location):
+                log.info(f"No Location received. Using Location scope from parent: {self.parent.name}")
+                url = f"v1/telephony/config/locations/{self.parent.id}/callRouting/translationPatterns"
+                scope = 'location'
+                location_id = self.parent.id
+            else:
+                log.info("No Location defined. Using Org scope.")
+                url = f"v1/telephony/config/callRouting/translationPatterns"
+                scope = 'org'
+
+        response = webex_api_call('post', url, params={'orgId': self.parent.org_id}, payload=payload)
+        pattern_id = response['id']
+        log.debug(f"New Pattern ID: {pattern_id}")
+        log.debug("Getting new pattern details")
+        if scope == 'org':
+            config = webex_api_call('get', f"v1/telephony/config/callRouting/translationPatterns/{pattern_id}",
+                                    params={'orgId': self.parent.org_id})
+            new_pattern = TranslationPattern(self.parent, config)
+        else:
+            config = webex_api_call(
+                'get',
+                f"v1/telephony/config/locations/{location_id}/callRouting/translationPatterns/{pattern_id}",
+                params={'orgId': self.parent.org_id}
+            )
+            new_pattern = TranslationPattern(self.parent, config)
+        return new_pattern
+

@@ -20,7 +20,7 @@ from .person import UserGroups, Person, PersonList
 from .applications import WebexApplications
 from .announcements import AnnouncementList
 from .workspace import Workspace, WorkspaceList, WorkspaceLocationList
-from .call_routing import CallRouting
+from .call_routing import CallRouting, TranslationPatternList
 from .reports import ReportList
 from .calls import Calls
 from .device import DeviceList, SupportedDeviceList
@@ -85,6 +85,7 @@ class Org:
         self._voicemail_groups = None
         self._numbers = None
         self._supported_devices = None
+        self._translation_patterns = None
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -737,6 +738,13 @@ class Org:
 
         """
         return self.people.webex_calling(True)
+
+    @property
+    def translation_patterns(self):
+        """ The :class:`TranslationPatternList of Translation Patterns for the Org and all Locations """
+        if self._translation_patterns is None:
+            self._translation_patterns = TranslationPatternList(self)
+        return self._translation_patterns
 
     @property
     def recorded_people(self):
