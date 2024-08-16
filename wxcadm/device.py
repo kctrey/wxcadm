@@ -121,6 +121,33 @@ class Device:
             self._layout = DeviceLayout(self)
         return self._layout
 
+    def set_layout(self, layout: DeviceLayout):
+        """ Use the provided :class:`DeviceLayout` as the new layout for the Device.
+
+        .. note::
+
+            Due to the complexity of the DeviceLayout, the lists and dicts for each line section are represented as
+            they are defined by the Webex Developer documents. See the documented format at:
+            https://developer.webex.com/docs/api/v1/device-call-settings/modify-device-layout-by-device-id
+
+        Args:
+            layout (DeviceLayout: The :class:`DeviceLayout` to apply
+
+        Returns:
+            bool: True on success
+
+        """
+        payload = {
+            'layoutMode': layout.layout_mode,
+            'userReorderEnabled': layout.user_reorder_enabled,
+            'lineKeys': layout.line_keys,
+            'kemModuleType': layout.kem_type,
+            'kemKeys': layout.kem_keys
+        }
+        webex_api_call('put', f"v1/telephony/config/devices/{self.id}/layout", payload=payload,
+                       params={'orgId': self.parent.org_id})
+        return True
+
     def change_tags(self, operation: str, tag: Optional[Union[str, list]] = None):
         """ Add a tag to the list of tags for this device
 
