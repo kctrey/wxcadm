@@ -3,6 +3,11 @@
 What's New
 ==========
 
+v4.3.5
+------
+- BUG FIX: :meth:`Person.assign_wxc()` was sending the ``manager`` property, which cannot be sent via API
+- BUG FIX: :meth:`Org.get_number_assignment()` now returns the correct object
+
 v4.3.4
 ------
 - :meth:`Device.set_layout()` to allow a :class:`DeviceLayout` to be configured on a device

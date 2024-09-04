@@ -358,7 +358,8 @@ class Org:
         """ Get the object to which a phone number is assigned.
 
         A number may be assigned to a Person, a Workspace, or any number of things. If the number is assigned to a
-        known class, that instance will be returned. If not, the `owner` value from the API will be returned.
+        known class, that instance will be returned. If not, the `owner` value from the API will be returned. If the
+        number is found but not assigned, None will be returned.
 
         .. note::
             Since Webex sometimes uses E.164 formatting and other times uses the national format, the match is made
@@ -371,10 +372,11 @@ class Org:
         """
         log.info(f"get_number_assignment({number})")
         for num in self.numbers:
-            if num.get("phoneNumber", "") is not None:
-                if number in num.get("phoneNumber", ""):
+            if num.phone_number is not None:
+                if number in num.phone_number:
                     log.debug(f"Found match: {num}")
-                    return num
+                    log.debug("Finding owner")
+                    return num.owner
         return None
 
     def get_workspace_devices(self, workspace: Optional[Workspace] = None):

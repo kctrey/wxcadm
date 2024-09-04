@@ -1300,8 +1300,6 @@ class Person:
                       avatar: Optional[str] = None,
                       department: Optional[str] = None,
                       title: Optional[str] = None,
-                      manager: Optional[str] = None,
-                      manager_id: Optional[str] = None,
                       addresses: Optional[list] = None):
         """Update the Person in Webex.
 
@@ -1324,8 +1322,6 @@ class Person:
             avatar (str): The URL of the Person's avatar
             department (str): The Person's department
             title (str): The Person's title
-            manager (str): The Person's manager
-            manager_id (str): The Person ID of the manager
             addresses (list): A list of addresses, each defined as a dict
 
         Returns:
@@ -1371,12 +1367,6 @@ class Person:
         if title is None:
             title = self.title
         payload['title'] = title
-        if manager is None:
-            manager = self.manager
-        payload['manager'] = manager
-        if manager_id is None:
-            manager_id = self.manager_id
-        payload['managerId'] = manager_id
         if addresses is None:
             addresses = self.addresses
         payload['addresses'] = addresses
