@@ -9,6 +9,7 @@ from wxcadm import log
 
 
 class LegPart:
+    """ A Call Leg is made up of one or two Leg Parts """
     def __init__(self, record: dict):
         log.debug(f"Adding LegPart {record['Local call ID']}")
         self.record = record
@@ -65,16 +66,29 @@ class LegPart:
 
 
 class CallLeg:
+    """ A Call is made up of one ore more Call Legs """
     def __init__(self):
         # app.logger.debug("Adding Call Leg to Call")
         self.parts: list[LegPart] = []
 
     @property
     def start_time(self) -> datetime:
+        """ The Call Leg start date and time
+
+        Returns:
+            datetime
+
+        """
         return self.parts[0].start_time
 
     @property
     def end_time(self) -> datetime:
+        """ The Call Leg end date and time
+
+        Returns:
+            datetime
+
+        """
         for part in self.parts:
             if part.transfer_time is not None and part.direction.upper() == 'TERMINATING':
                 return part.transfer_time
@@ -82,6 +96,7 @@ class CallLeg:
 
     @property
     def pstn_leg(self) -> bool:
+        """ Whether this Call Leg is to or from the PSTN (off-net) """
         for part in self.parts:
             if part.pstn_inbound is True or part.pstn_outbound is True:
                 return True
@@ -89,14 +104,22 @@ class CallLeg:
 
     @property
     def duration(self) -> int:
+        """ The number of seconds of duration for the Call Leg """
         return int(self.parts[0].duration)
 
     @property
     def ring_duration(self) -> int:
+        """ The number of seconds that the call was in a ringing state """
         return int(self.parts[0].ring_duration)
 
     @property
     def transfer_ids(self) -> list:
+        """ List of Transfer IDs associated with the Call Leg
+
+        Returns:
+            list[str]
+
+        """
         ids = []
         for part in self.parts:
             if part.transfer_related_call_id != '':
@@ -105,6 +128,7 @@ class CallLeg:
 
     @property
     def orig_part(self) -> Optional[LegPart]:
+        """ The :class:`LegPart` for the originating part of the Call Leg"""
         for part in self.parts:
             if part.direction.upper() == 'ORIGINATING':
                 return part
@@ -112,6 +136,7 @@ class CallLeg:
 
     @property
     def term_part(self) -> Optional[LegPart]:
+        """ The :class:`LegPart` for the terminating part of the Call Leg """
         for part in self.parts:
             if part.direction.upper() == 'TERMINATING':
                 return part
@@ -119,6 +144,7 @@ class CallLeg:
 
     @property
     def is_queue_leg(self) -> bool:
+        """ Whether the Call Leg is to a Call Queue """
         if self.term_part is not None:
             if self.term_part.user_type.upper() == 'CALLCENTERPREMIUM':
                 return True
@@ -126,6 +152,7 @@ class CallLeg:
 
     @property
     def is_aa_leg(self) -> bool:
+        """ Whether the Call Leg is to an Auto Attendant """
         if self.term_part is not None:
             if self.term_part.user_type.upper() == 'AUTOMATEDATTENDANTVIDEO':
                 return True
@@ -133,6 +160,7 @@ class CallLeg:
 
     @property
     def is_agent_leg(self) -> bool:
+        """ Whether the Call Leg is a Call Queue leg to an Agent """
         if self.term_part is not None:
             if self.term_part.user_type.upper() == 'USER' and self.term_part.redirect_reason.upper() == 'CALLQUEUE':
                 return True
@@ -140,6 +168,7 @@ class CallLeg:
 
     @property
     def is_vm_deposit(self) -> bool:
+        """ Whether the Call Leg is a Voicemail deposit"""
         if self.orig_part is not None:
             if self.orig_part.called_line_id == 'Voice Portal Voice Messaging Group':
                 if self.orig_part.redirect_reason in ['UserBusy', 'NoAnswer', 'Unconditional']:
@@ -167,6 +196,7 @@ class CallLeg:
 
     @property
     def calling_number(self) -> str:
+        """ The Calling Part Number for the Call Leg """
         if self.orig_part is None:
             return self.term_part.calling_number
         else:
@@ -252,6 +282,12 @@ class CallLeg:
 
     @property
     def in_reason(self) -> Optional[str]:
+        """ The Reason a Call Leg was received.
+
+        Returns:
+            str: A descriptive reason
+
+        """
         if self.term_part is None:
             return None
         if self.term_part.call_type == 'SIP_INBOUND':
@@ -264,6 +300,14 @@ class CallLeg:
 
     @property
     def out_reason(self) -> Optional[str]:
+        """ The Reason the Call Leg originated.
+
+        This can be useful in finding Call Queue Call-Back legs
+
+        Returns:
+            str: A descriptive reason
+
+        """
         if self.orig_part is None:
             return None
         if self.orig_part.related_reason == '':
@@ -276,6 +320,7 @@ class CallLeg:
 
     @property
     def out_label(self):
+        """ An experimental text description of the Call Leg """
         label = ''
         if self.orig_part is None:
             # Without an Orig Part, we have to get everything we need from the Term Part
@@ -302,6 +347,12 @@ class CallLeg:
 
     @property
     def answered(self) -> bool:
+        """ Whether the Call Leg was answered
+
+        Returns:
+            bool
+
+        """
         answered = False
         for part in self.parts:
             if part.answered is True:
@@ -310,6 +361,7 @@ class CallLeg:
 
     @property
     def answered_label(self) -> str:
+        """ The string 'Answered' or 'Unanswered'. Useful for labeling in a UI. """
         label = 'Answered' if self.answered is True else 'Unanswered'
         return label
 
@@ -341,6 +393,12 @@ class Call:
 
     @property
     def start_time(self) -> Optional[datetime]:
+        """ The Call Start date and time
+
+        Returns:
+            datetime
+
+        """
         earliest: Optional[datetime] = None
         for leg in self.legs:
             if earliest is None or leg.start_time < earliest:
@@ -349,6 +407,12 @@ class Call:
 
     @property
     def end_time(self) -> Optional[datetime]:
+        """ The Call End date and time
+
+        Returns:
+            datetime
+
+        """
         latest: Optional[datetime] = None
         for leg in self.legs:
             if latest is None or leg.end_time > latest:
@@ -357,23 +421,48 @@ class Call:
 
     @property
     def duration(self):
+        """ The duration of the Call
+
+        Returns:
+            timedelta
+
+        """
         difference: timedelta = self.end_time - self.start_time
         return str(difference).split('.')[0]
 
     @property
     def calling_number(self) -> str:
+        """ The original Calling Number from the first Leg of the Call
+
+        Returns:
+            str: The Calling Number
+
+        """
         return self.legs_sorted[0].calling_number
 
     @property
     def leg_count(self) -> int:
+        """ The number of Legs that make up the call
+
+        Returns:
+            int: Number of Legs
+
+        """
         return len(self.legs)
 
     @property
     def legs_sorted(self):
+        """ List of Call Legs sorted by their Start DateTime
+
+        Returns:
+            list[CallLeg]: The list of CallLegs
+
+        """
         return sorted(self.legs, key=lambda x: x.start_time, reverse=False)
 
     @property
     def part_ids(self):
+        """ List of Part IDs used within the Call """
         parts = []
         for leg in self.legs:
             parts.extend(leg.parts_id)
@@ -381,6 +470,7 @@ class Call:
 
     @property
     def transfer_ids(self) -> list:
+        """ List of Transfer IDs used within the Call """
         ids = []
         for leg in self.legs:
             ids.extend(leg.transfer_ids)
@@ -396,6 +486,12 @@ class Call:
 
     @property
     def answered_legs(self):
+        """ The number of Call Legs where the Answer indicator is True
+
+        Returns:
+            int: The number of Answered legs
+
+        """
         answered = 0
         for leg in self.legs:
             if leg.answered is True:
@@ -404,6 +500,12 @@ class Call:
 
     @property
     def has_queue_leg(self) -> bool:
+        """ Whether the Call has a Call Leg that involves a Call Queue
+
+        Returns:
+            bool
+
+        """
         for leg in self.legs:
             if leg.is_queue_leg is True:
                 return True
@@ -411,6 +513,12 @@ class Call:
 
     @property
     def has_pstn_leg(self) -> bool:
+        """ Whether the Call has a Call Leg that was to or from the PSTN (off-net)
+
+        Returns:
+            bool
+
+        """
         for leg in self.legs:
             if leg.pstn_leg:
                 return True
@@ -418,6 +526,12 @@ class Call:
 
     @property
     def has_vm_deposit_leg(self) -> bool:
+        """ Whether the Call contains a Voicemail deposit
+
+        Returns:
+            bool
+
+        """
         for leg in self.legs:
             if leg.is_vm_deposit:
                 return True
@@ -425,6 +539,12 @@ class Call:
 
     @property
     def is_queue_abandon(self) -> bool:
+        """ Whether the Call is one where the caller ended the call while waiting in a Call Queue
+
+        Returns:
+             bool
+
+        """
         if self.has_queue_leg:
             for leg in self.legs:
                 if leg.is_agent_leg and leg.answered:
@@ -437,15 +557,27 @@ class Call:
 class CallDetailRecords:
     def __init__(self, records: list, webex: Optional[wxcadm.Webex] = None):
         self.records: list = records
+        """ The records that were sent to the CallDetailRecords instance """
         self.webex = webex
-        self.retry_records = []
+        """ The wxcadm.Webex connection to use to look up identifiers """
+        self._retry_records = []
         self.calls: list[Call] = []
-        self.process_calls()
+        """ The (unordered) list of Call instances after processing """
+        self.__process_calls()
         # Retry any that didn't make it through the first time
-        self.to_merge = []
-        self.merge_transfer_calls()
+        self._to_merge = []
+        self.__merge_transfer_calls()
 
     def get_call_by_correlation_id(self, correlation_id: str) -> Optional[Call]:
+        """ Find a Call by its Correlation ID
+
+        Args:
+            correlation_id (str): The Correlation ID to search for
+
+        Returns:
+            Call: The matching Call instance
+
+        """
         log.debug(f"Getting Call by Correlation ID: {correlation_id}")
         for call in self.calls:
             if correlation_id == call.id:
@@ -453,6 +585,15 @@ class CallDetailRecords:
         return None
 
     def get_call_by_part_call_id(self, part_call_id: str):
+        """ Find a Call by the Part ID of one of the Call Parts
+
+        Searching by Part iD is rare and normally only used for internal processing, but users who have an idea of
+        what the Part ID is might have use for this method.
+
+        Returns:
+            Call: The matching Call instance
+
+        """
         log.debug(f"Getting Call by Park Call ID: {part_call_id}")
         for call in self.calls:
             if part_call_id in call.part_ids:
@@ -461,9 +602,10 @@ class CallDetailRecords:
 
     @property
     def calls_sorted(self):
+        """ A list of Calls sorted by timestamp """
         return sorted(self.calls, key=lambda x: x.start_time, reverse=False)
 
-    def user_finder(self, type: str, location_id: str, user_id: str) -> str:
+    def __user_finder(self, type: str, location_id: str, user_id: str) -> str:
         log.info(f"Finding User with type '{type}' and ID {user_id}")
         if type == 'AutomatedAttendantVideo':
             me = self.webex.org.auto_attendants.get(uuid=user_id)
@@ -493,7 +635,7 @@ class CallDetailRecords:
             log.warning(f"No Method to find User for {type}")
         return f'{type} - {user_id}'
 
-    def process_calls(self, records: Optional[list] = None):
+    def __process_calls(self, records: Optional[list] = None):
         log.debug("Processing calls for CallDetailRecords")
         if records is None:
             records = self.records
@@ -501,7 +643,7 @@ class CallDetailRecords:
         for record in records:
             # app.logger.debug(f"Correlation ID: {record['Correlation ID']}")
             if record['User'] == '' or record['User'] == 'NA':
-                record['User'] = self.user_finder(
+                record['User'] = self.__user_finder(
                     record['User type'],
                     record['Site UUID'],
                     record['User UUID']
@@ -514,14 +656,14 @@ class CallDetailRecords:
                 self.calls.append(call)
             call.add_record(record)
 
-    def delete_call(self, id: str):
+    def __delete_call(self, id: str):
         new_calls = []
         for call in self.calls:
             if call.id != id:
                 new_calls.append(call)
         self.calls = new_calls
 
-    def merge_transfer_calls(self):
+    def __merge_transfer_calls(self):
         merge_done = False
         # This is done as a while loop that never ends without a break. Since matching calls will both have each others
         # part_id values, we have to take them one at a time without looking at the self.calls for the loop.
@@ -543,10 +685,10 @@ class CallDetailRecords:
                         (search_call.start_time - timedelta(hours=24) <=
                          call.start_time <=
                          search_call.start_time + timedelta(hours=24)):
-                    self.merge_calls(call, search_call)
+                    self.__merge_calls(call, search_call)
                     break
 
-    def merge_calls(self, call1: Call, call2: Call):
+    def __merge_calls(self, call1: Call, call2: Call):
         new_calls_list = []
         for call in self.calls:
             if call == call1:
@@ -561,6 +703,12 @@ class CallDetailRecords:
         return self.calls
 
     def get_abandoned_calls(self) -> list:
+        """ Get a list of Calls where the caller hung up in a Call Queue prior to an Agent answering
+
+        Returns:
+            list[Call]: A list of Call instances
+
+        """
         response = []
         for call in self.calls_sorted:
             if call.has_queue_leg and call.is_queue_abandon:
@@ -568,6 +716,12 @@ class CallDetailRecords:
         return response
 
     def get_pstn_calls(self) -> list:
+        """ Get a list of Calls where a PSTN leg is present
+
+        Returns:
+            list[Call]: A list of Call instances
+
+        """
         response = []
         for call in self.calls_sorted:
             if call.has_pstn_leg:
@@ -575,6 +729,12 @@ class CallDetailRecords:
         return response
 
     def get_voicemail_deposit_calls(self) -> list:
+        """ Get a list of Calls where the call was sent to Voicemail for the caller to leave a message
+
+        Returns:
+            list[Call]: A list of Call instances
+
+        """
         response = []
         for call in self.calls_sorted:
             if call.has_vm_deposit_leg:
