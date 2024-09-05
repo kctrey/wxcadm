@@ -246,8 +246,10 @@ class XSIEventsChannel:
 
         # Start the channel thread
         self.channel_thread.start()
-        # Wait a few seconds for the channel to come up before starting the heartbeats
-        time.sleep(2)
+        # Wait for the Channel to come up, which will mean an .id will be present
+        while self.id == "":
+            log.debug("Waiting for Channel to come up...")
+            time.sleep(2)
         self.heartbeat_thread.start()
 
     def _channel_daemon(self):
@@ -371,6 +373,12 @@ class XSIEventsChannel:
         """
         while self.active:
             tid = tracking_id()
+            if self.id is None or self.id == "":
+                # If we don't have an ID, we need to kill this and try to restart the channel
+                log.warning("No Channel ID found to start heartbeats")
+                self.active = False
+                self.parent.restart_failed_channel(self)
+                continue
             log.debug(f"[{threading.current_thread().name}][{tid}] Sending heartbeat for channel: {self.id}")
             try:
                 r = self.session.put(self.events_endpoint + f"/v2.0/channel/{self.id}/heartbeat",
@@ -384,8 +392,9 @@ class XSIEventsChannel:
                 else:
                     log.debug(f"[{threading.current_thread().name}][{r.headers.get('TrackingID', 'Unknown')}] "
                               f"{ip} - Heartbeat failed: {r.text} [{r.status_code}]")
-                    if r.status_code == 404:
+                    if r.status_code == 404 or r.status_code == 401:
                         # If the channel can't be found on the server, kill the channel and restart it
+                        log.warning(f"Received HTTP {r.status_code}. Marking channel inactive and restarting.")
                         self.active = False
                         self.parent.restart_failed_channel(self)
                         next_heartbeat = 0

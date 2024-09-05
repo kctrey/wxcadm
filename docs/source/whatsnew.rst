@@ -3,6 +3,10 @@
 What's New
 ==========
 
+v4.3.6
+------
+- BUG FIX: Fixed problems with Xsi-Events Heartbeats to invalid channels
+
 v4.3.5
 ------
 - BUG FIX: :meth:`Person.assign_wxc()` was sending the ``manager`` property, which cannot be sent via API
