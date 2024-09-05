@@ -28,7 +28,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='wxcadm',
-    version='4.3.5',
+    version='4.3.6',
     packages=packages,
     url='https://github.com/kctrey/wxcadm',
     license='GPL-3.0',
