@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import UserList
 from dataclasses import dataclass, field
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 import wxcadm
 import wxcadm.location
@@ -89,6 +89,12 @@ class Trunks(UserList):
             this_trunk = Trunk(self.org, **item)
             self.data.append(this_trunk)
 
+    def get(self, name: str) -> Optional[Trunk]:
+        for trunk in self.data:
+            if trunk.name == name:
+                return trunk
+        return None
+
     def add_trunk(self, name: str,
                   location: wxcadm.Location | str,
                   password: str,
@@ -169,6 +175,9 @@ class Trunk:
     """ Whether the Trunk is in use """
     trunkType: str
     """ The type of Trunk, either 'REGISTERING' or 'CERTIFICATE_BASED' """
+    isRestrictedToDedicatedInstance: bool
+    """ Whether the Trunk can only be used by Webex Calling Dedicated Instance"""
+    # TODO - Add support for Dual Identity field and updates
 
     def __post_init__(self):
         log.debug(f'Finding Location instance: {self.location}')
@@ -191,7 +200,7 @@ class RouteGroups(UserList):
             this_rg = RouteGroup(self.org, **item)
             self.data.append(this_rg)
 
-    def get_route_group(self, id: Optional[str] = None, name: Optional[str] = None) -> Optional[RouteGroup]:
+    def get(self, id: Optional[str] = None, name: Optional[str] = None) -> Optional[RouteGroup]:
         """ Return a RouteGroup instance with the given ID or name.
 
         Args:
@@ -218,6 +227,63 @@ class RouteGroup:
     """ The name of the RouteGroup """
     inUse: bool
     """ Whether or not the RouteGroup is being used by any Location, Route List or Dial Plan"""
+
+    @property
+    def trunks(self) -> List[dict]:
+        """ A dict of the Trunks within the Route Group along with their Priorities """
+        response = webex_api_call('get', f"v1/telephony/config/premisePstn/routeGroups/{self.id}",
+                                  params={'orgId': self.org.org_id})
+        return response['localGateways']
+
+    def add_trunk(self, trunk: Trunk, priority: Union[str, int]):
+        """ Add a new Trunk to the Route Group with the given priority
+
+        The priority value will be a fixed number value (int) for the given priority. For a Route Group with an unknown
+        number of existing Trunks, the keyword ``'next'`` can be used to assign the priority as the next numerical
+        value, or the keyword ``'with_last'`` will assign the priority to the same value as other trunks with the last
+        priority value.
+
+        Args:
+            trunk (Trunk): The :class:`Trunk` to add
+            priority (str, int): Either a numeric priority or the word ``'next'`` or ``'with_last'``
+
+        Returns:
+
+        """
+        trunks = self.trunks
+        if priority == 'next' or priority =='with_last':
+            highest_val = self.__get_last_priority(trunks)
+            if priority == 'next':
+                priority = int(highest_val) + 1
+            else:
+                priority = int(highest_val)
+
+        trunks.append(
+            {
+                'id': trunk.id,
+                'name': trunk.name,
+                'locationId': trunk.location.id,
+                'priority': priority
+            }
+        )
+        payload = {
+            'name': self.name,
+            'localGateways': trunks
+        }
+
+        webex_api_call('put', f"v1/telephony/config/premisePstn/routeGroups/{self.id}",
+                       params={'orgId': self.org.org_id}, payload=payload)
+        return True
+
+    def __get_last_priority(self, trunks: Optional[dict] = None):
+        if trunks is None:
+            trunks = self.trunks
+        highest = 1
+        for trunk in trunks:
+            if trunk['priority'] > highest:
+                highest = trunk['priority']
+        return highest
+
 
 
 class RouteLists(UserList):

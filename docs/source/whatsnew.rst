@@ -3,6 +3,11 @@
 What's New
 ==========
 
+v4.3.7
+------
+- :meth:`RouteGroup.add_trunk()` to be able to add new a Trunk to a Route Group
+- **BREAKING CHANGE**: :meth:`CallRouting.RouteGroups.get_route_group()` has been renamed to simply :meth:`get()` to match other modules
+
 v4.3.6
 ------
 - BUG FIX: Fixed problems with Xsi-Events Heartbeats to invalid channels
