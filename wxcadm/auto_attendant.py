@@ -194,8 +194,106 @@ class AutoAttendant:
     data: dict
 
     def __post_init__(self):
+        # Attributes available in the main list
         self.name = self.data.get('name', '')
         self.location_id = self.data.get('locationId', '')
+        self.phone_number: Optional[str] = self.data.get('phoneNumber', None)
+        self.extension: Optional[str] = self.data.get('extension', None)
+        self.routing_prefix: Optional[str] = self.data.get('routingPrefix', None)
+        self.esn: Optional[str] = self.data.get('esn', None)
+        self.toll_free_number: bool = self.data.get('tollFreeNumber', False)
+        # Attributes that require a Get Detail call
+        self._first_name: Optional[str] = None
+        self._last_name: Optional[str] = None
+        self._enabled: Optional[bool] = None
+        self._alternate_numbers: Optional[list] = None
+        self._language: Optional[str] = None
+        self._language_code: Optional[str] = None
+        self._business_schedule: Optional[str] = None
+        self._holiday_schedule: Optional[str] = None
+        self._extension_dialing: Optional[str] = None
+        self._name_dialing: Optional[str] = None
+        self._time_zone: Optional[str] = None
+        self._business_hours_menu: Optional[dict] = None
+        self._after_hours_menu: Optional[dict] = None
+
+    @property
+    def enabled(self) -> bool:
+        if self._enabled is None:
+            self._get_details()
+        return self._enabled
+
+    @property
+    def first_name(self) -> str:
+        if self._first_name is None:
+            self._get_details()
+        return self._first_name
+
+    @property
+    def last_name(self) -> str:
+        if self._last_name is None:
+            self._get_details()
+        return self._last_name
+
+    @property
+    def alternate_numbers(self) -> list:
+        if self._alternate_numbers is None:
+            self._get_details()
+        return self._alternate_numbers
+
+    @property
+    def language(self) -> str:
+        if self._language is None:
+            self._get_details()
+        return self._language
+
+    @property
+    def language_code(self) -> str:
+        if self._language_code is None:
+            self._get_details()
+        return self._language_code
+
+    @property
+    def business_schedule(self) -> str:
+        if self._business_schedule is None:
+            self._get_details()
+        return self._business_schedule
+
+    @property
+    def holiday_schedule(self) -> str:
+        if self._holiday_schedule is None:
+            self._get_details()
+        return self._holiday_schedule
+
+    @property
+    def extension_dialing(self) -> str:
+        if self._extension_dialing is None:
+            self._get_details()
+        return self._extension_dialing
+
+    @property
+    def name_dialing(self) -> str:
+        if self._name_dialing is None:
+            self._get_details()
+        return self._name_dialing
+
+    @property
+    def time_zone(self) -> str:
+        if self._time_zone is None:
+            self._get_details()
+        return self._time_zone
+
+    @property
+    def business_hours_menu(self) -> dict:
+        if self._business_hours_menu is None:
+            self._get_details()
+        return self._business_hours_menu
+
+    @property
+    def after_hours_menu(self) -> dict:
+        if self._after_hours_menu is None:
+            self._get_details()
+        return self._after_hours_menu
 
     @property
     def spark_id(self) -> str:
@@ -203,8 +301,25 @@ class AutoAttendant:
 
     @property
     def config(self) -> dict:
-        """ The config of the AutoAttendant """
+        """ The JSON config of the AutoAttendant """
+        response = self._get_details()
+        return response
+
+    def _get_details(self):
         response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/autoAttendants/{self.id}")
+        self._enabled = response.get('enabled', None)
+        self._first_name = response.get('firstName', '')
+        self._last_name = response.get('lastName', '')
+        self._alternate_numbers = response.get('alternateNumbers', [])
+        self._language = response.get('language', '')
+        self._language_code = response.get('languageCode', '')
+        self._business_schedule = response.get('businessSchedule', '')
+        self._holiday_schedule = response.get('holidaySchedule', None)
+        self._extension_dialing = response.get('extensionDialing', '')
+        self._name_dialing = response.get('nameDialing', '')
+        self._time_zone = response.get('timeZone', '')
+        self._business_hours_menu = response.get('businessHoursMenu', {})
+        self._after_hours_menu = response.get('afterHoursMenu', {})
         return response
 
     @property

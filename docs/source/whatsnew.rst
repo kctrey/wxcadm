@@ -5,6 +5,7 @@ What's New
 
 v4.3.7
 ------
+- Lots of new attributes in :class:`AutoAttendant`. Most of the config items were not exposed except in the JSON :attr:`AutoAttendant.config` and are now exposed as attributes.
 - :meth:`RouteGroup.add_trunk()` to be able to add new a Trunk to a Route Group
 - **BREAKING CHANGE**: :meth:`CallRouting.RouteGroups.get_route_group()` has been renamed to simply :meth:`get()` to match other modules
 
