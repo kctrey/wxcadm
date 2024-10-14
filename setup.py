@@ -28,7 +28,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='wxcadm',
-    version='4.3.6',
+    version='4.3.8',
     packages=packages,
     url='https://github.com/kctrey/wxcadm',
     license='GPL-3.0',
@@ -40,6 +40,6 @@ setup(
     package_data={'': ['LICENSE']},
     package_dir={'wxcadm': 'wxcadm'},
     include_package_data=True,
-    python_requires=">=3.6",
+    python_requires=">=3.10",
     install_requires=requires
 )

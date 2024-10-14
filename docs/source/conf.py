@@ -18,11 +18,11 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'wxcadm'
-copyright = '2022, Trey Hilyard'
+copyright = '2024, Trey Hilyard'
 author = 'Trey Hilyard'
 
 # The full version, including alpha/beta/rc tags
-release = '4.1.1'
+release = '4.3.8'
 
 
 # -- General configuration ---------------------------------------------------

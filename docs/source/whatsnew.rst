@@ -3,6 +3,10 @@
 What's New
 ==========
 
+v4.3.8
+------
+- MAJOR CHANGE: Most people are already using Python 3.10 or greater, but I just found that the PIP requirements showed Python >= 3.6 which will not work with newer version of the requests library
+
 v4.3.7
 ------
 - BUG FIX: :meth:`LocationList.webex_calling()` did not work for Orgs other than the native one and has been fixed.
