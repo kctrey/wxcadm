@@ -247,7 +247,8 @@ class Location:
         """ Whether the Location is enabled for Webex Calling """
         if self._calling_enabled is None:
             try:
-                response = webex_api_call("get", f"v1/telephony/config/locations/{self.id}")
+                response = webex_api_call("get", f"v1/telephony/config/locations/{self.id}",
+                                          params={'orgId': self.org_id})
                 if 'id' in response.keys():
                     self._calling_enabled = True
                     self._calling_config = response
@@ -261,7 +262,8 @@ class Location:
         """ The Webex Calling configuration dict """
         if self._calling_config is None:
             try:
-                response = webex_api_call("get", f"v1/telephony/config/locations/{self.id}")
+                response = webex_api_call("get", f"v1/telephony/config/locations/{self.id}",
+                                          params={'orgId': self.org_id})
                 if 'id' in response.keys():
                     self._calling_enabled = True
                     self._calling_config = response
@@ -294,7 +296,7 @@ class Location:
                 "announcementLanguage": self.preferred_language.lower(),
                 "address": self.address
             }
-            webex_api_call("post", "v1/telephony/config/locations", payload=payload)
+            webex_api_call("post", "v1/telephony/config/locations", payload=payload, params={'orgId': self.org_id})
             self._calling_enabled = True
         return True
 
