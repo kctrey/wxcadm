@@ -3,6 +3,10 @@
 What's New
 ==========
 
+v4.3.9
+------
+- :meth:`LocationList.webex_calling()` now uses a more efficient API call to reduce the time it takes to populate the data
+
 v4.3.8
 ------
 - MAJOR CHANGE: Most people are already using Python 3.10 or greater, but I just found that the PIP requirements showed Python >= 3.6 which will not work with newer version of the requests library
@@ -29,7 +33,7 @@ v4.3.4
 - New method :meth:`Workspace.set_professional_license()` allows Workspaces with a Workspace license to be converted to a Professional license. Not that, as of this release, the Webex API does now allow a Professional Workspace to be downgraded to a Workspace license.
 - New property :attr:`Workspace.license_type` returns 'PROFESSIONAL' or 'WORKSPACE' to allow the license type to be determined
 - :meth:`WorkspaceList.create()` now accepts a ``license_type`` argument to allow Professional licenses to be assigned to a Workspace
-- **BREAKING CHANGE** - :attr:`Workspace.location_id` has been renamed to :attr:`Workspace.locaqtion` to reflect that it is a :class:`Location` instance, not an ID string
+- **BREAKING CHANGE** - :attr:`Workspace.location_id` has been renamed to :attr:`Workspace.location` to reflect that it is a :class:`Location` instance, not an ID string
 - New :class:`TranslationPattern` and :class:`TranslationPatternList` accessed via :attr:`Org.translation_patterns` and :attr:`Location.translation_patterns`
 - Moved Audit Events to :class:`AuditEvent`, which is contained in :class:`AuditEventList` and still accessed via :meth:`Org.get_audit_events()`
 - Added :attr:`Webex.access_token_expires`, :attr:`Webex.refresh_token_expires` which are automatically updated by :meth:`Webex.get_new_token()` to prepare for upcoming keep-alive feature

@@ -127,7 +127,7 @@ class LocationList(UserList):
         """ Return a list of :py:class:`Location` where Webex Calling is enabled/disabled
 
         Args:
-            enabled (bool, optional): True (default) returns Webex Calling people. False returns Locations without
+            enabled (bool, optional): True (default) returns Webex Calling Locations. False returns Locations without
                 Webex Calling
 
             single (bool, optional): When True, returns only a single Location, which can be useful for some API calls,
@@ -140,14 +140,34 @@ class LocationList(UserList):
             :py:class:`Location`: When ``single=True`` is present, a single Location will be returned.
 
         """
+        # The following API call was added in 4.3.9 because the previous method required an API call for every Location
+        # which was very slow. The new API call gets the Webex Calling config for all Locations, so it is assumed
+        # that any Location returned has Webex Calling
+        response = wxcadm.webex_api_call('get', 'v1/telephony/config/locations', params={'orgId': self.parent.org_id})
         locations = []
-        entry: Location
-        for entry in self.data:
-            if entry.calling_enabled is enabled:
-                if single is True:
-                    return entry
-                locations.append(entry)
-        return locations
+        entry: dict
+        for entry in response['locations']:
+            location = self.get(id=entry['id'])
+            if location is not None:
+                location.calling_enabled = True
+                locations.append(location)
+        # Return the Locations we just found if asked for it
+        if enabled is True:
+            if single is False:
+                return locations
+            elif single is True:
+                return locations[0]
+        elif enabled is False:
+            locations = []
+            loc: Location
+            for loc in self.data:
+                if loc.calling_enabled is False or loc.calling_enabled is None:
+                    loc.calling_enabled = False
+                    locations.append(loc)
+            if single is False:
+                return locations
+            elif single is True:
+                return locations[0]
 
 
 class Location:
@@ -256,6 +276,11 @@ class Location:
                 self._calling_enabled = False
                 self._calling_config = None
         return self._calling_enabled
+
+    @calling_enabled.setter
+    def calling_enabled(self, value: bool):
+        self._calling_enabled = value
+        return
 
     @property
     def calling_config(self) -> dict:
