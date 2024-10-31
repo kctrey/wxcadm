@@ -5,6 +5,7 @@ What's New
 
 v4.3.9
 ------
+- BUG FIX: :meth:`NumberManagementJobList.create()` has been fixed
 - :meth:`LocationList.webex_calling()` now uses a more efficient API call to reduce the time it takes to populate the data
 
 v4.3.8

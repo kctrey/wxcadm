@@ -155,9 +155,10 @@ class NumberManagementJobList(UserList):
         for number in numbers:
             number_found = False
             for org_number in org_numbers:
-                if number in org_number.get('phoneNumber', ''):
-                    number_found = True
-                    numbers_to_move.append(org_number)
+                if org_number.phone_number is not None:
+                    if number in org_number.phone_number:
+                        number_found = True
+                        numbers_to_move.append(org_number)
             if number_found is False:
                 raise KeyError(f"{number} was not found in the Org")
 
@@ -169,7 +170,7 @@ class NumberManagementJobList(UserList):
         # Build the payload for the move job
         payload = {'operation': 'MOVE', 'targetLocationId': target_location_id, 'numberList': []}
         for number in numbers_to_move:
-            payload['numberList'].append({'locationId': number['location'].id, 'numbers': [number['phoneNumber']]})
+            payload['numberList'].append({'locationId': number.location.id, 'numbers': [number.phone_number]})
 
         response = wxcadm.webex_api_call('post', 'v1/telephony/config/jobs/numbers/manageNumbers',
                                          params={'orgId': self.parent.id},
