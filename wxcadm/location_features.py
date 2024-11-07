@@ -339,6 +339,45 @@ class VoicePortal(RealtimeClass):
         self.data_url: str = f'v1/telephony/config/locations/{self.location.id}/voicePortal'
         super().__init__()
 
+    def copy_config(self, target_location: wxcadm.Location, phone_number: str = None, passcode: str = None) -> bool:
+        """ Copies the Voice Portal settings to another Location.
+
+        The phone number and passcode will not be copied. To define those values as part of the copy operation,
+        ensure those arguments are passed to the method.
+
+        Args:
+            target_location (wxcadm.Location): The :class:`Location` to copy the settings to
+            phone_number (str, optional): The phone number to assign to the Voice Portal
+            passcode (str, optional): The Voice Portal passcode to set
+
+        Returns:
+            bool: True on success
+
+        """
+        payload = {
+            'name': 'Voice Portal',
+            'languageCode': self.language_code,
+            'extension': self.extension,
+            'firstName': self.first_name,
+            'lastName': self.last_name,
+        }
+        if phone_number is not None:
+            payload['phoneNumber'] = phone_number
+        if passcode is not None:
+            payload['passcode'] = {
+                'newPasscode': passcode,
+                'confirmPasscode': passcode
+            }
+        if isinstance(target_location, wxcadm.Location):
+            if target_location.calling_enabled is False:
+                raise ValueError("Target Location is not Webex Calling enabled")
+            webex_api_call('put', f"v1/telephony/config/locations/{target_location.id}/voicePortal",
+                           payload=payload, params={'orgId': target_location.org_id})
+        else:
+            raise ValueError("target_location much be a Location instance")
+
+        return True
+
 
 class OutgoingPermissionDigitPatternList:
     def __init__(self, location: wxcadm.Location):

@@ -18,6 +18,7 @@ from .dect import DECTNetworkList
 from .number import NumberList
 from .virtual_line import VirtualLineList
 from .call_routing import TranslationPatternList
+from .workspace import WorkspaceList
 
 
 class LocationList(UserList):
@@ -221,6 +222,7 @@ class Location:
         self._virtual_lines: Optional[VirtualLineList] = None
         self._floors: Optional[LocationFloorList] = None
         self._translation_patterns = None
+        self._workspaces = None
 
     def __str__(self):
         return self.name
@@ -454,6 +456,13 @@ class Location:
             this_schedule = LocationSchedule(self, schedule['id'], schedule['name'], schedule['type'])
             response.append(this_schedule)
         return response
+
+    @property
+    def workspaces(self) -> WorkspaceList:
+        """ :class:`WorkspaceList` of all Workspaces for this Location """
+        if self._workspaces is None:
+            self._workspaces = WorkspaceList(self)
+        return self._workspaces
 
     def set_announcement_language(self, language: str,
                                   update_users: bool = False,

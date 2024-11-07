@@ -84,7 +84,7 @@ class WorkspaceLocationList(UserList):
         return None
 
 class WorkspaceList(UserList):
-    def __init__(self, parent: Union["Org", "WorkspaceLocation", wxcadm.Location]):
+    def __init__(self, parent: Union[wxcadm.Org, wxcadm.WorkspaceLocation, wxcadm.Location]):
         """
 
         .. deprecated:: 3.4.0
@@ -95,16 +95,15 @@ class WorkspaceList(UserList):
 
         super().__init__()
         log.debug("Initializing WorkspaceList instance")
-        self.parent: wxcadm.Org = parent
+        self.parent: Union[wxcadm.Org, wxcadm.Location] = parent
         self.data: list = self._get_workspaces()
 
     def _get_workspaces(self):
         log.debug("Getting List of Workspaces")
         workspaces = []
-        # Eventually, I would like to handle Location instances, but for now we just reject them
         if isinstance(self.parent, wxcadm.location.Location):
-            log.warning("Workspaces by Location are not Supported. WorkspaceLocation must be used.")
-            raise ValueError("Workspaces cannot be obtained for a Location")
+            log.debug(f"Using Location {self.parent.name} as Workspace filter")
+            params = {'locationId': self.parent.id}
         elif isinstance(self.parent, wxcadm.workspace.WorkspaceLocation):
             log.debug(f"Using WorkspaceLocation {self.parent.name} as Workspace filter")
             params = {'workspaceLocationId': self.parent.id}
@@ -262,10 +261,7 @@ class Workspace:
         """
         self.id: str = id
         """The Webex ID of the Workspace"""
-        self._parent: wxcadm.Org = parent
-        # Attributes inherited from the Org parent
-        self._headers = self._parent._headers
-        self._params = self._parent._params
+        self._parent: Union[wxcadm.Org, wxcadm.Location] = parent
         # Instance attributes
         self.location: Optional[wxcadm.Location] = None
         """ The :class:`Location` of the Workspace """
@@ -416,7 +412,8 @@ class Workspace:
     def get_config(self):
         """Get (or refresh) the confirmation of the Workspace from the Webex API"""
         log.info(f"Getting Workspace config for {self.id}")
-        r = requests.get(_url_base + f"v1/workspaces/{self.id}", headers=self._headers, params=self._params)
+        r = requests.get(_url_base + f"v1/workspaces/{self.id}", headers=self._headers,
+                         params={'orgId': self._parent.org_id})
         if r.status_code in [200]:
             response = r.json()
             self.__process_config(response)
@@ -427,7 +424,10 @@ class Workspace:
         """Processes the config dict, whether passed in init or from an API call"""
         self.name = config.get("displayName", "")
         if 'locationId' in config.keys():
-            self.location = self._parent.locations.get(id=config['locationId'])
+            if isinstance(self._parent, wxcadm.Org):
+                self.location = self._parent.locations.get(id=config['locationId'])
+            elif isinstance(self._parent, wxcadm.Location):
+                self.location = self._parent
         else:
             self.location = config.get("workspaceLocationId", None)
         self.floor = config.get("floorId", "")
@@ -444,7 +444,6 @@ class Workspace:
         self.notes = config.get("notes", "")
         if self.calling == 'webexCalling':
             self.licenses = config['calling']['webexCalling'].get('licenses', [])
-
 
     @property
     def ecbn(self) -> dict:

@@ -37,6 +37,10 @@ class TestWorkspaces(unittest.TestCase):
             deleted_workspace = self.webex.org.workspaces.get_by_id(new_workspace.id)
             self.assertEqual(deleted_workspace, None)
 
+    def test_location_workspace_list(self):
+        workspace_list = self.random_location.workspaces
+        self.assertIsInstance(workspace_list, wxcadm.workspace.WorkspaceList)
+
 
 if __name__ == '__main__':
     unittest.main()

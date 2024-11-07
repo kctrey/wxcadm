@@ -3,6 +3,11 @@
 What's New
 ==========
 
+v4.3.10
+-------
+- Added :meth:`VoicePortal.copy_config()` to support easy cloning of Voice Portal settings
+- :class:`Location` now has a :attr:`Location.workspaces` property to get a :class:`WorkspaceList` of all Workspaces at the Location
+
 v4.3.9
 ------
 - BUG FIX: :meth:`NumberManagementJobList.create()` has been fixed

@@ -379,6 +379,9 @@ class Org:
                     return num.owner
         return None
 
+    def get_all_monitoring(self):
+        pass
+
     def get_workspace_devices(self, workspace: Optional[Workspace] = None):
         """ Get Webex Calling Workspaces and their associated Devices
 

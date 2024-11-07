@@ -523,6 +523,10 @@ class Person:
         else:
             return False
 
+    def unassign_wxc(self) -> bool:
+
+        return True
+
     def start_xsi(self, get_profile: bool = False, cache: bool = False):
         """Starts an XSI session for the Person
 
