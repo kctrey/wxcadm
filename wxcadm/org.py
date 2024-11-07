@@ -379,8 +379,44 @@ class Org:
                     return num.owner
         return None
 
-    def get_all_monitoring(self):
-        pass
+    def get_all_monitoring(self) -> dict:
+        """ Returns a dict of all Users and Workspaces that are being monitored. The User (Person) or Workspace is the
+        dict key and the Users and Workspaces that are monitoring that key are a list.
+
+        Returns:
+            dict: A dict in the format ``{ 'people': { person: [] }, 'workspaces': { person: [] } }``
+
+        """
+        all_monitoring = {'people': {}, 'workspaces': {}}
+        for person in self.people.webex_calling():
+            monitoring = person.get_monitoring()
+            for monitor in monitoring.get('monitoredElements', []):
+                if 'member' in monitor.keys():
+                    if monitor['member']['type'] == 'PEOPLE':
+                        target_person = self.people.get(id=monitor['member']['id'])
+                        if target_person not in all_monitoring['people'].keys():
+                            all_monitoring['people'][target_person] = []
+                        all_monitoring['people'][target_person].append(person)
+                    elif monitor['member']['type'] == 'PLACE':
+                        target_workspace = self.workspaces.get(id=monitor['member']['id'])
+                        if target_workspace not in all_monitoring['workspaces'].keys():
+                            all_monitoring['workspaces'][target_workspace] = []
+                        all_monitoring['workspaces'][target_workspace].append(person)
+        for workspace in self.workspaces.webex_calling():
+            monitoring = workspace.monitoring
+            for monitor in monitoring.get('monitoredElements', []):
+                if 'member' in monitor.keys():
+                    if monitor['member']['type'] == 'PEOPLE':
+                        target_person = self.people.get(id=monitor['member']['id'])
+                        if target_person not in all_monitoring['people'].keys():
+                            all_monitoring['people'][target_person] = []
+                        all_monitoring['people'][target_person].append(workspace)
+                    elif monitor['member']['type'] == 'PLACE':
+                        target_workspace = self.workspaces.get(id=monitor['member']['id'])
+                        if target_workspace not in all_monitoring['workspaces'].keys():
+                            all_monitoring['workspaces'][target_workspace] = []
+                        all_monitoring['workspaces'][target_workspace].append(workspace)
+        return all_monitoring
 
     def get_workspace_devices(self, workspace: Optional[Workspace] = None):
         """ Get Webex Calling Workspaces and their associated Devices

@@ -306,6 +306,7 @@ class Workspace:
         # Property storage
         self._numbers: Optional[dict] = None
         self._devices: Optional[DeviceList] = None
+        self._monitoring: Optional[dict] = None
 
 
         if config:
@@ -315,9 +316,6 @@ class Workspace:
 
     def __str__(self):
         return self.name
-
-    def __repr__(self):
-        return self.id
 
     @property
     def org_id(self) -> str:
@@ -388,6 +386,28 @@ class Workspace:
     def spark_id(self):
         """ The internal identifier used by Webex """
         return decode_spark_id(self.id)
+
+    @property
+    def monitoring(self) -> dict:
+        """ A dict of the Users, Workspaces and Park Extensions the Workspace is Monitoring """
+        if self._monitoring is None:
+            self._monitoring = webex_api_call(
+                'get',
+                f"v1/workspaces/{self.id}/features/monitoring",
+                params={'orgId': self.org_id}
+            )
+        return self._monitoring
+
+    def get_monitored_by(self):
+        """ Returns a list of Users (Person) and Workspaces that are Monitoring this Workspace """
+        if isinstance(self._parent, wxcadm.Org):
+            monitor_list = self._parent.get_all_monitoring()
+        elif isinstance(self._parent, wxcadm.Location):
+            monitor_list = self._parent.parent.get_all_monitoring()
+        try:
+            return monitor_list['workspaces'][self]
+        except KeyError:
+            return None
 
     def delete(self):
         """ Delete the Workspace

@@ -5,6 +5,8 @@ What's New
 
 v4.3.10
 -------
+- Added :meth:`Workspace.get_monitored_by()` and :meth:`Person.get_monitored_by()` to allow a list of Users/Workspaces that are monitoring the selected Person/Workspace
+- Added :attr:`Workspace.monitoring` to get the dict of monitoring for the Workspace
 - Added :meth:`VoicePortal.copy_config()` to support easy cloning of Voice Portal settings
 - :class:`Location` now has a :attr:`Location.workspaces` property to get a :class:`WorkspaceList` of all Workspaces at the Location
 

@@ -1014,6 +1014,17 @@ class Person:
         self.monitoring = self.__get_webex_data(f"v1/people/{self.id}/features/monitoring")
         return self.monitoring
 
+    def get_monitored_by(self):
+        """ Returns a list of Users (Person) and Workspaces that are Monitoring this Person """
+        if isinstance(self._parent, wxcadm.Org):
+            monitor_list = self._parent.get_all_monitoring()
+        elif isinstance(self._parent, wxcadm.Location):
+            monitor_list = self._parent.parent.get_all_monitoring()
+        try:
+            return monitor_list['people'][self]
+        except KeyError:
+            return None
+
     def push_monitoring(self, config: dict):
         """ Push the Monitoring config to Webex
 
