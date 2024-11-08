@@ -223,6 +223,7 @@ class Location:
         self._floors: Optional[LocationFloorList] = None
         self._translation_patterns = None
         self._workspaces = None
+        self._routing_prefix = None
 
     def __str__(self):
         return self.name
@@ -298,6 +299,29 @@ class Location:
                 self._calling_enabled = False
                 self._calling_config = None
         return self._calling_config
+
+    @property
+    def routing_prefix(self) -> Optional[str]:
+        """ The Routing Prefix (i.e. Location Code) for the Location """
+        if self._routing_prefix is None:
+            self._routing_prefix = self.calling_config.get('routingPrefix', None)
+        return self._routing_prefix
+
+    def set_routing_prefix(self, prefix: str) -> bool:
+        """ Set the Routing Prefix for the Location
+
+        Args:
+            prefix (str): The new Routing Prefix
+
+        Returns:
+            bool: True on success
+
+        """
+        payload = {'routingPrefix': prefix}
+        webex_api_call('put', f"v1/telephony/config/locations/{self.id}",
+                       payload=payload, params={'orgId': self.org_id})
+        self._routing_prefix = prefix
+        return True
 
     @property
     def org_id(self):
