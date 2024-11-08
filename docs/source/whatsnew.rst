@@ -5,6 +5,7 @@ What's New
 
 v4.3.10
 -------
+- Added :attr:`Location.ecbn` and :meth:`Location.set_ecbn()` to allow direct access and control of Location-level ECBN settings
 - Added :attr:`Location.routing_prefix` and :meth:`Location.set_routing_prefix()` to allow direct access and control of the Routing Prefix (i.e. Location Code)
 - Added :meth:`Workspace.get_monitored_by()` and :meth:`Person.get_monitored_by()` to allow a list of Users/Workspaces that are monitoring the selected Person/Workspace
 - Added :attr:`Workspace.monitoring` to get the dict of monitoring for the Workspace

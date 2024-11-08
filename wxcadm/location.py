@@ -4,6 +4,7 @@ from typing import Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from .number import NumberList
 from collections import UserList
+from typing import Union
 
 import wxcadm
 from wxcadm import log
@@ -284,6 +285,42 @@ class Location:
     def calling_enabled(self, value: bool):
         self._calling_enabled = value
         return
+
+    @property
+    def ecbn(self):
+        """ The Emergency Callback Number details for the Location """
+        response = webex_api_call('get', f"v1/telephony/config/locations/{self.id}/features/emergencyCallbackNumber",
+                                  params={'orgId': self.org_id})
+        return response
+
+    def set_ecbn(self, value: Union[str, wxcadm.Person, wxcadm.Workspace, wxcadm.VirtualLine]) -> bool:
+        """ Set the ECBN of the Location
+
+        Valid values are ``'location'``, or a :class:`Person`, :class:`Workspace`, or :class:`VirtualLine` to set the
+        ECBN to one of those.
+
+        Args:
+            value (str, Person, Workspace, VirtualLine): The value to set the ECBN to
+
+        Returns:
+            bool: True on success
+
+        """
+        if isinstance(value, wxcadm.Person) or \
+                isinstance(value, wxcadm.Workspace) or \
+                isinstance(value, wxcadm.VirtualLine):
+            payload = {
+                'selected': 'LOCATION_MEMBER_NUMBER',
+                'locationMemberId': value.id
+            }
+        elif value.lower() == 'location' or value.lower() == 'location_number':
+            payload = {'selected': 'LOCATION_NUMBER'}
+        else:
+            raise ValueError('Unknown value')
+
+        response = webex_api_call('put', f'v1/telephony/config/locations/{self.id}/features/emergencyCallbackNumber',
+                                  params={'orgId': self.org_id}, payload=payload)
+        return True
 
     @property
     def calling_config(self) -> dict:

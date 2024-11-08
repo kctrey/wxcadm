@@ -9,6 +9,25 @@ if TYPE_CHECKING:
     from wxcadm.location_features import *
 
 
+class TestLocationECBN(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        load_dotenv()
+        cls.access_token = os.getenv("WEBEX_ACCESS_TOKEN")
+        if not cls.access_token:
+            print("No WEBEX_ACCESS_TOKEN found. Cannot continue.")
+            exit(1)
+
+    def setUp(self) -> None:
+        self.webex = wxcadm.Webex(self.access_token)
+        self.random_location: Location = choice(self.webex.org.locations.webex_calling())
+
+    def test_location_ecbn_get(self) -> None:
+        current_ecbn = self.random_location.ecbn
+        self.assertIsInstance(current_ecbn, dict)
+        self.assertIn(current_ecbn['selected'], ['LOCATION_NUMBER', 'LOCATION_MEMBER_NUMBER'], "Unknown selected value")
+
+
 class TestVoicemailGroups(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -121,7 +140,6 @@ class TestLocationFloors(unittest.TestCase):
             self.skipTest("No floors at location")
         self.assertIsInstance(self.random_location.floors[0], wxcadm.LocationFloor)
         self.assertIsInstance(self.random_location.floors[0].floor_number, int)
-
 
 
 if __name__ == '__main__':
