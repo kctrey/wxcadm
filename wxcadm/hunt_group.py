@@ -61,6 +61,30 @@ class HuntGroup:
     def spark_id(self) -> str:
         return decode_spark_id(self.id)
 
+    def add_agent(self, agent: Union[wxcadm.Person, wxcadm.Workspace, wxcadm.VirtualLine],
+                  weight: Optional[str] = None) -> bool:
+        """ Add an agent to the Hunt Group
+
+        The weight field is only applicable and required when the call policy is `'WEIGHTED'`
+
+        Args:
+            agent: The :class:`Person`, :class:`Workspace` or :class:`VirtualLine` to add as an agent
+            weight: The weight to associate with the agent
+
+        Returns:
+            bool: True on success
+
+        """
+        log.info(f"Adding agent to Hunt Group {self.name}")
+        config = self.config
+        new_agent_payload = {'id': agent.id}
+        if weight is not None:
+            new_agent_payload['weight'] = weight
+        config['agents'].append(new_agent_payload)
+        webex_api_call('put', f"v1/telephony/config/locations/{self.location_id}/huntGroups/{self.id}",
+                       payload=config)
+        return True
+
 
 class HuntGroupList(UserList):
     _endpoint = "v1/telephony/config/huntGroups"
@@ -149,13 +173,15 @@ class HuntGroupList(UserList):
                name: str,
                first_name: str,
                last_name: str,
-               phone_number: Optional[str],
-               extension: Optional[str],
-               call_policies: dict,
+               phone_number: Optional[str] = None,
+               extension: Optional[str] = None,
+               call_policies: Optional[dict] = None,
                enabled: bool = True,
                language: Optional[str] = None,
                time_zone: Optional[str] = None,
-               location: Optional[wxcadm.Location] = None
+               location: Optional[wxcadm.Location] = None,
+               agents: Optional[list] = None,
+               allow_as_agent_caller_id: bool = False
                ):
         """ Create a Hunt Group
 
@@ -165,7 +191,7 @@ class HuntGroupList(UserList):
             last_name (str): The last name to be used for Caller ID
             phone_number (str, optional): The phone number (e.g. DID) for the Hunt Group
             extension (str, optional): The extension for the Hunt Group
-            call_policies (dict): The Hunt Group Call Policy. The dict has the following format::
+            call_policies (dict, optional): The Hunt Group Call Policy. The dict has the following format::
 
                 {
                     'policy': 'REGULAR',
@@ -192,6 +218,10 @@ class HuntGroupList(UserList):
             location (Location, optional): The Location at which to create the Hunt Group. Only required when the
                 :class:`HuntGroupList` is at the Org level. If at the Location level, the selected :class:`Location`
                 will be used.
+            agents: (list, optional): A list of :class:`Person`, :class:`Workspace` or :class:`VirtualLine` instances
+                which will be assigned as agents in the Hunt Group. Without this list, no agents will be present.
+            allow_as_agent_caller_id (bool, optional): Whether the Hunt Group phone number can be used as Caller ID
+                by agents. Defaults to False.
 
         Returns:
             HuntGroup: The :class:`HuntGroup` instance of the created Hunt Group
@@ -214,6 +244,30 @@ class HuntGroupList(UserList):
         if language is None:
             log.debug(f"Using Location announcement_language {location.announcement_language}")
             language = location.announcement_language
+        if call_policies is None:
+            log.debug(f"Using default Call Policies")
+            call_policies = {
+                'policy': 'SIMULTANEOUS',
+                'waitingEnabled': False,
+                'groupBusyEnabled': False,
+                'allowMembersToControlGroupBusyEnabled': False,
+                'noAnswer': {
+                    'nextAgentEnabled': False,
+                    'nextAgentRings': 5,
+                    'forwardEnabled': False,
+                    'numberOfRings': 15,
+                    'systemMaxNumberOfRings': 20,
+                    'destinationVoicemailEnabled': False
+                },
+                'busyRedirect': {
+                    'enabled': False,
+                    'destinationVoicemailEnabled': False,
+                },
+                'businessContinuityRedirect': {
+                    'enabled': False,
+                    'destinationVoicemailEnabled': False
+                }
+            }
 
         payload = {
             "name": name,
@@ -223,8 +277,19 @@ class HuntGroupList(UserList):
             "phoneNumber": phone_number,
             "timeZone": time_zone,
             "languageCode": language,
-            "callPolicies": call_policies
+            "callPolicies": call_policies,
+            'huntGroupCallerIdForOutgoingCallsEnabled': allow_as_agent_caller_id
         }
+        if agents is not None:
+            agent_list = []
+            log.info("Finding agent IDs to assign to Hunt Group")
+            for agent in agents:
+                if not isinstance(agent, wxcadm.Person) and not isinstance(agent, wxcadm.VirtualLine) and \
+                        not isinstance(agent, wxcadm.Workspace):
+                    raise ValueError("Agents must be of type Workspace, Person or VirtualLine")
+                agent_list.append({'id': agent.id})
+            payload['agents'] = agent_list
+
         response = webex_api_call("post", f"v1/telephony/config/locations/{location.id}/huntGroups",
                                   payload=payload)
         new_hg_id = response['id']

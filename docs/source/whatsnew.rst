@@ -5,6 +5,10 @@ What's New
 
 v4.3.10
 -------
+
+- The ``call_policy`` parameter on :meth:`HuntGroupList.create()` was changed to optional with a default Policy for quicker HG builds
+- Added :meth:`HuntGroup.add_agent()` to support adding new agents to a Hunt Group
+- :meth:`HuntGroupList.create()` not supports adding agents when the Hunt Group is created
 - Added :attr:`Location.ecbn` and :meth:`Location.set_ecbn()` to allow direct access and control of Location-level ECBN settings
 - Added :attr:`Location.routing_prefix` and :meth:`Location.set_routing_prefix()` to allow direct access and control of the Routing Prefix (i.e. Location Code)
 - Added :meth:`Workspace.get_monitored_by()` and :meth:`Person.get_monitored_by()` to allow a list of Users/Workspaces that are monitoring the selected Person/Workspace
