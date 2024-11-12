@@ -5,7 +5,7 @@ What's New
 
 v4.3.10
 -------
-
+- BUG FIX: :meth:`Device.set_layout` and the respective :class:`DeviceLayout` now does not include an empty string for ``'kemType'``
 - Added :attr:`Workspace.caller_id` and :meth:`Workspace.set_caller_id()`
 - Added :attr:`Location.external_caller_id_name` and :meth:`Location.set_external_caller_id_name` to control this value
 - Modified :meth:`Trunks.get()` to also accept ``id`` in addition to ``name``

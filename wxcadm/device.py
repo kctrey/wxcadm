@@ -22,8 +22,8 @@ class DeviceLayout:
         self.layout_mode: str = ''
         self.user_reorder_enabled: bool = False
         self.line_keys: list = []
-        self.kem_type: str = ''
-        self.kem_keys: list = []
+        self.kem_type: Optional[str] = None
+        self.kem_keys: Optional[list] = None
 
         if config is None:
             self._get_config()
@@ -34,8 +34,8 @@ class DeviceLayout:
         self.layout_mode = config.get('layoutMode', '')
         self.user_reorder_enabled = config.get('userReorderEnabled', False)
         self.line_keys = config.get('lineKeys', [])
-        self.kem_type = config.get('kemModuleType', '')
-        self.kem_keys = config.get('kemKeys', [])
+        self.kem_type = config.get('kemModuleType', None)
+        self.kem_keys = config.get('kemKeys', None)
 
     def _get_config(self):
         response = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/layout',
@@ -140,10 +140,13 @@ class Device:
         payload = {
             'layoutMode': layout.layout_mode,
             'userReorderEnabled': layout.user_reorder_enabled,
-            'lineKeys': layout.line_keys,
-            'kemModuleType': layout.kem_type,
-            'kemKeys': layout.kem_keys
+            'lineKeys': layout.line_keys
         }
+        if layout.kem_type is not None:
+            payload['kemType'] = layout.kem_type
+        if layout.kem_keys is not None:
+            payload['kemKeys'] = layout.kem_keys
+
         webex_api_call('put', f"v1/telephony/config/devices/{self.id}/layout", payload=payload,
                        params={'orgId': self.parent.org_id})
         return True
