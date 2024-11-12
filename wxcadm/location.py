@@ -323,6 +323,68 @@ class Location:
         return True
 
     @property
+    def unknown_extension_policy(self) -> dict:
+        """ The Location configuration for routing unknown extensions to the Premises as internal calls
+
+        The dict contains two keys, ``'enabled'`` and ``'route'``. The ``'route'`` key will be either a
+        :class:`Trunk` or a :class:`RouteGroup` when the ``'enabled'`` values is ``True``.
+
+        """
+        policy = {}
+        response = webex_api_call('get', f"v1/telephony/config/locations/{self.id}/internalDialing",
+                                  params={'orgId': self.org_id})
+        policy['enabled'] = response.get('enableUnknownExtensionRoutePolicy', False)
+        policy['route'] = None
+        if 'unknownExtensionRouteIdentity' in response.keys():
+            identity = response['unknownExtensionRouteIdentity']
+            entity_type = identity.get('type', '')
+            if entity_type == 'ROUTE_GROUP':
+                entity = self.parent.call_routing.route_groups.get(id=identity['id'])
+            elif entity_type == 'TRUNK':
+                entity = self.parent.call_routing.trunks.get(id=identity['id'])
+            else:
+                entity = 'UNKNOWN'
+            policy['route'] = entity
+        return policy
+
+    def set_unknown_extension_policy(self, route: Union[wxcadm.Trunk, wxcadm.RouteGroup, str]) -> bool:
+        """ Set the Unknown Extension Policy for the Location
+
+        If the ``route`` parameter is a :class:`Trunk` or a :class:`RouteGroup`, the routing will be enabled and the
+        provided :class:`Trunk` or :class:`RouteList` will be used. To disable Unknown Extension routing, pass the
+        ``route`` argument a value of ``'disabled'``.
+
+        Args:
+            route: A :class:`Trunk`, :class:`RouteGroup` to use for routing, or ``'disabled'`` to disable routing
+
+        Returns:
+            bool: True on success
+
+        """
+        if isinstance(route, str):
+            if route.lower() != 'disabled':
+                raise ValueError("Invalid route type")
+            else:
+                payload = {'enableUnknownExtensionRoutePolicy': False}
+        else:
+            if isinstance(route, wxcadm.Trunk):
+                route_type = 'TRUNK'
+            elif isinstance(route, wxcadm.RouteGroup):
+                route_type = 'ROUTE_GROUP'
+            else:
+                raise ValueError("Invalid route type")
+            payload = {
+                'enableUnknownExtensionRoutePolicy': True,
+                'unknownExtensionRouteIdentity': {
+                    'id': route.id,
+                    'type': route_type
+                }
+            }
+        webex_api_call('put', f"v1/telephony/config/locations/{self.id}/internalDialing",
+                       params={'orgId': self.org_id}, payload=payload)
+        return True
+
+    @property
     def calling_config(self) -> dict:
         """ The Webex Calling configuration dict """
         if self._calling_config is None:
@@ -336,6 +398,27 @@ class Location:
                 self._calling_enabled = False
                 self._calling_config = None
         return self._calling_config
+
+    @property
+    def external_caller_id_name(self) -> str:
+        """ The name sent as Caller ID for External calls that do not have a value set """
+        return self.calling_config.get('externalCallerIdName', None)
+
+    def set_external_caller_id_name(self, name: str) -> bool:
+        """ Set the name to be sent as Caller ID for External calls that do not have a value set
+
+        Args:
+            name: The name to send
+
+        Returns:
+            bool: True on success
+
+        """
+        payload = {'externalCallerIdName': name}
+        webex_api_call('put', f"v1/telephony/config/locations/{self.id}",
+                       payload=payload, params={'orgId': self.org_id})
+        self._calling_config = None
+        return True
 
     @property
     def routing_prefix(self) -> Optional[str]:

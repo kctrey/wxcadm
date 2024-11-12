@@ -6,6 +6,12 @@ What's New
 v4.3.10
 -------
 
+- Added :attr:`Workspace.caller_id` and :meth:`Workspace.set_caller_id()`
+- Added :attr:`Location.external_caller_id_name` and :meth:`Location.set_external_caller_id_name` to control this value
+- Modified :meth:`Trunks.get()` to also accept ``id`` in addition to ``name``
+- Added :meth:`RouteLists.get()` to find RouteLists
+- New method :meth:`Location.set_unknown_extension_policy()` to set the Unknown Extension Routing Policy for the Location
+- Added :attr:`Location.unknown_extension_policy` to retrieve the current Unknown Extension Routing Policy
 - The ``call_policy`` parameter on :meth:`HuntGroupList.create()` was changed to optional with a default Policy for quicker HG builds
 - Added :meth:`HuntGroup.add_agent()` to support adding new agents to a Hunt Group
 - :meth:`HuntGroupList.create()` not supports adding agents when the Hunt Group is created

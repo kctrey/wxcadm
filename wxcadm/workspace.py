@@ -429,6 +429,56 @@ class Workspace:
             self._devices = DeviceList(self)
         return self._devices
 
+    @property
+    def caller_id(self) -> dict:
+        """ The Caller ID settings for the Workspace """
+        log.info(f"Getting Caller ID config for Workspace: {self.name}")
+        response = webex_api_call('get', f"v1/workspaces/{self.id}/features/callerId", params={'orgId': self.org_id})
+        return response
+
+    def set_caller_id(self, name: str, number: str, block_for_received_calls: Optional[bool] = False):
+        """ Set the Caller ID for the Workspace
+
+        Args:
+            name (str): The name to set as the Caller ID Name. Also accepts keywords: ``direct`` sets the name to the
+                Workspace's name . ``location`` sets the name to the name of the Location.
+            number (str): The number to set as the Caller ID.  Also accepts keywords: ``direct`` sets the number to the
+                Workspace's DID in Webex. ``location`` sets the name to the main number of the Location.
+            block_for_received_calls (bool, optional): Block this Workspace's identity when receiving a call
+
+
+        Returns:
+            bool: True on success
+
+        Raises:
+            wxcadm.exceptions.APIError: Raised when there is a problem with the API call
+
+        """
+        log.info(f"Setting Caller ID for {self.name}")
+        log.debug(f"\tNew Name: {name}\tNew Number: {number}")
+        payload = {}
+        # Handle the possible number values
+        if number.lower() == "direct":
+            payload['selected'] = "DIRECT_LINE"
+        elif number.lower() == "location":
+            payload['selected'] = "LOCATION_NUMBER"
+        else:
+            payload['selected'] = "CUSTOM"
+            payload['customNumber'] = number
+        # Then deal with possible name values
+        if name.lower() == "direct":
+            payload['externalCallerIdNamePolicy'] = "DIRECT_LINE"
+        elif name.lower() == "location":
+            payload['externalCallerIdNamePolicy'] = "LOCATION"
+        else:
+            payload['externalCallerIdNamePolicy'] = "OTHER"
+            payload['customExternalCallerIdName'] = name
+        payload['blockInForwardCallsEnabled'] = block_for_received_calls
+
+        webex_api_call('put', f"v1/workspaces/{self.id}/features/callerId", params={'orgId': self.org_id},
+                       payload=payload)
+        return True
+
     def get_config(self):
         """Get (or refresh) the confirmation of the Workspace from the Webex API"""
         log.info(f"Getting Workspace config for {self.id}")

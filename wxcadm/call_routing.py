@@ -89,8 +89,21 @@ class Trunks(UserList):
             this_trunk = Trunk(self.org, **item)
             self.data.append(this_trunk)
 
-    def get(self, name: str) -> Optional[Trunk]:
+    def get(self, name: Optional[str] = None, id: Optional[str] = None) -> Optional[Trunk]:
+        """ Get a Trunk by name or ID
+
+        Args:
+            name: The name of the Trunk
+            id: The Trunk ID
+
+        Returns:
+
+        """
+        if name is None and id is None:
+            raise ValueError("Must provide name or id")
         for trunk in self.data:
+            if trunk.id == id:
+                return trunk
             if trunk.name == name:
                 return trunk
         return None
@@ -285,7 +298,6 @@ class RouteGroup:
         return highest
 
 
-
 class RouteLists(UserList):
     """ RouteLists is a class that behaves as an array. Each item in the array is a :py:class:`RouteList` instance."""
     # TODO - Create Route List, Delete Route List
@@ -299,6 +311,26 @@ class RouteLists(UserList):
         for item in items['routeLists']:
             this_rl = RouteList(self.org, **item)
             self.data.append(this_rl)
+
+    def get(self, name: Optional[str] = None, id: Optional[str] = None) -> Optional[RouteLists]:
+        """ Get a RouteList by name or ID
+
+        Args:
+            name: The name of the RouteList
+            id: The RouteList ID
+
+        Returns:
+            RouteList
+
+        """
+        if name is None and id is None:
+            raise ValueError("Must provide name or id")
+        for routelist in self.data:
+            if routelist.id == id:
+                return routelist
+            if routelist.name == name:
+                return routelist
+        return None
 
 
 @dataclass
