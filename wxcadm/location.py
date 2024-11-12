@@ -267,6 +267,10 @@ class Location:
         return self._floors
 
     @property
+    def people(self) -> list:
+        return self.parent.people.get(location=self)
+
+    @property
     def calling_enabled(self) -> bool:
         """ Whether the Location is enabled for Webex Calling """
         if self._calling_enabled is None:
@@ -470,6 +474,45 @@ class Location:
             webex_api_call("post", "v1/telephony/config/locations", payload=payload, params={'orgId': self.org_id})
             self._calling_enabled = True
         return True
+
+    def get_all_monitoring(self) -> dict:
+        """ Returns a dict of all Users and Workspaces that are being monitored. The User (Person) or Workspace is the
+        dict key and the Users and Workspaces that are monitoring that key are a list.
+
+        Returns:
+            dict: A dict in the format ``{ 'people': { person: [] }, 'workspaces': { person: [] } }``
+
+        """
+        all_monitoring = {'people': {}, 'workspaces': {}}
+        for person in self.people:
+            monitoring = person.get_monitoring()
+            for monitor in monitoring.get('monitoredElements', []):
+                if 'member' in monitor.keys():
+                    if monitor['member']['type'] == 'PEOPLE':
+                        target_person = self.parent.people.get(id=monitor['member']['id'])
+                        if target_person not in all_monitoring['people'].keys():
+                            all_monitoring['people'][target_person] = []
+                        all_monitoring['people'][target_person].append(person)
+                    elif monitor['member']['type'] == 'PLACE':
+                        target_workspace = self.parent.workspaces.get(id=monitor['member']['id'])
+                        if target_workspace not in all_monitoring['workspaces'].keys():
+                            all_monitoring['workspaces'][target_workspace] = []
+                        all_monitoring['workspaces'][target_workspace].append(person)
+        for workspace in self.workspaces.webex_calling():
+            monitoring = workspace.monitoring
+            for monitor in monitoring.get('monitoredElements', []):
+                if 'member' in monitor.keys():
+                    if monitor['member']['type'] == 'PEOPLE':
+                        target_person = self.parent.people.get(id=monitor['member']['id'])
+                        if target_person not in all_monitoring['people'].keys():
+                            all_monitoring['people'][target_person] = []
+                        all_monitoring['people'][target_person].append(workspace)
+                    elif monitor['member']['type'] == 'PLACE':
+                        target_workspace = self.parent.workspaces.get(id=monitor['member']['id'])
+                        if target_workspace not in all_monitoring['workspaces'].keys():
+                            all_monitoring['workspaces'][target_workspace] = []
+                        all_monitoring['workspaces'][target_workspace].append(workspace)
+        return all_monitoring
 
     def delete(self):
         """ Delete a Location

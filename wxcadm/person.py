@@ -21,7 +21,7 @@ class PersonList(UserList):
     def __init__(self, parent: Union[wxcadm.Org, wxcadm.Location]):
         super().__init__()
         log.debug("Initializing PersonList")
-        self.parent: Union[wxcadm.Org, wxcadm.Person] = parent
+        self.parent: Union[wxcadm.Org, wxcadm.Location] = parent
         self.data: list = self._get_people()
 
     def _get_people(self):
@@ -34,6 +34,7 @@ class PersonList(UserList):
         elif isinstance(self.parent, wxcadm.Location):
             log.debug(f"Using Location ID {self.parent.id} as Person filter")
             params['locationId'] = self.parent.id
+            params['orgId'] = self.parent.org_id
         else:
             log.warn("Parent class is not Org or Location, so all People will be returned")
         response = webex_api_call("get", "v1/people", params=params)
@@ -70,7 +71,8 @@ class PersonList(UserList):
                 return entry
         return None
 
-    def get(self, id: Optional[str] = None, email: Optional[str] = None, name: Optional[str] = None):
+    def get(self, id: Optional[str] = None, email: Optional[str] = None, name: Optional[str] = None,
+            location: Optional[wxcadm.Location] = None):
         """ Get the :py:class:`Person` (or list) that matches the provided arguments
 
         This method was added after the :meth:`get_by_email()` and :meth:`get_by_id()` to match other List Classes.
@@ -82,10 +84,11 @@ class PersonList(UserList):
             id (str, optional): The Webex ID of the Person
             email (str, optional): The email address of the Person
             name (str, optional): The Display Name of the Person
+            location (Location, optional): Return people at the specified Location
 
         Returns:
             Person: The :class:`Person` instance. None is returned if no match is found. If multiple matches are found
-                for a ``name``, a list of :class:`Person` instances is returned.
+                for a ``name`` or ``location``, a list of :class:`Person` instances is returned.
 
         """
         if id is not None:
@@ -104,6 +107,17 @@ class PersonList(UserList):
                 return matches[0]
             else:
                 return matches
+        if location is not None:
+            if not isinstance(location, wxcadm.Location):
+                location = self.parent.locations.get(id=location)
+                if location is None:
+                    raise ValueError("Invalid Location ID")
+            entry: Person
+            matches = []
+            for entry in self.data:
+                if entry.location == location.id:
+                    matches.append(entry)
+            return matches
         raise KeyError("No valid search arguments provided")
 
     def get_by_email(self, email: str) -> Optional[Person]:
