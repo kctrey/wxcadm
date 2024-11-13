@@ -247,8 +247,13 @@ class XSIEventsChannel:
         # Start the channel thread
         self.channel_thread.start()
         # Wait for the Channel to come up, which will mean an .id will be present
+        self.wait_count = 0
         while self.id == "":
-            log.debug("Waiting for Channel to come up...")
+            self.wait_count += 1
+            if self.wait_count >= 20:
+                self.active = False
+                self.parent.restart_failed_channel(channel=self, wait=1)
+            log.debug(f"[{self.wait_count}/20] Waiting for Channel to come up...")
             time.sleep(2)
         self.heartbeat_thread.start()
 

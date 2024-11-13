@@ -3,6 +3,10 @@
 What's New
 ==========
 
+v4.3.11
+-------
+- BUG FIX: :class:XsiEventsChannel` now only waits 30 seconds for the channel to come up. Previously it would wait forever, but it was found that some channels never came up.
+
 v4.3.10
 -------
 - BUG FIX: :meth:`Device.set_layout` and the respective :class:`DeviceLayout` now does not include an empty string for ``'kemType'``
