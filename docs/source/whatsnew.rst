@@ -5,6 +5,7 @@ What's New
 
 v4.3.11
 -------
+- BUG FIX: :meth:`Person.push_monitoring()` has been fixed to accept the config returned by :meth:`Person.get_monitoring()` to make it easy to copy from one Person to another.
 - BUG FIX: :class:XsiEventsChannel` now only waits 30 seconds for the channel to come up. Previously it would wait forever, but it was found that some channels never came up.
 
 v4.3.10

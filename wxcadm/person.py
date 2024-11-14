@@ -1050,7 +1050,18 @@ class Person:
 
         """
         log.info(f"Pushing Monitoring config for {self.email}")
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/monitoring", payload=config)
+        # v4.3.11 - Found that the payload from the GET has more values than needed, so we need to clean it
+        # Figure out if the config is a list[dict], which is wrong and needs cleaned
+        if isinstance(config.get('monitoredElements')[0], dict):
+            new_monitored_elements = []
+            for element in config['monitoredElements']:
+                element_id = [element[key]['id'] for key in element.keys() if 'id' in element[key]][0]
+                new_monitored_elements.append(element_id)
+            config['monitoredElements'] = new_monitored_elements
+        # End cleanup
+
+        success = self.__put_webex_data(f"v1/people/{self.id}/features/monitoring", payload=config,
+                                        params={'orgId': self.org_id})
         if success:
             return True
         else:
