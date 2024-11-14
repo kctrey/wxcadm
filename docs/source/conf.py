@@ -22,7 +22,7 @@ copyright = '2024, Trey Hilyard'
 author = 'Trey Hilyard'
 
 # The full version, including alpha/beta/rc tags
-release = '4.3.8'
+release = '4.3.11'
 
 
 # -- General configuration ---------------------------------------------------
