@@ -1,4 +1,4 @@
-.. py:currentmodule:: wxcadm
+.. py:currentmodule:: wxcadm.models
 
 Attribute Models
 ================
