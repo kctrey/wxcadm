@@ -117,6 +117,12 @@ Properties are exposed for most commonly-used attributes.
    reference/Jobs
 
 .. toctree::
+    :maxdepth: 1
+    :caption: Attribute Models
+
+    reference/Models
+
+.. toctree::
    :maxdepth: 2
    :caption: XSI Reference
 
