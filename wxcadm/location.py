@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
+
 if TYPE_CHECKING:
     from .number import NumberList
 from collections import UserList
+from types import SimpleNamespace
 from typing import Union
 
 import wxcadm
 from wxcadm import log
+from .models import LocationEmergencySettings
 from .location_features import LocationSchedule, CallParkExtension, VoicePortal, OutgoingPermissionDigitPatternList
 from .call_queue import CallQueueList
 from .hunt_group import HuntGroupList
@@ -846,9 +849,87 @@ class Location:
             self._dect_networks = DECTNetworkList(self)
         return self._dect_networks
 
+    @property
+    def enhanced_emergency_calling(self) -> LocationEmergencySettings:
+        """ The Enhanced Emergency Calling settings for the Location
+
+        Returns:
+            LocationEmergencySettings: An object with the boolean attributes ``'integration'`` and ``'routing'``
+
+        """
+        response = webex_api_call('get', f"v1/telephony/config/locations/{self.id}/redSky",
+                                  params={'orgId': self.org_id})
+        return LocationEmergencySettings(integration=response['integrationEnabled'], routing=response['routingEnabled'])
+
+    def set_enhanced_emergency_calling(self, mode: str) -> dict:
+        """ Set the Location's Enhanced Emergency Calling mode to one of the following:
+
+        * `'none'` - Locations is opted out of Enhanced Emergency Calling
+        * `'integration'` - The Location is integrated with RedSky and sending HELD data and 933 test calls
+        * `'routing'` - The Location is routing 911 calls to RedSky
+
+        .. note::
+            The Webex APIs exhibit a very strange behavior, so running this method with any values will almost always
+            cause the Location to show up in Control Hub with a warning that the compliance status is unknown. The
+            Location will be configured correctly but the only way to resolve the warning is by manually completing the
+            setup in Control Hub
+
+        Args:
+            mode (str): `'none'`, `'integration'`, or `'routing'`
+
+        Returns:
+            dict: The `'locationStatus'` dict as returned by Webex
+
+        """
+        steps = ['LOCATION_SETUP', 'ALERTS']
+        if mode.lower() == 'integration':
+            steps.append('NETWORK_ELEMENTS')
+        elif mode.lower() == 'routing':
+            steps.extend(['NETWORK_ELEMENTS', 'ROUTING_ENABLED', 'COMPLIANT'])
+        elif mode.lower() == 'none':
+            steps = ['OPTED_OUT']
+        else:
+            steps = [mode]
+        for step in steps:
+            payload = {
+                'complianceStatus': step
+            }
+            response = webex_api_call('put', f"v1/telephony/config/locations/{self.id}/redSky/status",
+                                      params={'orgId': self.org_id}, payload=payload)
+        return response
+
+    def set_enhanced_emergency_routing(self, enabled: bool = True) -> bool:
+        """ Configure the Enhanced Emergency Call Routing (i.e. Route calls to RedSky) for the Location
+
+        This value cannot be True if :attr:`enhanced_emergency_calling.integration` is False and will raise a
+        ValueError.
+
+        Args:
+            enabled (bool): Whether to enable routing of 911 calls to the Enhanced Emergency Calling provider.
+                Defaults to True.
+
+        Returns:
+            bool: True on success
+
+        Raises:
+            ValueError: Raised when the value cannot be True because integration is disabled
+
+        """
+        current = self.enhanced_emergency_calling
+        if enabled is True and current.integration is False:
+            raise ValueError("Cannot enable routing when integration is disabled. Enable integration first.")
+        payload = {
+            'integrationEnabled': current.integration,
+            'routingEnabled': enabled
+        }
+        webex_api_call('put', f"v1/telephony/config/locations/{self.id}/redSky", params={'orgId': self.org_id},
+                       payload=payload)
+        return True
+
 
 class LocationFloor:
     """ A Floor within a Location """
+
     def __init__(self, parent: Location, config: Optional[dict] = None, id: Optional[str] = None):
         self.parent = parent
         if config is None and id is not None:
@@ -939,8 +1020,3 @@ class LocationFloorList(UserList):
         response = webex_api_call('post', f'v1/locations/{self.parent.id}/floors', payload=payload,
                                   params={'orgId': self.parent.org_id})
         self.data.append(LocationFloor(self.parent, config=response))
-
-
-
-
-

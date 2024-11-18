@@ -5,8 +5,11 @@ What's New
 
 v4.3.11
 -------
+- Added :meth:`Location.set_enhanced_emergency_calling()`
+- Added :attr:`Location.enhanced_emergency_calling`, which returns a :class:`LocationEmergencySettings`
+- Generically, I have started using named tuples instead of dicts for attributes returned by Webex for attributes that aren't objects to pass to other calls. For example :attr:`Location.enhanced_emergency_calling` returns a :class:`LocationEmergencySettings`
 - BUG FIX: :meth:`Person.push_monitoring()` has been fixed to accept the config returned by :meth:`Person.get_monitoring()` to make it easy to copy from one Person to another.
-- BUG FIX: :class:XsiEventsChannel` now only waits 30 seconds for the channel to come up. Previously it would wait forever, but it was found that some channels never came up.
+- BUG FIX: :class:`XsiEventsChannel` now only waits 30 seconds for the channel to come up and then attempt to restart it. Previously it would wait forever, but it was found that some channels never came up.
 
 v4.3.10
 -------
