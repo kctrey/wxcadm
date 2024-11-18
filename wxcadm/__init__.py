@@ -7,6 +7,7 @@ log.setLevel(logging.DEBUG)
 log.addHandler(logging.NullHandler())
 
 from .webex import Webex
+from .models import *
 from .org import Org
 from .xsi import XSIEvents, Call, XSI, XSICallQueue
 from .redsky import RedSky
@@ -16,7 +17,6 @@ from .exceptions import *
 from .common import *
 from .wholesale import Wholesale
 from .location_features import *
-
 from .announcements import *
 from .applications import *
 from .auto_attendant import *
