@@ -1,6 +1,6 @@
 Attribute Models
 ================
 
-.. automodule:: wxcadm.models
+.. autoclass:::: wxcadm.models.LocationEmergencySettings
     :members:
     :noindex:
