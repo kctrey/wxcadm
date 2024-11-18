@@ -1,7 +1,7 @@
-.. py:currentmodule:: wxcadm.models
+.. py:currentmodule:: wxcadm
 
 Attribute Models
 ================
 
-.. automodule::
+.. automodule:: models
     :members:
