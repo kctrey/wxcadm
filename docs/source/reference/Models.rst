@@ -4,3 +4,4 @@ Attribute Models
 ================
 
 .. automodule:: models
+    :members:
