@@ -5,6 +5,8 @@ What's New
 
 v4.3.11
 -------
+- :meth:`Recording.get_transcript()` has been added to allow the recording transcript to be obtained.
+- 4.3.11 includes my yearly clean-up so a log of new documentation, logging, and some (hopefully) small changes to the internals. I've started reworking the People class, which is the oldest one, to match with the behavior of a lot of the newer classes. At some point, this will likely mean breaking some things to replace them, but that will come in 4.4.0.
 - Added :meth:`Location.set_enhanced_emergency_calling()`
 - Added :attr:`Location.enhanced_emergency_calling`, which returns a :class:`LocationEmergencySettings`
 - Generically, I have started using named tuples instead of dicts for attributes returned by Webex for attributes that aren't objects to pass to other calls. For example :attr:`Location.enhanced_emergency_calling` returns a :class:`LocationEmergencySettings`

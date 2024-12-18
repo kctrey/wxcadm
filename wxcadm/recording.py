@@ -4,6 +4,7 @@ from typing import Optional, Union
 from collections import UserList
 import json
 import requests
+import re
 
 import wxcadm.location
 from wxcadm import log
@@ -94,6 +95,11 @@ class Recording:
         response = webex_api_call('get', f'v1/convergedRecordings/{self.id}', params=params)
         return response
 
+    def refresh(self) -> None:
+        self.details = self._get_details()
+
+
+
     @property
     def status(self) -> str:
         """ The status of the Recording """
@@ -106,6 +112,30 @@ class Recording:
         download = self.details.get('temporaryDirectDownloadLinks', self._get_details()['temporaryDirectDownloadLinks'])
         log.debug(download)
         return download['audioDownloadLink']
+
+    @property
+    def transcript_url(self) -> str:
+        """ The URL to download the recording transcript """
+        download = self.details.get('temporaryDirectDownloadLinks', self._get_details()['temporaryDirectDownloadLinks'])
+        return download['transcriptDownloadLink']
+
+    @property
+    def suggested_notes_url(self) -> str:
+        """ The URL to download the recording suggested notes """
+        download = self.details.get('temporaryDirectDownloadLinks', self._get_details()['temporaryDirectDownloadLinks'])
+        return download['suggestedNotesDownloadLink']
+
+    @property
+    def action_items_url(self) -> str:
+        """ The URL to download the recording action items """
+        download = self.details.get('temporaryDirectDownloadLinks', self._get_details()['temporaryDirectDownloadLinks'])
+        return download['actionItemsDownloadLink']
+
+    @property
+    def short_notes_url(self) -> str:
+        """ The URL to download the recording short notes """
+        download = self.details.get('temporaryDirectDownloadLinks', self._get_details()['temporaryDirectDownloadLinks'])
+        return download['shortNotesDownloadLink']
 
     @property
     def download_expires(self) -> str:
@@ -195,7 +225,7 @@ class Recording:
         session = self.details['serviceData']['callSessionId']
         return session
 
-    def download(self, filename: str):
+    def download(self, filename: str) -> bool:
         """ Download the recording file to the local machine
 
         Args:
@@ -205,10 +235,49 @@ class Recording:
             bool: True on success
 
         """
+        log.debug(f"Downloading recording to file: {filename}")
         response = requests.get(self.url)
         with open(filename, 'wb') as f:
             f.write(response.content)
         return True
+
+    def get_transcript(self, text_only: bool = False) -> str:
+        """ Get the transcript of the call
+
+        Args:
+            text_only (bool, optional): Return only the transcript without timestamps if True
+
+        Returns:
+            str: The transcript of the call
+
+        """
+        log.debug(f"Getting transcript for recording: {self.id}")
+        response = requests.get(self.transcript_url)
+        if text_only is True:
+            log.debug("Parsing transcript to text only")
+            raw_transcript = []
+            text = re.compile("[A-Za-z]")
+            log.debug(f"Parsing transcript: {response.text}")
+            lines = response.text.splitlines()
+            for line in lines:
+                if re.match(text, line) and line != 'WEBVTT':
+                    raw_transcript.append(line)
+            return " ".join(raw_transcript)
+        else:
+            return response.text
+
+    def get_suggested_notes(self):
+        response = requests.get(self.suggested_notes_url)
+        return response.text
+
+    def get_action_items(self):
+        response = requests.get(self.action_items_url)
+        return response.text
+
+    def get_short_notes(self):
+        response = requests.get(self.short_notes_url)
+        return response.text
+
 
 
 class RecordingList(UserList):
