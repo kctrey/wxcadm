@@ -916,11 +916,12 @@ class RedSkyUser:
         log.info("Getting RedSky User locations")
         log.debug(f"User ID: {self.id}")
         r = requests.get(f"https://api.wxc.e911cloud.com/geography-service/locations/deviceUser/{self.id}",
-                         headers=self.parent._headers)
+                         headers=self.parent._headers, params={'page': 1, 'pageSize': 100})
         if r.ok:
             data = r.json()
             return data
         else:
+            log.error(f"There was a problem getting the RedSky User locations: {r.text}")
             raise APIError(f"There was a problem getting the User's locations")
 
     @property
