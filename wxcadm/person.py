@@ -24,7 +24,7 @@ class PersonList(UserList):
         self.parent: Union[wxcadm.Org, wxcadm.Location] = parent
         self.data: list = self._get_people()
 
-    def _get_people(self):
+    def _get_people(self) -> list[Person]:
         log.debug("_get_people() started")
         params = {"callingData": "true"}
 

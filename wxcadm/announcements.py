@@ -21,6 +21,7 @@ class AnnouncementList(UserList):
         self.data: list = self._get_announcements()
 
     def _get_announcements(self):
+        log.debug("Getting announcements")
         annc_list = []
         announcements = webex_api_call("get", "v1/telephony/config/announcements", params={'locationId': 'all'})
         for annc in announcements.get('announcements', []):
@@ -29,6 +30,7 @@ class AnnouncementList(UserList):
         return annc_list
 
     def _refresh_announcements(self):
+        log.debug("Refreshing announcements")
         self.data = self._get_announcements()
 
     def get_by_location_id(self, location_id: str) -> list[Announcement]:
@@ -45,6 +47,7 @@ class AnnouncementList(UserList):
                 are found, an empty list will be returned.
 
         """
+        log.debug(f"Getting announcements by location id: {location_id}")
         annc_list = []
         for annc in self.data:
             if annc.level == "LOCATION" and annc.location['id'] == location_id:
@@ -62,6 +65,7 @@ class AnnouncementList(UserList):
             Announcement: The matching :py:class:`Announcement` instance. None is returned if no match can be found.
 
         """
+        log.debug(f"Getting announcements by id: {id}")
         for annc in self.data:
             if annc.id == id:
                 return annc
@@ -70,6 +74,7 @@ class AnnouncementList(UserList):
     @property
     def stats(self):
         """ The repository usage for announcements within the Org """
+        log.debug("Getting stats")
         response = webex_api_call("get", "v1/telephony/config/announcements/usage", params={"orgId": self.parent.id})
         return response
 
@@ -171,13 +176,14 @@ class Announcement:
         else:
             return False
 
-    def replace_file(self, filename: str):
+    def replace_file(self, filename: str) -> bool:
         """ Replace the existing audio file with a new one
 
         Args:
-            filename:
+            filename (str): The name of the file to replace the existing audio file with
 
         Returns:
+            bool: True if the file was successfully replaced, False otherwise
 
         """
         log.info(f"Replacing {self.name} file with file: {filename}")
@@ -191,8 +197,10 @@ class Announcement:
         )
 
         if self.level.lower() == "organization":
+            log.debug("Replacing at the Organization level")
             url = f"v1/telephony/config/announcements/{self.id}"
         elif self.level.lower() == "location":
+            log.debug("Replacing at the Location level")
             url = f"v1/telephony/config/locations/{self.location['id']}/announcements/{self.id}"
         else:
             raise ValueError("Cannot determine Announcement level")
@@ -206,7 +214,7 @@ class Announcement:
         log.debug(f"\t{response}")
         return True
 
-    def delete(self):
+    def delete(self) -> bool:
         """ Delete the Announcement
 
         Returns:

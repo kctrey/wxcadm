@@ -55,15 +55,15 @@ class Device:
 
         self.id: str = config['id']
         """ The Device ID """
-        self.tags: list = config.get('tags', config.get('description', ''))
+        self.tags: list = config.get('tags', config.get('description', []))
         """ The device tags """
         self.model: str = config.get('model', config.get('product', ''))
         """ The model name of the device """
         self.mac: str = config.get('mac')
         """ The device MAC address """
-        self.is_owner: bool = config.get('primaryOwner', None)
+        self.is_owner: bool = config.get('primaryOwner', False)
         """ Whether the Person or Workspace is the primary owner of the device """
-        self.activation_state: str = config.get('activationState', None)
+        self.activation_state: Optional[str] = config.get('activationState', None)
         """ The device activation state """
         self.type: str = config['type']
         """ The type of device association """
@@ -437,7 +437,7 @@ class DeviceMember:
         self.line_type: str = member_info['lineType']
         self.line_weight: int = member_info['lineWeight']
         self.hotline_enabled: bool = member_info['hotlineEnabled']
-        self.hotline_destination: str = member_info.get('hotlineDestination', None)
+        self.hotline_destination: Optional[str] = member_info.get('hotlineDestination', None)
         self.call_decline_all: bool = member_info['allowCallDeclineEnabled']
         self.line_label: Optional[str] = member_info.get('lineLabel', None)
         self.first_name: Optional[str] = member_info.get('firstName', None)
