@@ -5,7 +5,7 @@
 # of the VM on the mailbox.
 
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 from wxcadm.wxcadm import Webex
 
 access_token = "Your API Access Token"

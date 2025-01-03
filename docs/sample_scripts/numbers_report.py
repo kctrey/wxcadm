@@ -4,7 +4,7 @@
 # To use the script, simply pass your API Access Token as the only argument to the script
 
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 from wxcadm.wxcadm import Webex, Person
 
 try:
