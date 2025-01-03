@@ -1496,16 +1496,46 @@ class Person:
 
         """
         log.info(f"Disabling Call Recording for {self.email}")
-        recording_config = self.get_call_recording()
-        recording_config['enabled'] = False
-        self.call_recording = recording_config
+        recording_config = {'enabled': False}
+        response = self.push_call_recording(recording_config)
+        self.call_recording = response
+        return True
 
     def enable_call_recording(self, type: str,
                               record_vm: bool = False,
                               announcement_enabled: bool = False,
                               reminder_tone: bool = False,
-                              reminder_interval: int = 30):
+                              reminder_interval: int = 30,
+                              can_play: bool = True,
+                              can_download: bool = True,
+                              can_delete: bool = True,
+                              can_share: bool = True,
+                              transcribe: bool = True,
+                              ai_summary: bool = True):
+        """ Enable and configure Call Recording for the Person
 
+        .. note::
+
+            Some parameters, such as ``'transcribe'`` and ``'can_play'`` only apply to call recording done by the Webex
+            platform. If the recording is being done by another provider, these parameters will have no effect.
+
+        Args:
+            type (str): The type of Call Recording. Value must be 'always', 'never', 'always_with_pause' or 'on_demand'
+            record_vm (bool, optional): Whether to record Voicemail. Defaults to False
+            announcement_enabled (bool, optional): Whether to announce Call Recording. Defaults to False
+            reminder_tone (bool, optional): Whether to play a reminder tone. Defaults to False
+            reminder_interval (int, optional): Interval in seconds between reminders. Defaults to 30
+            can_play (bool, optional): Whether the user can play recordings. Defaults to True.
+            can_download (bool, optional): Whether the user can download recordings. Defaults to True.
+            can_delete (bool, optional): Whether the user can delete recordings. Defaults to True.
+            can_share (bool, optional): Whether the user can share recordings. Defaults to True.
+            transcribe (bool, optional): Enable AI transcription of recordings. Defaults to True.
+            ai_summary (bool, optional): Enable AI summary of recordings. Defaults to True.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
         type_map = {"always": "Always",
                     "never": "Never",
                     "always_with_pause": "Always with Pause/Resume",
@@ -1517,12 +1547,22 @@ class Person:
                    "recordVoicemailEnabled": record_vm,
                    "startStopAnnouncementEnabled": announcement_enabled,
                    "notification": {
-                       "type": "beep",
+                       "type": "Beep",
                        "enabled": reminder_tone,
                        "repeat": {
                            "enabled": reminder_tone,
                            "interval": reminder_interval
                        }
+                   },
+                   "callRecordingAccessSettings": {
+                       "viewAndPlayRecordingsEnabled": can_play,
+                       "downloadRecordingsEnabled": can_download,
+                       "deleteRecordingsEnabled": can_delete,
+                       "shareRecordingsEnabled": can_share
+                   },
+                   "postCallRecordingSettings": {
+                       "transcriptEnabled": transcribe,
+                       "summaryAndActionItemsEnabled": ai_summary
                    }
                    }
         success = self.push_call_recording(payload)
