@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('../../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'wxcadm'
-copyright = '2024, Trey Hilyard'
+copyright = '2025, Trey Hilyard'
 author = 'Trey Hilyard'
 
 # The full version, including alpha/beta/rc tags
