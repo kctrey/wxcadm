@@ -112,6 +112,105 @@ class VirtualLine:
             self._get_details()
         return self._time_zone
 
+    def get_call_recording(self):
+        """The Call Recording config for the Person
+
+        Returns:
+            dict: The Call Recording config for the Person instance
+
+        """
+        log.info(f"Getting Call Recording config for {self.display_name}")
+        response = webex_api_call('get',
+                                             f"v1/telephony/config/virtualLines/{self.id}/callRecording")
+        return response
+
+    def enable_call_recording(self, type: str,
+                              record_vm: bool = False,
+                              announcement_enabled: bool = False,
+                              reminder_tone: bool = False,
+                              reminder_interval: int = 30,
+                              can_play: bool = True,
+                              can_download: bool = True,
+                              can_delete: bool = True,
+                              can_share: bool = True,
+                              transcribe: bool = True,
+                              ai_summary: bool = True):
+        """ Enable and configure Call Recording for the Virtual Line
+
+        .. note::
+
+            Some parameters, such as ``'transcribe'`` and ``'can_play'`` only apply to call recording done by the Webex
+            platform. If the recording is being done by another provider, these parameters will have no effect.
+
+        Args:
+            type (str): The type of Call Recording. Value must be 'always', 'never', 'always_with_pause' or 'on_demand'
+            record_vm (bool, optional): Whether to record Voicemail. Defaults to False
+            announcement_enabled (bool, optional): Whether to announce Call Recording. Defaults to False
+            reminder_tone (bool, optional): Whether to play a reminder tone. Defaults to False
+            reminder_interval (int, optional): Interval in seconds between reminders. Defaults to 30
+            can_play (bool, optional): Whether the user can play recordings. Defaults to True.
+            can_download (bool, optional): Whether the user can download recordings. Defaults to True.
+            can_delete (bool, optional): Whether the user can delete recordings. Defaults to True.
+            can_share (bool, optional): Whether the user can share recordings. Defaults to True.
+            transcribe (bool, optional): Enable AI transcription of recordings. Defaults to True.
+            ai_summary (bool, optional): Enable AI summary of recordings. Defaults to True.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Enabling Call Recording for {self.display_name}")
+        type_map = {"always": "Always",
+                    "never": "Never",
+                    "always_with_pause": "Always with Pause/Resume",
+                    "on_demand": "On Demand with User Initiated Start"}
+        if type not in type_map.keys():
+            raise ValueError("'type' must be 'always', 'never', 'always_with_pause' or 'on_demand'.")
+        payload = {"enabled": True,
+                   "record": type_map[type],
+                   "recordVoicemailEnabled": record_vm,
+                   "startStopAnnouncementEnabled": announcement_enabled,
+                   "notification": {
+                       "type": "Beep",
+                       "enabled": reminder_tone,
+                       "repeat": {
+                           "enabled": reminder_tone,
+                           "interval": reminder_interval
+                       }
+                   },
+                   "callRecordingAccessSettings": {
+                       "viewAndPlayRecordingsEnabled": can_play,
+                       "downloadRecordingsEnabled": can_download,
+                       "deleteRecordingsEnabled": can_delete,
+                       "shareRecordingsEnabled": can_share
+                   },
+                   "postCallRecordingSettings": {
+                       "transcriptEnabled": transcribe,
+                       "summaryAndActionItemsEnabled": ai_summary
+                   }
+                   }
+        response = webex_api_call('put', f"v1/telephony/config/virtualLines/{self.id}/callRecording",
+                                  payload=payload, params={'orgId': self.org_id})
+        log.debug(f"Response: {response}")
+        return True
+
+    def disable_call_recording(self):
+        """ Disables Call Recording for the Virtual Line
+
+        This method will return True even if the Virtual Line did not have Call Recording enabled prior to calling
+        the method.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        log.info(f"Disabling Call Recording for {self.display_name}")
+        recording_config = {'enabled': False}
+        response = webex_api_call('put', f"v1/telephony/config/virtualLines/{self.id}/callRecording",
+                                  payload=recording_config, params={'orgId': self.org_id})
+        log.debug(f"Response: {response}")
+        return True
+
     def refresh_config(self) -> bool:
         """ Refresh the Virtual Line configuration from Webex This is especially useful when a new Virtual Line is
         created and the configuration is not known. """

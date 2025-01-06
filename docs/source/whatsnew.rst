@@ -3,6 +3,10 @@
 What's New
 ==========
 
+v4.4.0
+------
+- :class:`VirtualLine` now supports :meth:`get_call_recording()`, :meth:`enable_call_recording()` and :meth:`disable_call_recording()` like :class:`Person`
+
 v4.3.11
 -------
 - BUG FIX: :meth:`RedSkyUser.user_locations` has been fixed
