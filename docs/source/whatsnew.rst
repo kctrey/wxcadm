@@ -5,6 +5,7 @@ What's New
 
 v4.4.0
 ------
+- New method :meth:`NumberList.get_by_owner()` which allows searches by number owner
 - :class:`VirtualLine` now supports :meth:`get_call_recording()`, :meth:`enable_call_recording()` and :meth:`disable_call_recording()` like :class:`Person`
 
 v4.3.11

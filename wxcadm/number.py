@@ -100,7 +100,7 @@ class Number:
                             return group
                     return self._owner
                 else:
-                    log.warn(f'Unknown owner type "{owner_type}"')
+                    log.warning(f'Unknown owner type "{owner_type}"')
                     return self._owner
             else:
                 if self._owner['type'] == 'VOICE_MESSAGING':
@@ -160,27 +160,61 @@ class NumberList(UserList):
             esn: Optional[str] = None,
             state: Optional[str] = None,
             location: Optional[wxcadm.Location] = None
-            ):
+            ) -> Optional[Union[Number, list]]:
+        """ Find a Number or list of Number entries matching the given criteria.
+
+        If ``'phone_number'`` or ``'esn'`` is specified, then the response will be a :class:`Number` instance or None
+        if no match is found. If ``'extension'`` and ``'location'`` are specified, the response will be a
+        :class:`Number` if that extension matches within the provided location. If ``'extension'`` is specified
+        without a ``'location'``, a :class:`Number` instance will be returned if there is only one match. A list will
+        be returned if there are multiple matches. All others will return a list or None if there are no matches.
+
+        Args:
+            phone_number (str, optional): The phone number to match.
+            extension (str, optional): The extension to match.
+            esn (str, optional): The ESN to match.
+            state (str, optional): The state to match.
+            location (wxcadm.Location, optional): The Location to match.
+
+        Returns:
+            wxcadm.Number: The matching number
+            list[wxcadm.Number]: The matched numbers
+
+        """
         if phone_number is None and extension is None and esn is None and state is None and location is None:
             raise ValueError('A parameter is required')
         # Handle the single-value searches first
         for number in self.data:
             if phone_number is not None and phone_number in number.phone_number:
                 return number
-            if extension is not None and extension == number.extension:
-                return number
             if esn is not None and esn == number.esn:
                 return number
+            # If an extension and a location were provided, the user is expecting a single entry
+            if extension is not None and location is not None:
+                if extension == number.extension and location == number.location:
+                    return number
         # Then do the list-return searches
-        if state is not None or location is not None:
+        if state is not None or location is not None or extension is not None:
             result = []
             for number in self.data:
+                # Extensions can exist in more than one location
+                if extension is not None and extension == number.extension:
+                    result.append(number)
                 if state is not None and state == number.state:
                     result.append(number)
                 if location is not None and location.id == number.location.id:
                     result.append(number)
-            return result
+            # To handle legacy extension searches, only return the Number if it's the only one in the result
+            if len(result) == 1:
+                return result[0]
+            else:
+                return result
         return None
+
+    def get_by_owner(self, owner):
+        for number in self.data:
+            if number.owner == owner:
+                return number
 
     def add(self,
             location: wxcadm.Location,
