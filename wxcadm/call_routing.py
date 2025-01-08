@@ -202,7 +202,7 @@ class Trunk:
     pilot_user_id: str = field(init=False, repr=False)
     """ The Pilot User ID for the Trunk """
     outbound_proxy: Optional[OutboundProxy] = field(init=False, repr=False)
-    """ The :class:`models.OutboundProxy <wxcadm.models.OutboundProxy>` for the Trunk """
+    """ The :class:`OutboundProxy <.models.OutboundProxy>` for the Trunk """
     sip_auth_user: str = field(init=False, repr=False)
     """ The SIP Auth User ID for the Trunk """
     status: str = field(init=False, repr=False)
