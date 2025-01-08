@@ -9,6 +9,7 @@ import wxcadm.location
 import wxcadm.person
 from wxcadm import log
 from .common import *
+from .models import OutboundProxy
 
 
 class CallRouting:
@@ -190,7 +191,30 @@ class Trunk:
     """ The type of Trunk, either 'REGISTERING' or 'CERTIFICATE_BASED' """
     isRestrictedToDedicatedInstance: bool
     """ Whether the Trunk can only be used by Webex Calling Dedicated Instance"""
-    # TODO - Add support for Dual Identity field and updates
+
+    # Fields from a detail GET. They will be populated with a __getattr__ later
+    otg_dtg: str = field(init=False, repr=False)
+    """ The OTG/DTG value for the Trunk"""
+    lineport: str = field(init=False, repr=False)
+    """ The Line/Port identifier for the Trunk """
+    used_by_locations: list[dict] = field(init=False, repr=False)
+    """ List of Locations using the Trunk for PSTN routing """
+    pilot_user_id: str = field(init=False, repr=False)
+    """ The Pilot User ID for the Trunk """
+    outbound_proxy: Optional[OutboundProxy] = field(init=False, repr=False)
+    """ The :class:`OutboundProxy` for the Trunk """
+    sip_auth_user: str = field(init=False, repr=False)
+    """ The SIP Auth User ID for the Trunk """
+    status: str = field(init=False, repr=False)
+    """ The status of the Trunk """
+    response_status: list = field(init=False, repr=False)
+    """ List of status messages for the Trunk """
+    dual_identity_support: bool = field(init=False, repr=False)
+    """ Whether the Trunk supports Dual Identity """
+    device_type: str = field(init=False, repr=False)
+    """ The type of the device """
+    max_calls: int = field(init=False, repr=False)
+    """ The Max Concurrent Calls """
 
     def __post_init__(self):
         log.debug(f'Finding Location instance: {self.location}')
@@ -198,6 +222,40 @@ class Trunk:
         my_location = self.org.locations.get(id=self.location['id'])
         if my_location is not None:
             self.location = my_location
+
+    def __getattr__(self, item):
+        # The following is a crazy fix for a PyCharm debugger bug. It serves no purpose other than to stop extra API
+        # calls when developing in PyCharm. See the following bug:
+        # https://youtrack.jetbrains.com/issue/PY-48306
+        if item == 'shape':
+            return None
+        log.debug(f"Collecting details for Trunk: {self.id}")
+        response = webex_api_call('get', f"v1/telephony/config/premisePstn/trunks/{self.id}",
+                                  params={'orgId': self.org.id})
+        self.otg_dtg = response.get('otgDtgId', '')
+        self.lineport = response.get('linePort', '')
+        self.used_by_locations = response.get('locationsUsingTrunk', [])
+        self.pilot_user_id = response.get('pilotUserId', '')
+        proxy_dict = response.get('outboundProxy', None)
+        if proxy_dict is not None:
+            proxy = OutboundProxy(
+                service_type=proxy_dict['sipAccessServiceType'],
+                dns_type=proxy_dict['dnsType'],
+                proxy_address=proxy_dict['outboundProxy'],
+                srv_prefix=proxy_dict['srvPrefix'],
+                cname_records=proxy_dict['cnameRecords'],
+                attachment_updated=proxy_dict['attachmentUpdated']
+            )
+            self.outbound_proxy = proxy
+        else:
+            self.outbound_proxy = None
+        self.sip_auth_user = response.get('sipAuthenticationUserName', '')
+        self.status = response.get('status', '')
+        self.response_status = response.get('responseStatus', [])
+        self.dual_identity_support = response.get('dualIdentitySupportEnabled', False)
+        self.device_type = response.get('deviceType', '')
+        self.max_calls = response.get('maxConcurrentCalls', 0)
+        return self.__getattribute__(item)
 
 
 class RouteGroups(UserList):

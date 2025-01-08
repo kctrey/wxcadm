@@ -80,6 +80,31 @@ class TestTranslationPatterns(unittest.TestCase):
             success = pattern.delete()
             self.assertTrue(success)
 
+class TestTrunks(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        load_dotenv()
+        cls.access_token = os.getenv("WEBEX_ACCESS_TOKEN")
+        if not cls.access_token:
+            print("No WEBEX_ACCESS_TOKEN found. Cannot continue.")
+            exit(1)
+
+    def setUp(self) -> None:
+        self.webex = wxcadm.Webex(self.access_token)
+        self.random_location = choice(self.webex.org.locations.webex_calling())
+        # Enable for test debugging
+        # wxcadm.console_logging()
+
+    def test_trunks_list(self) -> None:
+        trunks = self.webex.org.call_routing.trunks
+        self.assertIsInstance(trunks, wxcadm.Trunks)
+        for trunk in trunks:
+            self.assertIsInstance(trunk, wxcadm.Trunk)
+            with self.subTest("Get Details"):
+                status = trunk.status
+                self.assertIsInstance(status, str)
+                self.assertIsInstance(trunk.outbound_proxy, (wxcadm.OutboundProxy, None))
+
 
 if __name__ == '__main__':
     unittest.main()
