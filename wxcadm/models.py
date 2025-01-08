@@ -3,7 +3,9 @@ from typing import NamedTuple, Optional
 class LocationEmergencySettings(NamedTuple):
     """ Enhanced Emergency Call Settings (i.e. RedSky settings) for a Location """
     integration: bool
+    """ Whether location data is being sent to RedSky """
     routing: bool
+    """ Whether 911 calls are being routed to RedSky"""
 
 class OutboundProxy(NamedTuple):
     service_type: str
