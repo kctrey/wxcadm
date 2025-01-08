@@ -8,6 +8,7 @@ class LocationEmergencySettings(NamedTuple):
     """ Whether 911 calls are being routed to RedSky"""
 
 class OutboundProxy(NamedTuple):
+    """ Outbound Proxy configuration """
     service_type: str
     """ What the Outbound Proxy is used for """
     dns_type: str
