@@ -20,7 +20,7 @@ _____
 .. autoclass:: wxcadm.call_routing.Trunk
     :members:
 
-.. autoclass:: wxcadm.models.OutboundProxy
+.. autoclass:: wxcadm.models.OutboundProxy()
     :members:
 
 RouteGroups
