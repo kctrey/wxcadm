@@ -21,9 +21,7 @@ _____
     :members:
 
 .. autoclass:: wxcadm.models.OutboundProxy
-    :noindex:
     :members:
-
 
 RouteGroups
 -----------
