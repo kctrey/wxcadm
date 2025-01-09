@@ -1,4 +1,7 @@
 from typing import NamedTuple, Optional
+from dataclasses import dataclass, field
+from dataclasses_json import dataclass_json, config
+
 
 class LocationEmergencySettings(NamedTuple):
     """ Enhanced Emergency Call Settings (i.e. RedSky settings) for a Location """
@@ -7,19 +10,22 @@ class LocationEmergencySettings(NamedTuple):
     routing: bool
     """ Whether 911 calls are being routed to RedSky"""
 
-class OutboundProxy(NamedTuple):
+
+@dataclass_json
+@dataclass
+class OutboundProxy:
     """ Outbound Proxy configuration """
-    service_type: str
+    service_type: str = field(metadata=config(field_name="sipAccessServiceType"))
     """ What the Outbound Proxy is used for """
-    dns_type: str
+    dns_type: str = field(metadata=config(field_name="dnsType"))
     """ The type of DNS record represented by the Outbound Proxy """
-    proxy_address: str
+    proxy_address: str = field(metadata=config(field_name="outboundProxy"))
     """ The hostname of the Outbound Proxy """
-    srv_prefix: Optional[str] = None
+    srv_prefix: Optional[str] = field(metadata=config(field_name="srvPrefix"), default=None)
     """ The SRV prefix to use if the DNS type is SRV """
-    cname_records: Optional[str] = None
+    cname_records: Optional[str] = field(metadata=config(field_name="cnameRecords"), default=None)
     """ Any CNAME records associated with the Outbound Proxy """
-    attachment_updated: bool = False
+    attachment_updated: bool = field(metadata=config(field_name="attachmentUpdated", exclude=lambda t: True), default=False)
     """ Whether the Outbound Proxy was updated """
 
 

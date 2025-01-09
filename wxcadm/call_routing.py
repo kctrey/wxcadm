@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import UserList
 from dataclasses import dataclass, field
+from dataclasses_json import dataclass_json, config
 from typing import Optional, Union, List
 
 import wxcadm
@@ -87,7 +88,8 @@ class Trunks(UserList):
         items = webex_api_call('get', '/v1/telephony/config/premisePstn/trunks')
         log.debug(f'Trunks from Webex: {items}')
         for item in items['trunks']:
-            this_trunk = Trunk(self.org, **item)
+            item['org'] = self.org
+            this_trunk = Trunk.from_dict(item)
             self.data.append(this_trunk)
 
     def get(self, name: Optional[str] = None, id: Optional[str] = None) -> Optional[Trunk]:
@@ -175,6 +177,7 @@ class Trunks(UserList):
             return False
 
 
+@dataclass_json
 @dataclass
 class Trunk:
     org: wxcadm.Org = field(repr=False)
@@ -185,11 +188,11 @@ class Trunk:
     """ The text name of the Trunk """
     location: dict | wxcadm.Location
     """ The Location instance associated with the Trunk """
-    inUse: bool
+    in_use: bool = field(metadata=config(field_name="inUse"))
     """ Whether the Trunk is in use """
-    trunkType: str
+    trunk_type: str = field(metadata=config(field_name="trunkType"))
     """ The type of Trunk, either 'REGISTERING' or 'CERTIFICATE_BASED' """
-    isRestrictedToDedicatedInstance: bool
+    dedicated_instance_only: bool = field(metadata=config(field_name="isRestrictedToDedicatedInstance"))
     """ Whether the Trunk can only be used by Webex Calling Dedicated Instance"""
 
     # Fields from a detail GET. They will be populated with a __getattr__ later
@@ -238,14 +241,7 @@ class Trunk:
         self.pilot_user_id = response.get('pilotUserId', '')
         proxy_dict = response.get('outboundProxy', None)
         if proxy_dict is not None:
-            proxy = OutboundProxy(
-                service_type=proxy_dict['sipAccessServiceType'],
-                dns_type=proxy_dict['dnsType'],
-                proxy_address=proxy_dict['outboundProxy'],
-                srv_prefix=proxy_dict['srvPrefix'],
-                cname_records=proxy_dict['cnameRecords'],
-                attachment_updated=proxy_dict['attachmentUpdated']
-            )
+            proxy = OutboundProxy.from_dict(proxy_dict)
             self.outbound_proxy = proxy
         else:
             self.outbound_proxy = None
@@ -256,6 +252,62 @@ class Trunk:
         self.device_type = response.get('deviceType', '')
         self.max_calls = response.get('maxConcurrentCalls', 0)
         return self.__getattribute__(item)
+
+    def set_dual_identity_support(self, enabled: bool):
+        """ Set the Dual Identity Support flag for the Trunk
+
+        The Dual Identity Support setting impacts the handling of the From header and P-Asserted-Identity (PAI) header
+        when sending an initial SIP INVITE to the trunk for an outbound call. When enabled, the From and PAI headers
+        are treated independently and may differ. When disabled, the PAI header is set to the same value as the From
+        header. Please refer to the documentation for more details.
+
+        Args:
+            enabled (bool): Whether the Dual Identity Support flag is enabled or disabled
+
+        Returns:
+            bool: True on success, False otherwise
+
+        Raises:
+            wxcadm.ApiError: Raised when the command is rejected by the Webex API
+
+        """
+        log.debug(f'Setting Dual Identity Support on trunk: {self.id} to {enabled}')
+        payload = {
+            "dualIdentitySupportEnabled": enabled,
+        }
+        webex_api_call("put", f"v1/telephony/config/premisePstn/trunks/{self.id}",
+                       payload=payload, params={'orgId': self.org.id})
+        self.dual_identity_support = enabled
+        return True
+
+    def set_max_calls(self, calls: int):
+        """ Sets the maximum number of Concurrent Calls for the Trunk
+
+        .. note::
+            Setting the maximum number of Concurrent Calls for the Trunk is only supported for certificate-based trunks.
+
+        Args:
+            calls (int): The maximum number of Concurrent Calls for the Trunk
+
+        Returns:
+            bool: True on success, False otherwise
+
+        Raises:
+            ValueError: Raised when trying to set the max calls value on a registration-based Trunk
+            wxcadm.ApiError: Raised when the command is rejected by the Webex API
+
+        """
+        log.debug(f'Setting Max Concurrent Calls on trunk: {self.id} to {calls}')
+        if self.trunkType == "REGISTERING":
+            log.warning("Cannot set max_calls on REGISTERING Trunk")
+            return ValueError("Cannot set max_calls on REGISTERING Trunk")
+        payload = {
+            "maxConcurrentCalls": calls
+        }
+        webex_api_call("put", f"v1/telephony/config/premisePstn/trunks/{self.id}",
+                       payload=payload, params={'orgId': self.org.id})
+        self.max_calls = calls
+        return True
 
 
 class RouteGroups(UserList):
