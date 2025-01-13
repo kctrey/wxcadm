@@ -31,3 +31,6 @@ Workspace
 .. autoclass:: wxcadm.workspace.Workspace
     :members:
     :undoc-members:
+
+.. autoclass:: wxcadm.monitoring.MonitoringList
+    :members:

@@ -11,6 +11,7 @@ from wxcadm import log
 from .common import *
 from .exceptions import *
 from .device import DeviceList
+from .monitoring import MonitoringList
 
 
 class WorkspaceLocationList(UserList):
@@ -391,11 +392,13 @@ class Workspace:
     def monitoring(self) -> dict:
         """ A dict of the Users, Workspaces and Park Extensions the Workspace is Monitoring """
         if self._monitoring is None:
-            self._monitoring = webex_api_call(
-                'get',
-                f"v1/workspaces/{self.id}/features/monitoring",
-                params={'orgId': self.org_id}
-            )
+            response = webex_api_call("get", f"v1/workspaces/{self.id}/features/monitoring",
+                                      params={"orgId": self.org_id})
+            response['parent'] = self
+            response['org'] = self._parent
+            if "monitoredElements" not in response.keys():
+                response['monitoredElements'] = []
+            self._monitoring = MonitoringList.from_dict(response)
         return self._monitoring
 
     def get_monitored_by(self):

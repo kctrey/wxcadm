@@ -12,3 +12,6 @@ Person
 .. autoclass:: wxcadm.person.Person
     :members:
     :undoc-members:
+
+.. autoclass:: wxcadm.monitoring.MonitoringList
+    :members:

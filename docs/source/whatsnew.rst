@@ -5,6 +5,9 @@ What's New
 
 v4.4.0
 ------
+- **BREAKING CHANGE** - :attr:`.workspace.Workspace.monitoring` now returns a :class:`~.monitoring.MonitoringList` instead of a dict
+- :class:`~.monitoring.MonitoringList` with improved functionality. See docs for a complete list of methods
+- **BREAKING CHANGE** - :meth:`~.person.get_monitoring()` and :meth:`.person.push_monitoring()` have been removed and replaced with the :attr:`Person.monitoring` attribute, which returns a :class:`.monitoring.MonitoringList` to make managing monitored elements easier
 - The :class:`Trunk` class now supports all of the detailed attributes for the trunk
 - New method :meth:`NumberList.get_by_owner()` which allows searches by number owner
 - :class:`VirtualLine` now supports :meth:`get_call_recording()`, :meth:`enable_call_recording()` and :meth:`disable_call_recording()` like :class:`Person`

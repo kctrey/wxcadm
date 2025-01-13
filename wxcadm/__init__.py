@@ -29,6 +29,7 @@ from .hunt_group import *
 from .jobs import *
 from .location import *
 from .meraki import *
+from .monitoring import *
 from .number import *
 from .person import *
 from .pickup_group import *

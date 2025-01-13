@@ -13,6 +13,7 @@ from .common import *
 from .xsi import XSI
 from .device import DeviceList
 from .location import Location
+from .monitoring import MonitoringList
 
 from wxcadm import log
 
@@ -315,8 +316,6 @@ class Person:
         """Dictionary of DND settings as returned by Webex API with :meth:`get_dnd()`"""
         self.calling_behavior: dict = {}
         """Dictionary of Calling Behavior as returned by Webex API with :meth:`get_calling_behavior()`"""
-        self.monitoring: dict = {}
-        """Dictionary of Monitoring settings as returned by Webex API with :meth:`get_monitoring()`"""
         self.hoteling: dict = {}
         """Dictionary of Hoteling settings as returned by Webex API with :meth:`get_hoteling()`"""
         self.ptt: Optional[dict] = None
@@ -354,6 +353,7 @@ class Person:
         self.status: Optional[str] = None
         """ The current presence status of the Person """
         self._devices: Optional[DeviceList] = None
+        self._monitoring: Optional[MonitoringList] = None
 
         # API-related attributes
         self._headers = parent._headers
@@ -596,7 +596,6 @@ class Person:
             self.get_hoteling()
             self.get_barge_in()
             self.get_intercept()
-            self.get_monitoring()
             self.get_outgoing_permission()
             self.get_ptt()
             return self
@@ -1017,16 +1016,18 @@ class Person:
             log.warning("The Call Recording config push failed")
             return False
 
-    def get_monitoring(self):
-        """ Get the Monitoring config for the Person
-
-        Returns:
-            dict: The Monitoring config for the Person instance
-
-        """
-        log.debug(f"Getting Monitoring config for {self.email}")
-        self.monitoring = self.__get_webex_data(f"v1/people/{self.id}/features/monitoring")
-        return self.monitoring
+    @property
+    def monitoring(self):
+        """ :class:`~.monitoring.MonitoringList` to view and control monitoring """
+        if self._monitoring is None:
+            response = webex_api_call("get", f"v1/people/{self.id}/features/monitoring",
+                                      params={"orgId": self.org_id})
+            response['parent'] = self
+            response['org'] = self._parent
+            if "monitoredElements" not in response.keys():
+                response['monitoredElements'] = []
+            self._monitoring = MonitoringList.from_dict(response)
+        return self._monitoring
 
     def get_monitored_by(self):
         """ Returns a list of Users (Person) and Workspaces that are Monitoring this Person """
@@ -1038,35 +1039,6 @@ class Person:
             return monitor_list['people'][self]
         except KeyError:
             return None
-
-    def push_monitoring(self, config: dict):
-        """ Push the Monitoring config to Webex
-
-        Args:
-            config (dict): The Monitoring config as defined by the Webex API specification.
-
-        Returns:
-            bool: True on success, False otherwise
-
-        """
-        log.info(f"Pushing Monitoring config for {self.email}")
-        # v4.3.11 - Found that the payload from the GET has more values than needed, so we need to clean it
-        # Figure out if the config is a list[dict], which is wrong and needs cleaned
-        if isinstance(config.get('monitoredElements')[0], dict):
-            new_monitored_elements = []
-            for element in config['monitoredElements']:
-                element_id = [element[key]['id'] for key in element.keys() if 'id' in element[key]][0]
-                new_monitored_elements.append(element_id)
-            config['monitoredElements'] = new_monitored_elements
-        # End cleanup
-
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/monitoring", payload=config,
-                                        params={'orgId': self.org_id})
-        if success:
-            return True
-        else:
-            log.warning("The Monitoring config push failed")
-            return False
 
     def get_hoteling(self) -> dict:
         """ Get the Hoteling config for the Person
