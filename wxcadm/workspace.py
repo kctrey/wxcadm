@@ -389,8 +389,8 @@ class Workspace:
         return decode_spark_id(self.id)
 
     @property
-    def monitoring(self) -> dict:
-        """ A dict of the Users, Workspaces and Park Extensions the Workspace is Monitoring """
+    def monitoring(self) -> MonitoringList:
+        """ The :class:`~.monitoring.MonitoringList` associated with the Workspace """
         if self._monitoring is None:
             response = webex_api_call("get", f"v1/workspaces/{self.id}/features/monitoring",
                                       params={"orgId": self.org_id})
