@@ -5,6 +5,7 @@ What's New
 
 v4.4.0
 ------
+- Org-wide Queue settings are available at :attr:`Org.queue_settings`, which returns a :class:`.call_queue.OrgQueueSettings` instance
 - **BREAKING CHANGE** - :attr:`.workspace.Workspace.monitoring` now returns a :class:`~.monitoring.MonitoringList` instead of a dict
 - :class:`~.monitoring.MonitoringList` with improved functionality. See docs for a complete list of methods
 - **BREAKING CHANGE** - :meth:`~.person.get_monitoring()` and :meth:`.person.push_monitoring()` have been removed and replaced with the :attr:`Person.monitoring` attribute, which returns a :class:`.monitoring.MonitoringList` to make managing monitored elements easier

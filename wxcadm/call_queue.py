@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from keyword import kwlist
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from wxcadm.person import Person
@@ -6,10 +8,65 @@ if TYPE_CHECKING:
 
 from typing import Optional, Union
 from collections import UserList
+from dataclasses import dataclass, field
+from dataclasses_json import dataclass_json, config
 
 import wxcadm.exceptions
 from .common import *
 from wxcadm import log
+
+
+@dataclass_json
+@dataclass
+class OrgQueueSettings:
+    org: wxcadm.Org
+    maintain_queue_position_for_sim_ring: bool = field(metadata=config(field_name="maintainQueuePositionForSimRingEnabled"))
+    """ Maintain queue position for Simultaneous routing algorithm """
+    agent_unavailable_on_bounce: bool = field(metadata=config(field_name="forceAgentUnavailableOnBouncedEnabled"))
+    """ Change the status of a Customer Experience Essentials agent to unavailable in the event of bounced calls """
+    play_barge_in_tone: bool = field(metadata=config(field_name="playToneToAgentForBargeInEnabled"))
+    """ Play a notification tone to the Agent for Supervisor Barge-In """
+    play_monitoring_tone: bool = field(metadata=config(field_name="playToneToAgentForSilentMonitoringEnabled"))
+    """ Play a notification tone to the Agent for Supervisor Monitoring """
+    play_whisper_tone: bool = field(metadata=config(field_name="playToneToAgentForSupervisorCoachingEnabled"))
+    """ Play a notification tone to the Agent for Supervisor Coaching """
+
+    def set(self,
+            maintain_queue_position_for_sim_ring: Optional[bool] = None,
+            agent_unavailable_on_bounce: Optional[bool] = None,
+            play_barge_in_tone: Optional[bool] = None,
+            play_monitoring_tone: Optional[bool] = None,
+            play_whisper_tone: Optional[bool] = None,
+            ):
+        """ Set one or more attributes
+
+        Args:
+            maintain_queue_position_for_sim_ring (bool, optional): Set this value
+            agent_unavailable_on_bounce (bool, optional): Set this value
+            play_barge_in_tone (bool, optional): Set this value
+            play_monitoring_tone (bool, optional): Set this value
+            play_whisper_tone (bool, optional): Set this value
+
+        Returns:
+            bool: True on success, False on failure
+
+        """
+        if maintain_queue_position_for_sim_ring is not None:
+            self.maintain_queue_position_for_sim_ring = maintain_queue_position_for_sim_ring
+        if agent_unavailable_on_bounce is not None:
+            self.agent_unavailable_on_bounce = agent_unavailable_on_bounce
+        if play_barge_in_tone is not None:
+            self.play_barge_in_tone = play_barge_in_tone
+        if play_monitoring_tone is not None:
+            self.play_monitoring_tone = play_monitoring_tone
+        if play_whisper_tone is not None:
+            self.play_whisper_tone = play_whisper_tone
+        payload = self.to_dict()
+        log.debug(payload)
+        del payload['org']
+        webex_api_call('put', "v1/telephony/config/queues/settings", payload=payload,
+                       params={'orgId': self.org.org_id})
+        return True
 
 
 class CallQueue:

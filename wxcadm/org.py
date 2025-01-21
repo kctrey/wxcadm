@@ -13,7 +13,7 @@ from .cpapi import CPAPI
 from .location import Location, LocationList
 from .location_features import PagingGroup, VoicemailGroupList
 from .auto_attendant import AutoAttendantList
-from .call_queue import CallQueueList
+from .call_queue import CallQueueList, OrgQueueSettings
 from .hunt_group import HuntGroupList
 from .webhooks import Webhooks
 from .person import UserGroups, Person, PersonList
@@ -222,6 +222,12 @@ class Org:
         if self._rebuild_phones_jobs is None:
             self._rebuild_phones_jobs = RebuildPhonesJobList(self)
         return self._rebuild_phones_jobs
+
+    @property
+    def queue_settings(self):
+        response = webex_api_call("get", "v1/telephony/config/queues/settings", params={'orgId': self.id})
+        response['org'] = self
+        return OrgQueueSettings.from_dict(response)
 
     def __get_licenses(self):
         """Gets all licenses for the Organization
