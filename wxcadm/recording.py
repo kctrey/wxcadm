@@ -17,11 +17,17 @@ from .common import *
 @dataclass
 class RecordingVendor:
     id: str
+    """ The ID of the Recording Vendor """
     name: str
+    """ The name of the Recording Vendor """
     description: str
+    """ The description of the Recording Vendor """
     auto_user_account_creation: bool = field(metadata=config(field_name="migrateUserCreationEnabled"))
+    """ Whether user accounts are created automatically on the Recording Vendor """
     login_url: str = field(metadata=config(field_name="loginUrl"))
+    """ The URL to access the Recording Provider's login page """
     tos_url: str = field(metadata=config(field_name="termsOfServiceUrl"))
+    """ The URL to access the Recording Provider's Terms of Service """
 
 
 class RecordingVendorsList(UserList):
