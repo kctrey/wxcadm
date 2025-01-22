@@ -1632,6 +1632,26 @@ class Person:
                                   params={'orgId': self.org_id})
         return response
 
+    def ecbn_null_change(self) -> bool:
+        """ Issue a "null change" on the user's ECBN, sending the same values that exist currently.
+
+        This was added due to a back-end bug discovered that caused ECBN settings to be out of sync between Control
+        Hub and Webex Calling. In most cases, this will not be used, but can be used in specialized scripts to correct
+        this issue.
+
+        """
+        log.info(f"Performing null ECBN change for user: {self.email}")
+        current_ecbn = self.ecbn
+        payload = {
+            'selected': current_ecbn['selected']
+        }
+        if current_ecbn['selected'] == 'LOCATION_MEMBER_NUMBER':
+            payload['locationMemberId'] = current_ecbn['locationMemberInfo']['memberId']
+        response = webex_api_call('put', f"v1/telephony/config/people/{self.id}/emergencyCallbackNumber",
+                                  params={'orgId': self.org_id}, payload=payload)
+        log.debug(response)
+        return True
+
     def set_ecbn(self, value: Union[str, wxcadm.Person, wxcadm.Workspace, wxcadm.VirtualLine]):
         """ Set the ECBN of the Person
 

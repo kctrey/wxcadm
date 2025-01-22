@@ -5,6 +5,7 @@ What's New
 
 v4.4.0
 ------
+- :meth:`~.person.Person.ecbn_null_change()` added to address a bug where Control Hub and Webex Calling are out of sync
 - Recording Vendor settings are now available for :class:`~.org.Org` and :class:`~.location.Location` via the :attr:`recording_vendor` property, which returns a :class:`~.recording.OrgRecordingVendorSelection` or :class:`~.recording.LocationRecordingVendorSelection`
 - Org-wide Queue settings are available at :attr:`Org.queue_settings`, which returns a :class:`.call_queue.OrgQueueSettings` instance
 - **BREAKING CHANGE** - :attr:`.workspace.Workspace.monitoring` now returns a :class:`~.monitoring.MonitoringList` instead of a dict
