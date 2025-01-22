@@ -5,6 +5,7 @@ What's New
 
 v4.4.0
 ------
+- BUG FIX: :meth:`.location.Location.enable_webex_calling()` now correctly handles addresses without an 'address2' value
 - :meth:`~.person.Person.ecbn_null_change()` added to address a bug where Control Hub and Webex Calling are out of sync
 - Recording Vendor settings are now available for :class:`~.org.Org` and :class:`~.location.Location` via the :attr:`recording_vendor` property, which returns a :class:`~.recording.OrgRecordingVendorSelection` or :class:`~.recording.LocationRecordingVendorSelection`
 - Org-wide Queue settings are available at :attr:`Org.queue_settings`, which returns a :class:`.call_queue.OrgQueueSettings` instance

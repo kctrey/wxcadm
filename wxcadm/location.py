@@ -467,6 +467,9 @@ class Location:
         """
         if self.calling_enabled is False:
             log.info(f"Enabling Webex Calling for Location {self.name}")
+            # Clean up the address. Found a failure when address2 fails when it is ''
+            if self.address['address2'] == '':
+                self.address['address2'] = None
             payload = {
                 "id": self.id,
                 "name": self.name,
