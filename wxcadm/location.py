@@ -23,6 +23,7 @@ from .number import NumberList
 from .virtual_line import VirtualLineList
 from .call_routing import TranslationPatternList
 from .workspace import WorkspaceList
+from .recording import LocationRecordingVendorSelection
 
 
 class LocationList(UserList):
@@ -836,6 +837,10 @@ class Location:
         if self._pickup_groups is None:
             self._pickup_groups = PickupGroupList(self)
         return self._pickup_groups
+
+    @property
+    def recording_vendor(self) -> LocationRecordingVendorSelection:
+        return LocationRecordingVendorSelection(self)
 
     @property
     def voice_portal(self) -> VoicePortal:

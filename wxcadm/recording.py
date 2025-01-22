@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Optional, Union
 from collections import UserList
+from dataclasses import dataclass, field
+from dataclasses_json import dataclass_json, config
 import json
 import requests
 import re
@@ -9,6 +11,190 @@ import re
 import wxcadm.location
 from wxcadm import log
 from .common import *
+
+
+@dataclass_json
+@dataclass
+class RecordingVendor:
+    id: str
+    name: str
+    description: str
+    auto_user_account_creation: bool = field(metadata=config(field_name="migrateUserCreationEnabled"))
+    login_url: str = field(metadata=config(field_name="loginUrl"))
+    tos_url: str = field(metadata=config(field_name="termsOfServiceUrl"))
+
+
+class RecordingVendorsList(UserList):
+    def __init__(self, vendors: list):
+        super().__init__()
+        self.data = []
+        for vendor in vendors:
+            this_vendor = RecordingVendor.from_dict(vendor)
+            self.data.append(this_vendor)
+
+    def get(self, id: Optional[str] = '', name: Optional[str] = '') -> Optional[RecordingVendor]:
+        """ Get a :class:`RecordingVendor` by its ID or name
+
+        Args:
+            id (str, optional): The ID of the Recording Vendor
+            name (str, optional): The name of the Recording Vendor
+
+        Returns:
+            RecordingVendor or None
+
+        """
+        for vendor in self.data:
+            if vendor.id == id or vendor.name == name:
+                return vendor
+        return None
+
+
+class OrgRecordingVendorSelection:
+    def __init__(self, parent: wxcadm.Org):
+        log.info("Getting Org-level Recording Vendor Selection")
+        self.parent: wxcadm.Org = parent
+        self._url = "v1/telephony/config/callRecording/vendors"
+        response = webex_api_call('get', self._url, params={'orgId': self.parent.org_id})
+        self.available_vendors: RecordingVendorsList = RecordingVendorsList(response['vendors'])
+        """ :class:`RecordingVendorsList` of available :class:`RecordingVendor` """
+        self.selected_vendor: RecordingVendor = self.available_vendors.get(id=response['vendorId'])
+        """ The selected :class:`RecordingVendor` """
+        self.storage_region: Optional[str] = response.get('storageRegion', None)
+        """ The storage region. Only applicable when the recording vendor is Webex """
+        self.failure_behavior: Optional[str] = response.get('failureBehavior', None)
+        """ The behavior when the Call Recording session cannot be established """
+
+    def change_vendor(self, new_vendor: RecordingVendor) -> bool:
+        """ Replace the current Recording Vendor with another
+
+        Args:
+            new_vendor (RecordingVendor): The new :class:`RecordingVendor`
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'vendorId': new_vendor.id}
+        webex_api_call('put', self._url, payload=payload, params={'orgId': self.parent.org_id})
+        return True
+
+    def set_failure_behavior(self, failure_behavior: str) -> bool:
+        """ Set the failure behavior
+
+        Args:
+            failure_behavior (str): The failure behavior. Valid options are ``'PROCEED_WITH_CALL_NO_ANNOUNCEMENT'``,
+                ``'PROCEED_CALL_WITH_ANNOUNCEMENT'``, or ``'END_CALL_WITH_ANNOUNCEMENT'``
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+
+
+class LocationRecordingVendorSelection:
+    def __init__(self, parent: wxcadm.Location):
+        log.info("Getting Location-level Recording Vendor Selection")
+        self.parent: wxcadm.Location = parent
+        self._url = f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendors"
+        response = webex_api_call('get', self._url, params={'orgId': self.parent.org_id})
+        self.available_vendors: RecordingVendorsList = RecordingVendorsList(response['vendors'])
+        """ :class:`RecordingVendorsList` of available :class:`RecordingVendor` """
+        self.use_org_vendor: bool = response['orgDefaultEnabled']
+        """ Whether to use the Org-level Recording Vendor """
+        self.org_vendor = self.available_vendors.get(id=response['orgDefaultVendorId'])
+        """ The :class:`RecordingVendor` used at the Org level """
+        self.location_vendor = self.available_vendors.get(id=response['defaultVendorId'])
+        """ The :class:`RecordingVendor` used at the Location level """
+        self.use_org_storage_region: Optional[bool] = response.get('orgStorageRegionEnabled', None)
+        """ Whether to use the Org-level Storage Region. Only applies to Webex recording """
+        self.org_storage_region: Optional[str] = response.get('orgStorageRegion', None)
+        """ The Storage Region used at the Org level """
+        self.location_storage_region: Optional[str] = response.get('storageRegion', None)
+        """ The Storage Region used at the Location level """
+        self.use_org_failure_behavior: bool = response['orgFailureBehaviorEnabled']
+        """ Whether to use the Org-level Failure Behavior. """
+        self.org_failure_behavior: str = response.get('orgFailureBehavior', None)
+        """ The Failure Behavior used at the Org level """
+        self.location_failure_behavior: str = response.get('failureBehavior', None)
+        """ The Failure Behavior used at the Location level """
+
+    def change_vendor(self, new_vendor: RecordingVendor) -> bool:
+        """ Replace the current Recording Vendor with another.
+
+        If the Location is currently using the Recording Vendor from the Org level, the Org-level vendor will no longer
+        be used.
+
+        Args:
+            new_vendor (RecordingVendor): The new :class:`RecordingVendor`
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'id': new_vendor.id, 'orgDefaultEnabled': False}
+        webex_api_call('put', f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendor",
+                       payload=payload, params={'orgId': self.parent.org_id})
+        self.location_vendor = new_vendor
+        return True
+
+    def set_storage_region(self, region: str) -> bool:
+        """ Set the Location-level Recording Storage Region (Webex recording only)
+
+        Args:
+            region (str): The 2-character region code
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'storageRegion': region, 'orgStorageRegionEnabled': False}
+        webex_api_call('put', f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendor",
+                       payload=payload, params={'orgId': self.parent.org_id})
+        self.use_org_storage_region = False
+        self.location_storage_region = region
+        return True
+
+    def set_failure_behavior(self, failure_behavior: str) -> bool:
+        """ Set the Location-level Recording Failure Behavior
+
+        Args:
+            failure_behavior (str): The failure behavior. Valid options are `'PROCEED_WITH_CALL_NO_ANNOUNCEMENT'``,
+                ``'PROCEED_CALL_WITH_ANNOUNCEMENT'``, or ``'END_CALL_WITH_ANNOUNCEMENT'``
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'failureBehavior': failure_behavior, 'orgFailureBehaviorEnabled': False}
+        webex_api_call('put', f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendor",
+                       payload=payload, params={'orgId': self.parent.org_id})
+        self.use_org_failure_behavior = False
+        self.location_failure_behavior = failure_behavior
+        return True
+
+    def clear_vendor_override(self) -> bool:
+        """ Revert the Location-level Recording Vendor back to the Org default """
+        payload = {'orgDefaultEnabled': True}
+        webex_api_call('put', f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendor",
+                       payload=payload, params={'orgId': self.parent.org_id})
+        self.use_org_vendor = True
+        return True
+
+    def clear_region_override(self) -> bool:
+        """ Revert the Location-level Storage Region back to the Org default (Webex recording only) """
+        payload = {'orgStorageRegionEnabled': True}
+        webex_api_call('put', f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendor",
+                       payload=payload, params={'orgId': self.parent.org_id})
+        self.use_org_storage_region = True
+        return True
+
+    def clear_failure_override(self) -> bool:
+        """ Revert the Location-level Failure Behavior back to the Org default """
+        payload = {'orgFailureBehaviorEnabled': True}
+        webex_api_call('put', f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendor",
+                       payload=payload, params={'orgId': self.parent.org_id})
+        self.use_org_failure_behavior = True
+        return True
 
 
 class ComplianceAnnouncementSettings:

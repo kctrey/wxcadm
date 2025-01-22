@@ -24,7 +24,7 @@ from .call_routing import CallRouting, TranslationPatternList
 from .reports import ReportList
 from .calls import Calls
 from .device import DeviceList, SupportedDeviceList
-from .recording import ComplianceAnnouncementSettings, RecordingList
+from .recording import ComplianceAnnouncementSettings, RecordingList, OrgRecordingVendorSelection
 from .jobs import NumberManagementJobList, UserMoveJobList, RebuildPhonesJobList
 from .virtual_line import VirtualLineList
 from .dect import DECTNetworkList
@@ -792,6 +792,10 @@ class Org:
         if self._translation_patterns is None:
             self._translation_patterns = TranslationPatternList(self)
         return self._translation_patterns
+
+    @property
+    def recording_vendor(self):
+        return OrgRecordingVendorSelection(self)
 
     @property
     def recorded_people(self):
