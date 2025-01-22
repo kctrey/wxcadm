@@ -43,4 +43,16 @@ VoicemailGroup
     :members:
     :undoc-members:
 
+Recording
+---------
+
+.. autoclass:: wxcadm.recording.OrgRecordingVendorSelection
+    :members:
+
+.. autoclass:: wxcadm.recording.RecordingVendorsList
+    :members:
+
+.. autoclass:: wxcadm.recording.RecordingVendor
+    :members:
+
 
