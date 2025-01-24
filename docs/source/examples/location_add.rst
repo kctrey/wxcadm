@@ -127,8 +127,9 @@ Provider:
     # Set the selected provider on the Location
     my_location.pstn.set_provider(selected_provider)
 
-LGW (Premise PSTN)
-^^^^^^^^^^^^^^^^^^
+
+LGW and Premise PSTN
+^^^^^^^^^^^^^^^^^^^^^
 When using Premise PSTN, the Location can use either a Trunk or a Route Group as the PSTN connection. The one you select
 will depend on the LGW architecture in use.
 
@@ -153,6 +154,7 @@ Trunk
     # Set the selected Trunk as the PSTN connection for the Location
     my_location.pstn.set_provider(selected_trunk)
 
+
 Route Group
 """""""""""
 
@@ -172,7 +174,8 @@ Route Group
     # Set the selected Route Group as the PSTN connection for the Location
     my_location.pstn.set_provider(selected_rg)
 
-Add Numbers (Non-Integrated CCP and Premise PSTN Only)
+
+Add Numbers - Non-Integrated CCP and Premise PSTN Only
 -------------------------------------------------------
 For Non-Integrated Cloud Connected and Premise PSTN, Numbers can be added via the API and are supported by **wxcadm**.
 
