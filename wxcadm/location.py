@@ -25,6 +25,7 @@ from .call_routing import TranslationPatternList
 from .workspace import WorkspaceList
 from .recording import LocationRecordingVendorSelection
 from .pstn import LocationPSTN
+from .number import Number
 
 
 class LocationList(UserList):
@@ -231,6 +232,7 @@ class Location:
         self._workspaces = None
         self._routing_prefix = None
         self._pstn = None
+        self._main_number = None
 
     def __str__(self):
         return self.name
@@ -626,17 +628,39 @@ class Location:
             return response['phoneNumbers']
 
     @property
-    def main_number(self):
+    def main_number(self) -> Number:
         """Returns the Main Number for this Location, if defined
 
         Returns:
-            str: The main number for the Location. None is returned if a main number cannot be found.
+            Number: The main number for the Location. None is returned if a main number cannot be found.
 
         """
-        for number in self._parent.numbers:
-            if number['location'].name == self.name and number['mainNumber'] is True:
-                return number['number']
-        return None
+        if self._main_number is None:
+            config = self.calling_config
+            number = self.numbers.get(location=self, phone_number=config['callingLineId'].get('phoneNumber'))
+            self._main_number = number
+        return self._main_number
+
+    def set_main_number(self, number: Union[Number, str]) -> bool:
+        """ Set the Main Number for the Location
+
+        Args:
+            number (Number, str): The main number as a :class:`~.number.Number` or a string
+
+        Returns:
+            bool: True on success. False otherwise.
+
+        Raises:
+            wxcadm.APIError: Raised when the new Main Number is rejected by Webex for any reason
+
+        """
+        if isinstance(number, Number):
+            number = number.phone_number
+        payload = {'callingLineId': {'phoneNumber': number}}
+        webex_api_call('put', f"v1/telephony/config/locations/{self.id}", payload=payload,
+                       params={'orgId': self.org_id})
+        self._main_number = None
+        return True
 
     @property
     def schedules(self):

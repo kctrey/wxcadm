@@ -137,7 +137,7 @@ For either case, you will need to know the name of the Trunk or Route Group that
 
 **Trunk**
 
-    .. code-block:: python
+.. code-block:: python
 
     import wxcadm
 
@@ -156,7 +156,7 @@ For either case, you will need to know the name of the Trunk or Route Group that
 
 ** Route Group **
 
-    .. code-block:: python
+.. code-block:: python
 
     import wxcadm
 
@@ -197,8 +197,22 @@ For Non-Integrated Cloud Connected and Premise PSTN, Numbers can be added via th
 
 Set the Main Number of the Location
 -----------------------------------
-Currently, the ability to set the Main Number of a Location, which is required for calls inbound or outbound, is not
-supported by the Webex APIs and is, therefore, not supported by **wxcadm**.
+After Numbers have been added to the Location, a Main Number needs to be set to allow outgoing and incoming calls.
+
+.. code-block:: python
+
+    import wxcadm
+
+    webex_access_token = "Your Access Token"
+    location_name = "Site 100"
+    main_number = '9152212221'
+
+    webex = wxcadm.Webex(webex_access_token)
+    # Get the Location instance of the desired Location
+    my_location = webex.org.locations.get(name=location_name)
+    # Set the Main Number
+    my_location.set_main_number(main_number)
+
 
 Set the Voice Portal Number or Extension
 ----------------------------------------
@@ -272,10 +286,12 @@ the previous scripts as a single script.
     # Enable Webex Calling
     new_location.enable_webex_calling()
     # Connect the PSTN (a Premise LGW Trunk, in this case) to the Location
-    trunk = webex.org.routing.trunks.get(name=location_trunk)
+    trunk = webex.org.call_routing.trunks.get(name=location_trunk)
     new_location.pstn.set_provider(trunk)
     # Add the Numbers to the Location
     webex.org.numbers.add(new_location, number_list)
+    # Set the Main Number. For this example, it's the first number in number_list
+    new_location.set_main_number(number_list[0])
     # Set the Voice Portal Extension
     new_location.voice_portal.extension = voice_portal_extension
 
