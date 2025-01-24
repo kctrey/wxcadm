@@ -86,7 +86,7 @@ Non-Integrated Cloud-Connected, or Local Gateway (Premise PSTN).
 The sections below outline the steps based on the type of PSTN Provider being used.
 
 Integrated and Non-Integrated Cloud-Connected
-#############################################
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The steps for both Integrated and Non-Integrated Cloud-Connected Providers are the same from an API and **wxcadm**
 perspective. The difference is that Phone Numbers cannot be added via API for Integrated Cloud-Connected Providers.
 
@@ -128,14 +128,14 @@ Provider:
     my_location.pstn.set_provider(selected_provider)
 
 LGW (Premise PSTN)
-==================
+^^^^^^^^^^^^^^^^^^
 When using Premise PSTN, the Location can use either a Trunk or a Route Group as the PSTN connection. The one you select
 will depend on the LGW architecture in use.
 
 For either case, you will need to know the name of the Trunk or Route Group that you wish to assign.
 
 Trunk
-+++++
+"""""
 
     .. code-block:: python
 
@@ -154,7 +154,7 @@ Trunk
     my_location.pstn.set_provider(selected_trunk)
 
 Route Group
-+++++++++++
+"""""""""""
 
     .. code-block:: python
 
@@ -227,7 +227,7 @@ soon as the command is run.
     my_location.voice_portal.extension = voice_portal_extension
 
 Complete Script
-===============
+---------------
 In the examples above, you saw how to create the Location and get it set up, all using individual Pyton scripts. In the
 real world, you would probably use a single script to do all of the work at one time. The following is an example of all
 the previous scripts as a single script.
@@ -279,6 +279,6 @@ the previous scripts as a single script.
     new_location.voice_portal.extension = voice_portal_extension
 
 In Summary
-==========
+----------
 Once you have the Location created, **wxcadm** provides methods to help with the management of the Location and its
 features. See the :class:`.location.Location` section of these docs to help with anything else.
