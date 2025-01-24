@@ -156,6 +156,7 @@ Properties are exposed for most commonly-used attributes.
 .. toctree::
     :maxdepth: 1
     :caption: Example Scripts
+    :glob:
 
     examples/*
 
