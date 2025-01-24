@@ -5,6 +5,7 @@ What's New
 
 v4.4.0
 ------
+- New method :meth:`LocationList.with_pstn() <.location.LocationList.with_pstn()` added to retrieve a list of Locations with or without a PSTN provider configured. :meth:`LocationList.without_pstn()` also exists as an aliad for :meth:`with_pstn(False)`
 - New method :meth:`Location.set_main_number() <.location.Location.set_main_number()` allows the Main Number to be set. This accepts either a :class:`~.number.Number` or a string.
 - :attr:`Location.main_number` now uses new logic to determine the Location's Main Number, and returns it as a :class:`.number.Number` instance
 - BUG FIX: The Realtime classes (currently only :class:`~.location_features.VoicePortal`) have been fixed to allow additional API fields that don't come back in the GET. This fixes setting :attr:`VoicePortal.extension`

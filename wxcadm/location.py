@@ -177,6 +177,29 @@ class LocationList(UserList):
             elif single is True:
                 return locations[0]
 
+    def with_pstn(self, has_pstn: bool = True):
+        """ Return o list of :class:`Location` where the location has PSTN enabled
+
+        Args:
+            has_pstn (bool): True for Locations with PSTN, False for Locations without PSTN. Defaults to True.
+
+        Returns:
+            list[:class:`Location`]: List of :class:`Location` instances. An empty list is returned if none match
+
+        """
+        with_pstn = []
+        for loc in self.webex_calling(enabled=True):
+            if has_pstn is True:
+                if loc.pstn.provider is not None:
+                    with_pstn.append(loc)
+            if has_pstn is False:
+                if loc.pstn.provider is None:
+                    with_pstn.append(loc)
+        return with_pstn
+
+    def without_pstn(self):
+        """ Alias function of :meth:`LocationList.with_pstn(False)` to quickly provide Locations without PSTN """
+        return self.with_pstn(has_pstn=False)
 
 class Location:
     def __init__(self, parent: wxcadm.Org, location_id: str,
