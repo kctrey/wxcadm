@@ -5,6 +5,7 @@ What's New
 
 v4.4.0
 ------
+- BUG FIX: The Realtime classes (currently only :class:`~.location_features.VoicePortal`) have been fixed to allow additional API fields that don't come back in the GET. This fixes setting :attr:`VoicePortal.extension`
 - PSTN Connections for Locations are now supported! See the :attr:`.location.Location.pstn` property and the docs for the :class:`~.pstn.LocationPSTN` class
 - **BREAKING CHNGE** - :meth:`~.location.Location.set_enhanced_emergency_routing` has been removed. :meth:`~.location.Location.set_enhanced_emergency_calling(mode='routing')` should be used instead.
 - BUG FIX: :meth:`.location.Location.enable_webex_calling()` now correctly handles addresses without an 'address2' value

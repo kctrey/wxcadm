@@ -332,7 +332,7 @@ class VoicePortal(RealtimeClass):
     """ The first name of the Voice Portal in the directory """
     last_name: str = field(repr=True, init=False, default=None)
     """ The last name of the Voice Portal in the directory """
-    _api_fields = []
+    _api_fields = ['phone_number', 'extension']
     _initialized = False
 
     def __post_init__(self):

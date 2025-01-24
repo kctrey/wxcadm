@@ -11,7 +11,9 @@ from .exceptions import PutError
 class RealtimeClass:
     def __init__(self):
         data: dict = webex_api_call('get', self.data_url)
+        log.debug(f"Received {data}")
         for key, val in data.items():
+            log.debug(f"Setting {key} to {val}")
             self.__setattr__(humps.decamelize(key), val)
             self._api_fields.append(humps.decamelize(key))
         self._initialized = True
@@ -20,7 +22,9 @@ class RealtimeClass:
         return_dict = {}
         for field in self._api_fields:
             value = self.__getattribute__(field)
+            log.debug(f"Adding {field} to payload")
             return_dict[humps.camelize(field)] = value
+        log.debug(f"Returning {return_dict}")
         return return_dict
 
     def __setattr__(self, name, value):
