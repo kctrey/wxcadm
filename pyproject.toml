@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wxcadm"
-version = "4.3.11"
+version = "4.4.0"
 authors = [
   { name="Trey Hilyard", email="kctrey@gmail.com" },
 ]
@@ -26,6 +26,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
+
+[tool.setuptools]
+packages = ["wxcadm"]
 
 [project.urls]
 Homepage = "https://github.com/kctrey/wxcadm"
