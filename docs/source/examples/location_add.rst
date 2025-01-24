@@ -135,8 +135,7 @@ will depend on the LGW architecture in use.
 
 For either case, you will need to know the name of the Trunk or Route Group that you wish to assign.
 
-Trunk
-"""""
+**Trunk**
 
     .. code-block:: python
 
@@ -155,8 +154,7 @@ Trunk
     my_location.pstn.set_provider(selected_trunk)
 
 
-Route Group
-"""""""""""
+** Route Group **
 
     .. code-block:: python
 
