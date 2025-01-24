@@ -24,6 +24,7 @@ from .virtual_line import VirtualLineList
 from .call_routing import TranslationPatternList
 from .workspace import WorkspaceList
 from .recording import LocationRecordingVendorSelection
+from .pstn import LocationPSTN
 
 
 class LocationList(UserList):
@@ -229,6 +230,7 @@ class Location:
         self._translation_patterns = None
         self._workspaces = None
         self._routing_prefix = None
+        self._pstn = None
 
     def __str__(self):
         return self.name
@@ -858,6 +860,12 @@ class Location:
         return self._dect_networks
 
     @property
+    def pstn(self):
+        if self._pstn is None:
+            self._pstn = LocationPSTN(self)
+        return self._pstn
+
+    @property
     def enhanced_emergency_calling(self) -> LocationEmergencySettings:
         """ The Enhanced Emergency Calling settings for the Location
 
@@ -905,34 +913,6 @@ class Location:
             response = webex_api_call('put', f"v1/telephony/config/locations/{self.id}/redSky/status",
                                       params={'orgId': self.org_id}, payload=payload)
         return response
-
-    def set_enhanced_emergency_routing(self, enabled: bool = True) -> bool:
-        """ Configure the Enhanced Emergency Call Routing (i.e. Route calls to RedSky) for the Location
-
-        This value cannot be True if :attr:`enhanced_emergency_calling.integration` is False and will raise a
-        ValueError.
-
-        Args:
-            enabled (bool): Whether to enable routing of 911 calls to the Enhanced Emergency Calling provider.
-                Defaults to True.
-
-        Returns:
-            bool: True on success
-
-        Raises:
-            ValueError: Raised when the value cannot be True because integration is disabled
-
-        """
-        current = self.enhanced_emergency_calling
-        if enabled is True and current.integration is False:
-            raise ValueError("Cannot enable routing when integration is disabled. Enable integration first.")
-        payload = {
-            'integrationEnabled': current.integration,
-            'routingEnabled': enabled
-        }
-        webex_api_call('put', f"v1/telephony/config/locations/{self.id}/redSky", params={'orgId': self.org_id},
-                       payload=payload)
-        return True
 
 
 class LocationFloor:

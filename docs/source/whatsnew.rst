@@ -5,6 +5,8 @@ What's New
 
 v4.4.0
 ------
+- PSTN Connections for Locations are now supported! See the :attr:`.location.Location.pstn` property and the docs for the :class:`~.pstn.LocationPSTN` class
+- **BREAKING CHNGE** - :meth:`~.location.Location.set_enhanced_emergency_routing` has been removed. :meth:`~.location.Location.set_enhanced_emergency_calling(mode='routing')` should be used instead.
 - BUG FIX: :meth:`.location.Location.enable_webex_calling()` now correctly handles addresses without an 'address2' value
 - :meth:`~.person.Person.ecbn_null_change()` added to address a bug where Control Hub and Webex Calling are out of sync
 - Recording Vendor settings are now available for :class:`~.org.Org` and :class:`~.location.Location` via the :attr:`recording_vendor` property, which returns a :class:`~.recording.OrgRecordingVendorSelection` or :class:`~.recording.LocationRecordingVendorSelection`

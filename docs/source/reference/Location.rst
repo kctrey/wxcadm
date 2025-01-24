@@ -55,4 +55,16 @@ Recording
 .. autoclass:: wxcadm.recording.RecordingVendor
     :members:
 
+PSTN Configuration
+------------------
+
+.. autoclass:: wxcadm.pstn.LocationPSTN
+    :members:
+
+.. autoclass:: wxcadm.pstn.PSTNProviderList
+    :members:
+
+.. autoclass:: wxcadm.pstn.PSTNProvider
+    :members:
+
 
