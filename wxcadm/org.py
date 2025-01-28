@@ -26,10 +26,12 @@ from .calls import Calls
 from .device import DeviceList, SupportedDeviceList
 from .recording import ComplianceAnnouncementSettings, RecordingList, OrgRecordingVendorSelection
 from .jobs import NumberManagementJobList, UserMoveJobList, RebuildPhonesJobList
-from .virtual_line import VirtualLineList
+from .virtual_line import VirtualLineList, VirtualLine
 from .dect import DECTNetworkList
 from .number import NumberList
 from .events import AuditEventList
+from .monitoring import MonitoringList
+from .location_features import CallParkExtension
 
 
 class Org:
@@ -86,6 +88,7 @@ class Org:
         self._numbers = None
         self._supported_devices = None
         self._translation_patterns = None
+        self._all_monitoring = None
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -393,36 +396,50 @@ class Org:
             dict: A dict in the format ``{ 'people': { person: [] }, 'workspaces': { person: [] } }``
 
         """
-        all_monitoring = {'people': {}, 'workspaces': {}}
-        for person in self.people.webex_calling():
-            monitoring = person.get_monitoring()
-            for monitor in monitoring.get('monitoredElements', []):
-                if 'member' in monitor.keys():
-                    if monitor['member']['type'] == 'PEOPLE':
-                        target_person = self.people.get(id=monitor['member']['id'])
-                        if target_person not in all_monitoring['people'].keys():
-                            all_monitoring['people'][target_person] = []
-                        all_monitoring['people'][target_person].append(person)
-                    elif monitor['member']['type'] == 'PLACE':
-                        target_workspace = self.workspaces.get(id=monitor['member']['id'])
-                        if target_workspace not in all_monitoring['workspaces'].keys():
-                            all_monitoring['workspaces'][target_workspace] = []
-                        all_monitoring['workspaces'][target_workspace].append(person)
-        for workspace in self.workspaces.webex_calling():
-            monitoring = workspace.monitoring
-            for monitor in monitoring.get('monitoredElements', []):
-                if 'member' in monitor.keys():
-                    if monitor['member']['type'] == 'PEOPLE':
-                        target_person = self.people.get(id=monitor['member']['id'])
-                        if target_person not in all_monitoring['people'].keys():
-                            all_monitoring['people'][target_person] = []
-                        all_monitoring['people'][target_person].append(workspace)
-                    elif monitor['member']['type'] == 'PLACE':
-                        target_workspace = self.workspaces.get(id=monitor['member']['id'])
-                        if target_workspace not in all_monitoring['workspaces'].keys():
-                            all_monitoring['workspaces'][target_workspace] = []
-                        all_monitoring['workspaces'][target_workspace].append(workspace)
-        return all_monitoring
+        if self._all_monitoring is None:
+            all_monitoring = {'people': {}, 'workspaces': {}, 'park_extensions': {}, 'virtual_lines': {}}
+            for person in self.people.webex_calling():
+                if person.display_name == "Trent Hilliard":
+                    log.debug("Found Trey")
+                monitoring: MonitoringList  = person.monitoring
+                for element in monitoring.monitored_elements:
+                    if isinstance(element, CallParkExtension):
+                        if element.id not in all_monitoring['park_extensions'].keys():
+                            all_monitoring['park_extensions'][element.id] = []
+                        all_monitoring['park_extensions'][element.id].append(person)
+                    if isinstance(element, VirtualLine):
+                        if element.id not in all_monitoring['virtual_lines'].keys():
+                            all_monitoring['virtual_lines'][element.id] = []
+                        all_monitoring['virtual_lines'][element.id].append(person)
+                    if isinstance(element, Person):
+                        log.debug(f"Monitoring person: {element.display_name}")
+                        if element.id not in all_monitoring['people'].keys():
+                            all_monitoring['people'][element.id] = []
+                        all_monitoring['people'][element.id].append(person)
+                    if isinstance(element, Workspace):
+                        if element.id not in all_monitoring['workspaces'].keys():
+                            all_monitoring['workspaces'][element.id] = []
+                        all_monitoring['workspaces'][element.id].append(person)
+            for workspace in self.workspaces.webex_calling():
+                monitoring:monitoring = workspace.monitoring
+                for element in monitoring.monitored_elements:
+                    if isinstance(element, CallParkExtension):
+                        if element.id not in all_monitoring['park_extensions'].keys():
+                            all_monitoring['park_extensions'][element.id] = []
+                        all_monitoring['park_extensions'][element.id].append(workspace)
+                    if isinstance(element, VirtualLine):
+                        if element.id not in all_monitoring['virtual_lines'].keys():
+                            all_monitoring['virtual_lines'][element.id] = []
+                        all_monitoring['virtual_lines'][element.id].append(workspace)
+                    if isinstance(element, Person):
+                        if element.id not in all_monitoring['people'].keys():
+                            all_monitoring['people'][element.id] = []
+                        all_monitoring['people'][element.id].append(workspace)
+                    if isinstance(element, Workspace):
+                        if element.id not in all_monitoring['workspaces'].keys():
+                            all_monitoring['workspaces'][element.id] = []
+                        all_monitoring['workspaces'][element.id].append(workspace)
+        return self._all_monitoring
 
     def get_workspace_devices(self, workspace: Optional[Workspace] = None):
         """ Get Webex Calling Workspaces and their associated Devices

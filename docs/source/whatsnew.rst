@@ -3,6 +3,11 @@
 What's New
 ==========
 
+v4.4.1
+------
+- BUG FIX: :meth:`Device.set_layout() <.device.Device.set_layout()>` has been fixed
+- BUG FIX: :meth:`Person.get_monitored_by() <.person.Person.get_monitored_by()>` now returns the right information
+
 v4.4.0
 ------
 - New method :meth:`LocationList.with_pstn() <.location.LocationList.with_pstn()>` added to retrieve a list of Locations with or without a PSTN provider configured. :meth:`LocationList.without_pstn()` also exists as an alias for :meth:`with_pstn(False)`

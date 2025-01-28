@@ -143,7 +143,7 @@ class Device:
             'lineKeys': layout.line_keys
         }
         if layout.kem_type is not None:
-            payload['kemType'] = layout.kem_type
+            payload['kemModuleType'] = layout.kem_type
         if layout.kem_keys is not None:
             payload['kemKeys'] = layout.kem_keys
 

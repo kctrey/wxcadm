@@ -1036,7 +1036,7 @@ class Person:
         elif isinstance(self._parent, wxcadm.Location):
             monitor_list = self._parent.parent.get_all_monitoring()
         try:
-            return monitor_list['people'][self]
+            return monitor_list['people'][self.id]
         except KeyError:
             return None
 
