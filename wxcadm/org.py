@@ -399,8 +399,6 @@ class Org:
         if self._all_monitoring is None:
             all_monitoring = {'people': {}, 'workspaces': {}, 'park_extensions': {}, 'virtual_lines': {}}
             for person in self.people.webex_calling():
-                if person.display_name == "Trent Hilliard":
-                    log.debug("Found Trey")
                 monitoring: MonitoringList  = person.monitoring
                 for element in monitoring.monitored_elements:
                     if isinstance(element, CallParkExtension):
@@ -412,7 +410,6 @@ class Org:
                             all_monitoring['virtual_lines'][element.id] = []
                         all_monitoring['virtual_lines'][element.id].append(person)
                     if isinstance(element, Person):
-                        log.debug(f"Monitoring person: {element.display_name}")
                         if element.id not in all_monitoring['people'].keys():
                             all_monitoring['people'][element.id] = []
                         all_monitoring['people'][element.id].append(person)
