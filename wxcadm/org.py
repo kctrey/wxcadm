@@ -436,6 +436,7 @@ class Org:
                         if element.id not in all_monitoring['workspaces'].keys():
                             all_monitoring['workspaces'][element.id] = []
                         all_monitoring['workspaces'][element.id].append(workspace)
+            self._all_monitoring = all_monitoring
         return self._all_monitoring
 
     def get_workspace_devices(self, workspace: Optional[Workspace] = None):

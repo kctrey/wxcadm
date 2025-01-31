@@ -112,6 +112,17 @@ class VirtualLine:
             self._get_details()
         return self._time_zone
 
+    def get_monitored_by(self):
+        """ Returns a list of Users (Person) and Workspaces that are Monitoring this VirtualLine """
+        if isinstance(self.parent, wxcadm.Org):
+            monitor_list = self.parent.get_all_monitoring()
+        elif isinstance(self.parent, wxcadm.Location):
+            monitor_list = self.parent.parent.get_all_monitoring()
+        try:
+            return monitor_list['virtual_lines'][self.id]
+        except (KeyError, TypeError):
+            return None
+
     def get_call_recording(self):
         """The Call Recording config for the Person
 

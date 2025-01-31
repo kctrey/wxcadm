@@ -408,8 +408,8 @@ class Workspace:
         elif isinstance(self._parent, wxcadm.Location):
             monitor_list = self._parent.parent.get_all_monitoring()
         try:
-            return monitor_list['workspaces'][self]
-        except KeyError:
+            return monitor_list['workspaces'][self.id]
+        except (KeyError, TypeError):
             return None
 
     def delete(self):

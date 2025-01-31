@@ -304,6 +304,17 @@ class CallParkExtension:
     extension: str
     """ The Call Park Extension number (as a string) """
 
+    def get_monitored_by(self):
+        """ Returns a list of Users (Person) and Workspaces that are Monitoring this Park Extension """
+        if isinstance(self.parent, wxcadm.Org):
+            monitor_list = self.parent.get_all_monitoring()
+        elif isinstance(self.parent, wxcadm.Location):
+            monitor_list = self.parent.parent.get_all_monitoring()
+        try:
+            return monitor_list['park_extensions'][self.id]
+        except KeyError:
+            return None
+
 
 @dataclass
 class VoicePortal(RealtimeClass):
