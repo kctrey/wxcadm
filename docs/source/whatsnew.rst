@@ -5,6 +5,8 @@ What's New
 
 v4.4.1
 ------
+- Added :meth:`DeviceList.get_by_status() <.device.DeviceList.get_by_status()>` to allow devices to be retrieved by their connection status
+- :class:`Device <.device.Device>`s in a :class:`DeviceList <.device.DeviceList>` now all have the same config values. Previously Devices that were assigned to a Person did not have things like `connection_status`
 - BUG FIX: :meth:`Device.set_layout() <.device.Device.set_layout()>` has been fixed
 - BUG FIX: :meth:`Person.get_monitored_by() <.person.Person.get_monitored_by()>` now returns the right information
 

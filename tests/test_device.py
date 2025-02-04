@@ -34,6 +34,27 @@ class TestDeviceList(unittest.TestCase):
         device_list = workspace.devices
         self.assertIsInstance(device_list, wxcadm.device.DeviceList)
 
+    def test_devicelist_status(self) -> None:
+        with self.subTest("Online Devices"):
+            online_devices = self.webex.org.devices.get_by_status('online')
+            if len(online_devices) == 0:
+                self.skipTest("No online devices found")
+            for device in online_devices:
+                self.assertIn(device.connection_status, ['connected', 'connected_with_issues'])
+        with self.subTest("Offline Devices"):
+            offline_devices = self.webex.org.devices.get_by_status('offline')
+            if len(offline_devices) == 0:
+                self.skipTest("No offline devices found")
+            for device in offline_devices:
+                self.assertIn(device.connection_status, ['disconnected', 'offline_deep_sleep', 'offline_expired'])
+        with self.subTest("Unknown Devices"):
+            unknown_devices = self.webex.org.devices.get_by_status('unknown')
+            if len(unknown_devices) == 0:
+                self.skipTest("No unknown devices found")
+            for device in unknown_devices:
+                self.assertIn(device.connection_status, ['unknown'])
+
+
 
 class TestDevice(unittest.TestCase):
     @classmethod

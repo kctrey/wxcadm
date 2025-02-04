@@ -50,7 +50,10 @@ class Device:
         self.parent = parent
         """ The :py:class:`Org`, :py:class:`Person` or :py:class:`Workspace` that created this instance """
 
-        if config is None and id is not None:
+        # The logic below addresses the case where the Device owner is a Person, because of how we have to get the
+        # list of devices
+        if "connectionStatus" not in config.keys():
+            self._early_config = config # This is being used to determine if the change to always fetch config was needed
             config = webex_api_call('get', f'/v1/devices/{id}', params={'orgId': self.parent.org_id})
 
         self.id: str = config['id']
@@ -601,11 +604,11 @@ class DeviceList(UserList):
         if self._endpoint_items_key is not None:
             log.info(f"Found {len(response[self._endpoint_items_key])} items")
             for entry in response[self._endpoint_items_key]:
-                items.append(self._item_class(parent=self.parent, config=entry))
+                items.append(self._item_class(parent=self.parent, config=entry, id=entry['id']))
         else:
             log.info(f"Found {len(response)} items")
             for entry in response:
-                items.append(self._item_class(parent=self.parent, config=entry))
+                items.append(self._item_class(parent=self.parent, config=entry, id=entry['id']))
         return items
 
     def refresh(self):
@@ -844,6 +847,42 @@ class DeviceList(UserList):
             if wxc_device is enabled:
                 device_list.append(device)
         return device_list
+
+    def get_by_status(self, status: str) -> list:
+        """ Get a list of devices by the connection status from :attr:`Device.connection_status`
+
+        The `status` argument accepts the "raw" :attr:`Device.connection_status`:
+            - "connected"
+            - "disconnected"
+            - "connected_with_issues"
+            - "offline_expired"
+            - "activating"
+            - "unknown"
+        It also accepts the following grouping values which are unique to **wxcadm**:
+            - "online" returns devices which are known to be online
+            - "offline" returns devices which are known to be offline
+
+        Since `"activating"` and `"unknown"` devices are not known to be in a state, they can only be returned by
+            passing the raw value as the status
+
+        Args:
+            status (str): See the documentation above for a list of valid values.
+
+        Returns:
+            list(Device): List of :class:`Device` instances matching the requested argument.
+
+        """
+        return_list = []
+        if status.lower() == 'online':
+            match_status_list = ['connected', 'connected_with_issues']
+        elif status.lower() == 'offline':
+            match_status_list = ['disconnected', 'offline_expired', 'offline_deep_sleep']
+        else:
+            match_status_list = [status]
+        for device in self.data:
+            if device.connection_status.lower() in match_status_list:
+                return_list.append(device)
+        return return_list
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
