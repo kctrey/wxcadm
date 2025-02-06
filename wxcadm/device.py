@@ -53,8 +53,10 @@ class Device:
         # The logic below addresses the case where the Device owner is a Person, because of how we have to get the
         # list of devices
         if "connectionStatus" not in config.keys():
-            self._early_config = config # This is being used to determine if the change to always fetch config was needed
-            config = webex_api_call('get', f'/v1/devices/{id}', params={'orgId': self.parent.org_id})
+            try:
+                config = webex_api_call('get', f'/v1/devices/{id}', params={'orgId': self.parent.org_id})
+            except wxcadm.APIError:
+                pass
 
         self.id: str = config['id']
         """ The Device ID """
@@ -744,16 +746,20 @@ class DeviceList(UserList):
         if isinstance(self.parent, wxcadm.workspace.Workspace):
             payload['workspaceId'] = self.parent.id
             params = {'orgId': self.parent.org_id}
+            device_info_url = f"v1/telephony/config/workspaces/{self.parent.id}/devices"
         elif isinstance(self.parent, (wxcadm.person.Person, wxcadm.person.Me)):
             payload['personId'] = self.parent.id
             params = {'orgId': self.parent.org_id}
+            device_info_url = f"v1/telephony/config/people/{self.parent.id}/devices"
         elif isinstance(self.parent, wxcadm.org.Org):
             if person is not None:
                 payload['personId'] = person.id
                 params = {'orgId': self.parent.id}
+                device_info_url = f"v1/telephony/config/people/{person.id}/devices"
             elif workspace is not None:
                 payload['workspaceId'] = workspace.id
                 params = {'orgId': self.parent.id}
+                device_info_url = f"v1/telephony/config/people/{workspace.id}/devices"
             else:
                 raise ValueError("Person or Workspace must be provided")
         else:
@@ -798,13 +804,26 @@ class DeviceList(UserList):
             log.debug(f"\t{response}")
 
             # Get the ID of the device we just inserted
-            device_id = response.get('id', None).replace('=', '')
+            # Adding 9800s does not return any JSON, just a bool, so when that happens, we just need to go find the
+            # newly added device. Unfortunately, it means an entirely different API call (4.4.1)
+            if isinstance(response, bool):
+                device_info = webex_api_call('get', device_info_url, params={'orgId': self.parent.org_id})
+                for device in device_info['devices']:
+                    if device['mac'] == mac.upper().replace(':', '').replace('-', ''):
+                        new_device = Device(parent=self.parent, config=device, id=device['id'])
+                        results = {
+                            'device_id': new_device.id,
+                            'mac': new_device.mac,
+                            'device_object': new_device
+                        }
+            else:
+                device_id = response.get('id', None).replace('=', '')
 
-            results = {
-                'device_id': device_id,
-                'mac': response['mac'],
-                'device_object': Device(self.parent, config=response)
-            }
+                results = {
+                    'device_id': device_id,
+                    'mac': response['mac'],
+                    'device_object': Device(self.parent, config=response)
+                }
 
             if data_needed is True:
                 response = webex_api_call('get', f'/v1/telephony/config/devices/{device_id}',

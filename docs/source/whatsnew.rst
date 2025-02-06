@@ -5,6 +5,8 @@ What's New
 
 v4.4.1
 ------
+- BUG FIX: Adding a PhoneOS (i.e. 9800) phone to a Person or Workspace by MAC address would throw an exception due to the "empty" API response from Webex. Now, the device is found with a second API call and returned, although with limited functionality
+- Added :meth:`AnnouncementList.get() <.announcements.AnnouncementList.get()>` to allow Announcements to be retrieved. Especially handy for the new Playlist functionality
 - Added :meth:`DeviceList.get_by_status() <.device.DeviceList.get_by_status()>` to allow devices to be retrieved by their connection status
 - :class:`Device <.device.Device>`s in a :class:`DeviceList <.device.DeviceList>` now all have the same config values. Previously Devices that were assigned to a Person did not have things like `connection_status`
 - BUG FIX: :meth:`Device.set_layout() <.device.Device.set_layout()>` has been fixed
