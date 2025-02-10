@@ -526,12 +526,23 @@ class Person:
                 if license in ucm_licenses:
                     self.licenses.remove(license)
 
-        # Call the update_person() method to update the new values.
-        if phone_number is None:
-            success = self.update_person(extension=extension, location=location.id)
-        else:
-            success = self.update_person(numbers=[{"type": "work", "value": phone_number}],
-                                         extension=extension, location=location.id)
+        # 4.4.2 - Changed from using update_person() to calling the PUT /v1/people/{personId} directly
+        # The minimum payload was determined by adding one field at a time, so there may be a need to add more
+        # to this payload at some point.
+        payload = {
+            'displayName': self.display_name,
+            'locationId': location.id,
+            'extension': extension,
+            'licenses': self.licenses
+        }
+        if phone_number is not None:
+            payload['phoneNumbers'] = {
+                'type': 'work',
+                'value': phone_number
+            }
+
+        success = webex_api_call('put', f"/v1/people/{self.id}", payload=payload,
+                                 params={'orgId': self.org_id, 'callingData': True})
         if success:
             return True
         else:

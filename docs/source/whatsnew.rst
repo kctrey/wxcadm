@@ -3,6 +3,10 @@
 What's New
 ==========
 
+v4.4.2
+------
+- BUG FIX: When a Person was synced from Entra ID with an existing phone number, the :meth:`Person.assign_wxc()` would fail if the phone number from Entra ID matched the existing number. The entire `assign_wxc()` was refactored to use the API endpoint directly rather than calling :meth:`Person.update_person()`
+
 v4.4.1
 ------
 - Playlists are now supported via :attr:`Org.playlists <.org.Org.playlists>`. This returns a :class:`PlaylistList <.announcements.PlaylistLists>` with :class:`Playlist <.announcements.Playlist>` entries
