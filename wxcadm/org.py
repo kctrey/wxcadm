@@ -18,7 +18,7 @@ from .hunt_group import HuntGroupList
 from .webhooks import Webhooks
 from .person import UserGroups, Person, PersonList
 from .applications import WebexApplications
-from .announcements import AnnouncementList
+from .announcements import AnnouncementList, PlaylistList
 from .workspace import Workspace, WorkspaceList, WorkspaceLocationList
 from .call_routing import CallRouting, TranslationPatternList
 from .reports import ReportList
@@ -89,6 +89,7 @@ class Org:
         self._supported_devices = None
         self._translation_patterns = None
         self._all_monitoring = None
+        self._playlists = None
 
         self.call_routing = CallRouting(self)
         """ The :py:class:`CallRouting` instance for this Org """
@@ -324,6 +325,13 @@ class Org:
         if self._announcements is None:
             self._announcements = AnnouncementList(parent=self)
         return self._announcements
+
+    @property
+    def playlists(self) -> PlaylistList:
+        """ The :py:class:`~wxcadm.playlists.PlaylistList` list with the :class:`Playlist` instances for this Org"""
+        if self._playlists is None:
+            self._playlists = PlaylistList(parent=self)
+        return self._playlists
 
     @property
     def calls(self):

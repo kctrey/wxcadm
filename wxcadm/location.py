@@ -98,7 +98,9 @@ class LocationList(UserList):
                name: str,
                time_zone: str,
                preferred_language: str,
-               address: dict):
+               address: dict,
+               latitude: Optional[str] = None,
+               logitude: Optional[str] = None):
         """ Create a new Location
 
         Args:
@@ -115,6 +117,9 @@ class LocationList(UserList):
                     "postalCode": "32123",
                     "country": "US"
                 }
+
+            latitude (str, optional): The latitude of the location. If not specified, the default value is None.
+            longitude (str, optional): The longitude of the location. If not specified, the default value is None.
 
         Returns:
             dict: The response from Webex with the Location details.

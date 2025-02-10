@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     pass
 from dataclasses import dataclass, field
+from dataclasses_json import dataclass_json, config
 from collections import UserList
 from requests_toolbelt import MultipartEncoder
 
@@ -32,6 +33,53 @@ class AnnouncementList(UserList):
     def _refresh_announcements(self):
         log.debug("Refreshing announcements")
         self.data = self._get_announcements()
+
+    def get(self, id:str = None,
+            name:str = None,
+            file_name: str = None,
+            level: str = None,
+            location: wxcadm.Location = None) -> Announcement | list[Announcement] | None:
+        """ Get the Announcements matching the given criteria.
+
+        Args:
+            id (str, optional): The ID of the Announcement
+            name (str, optional): The name of the Announcement
+            file_name (str, optional) : The name of the file associated with the Announcement
+            level (str, optional) : The level of the Announcement (e.g. ORGANIZATION, LOCATION)
+            location (Location, optional) : The Location instance to filter on
+
+        Returns:
+            Announcement | list[Announcement] | None: The matching Announcements. If more than one Announcement is found,
+                a list of Announcements is returned. If no Announcements are found, None is returned.
+
+        """
+        filtered_announcements = []
+        for annc in self.data:
+            match = True
+            if id is not None and annc.id != id:
+                match = False
+            if name is not None and name not in annc.name:
+                match = False
+            if file_name is not None and annc.fileName != file_name:
+                match = False
+            if level is not None and annc.level != level:
+                match = False
+            if location is not None:
+                if annc.level == 'ORGANIZATION':
+                    match = False
+                else:
+                    if annc.location is not None and annc.location['id'] != location.id:
+                        match = False
+
+            if match is True:
+                filtered_announcements.append(annc)
+
+        if len(filtered_announcements) == 1:
+            return filtered_announcements[0]
+        elif len(filtered_announcements) > 1:
+            return filtered_announcements
+        else:
+            return None
 
     def get_by_location_id(self, location_id: str) -> list[Announcement]:
         """ Get the :py:class:`Announcement` instances for the given location_id
@@ -235,3 +283,191 @@ class Announcement:
         response = webex_api_call("delete", url)
         log.debug(f"Response: {response}")
         return True
+
+
+@dataclass_json
+@dataclass
+class Playlist:
+    org: wxcadm.Org = field(repr=False)
+    id: str
+    """ The ID of the Playlist """
+    name: str
+    """ The name of the Playlist """
+    file_count: int = field(metadata=config(field_name="fileCount"))
+    """ The number of files in the Playlist """
+    last_updated: str = field(metadata=config(field_name="lastUpdated"))
+    """ The timestamp the Playlist was last updated """
+    in_use: bool = field(default=False, metadata=config(field_name="isInUse"))
+    """ Whether the Playlist is in use anywhere """
+    location_count: int = field(default=0, metadata=config(field_name="locationCount"))
+    """ The number of Locations the Playlist is associated with """
+
+    # Attributes that will be retrieved later with a __getattr__
+    file_size: int = field(init=False, repr=False, metadata=config(field_name="fileSize"))
+    """ The total size of the files in the Playlist in bytes """
+    announcements: list = field(init=False, repr=False)
+    """ List of :class:`Announcement` instances in the Playlist """
+
+    def __getattr__(self, item):
+        # The following is a crazy fix for a PyCharm debugger bug. It serves no purpose other than to stop extra API
+        # calls when developing in PyCharm. See the following bug:
+        # https://youtrack.jetbrains.com/issue/PY-48306
+        if item == 'shape':
+            return None
+        log.debug(f"Collecting details for Playlist: {self.id}")
+        response = webex_api_call('get', f"v1/telephony/config/announcements/playlists/{self.id}",
+                                  params={'orgId': self.org.id})
+        self.file_size = response.get('fileSize', 0)
+        self.announcements = []
+        for announcement in response.get('announcements', []):
+            self.announcements.append(Announcement(parent=self.org, **announcement))
+        return self.__getattribute__(item)
+
+    def refresh(self) -> bool:
+        """ Refresh the Playlist details from the API.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        response = webex_api_call('get', f"v1/telephony/config/announcements/playlists/{self.id}",
+                                  params={'orgId': self.org.id})
+        self.file_size = response.get('fileSize', 0)
+        self.file_count = response.get('fileCount', 0)
+        self.last_updated = response.get('lastUpdated', '')
+        self.in_use = response.get('isInUse', False)
+        self.location_count = response.get('locationCount', 0)
+        self.announcements = []
+        for announcement in response.get('announcements', []):
+            self.announcements.append(Announcement(parent=self.org, **announcement))
+        return True
+
+    def delete(self) -> bool:
+        """ Delete the Playlist
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        webex_api_call('delete', f"v1/telephony/config/announcements/playlists/{self.id}",
+                       params={'orgId': self.org.id})
+        return True
+
+    def replace_announcements(self, announcements: list[Announcement]) -> bool:
+        """ Replace the announcements in the Playlist with the given list of Announcements.
+
+        Args:
+            announcements (list[Announcement]): The list of Announcements to replace the announcements in the
+                Playlist with.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'announcementIds': []}
+        for announcement in announcements:
+            payload['announcementIds'].append(announcement.id)
+        webex_api_call('put', f"v1/telephony/config/announcements/playlists/{self.id}",
+                       params={'orgId': self.org.id},
+                       payload=payload)
+        self.refresh()
+        return True
+
+    @property
+    def locations(self) -> list[wxcadm.Location]:
+        """ The list of Locations the Playlist is associated with """
+        log.debug(f"Getting locations for Playlist: {self.id}")
+        response = webex_api_call('get', f"v1/telephony/config/announcements/playlists/{self.id}/locations",
+                                  params={'orgId': self.org.id})
+        locations = []
+        for location in response['locations']:
+            if location['playlistId'] == self.id:
+                locations.append(wxcadm.Location(parent=self.org, **location))
+        return locations
+
+    def assign_to_location(self, location: wxcadm.Location) -> bool:
+        """ Assign the Playlist to the given Location
+
+        Args:
+             location (Location): The Location to assign the Playlist to
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'locationIds': []}
+        current_locations = self.locations
+        for current_loc in current_locations:
+            payload['locationIds'].append(current_loc.id)
+        payload['locationIds'].append(location.id)
+
+        webex_api_call('put', f"v1/telephony/config/announcements/playlists/{self.id}",
+                       params={'orgId': self.org.id},
+                       payload=payload)
+        self.refresh()
+        return True
+
+
+class PlaylistList(UserList):
+    def __init__(self, parent: wxcadm.Org):
+        super().__init__()
+        self.parent: wxcadm.Org = parent
+        self.data: list = self._get_data()
+
+    def _get_data(self) -> list:
+        response = webex_api_call('get', f"v1/telephony/config/announcements/playlists",
+                                  params={'orgId': self.parent.id})
+        log.debug(f"Response: {response}")
+        data = []
+        for item in response['playlists']:
+            item['org'] = self.parent
+            data.append(Playlist.from_dict(item))
+        return data
+
+    def get(self, id: str = '', name: str ='') -> Playlist | None:
+        """ Get a :class:`Playlist` by ID or Name
+
+        Args:
+            id (str, optional): The ID of the Playlist
+            name (str, optional): The Name of the Playlist
+
+        Returns:
+            Playlist: The matching :class:`Playlist`
+            None: If no Playlist was found
+
+        """
+        for playlist in self.data:
+            if id != '' and playlist.id == id:
+                return playlist
+            if name != '' and playlist.name == name:
+                return playlist
+        return None
+
+    def create(self, name: str, announcements: list[Announcement]) -> Playlist:
+        """ Create a new Playlist
+
+        Args:
+            name (str): The name of the Playlist
+            announcements (list[Announcement]): A list of :class:`Announcement` instances to associate with the Playlist
+
+        Returns:
+            Playlist: The created Playlist
+
+        """
+        log.info(f"Creating Playlist: {name}")
+        payload = {'name': name,
+                   'announcementIds': []}
+        for announcement in announcements:
+            payload['announcementIds'].append(announcement.id)
+        response = webex_api_call('post', f"v1/telephony/config/announcements/playlists",
+                              payload=payload,
+                              params={'orgId': self.parent.id})
+        new_playlist_info = webex_api_call('get', f"v1/telephony/config/announcements/playlists/{response['id']}",
+                                           params={'orgId': self.parent.id})
+        new_playlist_info['org'] = self.parent
+        log.debug(f"Response: {new_playlist_info}")
+        this_playlist = Playlist.from_dict(new_playlist_info)
+        self.data.append(this_playlist)
+        return this_playlist
+
+

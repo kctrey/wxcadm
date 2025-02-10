@@ -5,6 +5,7 @@ What's New
 
 v4.4.1
 ------
+- Playlists are now supported via :attr:`Org.playlists <.org.Org.playlists>`. This returns a :class:`PlaylistList <.announcements.PlaylistLists>` with :class:`Playlist <.announcements.Playlist>` entries
 - BUG FIX: Adding a PhoneOS (i.e. 9800) phone to a Person or Workspace by MAC address would throw an exception due to the "empty" API response from Webex. Now, the device is found with a second API call and returned, although with limited functionality
 - Added :meth:`AnnouncementList.get() <.announcements.AnnouncementList.get()>` to allow Announcements to be retrieved. Especially handy for the new Playlist functionality
 - Added :meth:`DeviceList.get_by_status() <.device.DeviceList.get_by_status()>` to allow devices to be retrieved by their connection status
