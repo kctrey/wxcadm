@@ -12,7 +12,7 @@ from .common import *
 from .exceptions import *
 from .device import DeviceList
 from .monitoring import MonitoringList
-
+from .models import BargeInSettings
 
 class WorkspaceLocationList(UserList):
     def __init__(self, parent: wxcadm.Org):
@@ -168,6 +168,14 @@ class WorkspaceList(UserList):
                 wxc_workspaces.append(entry)
         return wxc_workspaces
 
+    def professional(self) -> list:
+        """ Return a list of Workspaces that have a Professional license """
+        wxc_workspaces = []
+        for entry in self.data:
+            if entry.calling.lower() == 'webexcalling' and entry.license_type.lower() == 'professional':
+                wxc_workspaces.append(entry)
+        return wxc_workspaces
+
     def create(self, location: wxcadm.Location,
                name: str,
                floor: Optional[WorkspaceLocationFloor] = None,
@@ -308,6 +316,7 @@ class Workspace:
         self._numbers: Optional[dict] = None
         self._devices: Optional[DeviceList] = None
         self._monitoring: Optional[dict] = None
+        self._barge_in: Optional[BargeInSettings] = None
 
 
         if config:
@@ -365,6 +374,18 @@ class Workspace:
             return num_list
         else:
             return None
+
+    @property
+    def barge_in(self):
+        if self._barge_in is None:
+            try:
+                response = webex_api_call('get', f"v1/telephony/config/workspaces/{self.id}/bargeIn",
+                                          params={'orgId': self.org_id})
+                response['parent'] = self
+                self._barge_in = BargeInSettings.from_dict(response)
+            except wxcadm.exceptions.APIError:
+                return None
+        return self._barge_in
 
     @property
     def esn(self):

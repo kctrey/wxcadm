@@ -5,6 +5,9 @@ What's New
 
 v4.4.2
 ------
+- :class:`BargeInSettings <.models.BargeInSettings>` supports :meth:`~.models.BargeInSettings.set_enabled()` and :meth:`~.models.BargeInSettings.set_tone_enabled()` to configure the values
+- Barge-In settings for :class:`Person` and :class:`Workspace` have been modernized to a :class:`BargeInSettings <.models.BargeInSettings>` class available via :attr:`Person.barge_in <.person.Person.barge_in>` and :attr:`Workspace.barge_in <.workspace.Workspace.barge_in>`. The old :meth:`Person.get_barge_in()` and :meth:`Person.push_barge_in()` have been deprecated and will be removed in 4.5.0.
+- Professional Workspaces can now be listed directly with :meth:`WorkspaceList.professional() <.workspace.WorkspaceList.professional()>`
 - BUG FIX: When a Person was synced from Entra ID with an existing phone number, the :meth:`Person.assign_wxc()` would fail if the phone number from Entra ID matched the existing number. The entire `assign_wxc()` was refactored to use the API endpoint directly rather than calling :meth:`Person.update_person()`
 
 v4.4.1

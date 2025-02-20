@@ -14,6 +14,7 @@ from .xsi import XSI
 from .device import DeviceList
 from .location import Location
 from .monitoring import MonitoringList
+from .models import BargeInSettings
 
 from wxcadm import log
 
@@ -303,8 +304,6 @@ class Person:
         '''Dictionary of the VM config as returned by Webex API with :meth:`get_vm_config()`'''
         self.call_recording: dict = {}
         """Dictionary of the Recording config as returned by Webex API with :meth:`get_call_recording()`"""
-        self.barge_in: dict = {}
-        """Dictionary of Barge-In config as returned by Webex API with :meth:`get_barge_in`"""
         self.call_forwarding: dict = {}
         """Dictionary of the Call Forwarding config as returned by Webex API 
         with :meth:`get_call_forwarding()`"""
@@ -354,6 +353,7 @@ class Person:
         """ The current presence status of the Person """
         self._devices: Optional[DeviceList] = None
         self._monitoring: Optional[MonitoringList] = None
+        self._barge_in: Optional[BargeInSettings] = None
 
         # API-related attributes
         self._headers = parent._headers
@@ -681,18 +681,44 @@ class Person:
         self.call_forwarding = self.__get_webex_data(f"v1/people/{self.id}/features/callForwarding")
         return self.call_forwarding
 
+    @property
+    def barge_in(self) -> Optional[BargeInSettings]:
+        """ The Barge-In config for the Person
+
+        Returns:
+            BargeInSettings: The Barge-In config for the Person instance
+
+        """
+        log.info(f"Getting Barge-In config for {self.email}")
+        if self._barge_in is None:
+            response = webex_api_call('get', f"v1/people/{self.id}/features/bargeIn",
+                                      params={'orgId': self.org_id})
+            if isinstance(response, dict):
+                response['parent'] = self
+                self._barge_in = BargeInSettings.from_dict(response)
+            else:
+                log.warning(f"The Barge-In settings for {self.email} is not a JSON data.")
+                self._barge_in = None
+        return self._barge_in
+
     def get_barge_in(self):
         """Get the Barge-In config for the Person
+
+        .. deprecated:: 4.4.2
+            Use :attr:`Person.barge_in` instead.
 
         Returns:
             dict: The Barge-In config for the Person instance
         """
         log.info(f"Getting Barge-In config for {self.email}")
-        self.barge_in = self.__get_webex_data(f"v1/people/{self.id}/features/bargeIn")
-        return self.barge_in
+        response = self.__get_webex_data(f"v1/people/{self.id}/features/bargeIn")
+        return response
 
     def push_barge_in(self, config: dict):
         """ Push the Barge-In config to Webex
+
+        .. deprecated:: 4.4.2
+            Use :meth:`Person.barge_in.set_enabled()` instead
 
         Returns:
             bool: True on success, False otherwise
@@ -1970,3 +1996,6 @@ class UserGroup:
             return True
         else:
             return False
+
+
+

@@ -7,7 +7,6 @@ log.setLevel(logging.DEBUG)
 log.addHandler(logging.NullHandler())
 
 from .webex import Webex
-from .models import *
 from .org import Org
 from .xsi import XSIEvents, Call, XSI, XSICallQueue
 from .redsky import RedSky
@@ -40,3 +39,5 @@ from .virtual_line import *
 from .webhooks import *
 from .workspace import *
 from .pstn import *
+from .models import *
+
