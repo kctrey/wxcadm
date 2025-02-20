@@ -12,6 +12,7 @@ class TestXSI(unittest.TestCase):
     def setUpClass(cls) -> None:
         load_dotenv()
         cls.access_token = os.getenv("WEBEX_ACCESS_TOKEN")
+        cls.token_type = os.getenv("WEBEX_TOKEN_TYPE")
         if not cls.access_token:
             print("No WEBEX_ACCESS_TOKEN found. Cannot continue.")
             exit(1)
@@ -29,6 +30,8 @@ class TestXSI(unittest.TestCase):
         if self.xsi_capable is False:
             self.skipTest("Not an XSI Token")
         with self.subTest("My Profile"):
+            if self.token_type.upper() == 'SERVICE':
+                self.skipTest("Service Token cannot access own XSI Profile")
             me = self.webex.me
             me.start_xsi()
             my_profile = me.xsi.profile
@@ -83,8 +86,12 @@ class TestXSI(unittest.TestCase):
     def test_directory_all(self):
         if self.xsi_capable is False:
             self.skipTest("Not an XSI Token")
-        me = self.webex.me
-        self.assertIsInstance(me, wxcadm.person.Me)
+        if self.token_type.upper() == 'SERVICE':
+            me = choice(self.webex.org.people.webex_calling())
+            self.assertIsInstance(me, wxcadm.person.Person)
+        else:
+            me = self.webex.me
+            self.assertIsInstance(me, wxcadm.person.Me)
         me.start_xsi()
         with self.subTest('Full Directory'):
             directory = me.xsi.directory()
