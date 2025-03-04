@@ -333,14 +333,14 @@ class Location:
                                   params={'orgId': self.org_id})
         return response
 
-    def set_ecbn(self, value: Union[str, wxcadm.Person, wxcadm.Workspace, wxcadm.VirtualLine]) -> bool:
+    def set_ecbn(self, value: Union[str, wxcadm.Person, wxcadm.Workspace, wxcadm.VirtualLine, wxcadm.HuntGroup]) -> bool:
         """ Set the ECBN of the Location
 
-        Valid values are ``'location'``, or a :class:`Person`, :class:`Workspace`, or :class:`VirtualLine` to set the
-        ECBN to one of those.
+        Valid values are ``'location'``, or a :class:`Person`, :class:`Workspace`, :class:`VirtualLine`, or
+        :class:`HuntGroup` to set the ECBN to one of those.
 
         Args:
-            value (str, Person, Workspace, VirtualLine): The value to set the ECBN to
+            value (str, Person, Workspace, VirtualLine, HuntGroup): The value to set the ECBN to
 
         Returns:
             bool: True on success
@@ -348,6 +348,7 @@ class Location:
         """
         if isinstance(value, wxcadm.Person) or \
                 isinstance(value, wxcadm.Workspace) or \
+                isinstance(value, wxcadm.HuntGroup) or \
                 isinstance(value, wxcadm.VirtualLine):
             payload = {
                 'selected': 'LOCATION_MEMBER_NUMBER',

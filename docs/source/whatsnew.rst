@@ -5,6 +5,10 @@ What's New
 
 v4.4.2
 ------
+- New :class:`.person.ApplicationLine` available via :attr:`ApplicationLineAssignments.lines <.person.ApplicationLineAssignments.lines>`
+- New :class:`~.person.ApplicationLineAssignments` available via :attr:`ApplicationServicesSettings.line_assignments <.person.ApplicationServicesSettings.line_assignments>`
+- New :class:`~.person.ApplicationServicesSettings` available via :attr:`Person.applications <.person.Person.applications>`
+- :meth:`Location.set_ecbn() <.location.Location.set_ecbn()>` now accepts a :class:`HuntGroup`
 - :class:`BargeInSettings <.models.BargeInSettings>` supports :meth:`~.models.BargeInSettings.set_enabled()` and :meth:`~.models.BargeInSettings.set_tone_enabled()` to configure the values
 - Barge-In settings for :class:`Person` and :class:`Workspace` have been modernized to a :class:`BargeInSettings <.models.BargeInSettings>` class available via :attr:`Person.barge_in <.person.Person.barge_in>` and :attr:`Workspace.barge_in <.workspace.Workspace.barge_in>`. The old :meth:`Person.get_barge_in()` and :meth:`Person.push_barge_in()` have been deprecated and will be removed in 4.5.0.
 - Professional Workspaces can now be listed directly with :meth:`WorkspaceList.professional() <.workspace.WorkspaceList.professional()>`

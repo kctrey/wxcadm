@@ -301,9 +301,10 @@ class Recording:
     @property
     def url(self) -> str:
         """ The URL to download the recording """
-        download = self.details.get('temporaryDirectDownloadLinks', self._get_details()['temporaryDirectDownloadLinks'])
+        download = self.details.get('temporaryDirectDownloadLinks',
+                                    self._get_details().get('temporaryDirectDownloadLinks', None))
         log.debug(download)
-        return download['audioDownloadLink']
+        return download.get('audioDownloadLink', None)
 
     @property
     def transcript_url(self) -> str:

@@ -6,6 +6,7 @@ import base64
 import os
 from typing import Optional, Union
 from dataclasses import dataclass, field
+from dataclasses_json import dataclass_json, config
 from collections import UserList
 
 import wxcadm.exceptions
@@ -354,6 +355,8 @@ class Person:
         self._devices: Optional[DeviceList] = None
         self._monitoring: Optional[MonitoringList] = None
         self._barge_in: Optional[BargeInSettings] = None
+        self._applications: Optional[ApplicationServicesSettings] = None
+        # TODO: Preferred answer endpoint
 
         # API-related attributes
         self._headers = parent._headers
@@ -1720,6 +1723,15 @@ class Person:
                                   params={'orgId': self.org_id}, payload=payload)
         return response
 
+    @property
+    def applications(self) -> ApplicationServicesSettings:
+        """ The Application Services Settings for the Person """
+        if self._applications is None:
+            response = webex_api_call('get', f"v1/people/{self.id}/features/applications")
+            response['parent'] = self
+            self._applications = ApplicationServicesSettings.from_dict(response)
+        return self._applications
+
 
 class Me(Person):
     """ The class representing the token owner. Some methods are only available at an owner scope. """
@@ -1997,5 +2009,363 @@ class UserGroup:
         else:
             return False
 
+@dataclass_json
+@dataclass
+class ApplicationServicesSettings:
+    parent: wxcadm.Person = field(repr=False)
+    ring_devices_for_click_to_dial: bool = field(metadata=config(field_name='ringDevicesForClickToDialCallsEnabled'))
+    """ When True, indicates to ring devices for outbound Click to Dial calls. """
+    ring_devices_for_group_page: bool = field(metadata=config(field_name='ringDevicesForGroupPageEnabled'))
+    """ When True, indicates to ring devices for inbound Group Pages. """
+    ring_devices_for_call_park: bool = field(metadata=config(field_name='ringDevicesForCallParkEnabled'))
+    """ When true, indicates to ring devices for Call Park recalled. """
+    browser_client_enabled: bool = field(metadata=config(field_name='browserClientEnabled'))
+    """ If True, the browser Webex Calling application is enabled for use. """
+    desktop_client_enabled: bool = field(metadata=config(field_name='desktopClientEnabled'))
+    """ If True, indicates to desktop WebEx Calling application is enabled. """
+    tablet_client_enabled: bool = field(metadata=config(field_name='tabletClientEnabled'))
+    """ If True, indicates to tablet Webex Calling application is enabled. """
+    mobile_client_enabled: bool = field(metadata=config(field_name='mobileClientEnabled'))
+    """ If True, indicates to mobile Webex Calling application is enabled. """
+    available_line_count: int = field(metadata=config(field_name='availableLineCount'))
+    """ Number of available devices licenses for assigning devices or apps """
+    browser_client_id: Optional[str] = field(metadata=config(field_name='browserClientId'), default=None)
+    """ The Device ID of the WebRTC browser client. None if the client is not enabled. """
+    desktop_client_id: Optional[str] = field(metadata=config(field_name='desktopClientId'), default=None)
+    """ The Device ID of the desktop Webex client. None if the client is not enabled. """
 
+    @property
+    def line_assignments(self) -> Optional[ApplicationLineAssignments]:
+        """ The :py:class:`ApplicationLineAssignments` instance for the applications """
+        if self.desktop_client_id is None:
+            return None
+        else:
+            return ApplicationLineAssignments(self.parent, self.desktop_client_id)
+
+    def set_ring_devices_for_click_to_dial(self, enabled: bool):
+        """ Set the `ring_devices_for_click_to_dial` value
+
+        Args:
+            enabled (bool): True for enabled, False for disabled
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {"ringDevicesForClickToDialCallsEnabled": enabled}
+        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
+                       payload=payload, params={'orgId': self.parent.org_id})
+        self.ring_devices_for_click_to_dial = enabled
+        return True
+
+    def set_ring_devices_for_group_page(self, enabled: bool):
+        """ Set the `ring_devices_for_group_page` value
+
+        Args:
+            enabled (bool): True for enabled, False for disabled
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {"ringDevicesForGroupPageEnabled": enabled}
+        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
+                       payload=payload, params={'orgId': self.parent.org_id})
+        self.ring_devices_for_group_page = enabled
+        return True
+
+    def set_ring_devices_for_call_park(self, enabled: bool):
+        """ Set the `ring_devices_for_call_park` value
+
+        Args:
+            enabled (bool): True for enabled, False for disabled
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {"ringDevicesForCallParkEnabled": enabled}
+        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
+                       payload=payload, params={'orgId': self.parent.org_id})
+        self.ring_devices_for_call_park = enabled
+        return True
+
+    def set_browser_client_enabled(self, enabled: bool):
+        """ Set the `browser_client_enabled` value
+
+        Args:
+            enabled (bool): True for enabled, False for disabled
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {"browserClientEnabled": enabled}
+        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
+                       payload=payload, params={'orgId': self.parent.org_id})
+        self.browser_client_enabled = enabled
+        return True
+
+    def set_desktop_client_enabled(self, enabled: bool):
+        """ Set the `desktop_client_enabled` value
+
+        Args:
+            enabled (bool): True for enabled, False for disabled
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {"desktopClientEnabled": enabled}
+        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
+                       payload=payload, params={'orgId': self.parent.org_id})
+        self.desktop_client_enabled = enabled
+        return True
+
+    def set_tablet_client_enabled(self, enabled: bool):
+        """ Set the `tablet_client_enabled` value
+
+        Args:
+            enabled (bool): True for enabled, False for disabled
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {"tabletClientEnabled": enabled}
+        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
+                       payload=payload, params={'orgId': self.parent.org_id})
+        self.tablet_client_enabled = enabled
+        return True
+
+    def set_mobile_client_enabled(self, enabled: bool):
+        """ Set the `mobile_client_enabled` value
+
+        Args:
+            enabled (bool): True for enabled, False for disabled
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {"mobileClientEnabled": enabled}
+        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
+                       payload=payload, params={'orgId': self.parent.org_id})
+        self.mobile_client_enabled = enabled
+        return True
+
+class ApplicationLineAssignments:
+    def __init__(self, person: wxcadm.Person, client_id: str):
+        log.info("Initializing ApplicationLineAssignments")
+        self.parent: wxcadm.Person = person
+        self.client_id: str = client_id
+        self.lines = []
+
+        response = webex_api_call(
+            'get',
+            f'v1/telephony/config/people/{self.parent.id}/applications/{self.client_id}/members',
+            params={'orgId': self.parent.org_id}
+        )
+        log.debug(response)
+        self.model = response.get('model', 'Unknown')
+        """ The name of the application """
+        self.max_line_count: int = response.get('maxLineCount', 0)
+        """ The maximum number of device ports """
+        for member in response.get('members', []):
+            # Add the parent Person so the Member has access to it
+            member['parent'] = self
+            member['person'] = self.parent
+            self.lines.append(ApplicationLine.from_dict(member))
+
+    def get(self, line_owner: Union[wxcadm.Person, wxcadm.VirtualLine, wxcadm.Workspace]) -> Optional[ApplicationLine]:
+        """ Get the :class:`ApplicationLine` for the given Person, VirtualLine or Workspace
+
+        Args:
+            line_owner (Person, VirtualLine, Workspace): The owner to get the line for
+
+        Returns:
+            ApplicationLine: The :class:`ApplicationLine` for the given Person, VirtualLine or Workspace
+            None: Returned when there is no associated line
+
+        """
+        for line in self.lines:
+            if line.line_owner == line_owner:
+                return line
+        return None
+
+    def _last_port(self) -> int:
+        last_port = 1
+        for line in self.lines:
+            if line.port > last_port:
+                last_port = line.port
+        return int(last_port)
+
+    def add(self, line_owner: Union[wxcadm.Person, wxcadm.VirtualLine, wxcadm.Workspace]) -> ApplicationLine:
+        """ Add the selected owner to the list of lines for this Person
+
+        .. note::
+            New lines are added to the end of the lines list with default values for Call Decline, Hotline, and the
+            Line Label. If you want to alter any of those after the line has been added, call those methods directly
+            from the :class:`ApplicationLine` object returned by this method.
+
+        Args:
+            line_owner (Person, VirtualLine, Workspace): The owner whose line to add
+
+        Returns:
+            ApplicationLine: The :class:`ApplicationLine` for the given Person, VirtualLine or Workspace
+
+        """
+        new_line = ApplicationLine(
+            parent=self,
+            person=self.parent,
+            port=int(self._last_port()) + 1,
+            line_type='SHARED_CALL_APPEARANCE',
+            id=line_owner.id,
+            num_lines=1,
+            hotline_enabled=False,
+            allow_call_decline=False,
+            line_label=None,
+            primary_owner=False,
+            member_type='NEW'
+        )
+        self.lines.append(new_line)
+        new_line._put_members()
+        return new_line
+
+
+@dataclass_json
+@dataclass
+class ApplicationLine:
+    parent: ApplicationLineAssignments = field(repr=False, metadata=config(exclude=lambda t: True))
+    person: wxcadm.Person = field(repr=False, metadata=config(exclude=lambda t: True))
+    port: int
+    """ The port the member occupies """
+    member_type: str = field(metadata=config(field_name='memberType', exclude=lambda t: True))
+    """ The type of the member """
+    id: str
+    """ The ID of the member """
+    line_type: str = field(metadata=config(field_name='lineType'))
+    """ The line type """
+    primary_owner: bool = field(metadata=config(field_name='primaryOwner'))
+    """ Whether the Person is the primary owner of the line """
+    num_lines: int = field(metadata=config(field_name='lineWeight'))
+    """ The number of lines consumed by the member """
+    hotline_enabled: bool = field(metadata=config(field_name='hotlineEnabled'))
+    """ Whether hotline functionality is enabled """
+    allow_call_decline: bool = field(metadata=config(field_name='allowCallDeclineEnabled'))
+    """
+    Set how a device behaves when a call is declined. When set to true, a call decline request is extended to all the
+    endpoints on the device. When set to false, a call decline request is only declined at the current endpoint.
+    """
+    line_label: Optional[str] = field(metadata=config(field_name='lineLabel'), default=None)
+    """ The line label to display """
+    hotline_destination: Optional[bool] = field(metadata=config(field_name='hotlineDestination'), default=None)
+    """ Where the hotline is routed to """
+    line_owner: Union[wxcadm.Person, wxcadm.Workspace, wxcadm.VirtualLine, None] = field(
+        default=None,
+        metadata=config(exclude=lambda t: True)
+    )
+
+    def __post_init__(self):
+        if self.member_type.upper() == 'PEOPLE' or isinstance(self.line_owner, wxcadm.Person):
+            self.line_owner = self.person._parent.people.get(id=self.id)
+        elif self.member_type.upper() == 'VIRTUAL_LINE' or isinstance(self.line_owner, wxcadm.VirtualLine):
+            self.line_owner = self.person._parent.virtual_lines.get(id=self.id)
+        elif self.member_type.upper() == 'PLACE' or isinstance(self.line_owner, wxcadm.Workspace):
+            self.line_owner = self.person._parent.workspaces.get(id=self.id)
+
+    def _put_members(self) -> bool:
+        payload = {
+            'members': []
+        }
+        for line in self.parent.lines:
+            payload['members'].append(line.to_dict())
+
+        webex_api_call(
+            'put',
+            f'v1/telephony/config/people/{self.person.id}/applications/{self.parent.client_id}/members',
+            payload=payload,
+            params={'orgId': self.person.org_id}
+        )
+
+        return True
+
+
+    def set_hotline(self, enabled: bool, destination: Optional[bool] = None) -> bool:
+        """ Enable or disable hotline functionality for this line
+
+        Args:
+            enabled (bool): True for enabled, False for disabled
+            destination (bool, optional): Where the hotline is routed to. Required when enabling hotline
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        if enabled is True:
+            if destination is None:
+                raise ValueError('Hotline destination cannot be None')
+            else:
+                self.hotline_enabled = True
+                self.hotline_destination = destination
+        else:
+            self.hotline_enabled = False
+            self.hotline_destination = None
+
+        self._put_members()
+        return True
+
+    def set_call_decline(self, enabled: bool) -> bool:
+        """ Enable or disable the ability to decline calls across all devices
+
+        Args:
+            enabled (bool): True for enabled, False for disabled
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        if enabled is True:
+            self.allow_call_decline = True
+        else:
+            self.allow_call_decline = False
+        self._put_members()
+        return True
+
+    def set_label(self, label: str | None) -> bool:
+        """ Set the line label for the line
+
+        Args:
+            label (str, None): The line label to display. If None is sent, the line will use the default label
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        self.line_label = label
+        self._put_members()
+        return True
+
+    def delete(self) -> bool:
+        """ Delete this line assignment from the user
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {
+            'members': []
+        }
+        for line in self.parent.lines:
+            if line.id != self.id:
+                payload['members'].append(line.to_dict())
+
+        webex_api_call(
+            'put',
+            f'v1/telephony/config/people/{self.person.id}/applications/{self.parent.client_id}/members',
+            payload=payload,
+            params={'orgId': self.person.org_id}
+        )
+
+        return True
 
