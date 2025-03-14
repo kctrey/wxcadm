@@ -25,7 +25,8 @@ class Webex:
                  client_secret: Optional[str] = None,
                  refresh_token: Optional[str] = None,
                  org_id: Optional[str] = None,
-                 auto_refresh_token: bool = False
+                 auto_refresh_token: bool = False,
+                 read_only: bool = False,
                  ) -> None:
         """Initialize a Webex instance to communicate with Webex and store data
 
@@ -60,6 +61,7 @@ class Webex:
                 requires the ``client_id``, ``client_secret`` and ``refresh_token`` to be provided when the
                 :class:`Webex` instance is created, as those values are needed by the refresh process. **This feature
                 is still in development and should not be used until this warning is removed**
+            read_only (bool, optional): Set to True if the token has only read access. Defaults to False.
 
         Returns:
             Webex: The Webex instance
@@ -78,6 +80,9 @@ class Webex:
 
         # Fast Mode flag when needed
         self._fast_mode = fast_mode
+
+        # Set Read Only mode
+        self._read_only = read_only
 
         # Instance attrs
         self.client_id = client_id
@@ -100,25 +105,35 @@ class Webex:
         the first or selected Org.
         """
         self._me: Optional[Type[Me]] = None
-        # Get the orgs that this token can manage
-        log.debug(f"Making API call to v1/organizations")
-        r = requests.get(_url_base + "v1/organizations", headers=self._headers)
-        # Handle invalid access token
-        if r.status_code != 200:
-            log.critical("The Access Token was not accepted by Webex")
-            log.debug(f"Response: {r.text}")
-            raise TokenError("The Access Token was not accepted by Webex")
-        response = r.json()
-        # Handle when no Orgs are returned. This is pretty rare
-        if len(response['items']) == 0:
-            log.warning("No Orgs were returned by the Webex API")
-            raise OrgError
-
-        orgs = response['items']
-        for org in orgs:
-            log.debug(f"Processing org: {org['displayName']}")
-            this_org = Org(name=org['displayName'], id=org['id'], parent=self, xsi=False)
+        if self._read_only is True:
+            # We can't call /v1/organizations on a read-only token, so we have to get it from somewhere else
+            log.info("Using token Org as Org ID")
+            response = webex_api_call('get', 'v1/people/me')
+            log.debug(response)
+            org_id = response['orgId']
+            this_org = Org(name="My Organization", id=org_id, parent=self, xsi=False)
             self.orgs.append(this_org)
+        else:
+            # Get the orgs that this token can manage
+            log.debug(f"Making API call to v1/organizations")
+            r = requests.get(_url_base + "v1/organizations", headers=self._headers)
+            # Handle invalid access token
+            if r.status_code != 200:
+                log.critical("The Access Token was not accepted by Webex")
+                log.debug(f"Response: {r.text}")
+                raise TokenError("The Access Token was not accepted by Webex")
+            response = r.json()
+            # Handle when no Orgs are returned. This is pretty rare
+            if len(response['items']) == 0:
+                log.warning("No Orgs were returned by the Webex API")
+                raise OrgError
+
+            orgs = response['items']
+            for org in orgs:
+                log.debug(f"Processing org: {org['displayName']}")
+                this_org = Org(name=org['displayName'], id=org['id'], parent=self, xsi=False)
+                self.orgs.append(this_org)
+
         if org_id is not None:
             log.info(f"Setting Org ID {org_id} as default Org")
             self.org = self.get_org_by_id(org_id)
