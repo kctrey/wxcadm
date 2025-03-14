@@ -12,7 +12,7 @@ from collections import UserList
 import wxcadm.exceptions
 from .common import *
 from .xsi import XSI
-from .device import DeviceList
+from .device import DeviceList, Device
 from .location import Location
 from .monitoring import MonitoringList
 from .models import BargeInSettings
@@ -356,7 +356,8 @@ class Person:
         self._monitoring: Optional[MonitoringList] = None
         self._barge_in: Optional[BargeInSettings] = None
         self._applications: Optional[ApplicationServicesSettings] = None
-        # TODO: Preferred answer endpoint
+        self._preferred_answer_endpoint: Optional[dict] = None
+        self._available_answer_endpoints: Optional[list[dict]] = None
 
         # API-related attributes
         self._headers = parent._headers
@@ -554,6 +555,83 @@ class Person:
     def unassign_wxc(self) -> bool:
 
         return True
+
+    def set_preferred_answer_endpoint(self, endpoint: Union[wxcadm.Device, str]) -> bool:
+        """ Set the Person's preferred answer endpoint.
+
+        The `endpoint` can be a :class:`~.device.Device` or a string, which is the ID of the device or application. Due
+        to a problem with the Webex API, Cisco 9800 devices (PhoneOS) do not currently work with this endpoint.
+
+        Args:
+            endpoint (Device, str): The :class:`~.device.Device` or string ID of the device
+
+        Returns:
+            bool: True on success, False if otherwise
+
+        """
+        if isinstance(endpoint, wxcadm.Device):
+            endpoint = endpoint.id
+        payload = {
+            'preferredAnswerEndpointId': endpoint
+        }
+        response = webex_api_call('put', f"v1/telephony/config/people/{self.id}/preferredAnswerEndpoint",
+                                  payload=payload, params={'orgId': self.org_id})
+
+        return response
+
+
+    @property
+    def preferred_answer_endpoint(self) -> Union[dict, None]:
+        """ Get the Preferred Answer Endpoint for this Person
+
+        .. note::
+            For now, this just returns the dict from Webex with no parsing.
+
+        Returns:
+            dict: The Preferred Answer Endpoint config for this Person
+
+        """
+        response = webex_api_call('get', f"v1/telephony/config/people/{self.id}/preferredAnswerEndpoint",
+                                  params={'orgId': self.org_id})
+        if response.get('preferredAnswerEndpointId', None) is not None:
+            if 'endpoints' in response.keys():
+                self._available_answer_endpoints = response['endpoints']
+            # If the ID is present, need to look through the availableEndpoints to find what the actual device is.
+            for endpoint in response['endpoints']:
+                if endpoint['id'] == response['preferredAnswerEndpointId']:
+                    return endpoint
+            return response['preferredAnswerEndpointId']
+        else:
+            return None
+
+    @property
+    def available_answer_endpoints(self) -> Optional[list[Union[Device, str]]]:
+        """ Get a list of Available Answer Endpoints for this Person
+
+        Returns:
+            list: A list of :class:`~.device.Device`s or User apps. None if there are no Available Answer Endpoints
+            for this Person
+
+        """
+        if self._available_answer_endpoints is None:
+            log.debug(f'Getting Available Answer Endpoints for Person {self.id}')
+            response = webex_api_call('get', f"v1/telephony/config/people/{self.id}/preferredAnswerEndpoint",
+                                      params={'orgId': self.org_id})
+            self._available_answer_endpoints = response.get('endpoints', None)
+        parsing_needed = all(isinstance(item, dict) for item in self._available_answer_endpoints)
+        if parsing_needed:
+            new_endpoints = []
+            for endpoint in self._available_answer_endpoints:
+                if endpoint['type'].upper() == 'DEVICE':
+                    this_device = self.devices.get(endpoint['id'])
+                    new_endpoints.append(this_device)
+                elif endpoint['type'].upper() == 'APPLICATION':
+                    this_application = endpoint['id']
+                    new_endpoints.append(this_application)
+                else:
+                    continue
+            self._available_answer_endpoints = new_endpoints
+        return self._available_answer_endpoints
 
     def start_xsi(self, get_profile: bool = False, cache: bool = False):
         """Starts an XSI session for the Person
