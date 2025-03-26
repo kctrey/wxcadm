@@ -617,6 +617,7 @@ class Person:
             log.debug(f'Getting Available Answer Endpoints for Person {self.id}')
             response = webex_api_call('get', f"v1/telephony/config/people/{self.id}/preferredAnswerEndpoint",
                                       params={'orgId': self.org_id})
+            log.debug(response)
             self._available_answer_endpoints = response.get('endpoints', None)
         parsing_needed = all(isinstance(item, dict) for item in self._available_answer_endpoints)
         if parsing_needed:
