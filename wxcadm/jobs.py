@@ -299,20 +299,16 @@ class UserMoveJobList(UserList):
                ):
         """ Create a User Move Job
 
-        .. note::
-
-            At this time, the API currently limits a User Move to a single user per job. The
-            API schema is written to support more, so it may be supported at some point, but for now, the `users` list
-            must contain only a single entry.
-
         Args:
             target_location (Location | str): A :class:`Location` instance or a string representing the Location ID to
                 move the numbers to
 
-            people (list[Person]): A list of :class:`Person` instances to move to the target Location
+            people (list[Person]): A list of :class:`Person` instances to move to the target Location. This is limited
+            to 100 users at a time.
 
-            validate_only (bool, optional): Whether to only perform the validation of the User Move, not actually move
-            the users. Defaults to False. False wll perform both a validation and create a User Move Job
+            validate_only (bool, optional): Whether to only perform the validation of the User Move of the first user,
+            not actually move the users. Defaults to False. False wll perform both a validation of the fist user and
+            create a User Move Job.
 
         Returns:
             UserMoveValidationResults: The Results of the validation for the User Move
@@ -321,6 +317,11 @@ class UserMoveJobList(UserList):
 
         """
         log.info(f"Creating User Move Job")
+        # Check to make sure we haven't been given >100 people
+        if len(people) > 100:
+            log.warn("No more than 100 people are allowed for the User Move Job")
+            raise ValueError("No more than 100 people are allowed for the User Move Job")
+
         if isinstance(target_location, wxcadm.Location):
             target_location_id = target_location.id
         else:
@@ -330,18 +331,34 @@ class UserMoveJobList(UserList):
         user_move_job = None
 
         # Build the payload for the move job validation
-        payload = {'usersList': []}
-        for person in people:
-            person_payload = {'locationId': target_location_id,
-                              'validate': True,
-                              'users': [{'userId': person.id, 'extension': person.extension}]}
-            payload['usersList'].append(person_payload)
+        # When there are more than one Person in the list, it only validates the first one
+        move_payload = {
+            "usersList": {
+                "locationId": target_location_id,
+                "validate": False,
+                "users": []
+            }
+        }
+
+        validation_payload = {
+            "usersList": {
+                "locationId": target_location_id,
+                "validate": True,
+                "users": []
+            }
+        }
+
+        for index, person in enumerate(people):
+            person_payload = {'userId': person.id, 'extension': person.extension}
+            move_payload['usersList']['users'].append(person_payload)
+            if index == 0:
+                validation_payload['usersList']['users'].append(person_payload)
 
         validation_results = UserMoveValidationResults()
         try:
             response = wxcadm.webex_api_call('post', 'v1/telephony/config/jobs/person/moveLocation',
                                              params={'orgId': self.parent.id},
-                                             payload=payload)
+                                             payload=validation_payload)
         except wxcadm.exceptions.APIError as e:
             log.debug(f"Webex returned an error to Number Move Validation: {e}")
 
@@ -359,11 +376,10 @@ class UserMoveJobList(UserList):
         # Create the job if the validation worked and if we weren't asked to only validate
         if validation_results.passed is True and validate_only is not True:
             log.debug(f"Validation passed and Move requested. Creating UserMoveJob call.")
-            payload['usersList'][0]['validate'] = False
             try:
                 response = wxcadm.webex_api_call('post', 'v1/telephony/config/jobs/person/moveLocation',
                                                  params={'orgId': self.parent.id},
-                                                 payload=payload)
+                                                 payload=move_payload)
             except wxcadm.exceptions.APIError as e:
                 log.debug(f"Webex returned an error to Number Move Validation: {str(e)}")
             else:

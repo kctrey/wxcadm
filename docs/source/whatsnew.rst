@@ -5,6 +5,7 @@ What's New
 
 v4.4.2
 ------
+- User Move Jobs now support up to 100 users/people at a time.
 - The :class:`~.person.Person` class now supports preferred answer endpoints and assignment of an endpoint
 - New :class:`.person.ApplicationLine` available via :attr:`ApplicationLineAssignments.lines <.person.ApplicationLineAssignments.lines>`
 - New :class:`~.person.ApplicationLineAssignments` available via :attr:`ApplicationServicesSettings.line_assignments <.person.ApplicationServicesSettings.line_assignments>`
