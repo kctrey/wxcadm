@@ -42,3 +42,10 @@ SupportedDevice
 .. autoclass:: wxcadm.device.SupportedDevice
     :members:
     :undoc-members:
+
+DeviceLayout
+------------
+
+.. autoclass:: wxcadm.device.DeviceLayout
+    :members:
+
