@@ -3,6 +3,10 @@
 What's New
 ==========
 
+v4.4.3
+------
+- BUG FIX: wxcadm was requiring the wrong requests version. Updated to require >-2.31.0
+
 v4.4.2
 ------
 - User Move Jobs now support up to 100 users/people at a time.
