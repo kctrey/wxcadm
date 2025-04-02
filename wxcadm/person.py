@@ -396,7 +396,10 @@ class Person:
         self.licenses = data.get("licenses", [])
         for license in self.licenses:
             if license in self._parent.wxc_licenses:
-                self.wxc = True
+                # v4.4.4 Ensure Person has both license and assigned Location in order to be .wxc=True
+                if self.location != "":
+                    self.wxc = True
+
 
     def __str__(self):
         return f"{self.email},{self.display_name}"
@@ -548,6 +551,7 @@ class Person:
         success = webex_api_call('put', f"/v1/people/{self.id}", payload=payload,
                                  params={'orgId': self.org_id, 'callingData': True})
         if success:
+            self.wxc = True
             return True
         else:
             return False
