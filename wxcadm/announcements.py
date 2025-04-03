@@ -24,7 +24,9 @@ class AnnouncementList(UserList):
     def _get_announcements(self):
         log.debug("Getting announcements")
         annc_list = []
-        announcements = webex_api_call("get", "v1/telephony/config/announcements", params={'locationId': 'all'})
+        announcements = webex_api_call("get",
+                                       "v1/telephony/config/announcements",
+                                       params={'locationId': 'all', 'orgId': self.parent.org_id})
         for annc in announcements.get('announcements', []):
             this_annc = Announcement(parent=self.parent, **annc)
             annc_list.append(this_annc)
@@ -123,7 +125,9 @@ class AnnouncementList(UserList):
     def stats(self):
         """ The repository usage for announcements within the Org """
         log.debug("Getting stats")
-        response = webex_api_call("get", "v1/telephony/config/announcements/usage", params={"orgId": self.parent.id})
+        response = webex_api_call("get",
+                                  "v1/telephony/config/announcements/usage",
+                                  params={"orgId": self.parent.org_id})
         return response
 
     def upload(self, name: str, filename: str, location: str | wxcadm.Location = None):
@@ -166,6 +170,7 @@ class AnnouncementList(UserList):
 
         response = webex_api_call("post_upload",
                                   url,
+                                  params={'orgId': self.parent.org_id},
                                   payload=encoder)
 
         if must_close is True:
@@ -201,7 +206,7 @@ class Announcement:
         else:
             raise ValueError("Cannot determine Announcement level")
 
-        response = webex_api_call("get", url)
+        response = webex_api_call("get", url, payload={"orgId": self.parent.org_id})
         if response.get('featureReferences', None) is not None:
             for usage in response.get('featureReferences'):
                 item = {
@@ -253,7 +258,7 @@ class Announcement:
         else:
             raise ValueError("Cannot determine Announcement level")
 
-        response = webex_api_call("put_upload", url, payload=encoder)
+        response = webex_api_call("put_upload", url, payload=encoder, params={"orgId": self.parent.org_id})
 
         if must_close is True:
             content.close()
@@ -280,7 +285,7 @@ class Announcement:
         else:
             raise ValueError("Cannot determine Announcement level")
 
-        response = webex_api_call("delete", url)
+        response = webex_api_call("delete", url, params={"orgId": self.parent.org_id})
         log.debug(f"Response: {response}")
         return True
 

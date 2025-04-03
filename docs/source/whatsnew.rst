@@ -5,6 +5,7 @@ What's New
 
 v4.4.4
 ------
+- BUG FIX: Fixed Announcement uploads and GETs to pass ``'orgId'`` to allow it to be used across Orgs
 - BUG FIX: When a :class:`~.person.Person` has a Webex Calling license but no Location, they were still marked with an :attr:`wxc` attribute of True. This has been resolved to require both a license and a Location.
 
 v4.4.3
