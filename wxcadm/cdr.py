@@ -40,6 +40,10 @@ class LegPart:
         self.outcome: str = record['Call outcome']
         self.outcome_reason: str = record['Call outcome reason']
         self.ring_duration: str = record['Ring duration']
+        self.device_owner_uuid: str = record['Device owner UUID']
+        self.recording_platform: str = record['Call Recording Platform Name']
+        self.recording_result: str = record['Call Recording Result']
+        self.recording_trigger: str = record['Call Recording Trigger']
         try:
             self.device_mac: str = record['Device MAC']
         except KeyError:
@@ -370,6 +374,14 @@ class CallLeg:
         self.parts.append(part)
         return part
 
+    @property
+    def recorded(self) -> bool:
+        """ Whether the Call Leg was recorded """
+        recorded = False
+        for part in self.parts:
+            if part.recording_result.lower() == 'successful':
+                recorded = True
+        return recorded
 
 class Call:
     def __init__(self, correlation_id: str):
@@ -605,9 +617,17 @@ class CallDetailRecords:
         """ A list of Calls sorted by timestamp """
         return sorted(self.calls, key=lambda x: x.start_time, reverse=False)
 
-    def __user_finder(self, type: str, location_id: str, user_id: str) -> str:
+    def __user_finder(self, type: str, location_id: str = None, user_id: str = None) -> str:
         log.info(f"Finding User with type '{type}' and ID {user_id}")
-        if type == 'AutomatedAttendantVideo':
+        if type.lower() == 'user':
+            me = self.webex.org.people.get(uuid=user_id)
+            if me is not None:
+                log.debug(f"Found User with ID {user_id}")
+                return f"{user_id} ({me.display_name})"
+            else:
+                log.warning(f"Could not find User with ID {user_id}")
+                return user_id
+        elif type.lower() == 'automatedattendantvideo':
             me = self.webex.org.auto_attendants.get(uuid=user_id)
             if me is not None:
                 log.debug(f"Found match: {me.name}")
@@ -615,7 +635,7 @@ class CallDetailRecords:
             else:
                 log.warning("No User Match found")
                 return 'Auto Attendant'
-        elif type == 'CallCenterPremium':
+        elif type.lower() == 'callcenterpremium':
             me = self.webex.org.call_queues.get(uuid=user_id)
             if me is not None:
                 log.debug(f"Found match: {me.name}")
@@ -623,7 +643,7 @@ class CallDetailRecords:
             else:
                 log.warning("No User Match found")
                 return 'Call Queue'
-        elif type == 'Place':
+        elif type.lower() == 'place':
             me = self.webex.org.workspaces.get(uuid=user_id)
             if me is not None:
                 log.debug(f"Found match: {me.name}")

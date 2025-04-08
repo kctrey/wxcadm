@@ -75,7 +75,7 @@ class PersonList(UserList):
         return None
 
     def get(self, id: Optional[str] = None, email: Optional[str] = None, name: Optional[str] = None,
-            location: Optional[wxcadm.Location] = None):
+            location: Optional[wxcadm.Location] = None, uuid: Optional[str] = None) -> Optional[Person]:
         """ Get the :py:class:`Person` (or list) that matches the provided arguments
 
         This method was added after the :meth:`get_by_email()` and :meth:`get_by_id()` to match other List Classes.
@@ -88,6 +88,7 @@ class PersonList(UserList):
             email (str, optional): The email address of the Person
             name (str, optional): The Display Name of the Person
             location (Location, optional): Return people at the specified Location
+            uuid (str, optional): The Webex UUID of the Person. Used primarily for CDR correlation.
 
         Returns:
             Person: The :class:`Person` instance. None is returned if no match is found. If multiple matches are found
@@ -96,6 +97,12 @@ class PersonList(UserList):
         """
         if id is not None:
             return self.get_by_id(id)
+        if uuid is not None:
+            entry: Person
+            for entry in self.data:
+                if entry.spark_id.split('/')[-1] == uuid:
+                    return entry
+            return None
         if email is not None:
             return self.get_by_email(email)
         if name is not None:

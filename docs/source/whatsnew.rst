@@ -3,6 +3,11 @@
 What's New
 ==========
 
+v4.4.5
+------
+- Started prework to give the :class:`~.cdr.CallDetailRecords` more functionality
+- :meth:`PersonList.get() <.person.PersonList.get()>` now supports a ``'uuid'`` argument to find a Person by UUID, which is what is populated in CDRs
+
 v4.4.4
 ------
 - BUG FIX: Fixed Announcement uploads and GETs to pass ``'orgId'`` to allow it to be used across Orgs
