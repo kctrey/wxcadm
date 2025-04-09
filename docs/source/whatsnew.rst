@@ -5,6 +5,7 @@ What's New
 
 v4.4.5
 ------
+- Accessing :class:`~.recordings.Recording` attributes no longer "wastes" an API call if it already has the :attr:`Recording.details` dict from Webex
 - Started prework to give the :class:`~.cdr.CallDetailRecords` more functionality
 - :meth:`PersonList.get() <.person.PersonList.get()>` now supports a ``'uuid'`` argument to find a Person by UUID, which is what is populated in CDRs
 

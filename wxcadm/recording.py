@@ -275,22 +275,22 @@ class Recording:
         self.parent = parent
         self.id = id
         """ The Recording ID """
-        self.details: dict
+        self.details: dict = None
         """ The full details of the Recording from Webex """
         if details is None:
+            log.debug("Getting Recording Details from Webex")
             self.details = self._get_details()
         else:
             self.details = details
 
     def _get_details(self):
         params = {'timezone': self._timezone} if self._timezone else None
+        print("Running _get_details")
         response = webex_api_call('get', f'v1/convergedRecordings/{self.id}', params=params)
         return response
 
     def refresh(self) -> None:
         self.details = self._get_details()
-
-
 
     @property
     def status(self) -> str:
@@ -299,59 +299,60 @@ class Recording:
         return status
 
     @property
-    def url(self) -> str:
+    def temporary_download_links(self) -> dict:
+        """ The temporary download links dict of the Recording """
+        if 'temporaryDirectDownloadLinks' in self.details:
+            return self.details['temporaryDirectDownloadLinks']
+        else:
+            details = self._get_details()
+            return details.get('temporaryDirectDownloadLinks', None)
+
+    @property
+    def url(self) -> Optional[str]:
         """ The URL to download the recording """
-        download = self.details.get('temporaryDirectDownloadLinks',
-                                    self._get_details().get('temporaryDirectDownloadLinks', None))
-        log.debug(download)
-        return download.get('audioDownloadLink', None)
+        return self.temporary_download_links.get('audioDownloadLink', None)
 
     @property
-    def transcript_url(self) -> str:
+    def transcript_url(self) -> Optional[str]:
         """ The URL to download the recording transcript """
-        download = self.details.get('temporaryDirectDownloadLinks', self._get_details()['temporaryDirectDownloadLinks'])
-        return download['transcriptDownloadLink']
+        return self.temporary_download_links.get('transcriptDownloadLink', None)
 
     @property
-    def suggested_notes_url(self) -> str:
+    def suggested_notes_url(self) -> Optional[str]:
         """ The URL to download the recording suggested notes """
-        download = self.details.get('temporaryDirectDownloadLinks', self._get_details()['temporaryDirectDownloadLinks'])
-        return download['suggestedNotesDownloadLink']
+        return self.temporary_download_links.get('suggestedNotesDownloadLink', None)
 
     @property
-    def action_items_url(self) -> str:
+    def action_items_url(self) -> Optional[str]:
         """ The URL to download the recording action items """
-        download = self.details.get('temporaryDirectDownloadLinks', self._get_details()['temporaryDirectDownloadLinks'])
-        return download['actionItemsDownloadLink']
+        return self.temporary_download_links.get('actionItemsDownloadLink')
 
     @property
     def short_notes_url(self) -> str:
         """ The URL to download the recording short notes """
-        download = self.details.get('temporaryDirectDownloadLinks', self._get_details()['temporaryDirectDownloadLinks'])
-        return download['shortNotesDownloadLink']
+        return self.temporary_download_links.get('shortNotesDownloadLink')
 
     @property
     def download_expires(self) -> str:
         """ The expiration date and time of the :attr:`url` """
-        download = self.details.get('temporaryDirectDownloadLinks', self._get_details()['temporaryDirectDownloadLinks'])
-        return download['expiration']
+        return self.temporary_download_links.get('expiration')
 
     @property
     def file_format(self) -> str:
         """ The format of the recording file """
-        file_format = self.details.get('format', self._get_details()['format'])
+        file_format = self.details.get('format', lambda: self._get_details()['format'])
         return file_format
 
     @property
     def duration(self) -> int:
         """ The duration of the recording, in seconds """
-        duration = self.details.get('durationSeconds', self._get_details()['durationSeconds'])
+        duration = self.details.get('durationSeconds', lambda: self._get_details()['durationSeconds'])
         return duration
 
     @property
     def file_size(self) -> int:
         """ The size of the recording file, in bytes """
-        file_size = self.details.get('sizeBytes', self._get_details()['sizeBytes'])
+        file_size = self.details.get('sizeBytes', lambda: self._get_details()['sizeBytes'])
         return file_size
 
     @property
@@ -363,43 +364,43 @@ class Recording:
     @property
     def service_type(self) -> str:
         """ The Service Type that created the Recording """
-        service_type = self.details.get('serviceType', self._get_details()['serviceType'])
+        service_type = self.details.get('serviceType', lambda: self._get_details()['serviceType'])
         return service_type
 
     @property
     def storage_region(self) -> str:
         """ The region where the Recording is stored """
-        region = self.details.get('storageRegion', self._get_details()['storageRegion'])
+        region = self.details.get('storageRegion', lambda: self._get_details()['storageRegion'])
         return region
 
     @property
     def created(self) -> str:
         """ The date and time the recording file was created """
-        created = self.details.get('createTime', self._get_details()['createTime'])
+        created = self.details.get('createTime', lambda: self._get_details()['createTime'])
         return created
 
     @property
     def recorded(self) -> str:
         """ The date and time the call was recorded """
-        recorded = self.details.get('timeRecorded', self._get_details()['timeRecorded'])
+        recorded = self.details.get('timeRecorded', lambda: self._get_details()['timeRecorded'])
         return recorded
 
     @property
     def owner_id(self) -> str:
         """ The UUID of the :class:`Person`, :class:`Workspace` or :class:`VirtualLine` that was recorded """
-        owner_id = self.details.get('ownerId', self._get_details()['ownerId'])
+        owner_id = self.details.get('ownerId', lambda: self._get_details()['ownerId'])
         return owner_id
 
     @property
     def owner_type(self) -> str:
         """ The type (user, workspace, virtual line) of the :attr:`owner_id` """
-        owner_type = self.details.get('ownerType', self._get_details()['ownerType'])
+        owner_type = self.details.get('ownerType', lambda: self._get_details()['ownerType'])
         return owner_type
 
     @property
     def owner_email(self) -> str:
         """ The email address of the owner, if owned by something that supports email address """
-        owner_email = self.details.get('ownerEmail', self._get_details()['ownerEmail'])
+        owner_email = self.details.get('ownerEmail', lambda: self._get_details()['ownerEmail'])
         return owner_email
 
     @property
@@ -472,7 +473,6 @@ class Recording:
         return response.text
 
 
-
 class RecordingList(UserList):
     _endpoint = 'v1/admin/convergedRecordings'
     _endpoint_items_key = None
@@ -527,17 +527,33 @@ class RecordingList(UserList):
         self.data = self._get_data()
         return True
 
-    def get(self, id: str):
-        """ Get the instance associated with a given Recording ID
+    def get(self, id: Optional[str] = None, call_id: Optional[str] = None):
+        """ Get the instance associated with a given Recording ID or Correlation ID
+
+        Note that when using the `call_id` tyo search, more than one Recording may exist for the same Correlations ID.
+        Because of that, a list of :class:`Recording`s will always be returned, even if there is only one. And empty
+        list will be returned if there are no matching recordings.
 
         Args:
             id (str): The Recording ID to find
+            call_id (str): The call or session ID to find the recording(s) for
 
         Returns:
             Recording: The :class:`Recording` instance correlating with the given ID
+            list[Recording]: The list of :class:`Recording` instances correlating with the given `call_id`
 
         """
-        for item in self.data:
-            if item.id == id:
-                return item
-        return None
+        if id is not None:
+            for item in self.data:
+                if item.id == id:
+                    return item
+            return None
+        elif call_id is not None:
+            return_list = []
+            for item in self.data:
+                if item.call_session_id == call_id:
+                    return_list.append(item)
+            return return_list
+        else:
+            raise ValueError("id or call_id must be specified")
+
