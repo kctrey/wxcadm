@@ -229,13 +229,13 @@ class PersonList(UserList):
             if calling:
                 log.debug("Calling requested. Finding Calling licenses.")
                 if isinstance(self.parent, wxcadm.Org):
-                    calling_license = self.parent.get_wxc_person_license()
+                    calling_license = self.parent.licenses.get_assignable_license('professional')
                 elif isinstance(self.parent, wxcadm.Location):
-                    calling_license = self.parent.parent.get_wxc_person_license()
+                    calling_license = self.parent.parent.licenses.get_assignable_license('professional')
                 else:
                     raise wxcadm.exceptions.LicenseError("No Calling Licenses found")
-                log.debug(f"Using Calling License: {calling_license}")
-                licenses.append(calling_license)
+                log.debug(f"Using Calling License: {calling_license.name} ({calling_license.id})")
+                licenses.append(calling_license.id)
 
         # Build the payload to send to the API
         log.debug("Building payload.")
@@ -401,12 +401,14 @@ class Person:
         self.roles = data.get("roles", [])
         self.numbers = data.get("phoneNumbers", [])
         self.licenses = data.get("licenses", [])
+
+        # Calculate whether this is a Webex Calling user
+        wxc_licenses = list(license.id for license in self._parent.licenses if 'Webex Calling' in license.name)
         for license in self.licenses:
-            if license in self._parent.wxc_licenses:
+            if license in wxc_licenses:
                 # v4.4.4 Ensure Person has both license and assigned Location in order to be .wxc=True
                 if self.location != "":
                     self.wxc = True
-
 
     def __str__(self):
         return f"{self.email},{self.display_name}"
@@ -502,12 +504,18 @@ class Person:
             else:
                 return None
 
+    def delete(self) -> bool:
+        """ Delete the Person """
+        webex_api_call('delete', f"v1/people/{self.id}", params={'orgId': self.org_id})
+        return True
+
     def assign_wxc(self,
                    location: wxcadm.Location,
                    phone_number: Optional[str] = None,
                    extension: Optional[str] = None,
                    unassign_ucm: Optional[bool] = False,
-                   license_type: Optional[str] = 'Professional'):
+                   license_type: Optional[str] = 'professional',
+                   ignore_license_overage: Optional[bool] = True):
         """ Assign Webex Calling to the user, along with a phone number and/or an extension.
 
         Args:
@@ -515,29 +523,30 @@ class Person:
             phone_number (str, optional): The phone number to assign to the Person. Defaults to None
             extension (str, optional): The extension to assign to the Person. Defaults to None
             unassign_ucm (bool, optional): True if you also want to remove the UCM license for the user. Default: False
-            license_type (str, optional): 'Standard' or 'Professional'. Defaults to 'Professional'.
+            license_type (str, optional): 'standard' or 'professional'. Defaults to 'professional'.
+            ignore_license_overage (bool, optional): False to raise an error if assigning a license will cause an overage. Default: True
 
         Returns:
             bool: True on success, False if otherwise
 
         """
-        if license_type.upper() == 'PROFESSIONAL':
-            # To assign Webex Calling to a Person, we need to find the License ID for Webex Calling Professional
-            license = self._parent.get_wxc_person_license()
-            self.licenses.append(license)
-        elif license_type.upper() == 'STANDARD':
-            license = self._parent.get_wxc_standard_license()
-            self.licenses.append((license))
+        log.info(f"Assigning Webex Calling to {self.display_name}...")
+        wxc_license = self._parent.licenses.get_assignable_license(license_type, ignore_license_overage)
+        log.debug(f"[Assign] License: {wxc_license.name} ({wxc_license.id})")
+        self.licenses.append(wxc_license.id)
 
         if unassign_ucm is True:
+            log.debug(f"[Assign] Unassigning UCM from {self.display_name}...")
             # Figure out what the licenses are for UCM
             ucm_licenses = []
             for license in self._parent.licenses:
-                if license['name'] == 'Unified Communication Manager (UCM)':
+                if license.name == 'Unified Communication Manager (UCM)':
                     ucm_licenses.append(license['id'])
             # Then remove them from the user
             for license in self.licenses[:]:
                 if license in ucm_licenses:
+                    log.debug(f"[Assign] Removing USM license {license}")
+                    self.unassign_wxc()
                     self.licenses.remove(license)
 
         # 4.4.2 - Changed from using update_person() to calling the PUT /v1/people/{personId} directly
@@ -555,7 +564,7 @@ class Person:
                 'value': phone_number
             }
 
-        success = webex_api_call('put', f"/v1/people/{self.id}", payload=payload,
+        success = webex_api_call('put', f"v1/people/{self.id}", payload=payload,
                                  params={'orgId': self.org_id, 'callingData': True})
         if success:
             self.wxc = True
@@ -564,7 +573,23 @@ class Person:
             return False
 
     def unassign_wxc(self) -> bool:
-
+        """ Unassign Webex Calling from the user. """
+        log.info(f"Unassigning Webex Calling from {self.display_name}...")
+        for license in self.licenses:
+            license_details = self._parent.licenses.get(id=license)
+            if 'Webex Calling' in license_details.name:
+                log.debug(f"[Unassign] Removing {license} from {self.display_name}")
+                self.licenses.remove(license)
+        if self.extension is not None:
+            self.extension = None
+        payload = {
+            'displayName': self.display_name,
+            'extension': None,
+            'licenses': self.licenses,
+        }
+        response = webex_api_call('put', f"v1/people/{self.id}",
+                                  payload=payload, params={'orgId': self.org_id, 'callingData': True})
+        log.debug(f"[Unassign] Response: {response}")
         return True
 
     def set_preferred_answer_endpoint(self, endpoint: Union[wxcadm.Device, str]) -> bool:
@@ -1402,7 +1427,7 @@ class Person:
         license_list = []
         for license in self.licenses:
             for org_lic in self._parent.licenses:
-                if license == org_lic['id']:
+                if license == org_lic.id:
                     license_list.append(org_lic)
         return license_list
 
@@ -1538,7 +1563,7 @@ class Person:
         new_licenses = []
         for license in self.licenses:
             log.debug(f"Checking license: {license}")
-            lic_name = self._parent.get_license_name(license)
+            lic_name = self._parent.licenses.get(id=license).name
             log.debug(f"License Name: {lic_name}")
             if any(match in lic_name.lower() for match in remove_matches):
                 if "screen share" in lic_name.lower():
@@ -1716,7 +1741,7 @@ class Person:
                 developer.webex.com/docs/api/v1/webex-calling-person-settings/get-a-list-of-phone-numbers-for-a-person
 
         """
-        return webex_api_call('get', f'/v1/people/{self.id}/features/numbers')
+        return webex_api_call('get', f'v1/people/{self.id}/features/numbers')
 
     def remove_did(self) -> str:
         """ Remove the DID (phone number) from the Person
@@ -2027,7 +2052,7 @@ class UserGroup:
         return self.displayName
 
     def _get_members(self):
-        response = webex_api_call("get", f"/v1/groups/{self.id}/members")
+        response = webex_api_call("get", f"v1/groups/{self.id}/members")
         items = response['members']
         # If there are more than 500 members, we need to go get the rest, and the Groups API handles this
         # differently than all the other APIs. This is probably going to break things if they ever fix the Groups

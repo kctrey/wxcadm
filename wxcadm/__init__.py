@@ -7,7 +7,7 @@ log.setLevel(logging.DEBUG)
 log.addHandler(logging.NullHandler())
 
 from .webex import Webex
-from .org import Org
+from .org import Org, WebexLicenseList, WebexLicense
 from .xsi import XSIEvents, Call, XSI, XSICallQueue
 from .redsky import RedSky
 from .meraki import Meraki

@@ -14,6 +14,13 @@ class LicenseError(OrgError):
     def __init__(self, message):
         super(LicenseError, self).__init__(message)
 
+class NotSubscribedForLicenseError(LicenseError):
+    def __init__(self, message):
+        super(NotSubscribedForLicenseError, self).__init__(message)
+
+class LicenseOverageError(LicenseError):
+    def __init__(self, message):
+        super(LicenseOverageError, self).__init__(message)
 
 class APIError(Exception):
     """The base class for any exceptions dealing with the API"""

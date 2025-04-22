@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+from collections import UserList
+
 import requests
 import re
 import wxcadm
@@ -65,8 +67,7 @@ class Org:
         self.xsi: dict = {}
         """The XSI details for the Organization"""
         self._params: dict = {"orgId": self.id}
-        self._licenses: Optional[list] = None
-        self._wxc_licenses: Optional[list] = None
+        self._licenses: Optional[WebexLicenseList] = None
         self._devices: Optional[list] = None
         self._usergroups: Optional[list] = None
         self._roles: Optional[dict] = None
@@ -178,9 +179,9 @@ class Org:
 
     @property
     def licenses(self):
-        """ A list of all licenses for the Organization as a dictionary of names and IDs """
+        """ A :class:`WebexLicenseList` for the Organization """
         if self._licenses is None:
-            self._licenses = self.__get_licenses()
+            self._licenses = WebexLicenseList(self)
         return self._licenses
 
     @property
@@ -232,44 +233,6 @@ class Org:
         response = webex_api_call("get", "v1/telephony/config/queues/settings", params={'orgId': self.id})
         response['org'] = self
         return OrgQueueSettings.from_dict(response)
-
-    def __get_licenses(self):
-        """Gets all licenses for the Organization
-
-        Returns:
-            list: List of dictionaries containing the license name and ID
-
-        """
-        log.info("__get_licenses() started for org")
-        license_list = []
-        try:
-            api_resp = webex_api_call("get", "v1/licenses", headers=self._headers, params=self._params)
-        except APIError:
-            return None
-        for item in api_resp:
-            if "Webex Calling" in item['name']:
-                wxc_license = True
-                if "Professional" in item['name']:
-                    wxc_type = "person"
-                elif "Workspace" in item['name']:
-                    wxc_type = "workspace"
-                elif "Basic" in item['name']:
-                    wxc_type = "standard"
-                else:
-                    wxc_type = "unknown"
-            else:
-                wxc_license = False
-                wxc_type = None
-            lic = {"name": item['name'],
-                   "id": item['id'],
-                   "total": item['totalUnits'],
-                   "consumed": item['consumedUnits'],
-                   "subscription": item.get("subscriptionId", ""),
-                   "wxc_license": wxc_license,
-                   "wxc_type": wxc_type
-                   }
-            license_list.append(lic)
-        return license_list
 
     @property
     def paging_groups(self):
@@ -509,24 +472,6 @@ class Org:
                 return device
         return False
 
-    def get_location_by_name(self, name: str):
-        """Get the Location instance associated with a given Location name
-
-        .. deprecated:: 2.2.0
-            Use :meth:`get_location` using the ```name``` argument instead.
-
-        Args:
-            name (str): The full name of the Location to look for. (Case sensitive)
-
-        Returns:
-            Location: The Location instance. If no match is found, None is returned
-
-        """
-        for location in self.locations:
-            if location.name == name:
-                return location
-        return None
-
     @property
     def people(self):
         """ :py:class:`PersonList` wth all the :py:class:`Person` instances for the Organization """
@@ -553,20 +498,29 @@ class Org:
     def wxc_licenses(self):
         """Get only the Webex Calling licenses from the Org.licenses attribute
 
+        .. deprecated:: 4.5.0
+
+            This method is now deprecated in favor of :py:meth:`Org.licenses.webex_calling()` and will be removed
+            in a future release.
+
         Returns:
             list[str]: The license IDs for each Webex Calling license
 
         """
-        if self.licenses is None:
-            self.__get_licenses()
         license_list = []
         for license in self.licenses:
-            if license['wxc_license']:
-                license_list.append(license['id'])
+            if license.wxc_license:
+                license_list.append(license)
         return license_list
 
     def get_wxc_person_license(self):
         """Get the Webex Calling - Professional license ID
+
+        .. deprecated:: 4.5.0
+
+            This method is now deprecated due to the new :attr:`Org.licenses` property which returns a
+            :class:`WebexLicenseList`. Because there may not be only a single Person license, the developer should
+            introduce the logic to find the appropriate license or allow the class to pick one automatically.
 
         Returns:
             str: The License ID
@@ -574,12 +528,18 @@ class Org:
         """
         log.info("__get_wxc_person_license started to find available Professional license")
         for license in self.licenses:
-            if license['wxc_type'] == "person":
-                return license['id']
+            if license.wxc_type.lower() == "person":
+                return license
         raise LicenseError("No Webex Calling Professional license found")
 
     def get_wxc_standard_license(self):
-        """Get the Webex Calling - Basic license ID
+        """ Get the Webex Calling - Basic license ID
+
+        .. deprecated:: 4.5.0
+
+            This method is now deprecated due to the new :attr:`Org.licenses` property which returns a
+            :class:`WebexLicenseList`. Because there may not be only a single Standard license, the developer should
+            introduce the logic to find the appropriate license or allow the class to pick one automatically.
 
         Returns:
             str: The License ID
@@ -587,8 +547,8 @@ class Org:
         """
         log.info("__get_wxc_standard_license started to find available Basic license")
         for license in self.licenses:
-            if license['wxc_type'] == "standard":
-                return license['id']
+            if license.wxc_type.lower() == "standard":
+                return license
         raise LicenseError("No Webex Calling Professional license found")
 
     def create_person(self, email: str,
@@ -639,8 +599,9 @@ class Org:
             licenses = []
             if calling:
                 log.debug("Calling requested. Finding Calling licenses.")
-                log.debug(f"Licenses: {self.get_wxc_person_license()}")
-                licenses.append(self.get_wxc_person_license())
+                calling_license = self.licenses.get_assignable_license('professional')
+                log.debug(f"Using Calling License: {calling_license.name} ({calling_license.id})")
+                licenses.append(calling_license.id)
             if messaging:
                 pass
             if meetings:
@@ -797,19 +758,6 @@ class Org:
         return self._hunt_groups
 
     @property
-    def wxc_people(self):
-        """Return all the people within the Organization **who have Webex Calling**
-
-        .. deprecated:: 4.0.0
-            Use :py:meth:`Org.people.webex_calling()` instead
-
-        Returns:
-            list[Person]: List of Person instances of people who have a Webex Calling license
-
-        """
-        return self.people.webex_calling(True)
-
-    @property
     def translation_patterns(self):
         """ The :class:`TranslationPatternList of Translation Patterns for the Org and all Locations """
         if self._translation_patterns is None:
@@ -844,8 +792,8 @@ class Org:
 
         """
         for license in self.licenses:
-            if license['id'] == license_id:
-                return license['name']
+            if license.id == license_id:
+                return license.name
         return None
 
     def get_audit_events(self, start: str, end: str) -> AuditEventList:
@@ -870,3 +818,194 @@ class Org:
 
     def get_recordings(self, **kwargs):
         return RecordingList(parent=self, **kwargs)
+
+
+class WebexLicenseList(UserList):
+    def __init__(self, org: wxcadm.Org):
+        """ The list of Webex licenses within the Org """
+        super().__init__()
+        self.org = org
+        self.data: list[WebexLicense] = []
+        api_response = webex_api_call("get", f"v1/licenses",
+                                      params={'orgId': self.org.id})
+        for license in api_response:
+            self.data.append(WebexLicense(org, license))
+        # Add the subscriptions to a list that is available to use for assignment.
+        # The idea is that a developer could limit the subscriptions if they wanted
+        self.assignable_subscriptions: list = \
+            list({license.subscription for license in self.data if license.subscription is not None})
+
+    def refresh(self):
+        """ Refresh the list of licenses and their usage """
+        self.data = []
+        api_response = webex_api_call("get", f"v1/licenses",
+                                      params={'orgId': self.org.id})
+        new_licenses_data = {license['id']: license for license in api_response}
+        existing_license: WebexLicense
+        for existing_license in self.data:
+            if existing_license.id in new_licenses_data.keys():
+                existing_license.total = new_licenses_data[existing_license.id]['totalUnits']
+                existing_license.consumed = new_licenses_data[existing_license.id]['consumedUnits']
+                existing_license.consumed_by_users = new_licenses_data[existing_license.id]['consumedByUsers']
+                existing_license.consumed_by_workspaces = new_licenses_data[existing_license.id]['consumedByWorkspaces']
+                del new_licenses_data[existing_license.id]
+
+        for license_data in new_licenses_data.values():
+            self.data.append(WebexLicense(self.org, license_data))
+
+    def get_assignable_license(self, license_type: str, ignore_license_overage: bool = False) -> WebexLicense:
+        """
+        Fetches an assignable Webex license of a specified type.
+
+        This method retrieves a Webex license based on the specified license type and whether
+        license overages should be ignored. The function first attempts to find available licenses
+        that match the specified criteria. If no available licenses exist, it searches for licenses
+        that would cause an overage, depending on the value of `ignore_license_overage`. The function
+        ensures the selected license belongs to an assignable subscription or has no subscription.
+
+        Args:
+            license_type (str): The type of license to retrieve. Valid valies are 'professional', 'workspace',
+                'standard' or 'hotdesk'
+
+            ignore_license_overage (bool, optional): Whether to override license overage conditions
+                when no available license exists. Defaults to False.
+
+        Returns:
+            WebexLicense: The assignable license that matches the specified criteria.
+
+        Raises:
+            wxcadm.LicenseOverageError: If license overage is detected and `ignore_license_overage` is False.
+            wxcadm.NotSubscribedForLicenseError: If the account is not subscribed for licenses of the
+                specified type.
+        """
+        if len(self.webex_calling(type=license_type, available_licenses_only=True)) == 0:
+            # No "available" licenses. Find one that would cause an overage
+            if len(self.webex_calling(type=license_type, available_licenses_only=False)) >= 1:
+                if ignore_license_overage:
+                    # Make sure we only pick from a subscription in the self.assignable_subscriptions list
+                    for license in self.webex_calling(type=license_type, available_licenses_only=False):
+                        if license.subscription in self.assignable_subscriptions or license.subscription is None:
+                            return license
+                    raise LicenseError(f"No available licenses of type {license_type} found in assignable subscriptions")
+                else:
+                    raise wxcadm.LicenseOverageError(
+                        """License overage detected. Override with 'ignore_license_overage=True' or assign a 
+                        different license""")
+            else:
+                raise wxcadm.NotSubscribedForLicenseError(f"No licenses available for {license_type}")
+        else:
+            for license in self.webex_calling(type=license_type, available_licenses_only=True):
+                if license.subscription in self.assignable_subscriptions or license.subscription is None:
+                    return license
+            raise LicenseError(f"No available licenses of type {license_type} found in assignable subscriptions")
+
+    def get(self,
+            id: Optional[str] = None,
+            name: Optional[str] = None,
+            subscription: Optional[str] = None) -> Optional[Union[wxcadm.WebexLicense, list[wxcadm.WebexLicense]]]:
+        """
+        Retrieve a Webex license by its ID, name, or subscription
+    
+        Args:
+            id (Optional[str]): The ID of the Webex license to retrieve.
+            name (Optional[str]): The name of the Webex license to retrieve..
+            subscription (Optional[str]): The subscription of the Webex licenses to retrieve.
+    
+        Returns:
+            WebexLicense: The Webex license that matches the provided ID or name, if only one is found.
+            list[WebexLicense]: A list of Webex licenses that matches the provided ID or name, if multiple matches are found.
+        """
+        matches = []
+        for entry in self.data:
+            if id is not None and entry.id == id:
+                return entry
+            if name is not None and entry.name == name:
+                matches.append(entry)
+            if entry.subscription is not None:
+                if subscription is not None and entry.subscription.lower() == subscription.lower():
+                    matches.append(entry)
+
+        if len(matches) == 1:
+            return matches[0]
+        elif len(matches) > 1:
+            return matches
+        else:
+            return None
+
+    def webex_calling(self, type: str = 'all', available_licenses_only: bool = False) -> list[WebexLicense]:
+        """ Return only Webex Calling licenses
+
+        Params:
+            type (str, optional): The type of licenses to return. Options are: 'all',
+            'professional', 'workspace', 'hotdesk', or 'standard'. Default is all.
+
+            available_licenses_only (bool, optional): Whether to only return subscriptions with available, unassigned
+            licenses. Default is False.
+
+        Returns:
+            list[WebexLicense]: List of Webex Calling Licenses
+
+        """
+        return_list = []
+        if type.lower() == 'all':
+            for license in self.data:
+                if license.wxc_license is True:
+                    return_list.append(license)
+        elif type.lower() == 'professional':
+            for license in self.data:
+                if license.wxc_type == 'professional':
+                    return_list.append(license)
+        elif type.lower() == 'workspace':
+            for license in self.data:
+                if license.wxc_type == 'workspace':
+                    return_list.append(license)
+        elif type.lower() == 'hotdesk':
+            for license in self.data:
+                if license.wxc_type == 'hotdesk':
+                    return_list.append(license)
+        elif type.lower() == 'standard':
+            for license in self.data:
+                if license.wxc_type == 'standard':
+                    return_list.append(license)
+
+        if available_licenses_only is True:
+            available_list: list[WebexLicense] = []
+            for license in return_list:
+                if license.consumed < license.total:
+                    available_list.append(license)
+            return available_list
+        else:
+            return return_list
+
+class WebexLicense:
+    def __init__(self, org: Org, data: dict):
+        self.org = org
+        self.name: str = data.get('name', 'Unknown')
+        """ The license name"""
+        self.id: str = data.get('id')
+        """ The license ID"""
+        self.total: int = data.get('totalUnits', 0)
+        """ The total number of licenses in the subscription"""
+        self.consumed: int = data.get('consumedUnits', 0)
+        """ The number of licenses that have been consumed"""
+        self.consumed_by_users: int = data.get('consumedByUsers', 0)
+        """ The number of licenses that have been consumed by users"""
+        self.consumed_by_workspaces: int = data.get('consumedByWorkspaces', 0)
+        """ The number of licenses that have been consumed by workspaces"""
+        self.subscription: Optional[str] = data.get('subscriptionId', None)
+        """ The subscription ID"""
+        self.wxc_license: bool = False
+        """ True if this is a Webex Calling license"""
+        self.wxc_type: Optional[str] = None
+        """ The type of Webex Calling license"""
+
+        if "Webex Calling" in self.name:
+            self.wxc_license = True
+            if "Professional" in self.name:
+                self.wxc_type = "professional"
+            elif "Workspace" in self.name:
+                self.wxc_type = "workspace"
+            elif "Hot desk only" in self.name:
+                self.wxc_type = "hotdesk"
+            elif "Basic" in self.name:
+                self.wxc_type = "standard"

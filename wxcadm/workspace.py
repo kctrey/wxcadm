@@ -3,8 +3,12 @@ from __future__ import annotations
 import requests
 from collections import UserList
 from typing import Optional, Union, TYPE_CHECKING
+
+from .exceptions import LicenseOverageError, NotSubscribedForLicenseError
+
 if TYPE_CHECKING:
     from wxcadm import Org
+    from .org import WebexLicenseList, WebexLicense
 import wxcadm.location
 import wxcadm
 from wxcadm import log
@@ -13,6 +17,7 @@ from .exceptions import *
 from .device import DeviceList
 from .monitoring import MonitoringList
 from .models import BargeInSettings
+
 
 class WorkspaceLocationList(UserList):
     def __init__(self, parent: wxcadm.Org):
@@ -186,11 +191,14 @@ class WorkspaceList(UserList):
                notes: Optional[str] = None,
                hotdesking: Optional[bool] = False,
                supported_devices: Optional[str] = 'phones',
-               license_type: str = 'workspace'
+               license_type: str = 'workspace',
+               ignore_license_overage: Optional[bool] = True
                ):
         """ Create a new Workspace
 
         In order to enable Webex Calling, a Location must be provided as well as an extension, phone number, or both.
+        This method will attempt to find a valid license for the given license_type. The `'ignore_license_overage'`
+        argument can me used to assign a license regardless of whether it will cause an overage
 
         Args:
             location (Location): The :class:`Location` where the Workspace will be located
@@ -203,17 +211,23 @@ class WorkspaceList(UserList):
             notes (str, optional): Free-form text notes
             hotdesking (bool, optional): Whether the workspace is enabled for Hot Desking. Defaults to False.
             supported_devices (str, optional): `phones` or `collaborationDevices`. Defaults to `phones`
-            license_type (str, optional): 'workspace' or 'professional'. Defaults to 'workspace'
+            license_type (str, optional): 'workspace', 'professional' or 'hotdesk'. Defaults to 'workspace'
+            ignore_license_overage (bool): If False, the method will not assign a license if it causes an overage
 
         Returns:
             Workspace: The :class:`Workspace` instance that is created in Control Hub
 
         Raises:
             ValueError: Raised when an ``extension`` or ``phone_number`` is not provided.
+            wxcadm.NotSubscribedForLicenseError: Raised when the license being requested is not available in any subscription
+            wxcadm.LicenseOverageError: Raised when the license being requested will cause an overage and `'ignore_license_overage'` is False
 
         """
-        if extension is None and phone_number is None:
+        log.info(f"Creating new Workspace called '{name}' in Location '{location.name}'")
+        if extension is None and phone_number is None and license_type.lower() != 'hotdesk':
             raise ValueError("Must provide extension, phone_number, or both")
+        if license_type.lower() == 'hotdesk' and hotdesking is False:
+            raise ValueError("Must enable hotdesking to use hotdesk license")
         # Removed 3.4.0 when Workspace Locations were deprecated
         # if location.workspace_location is None:
         #     raise KeyError(f"Location {location.name} does not have a Workspace Location")
@@ -242,16 +256,18 @@ class WorkspaceList(UserList):
             'supportedDevices': supported_devices
         }
 
-        # Find an available license if a Professional license was requested
-        if license_type.lower() == 'professional':
-            wxc_license = self.parent.get_wxc_person_license()
-            payload['calling']['webexCalling']['licenses'] = [wxc_license]
+        # Find an available license
+        wxc_license = self.parent.licenses.get_assignable_license(
+            license_type, ignore_license_overage=ignore_license_overage
+        )
 
-        response = webex_api_call('post', 'v1/workspaces', payload=payload)
-        new_workspace_id = response['id']
-        # TODO - Eventually I would like to remove the refresh() and just add the new Workspace directly
-        self.parent.workspaces.refresh()
-        new_workspace = self.parent.workspaces.get_by_id(new_workspace_id)
+        log.debug(f"License ID: {wxc_license.id} ({wxc_license.name})")
+        payload['calling']['webexCalling']['licenses'] = [wxc_license.id]
+        response = webex_api_call('post', 'v1/workspaces',
+                                  payload=payload, params={'orgId': self.parent.org_id})
+        log.debug(f"API call response: {response}")
+        new_workspace = Workspace(self.parent, response['id'], config=response)
+        self.data.append(new_workspace)
         return new_workspace
 
 
@@ -309,7 +325,7 @@ class Workspace:
         """The type of calendar connector assigned to the Workspace"""
         self.notes: Optional[str] = None
         """Notes associated with the Workspace"""
-        self.licenses: list = []
+        self.licenses: list[WebexLicense] = []
         """ The licenses for the Workspace when the calling value is 'webexCalling' """
 
         # Property storage
@@ -587,11 +603,13 @@ class Workspace:
         """
         log.info(f"Getting license type for Workspace: {self.name}")
         if len(self.licenses) == 1:
-            lic_name = self._parent.get_license_name(self.licenses[0])
+            lic_name = self._parent.licenses.get(id=self.licenses[0]).name
             if 'Workspaces' in lic_name:
                 return 'WORKSPACE'
             elif 'Professional' in lic_name:
                 return 'PROFESSIONAL'
+            elif 'Hot desk only' in lic_name:
+                return "HOTDESK"
             else:
                 return lic_name
         if len(self.licenses) == 0:
@@ -599,31 +617,107 @@ class Workspace:
         else:
             return "MULTIPLE"
 
-    def set_professional_license(self):
-        if self.license_type.upper() == 'PROFESSIONAL':
-            return True
-        new_license = self._parent.get_wxc_person_license()
+    def assign_wxc(self, location: wxcadm.Location,
+                   phone_number: Optional[str] = None,
+                   extension: Optional[str] = None,
+                   license_type: str = 'workspace',
+                   ignore_license_overage: bool = True) -> bool:
+        """ Enable Webex Calling for the Workspace
+
+        This method will attempt to find a valid license for the given license_type. The `'ignore_license_overage'`
+        argument can me used to assign a license regardless of whether it will cause an overage.
+
+        Params:
+            license_type (str): The type of license to enable. Valid values are 'workspace', 'professional',
+            or 'hotdesk'
+
+            ignore_license_overage (bool): If Fa;se, an exception will be raised if the license being requested will
+            cause an overage. If True, the license will be assigned regardless of whether it will cause an overage.
+            Defaults to True.
+
+        Returns:
+            bool: True on success
+
+        Raises:
+            wxcadm.NotSubscribedForLicenseError: Raised when the license being requested is not available in any subscription
+
+            wxcadm.LicenseOverageError: Raised when the license being requested will cause an overage and `'ignore_license_overage'` is False.
+
+        """
+        # Go find the license of the given type
+        new_license = self._parent.licenses.get_assignable_license(
+            license_type,
+            ignore_license_overage=ignore_license_overage
+        )
         payload = {
-            'displayName': self.name,
-            'locationId': self.location.id,
-            'floorId': self.floor_id,
-            'capacity': self.capacity,
-            'type': self.type,
-            'calling': {
-                'type': 'webexCalling',
-                'webexCalling': {
-                    'licenses': [
-                        new_license
-                    ]
+            "calling": {
+                "type": "webexCalling",
+                "webexCalling": {
+                    "locationId": location.id,
+                    "extension": extension,
+                    "phoneNumber": phone_number,
+                    "licenses": [new_license.id]
                 }
-            },
-            'notes': self.notes,
+            }
+        }
+        if license_type == 'hotdesk':
+            payload['hotdeskingStatus'] = 'on'
+        response = webex_api_call('put', f"v1/workspaces/{self.id}",
+                                  params={'orgId': self.org_id},
+                                  payload=payload)
+        self.__process_config(response)
+        return True
 
+    def unassign_wxc(self):
+        """ Disable Webex Calling for the Workspace
 
+        .. note::
+            This only can be done for Workspaces that support Collaboration Devices rather than phones. When a
+            Workspace has Webex Calling for phones, you must delete the Workspace and recreate it.
+
+        """
+        payload = {
+            "calling": {
+                "type": "freeCalling"
+            }
         }
         response = webex_api_call('put', f"v1/workspaces/{self.id}",
                                   params={'orgId': self.org_id},
                                   payload=payload)
+        self.__process_config(response)
+        return True
+
+    def set_professional_license(self):
+        if self.license_type.upper() == 'PROFESSIONAL':
+            return True
+        new_license = self._parent.licenses.get_assignable_license('professional')
+        payload = {
+            'calling': {
+                'type': 'webexCalling',
+                'webexCalling': {
+                    'locationId': self.location.id,
+                    'phoneNumber': self.number,
+                    'extension': self.extension,
+                    'licenses': [
+                        new_license.id
+                    ]
+                }
+            }
+        }
+        response = webex_api_call('put', f"v1/workspaces/{self.id}",
+                                  params={'orgId': self.org_id},
+                                  payload=payload)
+        self.__process_config(response)
+        return True
+
+    def set_hotdesk(self, enabled: bool = True):
+        """ Enable Hotdesk for the Workspace """
+        payload = {
+            'hotdeskingStatus': 'on' if enabled else 'off'
+        }
+        response = webex_api_call('put', f"v1/workspaces/{self.id}",
+                                  payload=payload,
+                                  params={'orgId': self.org_id})
         self.__process_config(response)
         return True
 

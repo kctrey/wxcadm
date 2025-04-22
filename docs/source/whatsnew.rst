@@ -3,8 +3,15 @@
 What's New
 ==========
 
-v4.4.5
+v4.5.0
 ------
+- **BREAKING CHANGE** - :meth:`Org.wxc_people()`, which was deprecated in v4.0.0 has been removed
+- **BREAKING CHANGE** - The `Org.get_location_by_name()` which was deprecated back in v2.2 has finally been removed
+- New :meth:`~.person.Person.delete()` to allow deletion of users
+- New :meth:`~.workspace.Workspace.unassign_wxc()` to support removing the Webex Calling license for RoomOS Workspaces
+- :meth:`~.workspace.Workspace.assign_wxc()` and :meth:`~.workspace.WorkspaceList.create()` now use the new :class:`~.org.WebexLicenseList` to find an available license
+- **BREAKING CHANGE ** - New :class:`~.org.WebexLicenseList` which provides a list of :class:`~.org.WebexLicense` objects. The new list class now provides all of the license searches and also provides logic to assign licenses. This changes the old `Org.licenses`, which returned a dict
+- Added docs to :class:`~.cdr.CallDetailRecords`
 - Accessing :class:`~.recordings.Recording` attributes no longer "wastes" an API call if it already has the :attr:`Recording.details` dict from Webex
 - Started prework to give the :class:`~.cdr.CallDetailRecords` more functionality
 - :meth:`PersonList.get() <.person.PersonList.get()>` now supports a ``'uuid'`` argument to find a Person by UUID, which is what is populated in CDRs
