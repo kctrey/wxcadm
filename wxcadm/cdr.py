@@ -568,6 +568,28 @@ class Call:
 
 class CallDetailRecords:
     def __init__(self, records: list, webex: Optional[wxcadm.Webex] = None):
+        """ The main class to process and work with Call Detail Records (CDRs). CDRs can be obtained in various ways.
+        This calls takes the records that have been obtained via one of these methods and builds a more useful
+        structure to describe the records. This structure makes it easier to find calls and analyze features that are
+        used by the legs involved in a call.
+
+        This class contains a list of :class:`Call`s. A :class:`Call` is made up of one or more :class:`CallLeg`s,
+        which are a connection between two endpoints. A :class:`CallLeg` is made up of one or two :class:`CallParts`,
+        which are the records for each endpoint. There may be an 'Orig Part', the record from the endpoint originating
+        the call leg, a 'Term Part', the record for the endpoint receiving the call leg, or both. Only when an endpoint
+        is a Webex Calling controlled endpoint will there be a :class:`LegPart`. For example, in a
+        :class:`CallLeg` from the PSTN to a Webex Calling user, only the 'Term Part' will be present because Webex
+        Calling does not control the PSTN endpoint.
+
+        Examples:
+            .. code-block:: python
+
+
+        Args:
+            records (list[dict]): A list of records where each record is a dict with the raw CDR field name
+            webex (wxcadm.Webex): A :class:`.webex.Webex` instance to provide a data channel to use the Webex APIs
+
+        """
         self.records: list = records
         """ The records that were sent to the CallDetailRecords instance """
         self.webex = webex
