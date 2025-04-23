@@ -452,6 +452,11 @@ class DeviceMember:
         self.host_ip: Optional[str] = member_info.get('hostIP', None)
         self.remote_ip: Optional[str] = member_info.get('remoteIP', None)
         self.line_port: Optional[str] = member_info.get('linePort', None)
+        self.esn: Optional[str] = member_info.get('esn', None)
+        self.routing_prefix: Optional[str] = member_info.get('routingPrefix', None)
+        self.location_id = None
+        if 'location' in member_info.keys():
+            self.location_id = member_info['location']['id']
 
     def set_line_label(self, label: str) -> DeviceMember:
         """ Set/update the Line Label on the device
