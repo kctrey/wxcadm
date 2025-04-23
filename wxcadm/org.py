@@ -21,7 +21,7 @@ from .webhooks import Webhooks
 from .person import UserGroups, Person, PersonList
 from .applications import WebexApplications
 from .announcements import AnnouncementList, PlaylistList
-from .workspace import Workspace, WorkspaceList, WorkspaceLocationList
+from .workspace import Workspace, WorkspaceList
 from .call_routing import CallRouting, TranslationPatternList
 from .reports import ReportList
 from .calls import Calls
@@ -75,7 +75,6 @@ class Org:
         self._hunt_groups: Optional[HuntGroupList] = None
         self._call_queues: Optional[CallQueueList] = None
         self._workspaces: Optional[WorkspaceList] = None
-        self._workspace_locations: Optional[WorkspaceLocationList] = None
         self._people: Optional[PersonList] = None
         self._auto_attendants: Optional[AutoAttendantList] = None
         self._locations: Optional[LocationList] = None
@@ -119,13 +118,6 @@ class Org:
         if self._voicemail_groups is None:
             self._voicemail_groups = VoicemailGroupList(self)
         return self._voicemail_groups
-
-    @property
-    def workspace_locations(self):
-        """ :py:class:`WorkspaceLocationList` of all :py:class:`WorkspaceLocation`s"""
-        if self._workspace_locations is None:
-            self._workspace_locations = WorkspaceLocationList(self)
-        return self._workspace_locations
 
     @property
     def reports(self) -> ReportList:
