@@ -410,7 +410,6 @@ class RouteGroup:
 
 class RouteLists(UserList):
     """ RouteLists is a class that behaves as an array. Each item in the array is a :py:class:`RouteList` instance."""
-    # TODO - Create Route List, Delete Route List
     def __init__(self, org: wxcadm.Org):
         log.info('Initializing RouteLists instance')
         super().__init__()
@@ -421,6 +420,27 @@ class RouteLists(UserList):
         for item in items['routeLists']:
             this_rl = RouteList(self.org, **item)
             self.data.append(this_rl)
+
+    def create(self, location: wxcadm.Location, route_group: RouteGroup, name: str) -> RouteList:
+        """ Create a new RouteList
+
+        Args:
+            location (wxcadm.Location): The location for the RouteList
+            route_group (wxcadm.RouteGroup): The RouteGroup for the RouteList
+            name (str): The name of the RouteList
+
+        Returns:
+            RouteList: The newly created RouteList
+
+        """
+        payload = {
+            'name': name,
+            'locationId': location.id,
+            'routeGroupId': route_group.id
+        }
+        response = webex_api_call('post', '/v1/telephony/config/premisePstn/routeLists', payload=payload,
+                                  params={'orgId': self.org.id})
+        return RouteList(self.org, **response)
 
     def get(self, name: Optional[str] = None, id: Optional[str] = None) -> Optional[RouteLists]:
         """ Get a RouteList by name or ID
@@ -453,9 +473,13 @@ class RouteList:
     name: str
     """ The name of the RouteList """
     locationId: str
+    """ The ID of the Location for the RouteList """
     locationName: str
+    """ The name of the Location for the RouteList """
     routeGroupId: str
+    """ The ID of the RouteGroup for the RouteList """
     routeGroupName: str
+    """ The name of the RouteGroup for the RouteList """
 
     def __post_init__(self):
         # This cleans up the Location and Route Group references so that they get the wxcadm instances for each

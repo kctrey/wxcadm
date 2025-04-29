@@ -5,6 +5,9 @@ What's New
 
 v4.5.0
 ------
+- :class:`~.call_routing.RouteLists` now supports :meth:`~.call_routing.RouteLists.create()` to create new Route Lists
+- All references and properties that were associated with a :class:`WorkspaceLocation` have been removed. All Webex Calling uses Location now and WorkspaceLocation has been deprecated.
+- :class:`~.device.DeviceMember` now includes `esn`, `routing_prefix` and `location_id` properties.
 - **BREAKING CHANGE** - :meth:`Org.wxc_people()`, which was deprecated in v4.0.0 has been removed
 - **BREAKING CHANGE** - The `Org.get_location_by_name()` which was deprecated back in v2.2 has finally been removed
 - New :meth:`~.person.Person.delete()` to allow deletion of users
