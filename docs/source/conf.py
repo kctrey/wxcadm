@@ -34,7 +34,8 @@ release = '4.3.11'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
-    'sphinx_rtd_theme'
+    'sphinx_rtd_theme',
+    'sphinx.ext.autosectionlabel'
 ]
 
 autoclass_content = 'class'
