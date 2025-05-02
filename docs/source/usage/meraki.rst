@@ -25,8 +25,11 @@ desired Location and make the correct Network Discovery mapping in RedSky.
 Before You Begin
 ================
 The Meraki functionality of **wxcadm** requires the `meraki <https://pypi.org/project/meraki/>`_ Python library, which
-is not installed when **wxcadm** is installed with PIP. You will need to install that library in order to use these
-methods: ``python3 -m pip install meraki``
+is not installed when **wxcadm** is installed with PIP without the optional ``meraki`` dependency. You can accomplish
+installing this module in two ways:
+
+1. Install it yourself with ``pip install meraki``
+2. Include the optional dependency when installing **wxcadm** with ``pip install wxcadm[meraki]``
 
 **wxcadm** also needs a valid Meraki Dashboard API access token. Instructions on creating an API access token can be
 found `here <https://documentation.meraki.com/General_Administration/Other_Topics/Cisco_Meraki_Dashboard_API>`_.

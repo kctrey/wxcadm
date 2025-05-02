@@ -13,7 +13,6 @@ dependencies = [
     "requests-toolbelt>=1.0.0",
     "srvlookup>=2.0.0",
     "xmltodict>=0.12.0",
-    "meraki>=1.30.0",
     "pyhumps==3.8.0",
     "dataclasses-json>=0.6.4"
 ]
@@ -35,3 +34,8 @@ Homepage = "https://github.com/kctrey/wxcadm"
 Issues = "https://github.com/kctrey/wxcadm/issues"
 Documentation = "https://wxcadm.readthedocs.io"
 Changelog = "https://wxcadm.readthedocs.io/en/latest/whatsnew.html"
+
+[project.optional-dependencies]
+meraki = [
+    "meraki>=1.30.0"
+]

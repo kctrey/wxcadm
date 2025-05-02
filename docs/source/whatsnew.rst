@@ -5,6 +5,7 @@ What's New
 
 v4.5.0
 ------
+- The inclusion of the `meraki` module as a dependency doesn't make sense for 99% of **wxcadm** users, so I have moved it to an optional dependency. See :ref:`Using Meraki for RedSky Network Discovery`
 - :class:`~.call_routing.RouteLists` now supports :meth:`~.call_routing.RouteLists.create()` to create new Route Lists
 - All references and properties that were associated with a :class:`WorkspaceLocation` have been removed. All Webex Calling uses Location now and WorkspaceLocation has been deprecated.
 - :class:`~.device.DeviceMember` now includes `esn`, `routing_prefix` and `location_id` properties.
