@@ -9,6 +9,7 @@ from .exceptions import LicenseOverageError, NotSubscribedForLicenseError
 if TYPE_CHECKING:
     from wxcadm import Org
     from .org import WebexLicenseList, WebexLicense
+    from .location import LocationFloor
 import wxcadm.location
 import wxcadm
 from wxcadm import log
@@ -110,7 +111,7 @@ class WorkspaceList(UserList):
 
     def create(self, location: wxcadm.Location,
                name: str,
-               floor: Optional[WorkspaceLocationFloor] = None,
+               floor: Optional[LocationFloor] = None,
                capacity: Optional[int] = None,
                type: Optional[str] = 'notSet',
                phone_number: Optional[str] = None,
@@ -320,6 +321,7 @@ class Workspace:
 
     @property
     def barge_in(self):
+        """ The :class:`~.barge_in.BargeInSettings` associated with the Workspace"""
         if self._barge_in is None:
             try:
                 response = webex_api_call('get', f"v1/telephony/config/workspaces/{self.id}/bargeIn",
@@ -392,6 +394,7 @@ class Workspace:
 
     @property
     def devices(self):
+        """ The :class:`~.device.DeviceList` associated with the Workspace"""
         if self._devices is None:
             self._devices = DeviceList(self)
         return self._devices

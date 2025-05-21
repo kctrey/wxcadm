@@ -513,10 +513,15 @@ class DialPlans(UserList):
 class DialPlan:
     org: wxcadm.Org = field(repr=False)
     id: str = field(repr=False)
+    """ The unique identifier for the DialPlan """
     name: str
+    """ The name of the DialPlan """
     routeId: str
+    """ The ID of the Route for the DialPlan """
     routeName: str
+    """ The name of the Route for the DialPlan """
     routeType: str
+    """ The type of the Route for the DialPlan """
 
     _patterns: Optional[list] = field(init=False, default=None)
 
@@ -571,10 +576,15 @@ class TranslationPattern:
         log.info("Creating TranslationsPattern instance")
         self.parent = parent
         self.id: Optional[str] = None
+        """ The unique identifier for the Translation Pattern """
         self.name: Optional[str] = None
+        """ The name of the Translation Pattern """
         self.match_pattern: Optional[str] = None
+        """ The match pattern for the Translation Pattern """
         self.replacement_pattern: Optional[str] = None
+        """ The replacement pattern for the Translation Pattern """
         self.location: Optional[wxcadm.Location] = None
+        """ The Location for the Translation Pattern """
         self.__process_config(config)
 
     def __process_config(self, config: dict):
@@ -656,6 +666,7 @@ class TranslationPatternList(UserList):
             match_pattern: Optional[str] = None,
             replacement_pattern: Optional[str] = None,
             ):
+        """ Find the Translation Pattern with the given ID, name, match pattern or replacement pattern """
 
         for entry in self.data:
             if entry.id == id or id is None:
@@ -727,4 +738,3 @@ class TranslationPatternList(UserList):
             )
             new_pattern = TranslationPattern(self.parent, config)
         return new_pattern
-

@@ -121,6 +121,7 @@ class Org:
 
     @property
     def reports(self) -> ReportList:
+        """ :class:`~.reports.ReportList` of all Reports for the Org """
         if self._reports is None:
             self._reports = ReportList(self)
         return self._reports
@@ -159,31 +160,35 @@ class Org:
 
     @property
     def auto_attendants(self):
+        """ :class:`.auto_attendant.AutoAttendantList` of all Auto Attendants for the Org """
         if self._auto_attendants is None:
             self._auto_attendants = AutoAttendantList(self)
         return self._auto_attendants
 
     @property
     def workspaces(self):
+        """ :class:`.workspace.WorkspacesList` instance for the Org """
         if self._workspaces is None:
             self._workspaces = WorkspaceList(parent=self)
         return self._workspaces
 
     @property
     def licenses(self):
-        """ A :class:`WebexLicenseList` for the Organization """
+        """ :class:`WebexLicenseList` for the Organization """
         if self._licenses is None:
             self._licenses = WebexLicenseList(self)
         return self._licenses
 
     @property
     def locations(self):
+        """ :class:`~.location.LocationList` for the Organization """
         if self._locations is None:
             self._locations = LocationList(self)
         return self._locations
 
     @property
     def dect_networks(self):
+        """ :class:`~.dect.DECTNetworkList` for the Organization"""
         if self._dect_networks is None:
             self._dect_networks = DECTNetworkList(self)
         return self._dect_networks
@@ -222,6 +227,7 @@ class Org:
 
     @property
     def queue_settings(self):
+        """ :class:`QueueSettingsList` for this Organization """
         response = webex_api_call("get", "v1/telephony/config/queues/settings", params={'orgId': self.id})
         response['org'] = self
         return OrgQueueSettings.from_dict(response)
@@ -758,6 +764,7 @@ class Org:
 
     @property
     def recording_vendor(self):
+        """The :class:`OrgRecordingVendorSelection` instance for the Organization"""
         return OrgRecordingVendorSelection(self)
 
     @property
@@ -826,6 +833,7 @@ class WebexLicenseList(UserList):
         # The idea is that a developer could limit the subscriptions if they wanted
         self.assignable_subscriptions: list = \
             list({license.subscription for license in self.data if license.subscription is not None})
+        """ List of assignable subscriptions """
 
     def refresh(self):
         """ Refresh the list of licenses and their usage """

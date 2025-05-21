@@ -69,6 +69,7 @@ class PickupGroup:
         self.name: str = config['name']
         """The name of the Pickup Group"""
         self.config = config
+        """The raw JSON configuration for the Pickup Group"""
 
     @property
     def users(self):

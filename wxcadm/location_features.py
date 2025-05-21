@@ -16,9 +16,12 @@ from .common import *
 class PagingGroup:
     parent: wxcadm.Location
     id: str
+    """ The ID of the Paging Group """
     name: str
+    """ The name of the Paging Group """
     spark_id: str = field(init=False, repr=False)
     config: dict = field(init=False, repr=False)
+    """ The configuration of the Paging Group """
 
     def __post_init__(self):
         self.spark_id = decode_spark_id(self.id)
@@ -212,6 +215,22 @@ class LocationSchedule:
     def update_event(self, id: str, name: str = None, start_date: str = None, end_date: str = None,
                      start_time: str = None,
                      end_time: str = None, all_day: bool = None, recurrence: dict = None):
+        """ Update an event within the LocationSchedule instance
+
+        Args:
+            id (str): The ID of the event
+            name (str, optional): The name of the event
+            start_date (str, optional): The start date of the event
+            end_date (str, optional): The end date of the event
+            start_time (str, optional): If this is not an all-day event, the time the event starts
+            end_time (str, optional): If this is not an all-day event, the time the event ends
+            all_day (bool, optional): True if this is an all-day event. start_time and end_time will be ignored.
+            recurrence (dict, optional): Dict of recurrence configuration. If this is not an all-day event, the
+                recurrence will be ignored.
+
+        Returns:
+
+        """
         log.debug("update_event() started")
         # Input validation
         if all_day is False and (start_time == "" or end_time == ""):
@@ -406,6 +425,7 @@ class OutgoingPermissionDigitPatternList:
         return pattern_list
 
     def refresh(self):
+        """ Refresh the list of digit patterns """
         self.patterns = self._get_data()
         return self
 
@@ -469,11 +489,17 @@ class OutgoingPermissionDigitPatternList:
 class OutgoingPermissionDigitPattern:
     def __init__(self, location: wxcadm.Location, config: dict):
         self.location = location
+        """ The location of the digit pattern """
         self.id: str = config.get('id', '')
+        """ The identifier of the digit pattern """
         self.name: str = config.get('name', '')
+        """ The name of the digit pattern """
         self.pattern: str = config.get('pattern', '')
+        """ The digit pattern """
         self.action: str = config.get('action', '')
+        """ The action of the digit pattern """
         self.transfer_enabled: bool = config.get('transferEnabled')
+        """ Whether the digit pattern is used for transferred or forwarded calls """
 
     def delete(self) -> bool:
         """ Delete the specified digit pattern
@@ -493,6 +519,18 @@ class OutgoingPermissionDigitPattern:
                pattern: Optional[str] = None,
                action: Optional[str] = None,
                transfer_enabled: Optional[bool] = None):
+        """ Update the specified digit pattern
+
+        Args:
+            name (str): The name of the digit pattern
+            pattern (str): The digit pattern
+            action (str): The action of the digit pattern
+            transfer_enabled (bool): Whether the digit pattern is used for transferred or forwarded calls.
+
+        Returns:
+            OutgoingPermissionDigitPattern: the instance of the digit pattern
+
+        """
         name = self.name if name is None else name
         pattern = self.pattern if pattern is None else pattern
         action = self.action if action is None else action
@@ -521,12 +559,19 @@ class OutgoingPermissionDigitPattern:
 class VoicemailGroup:
     org: wxcadm.Org
     id: str
+    """ The ID of the Voicemail Group """
     name: str
+    """ The name of the Voicemail Group """
     location_name: str
+    """ The name of the location """
     location_id: str
+    """ The ID of the location """
     extension: str
+    """ The extension of the Voicemail Group """
     enabled: bool
+    """ Whether the Voicemail Group is enabled """
     esn: Optional[str] = None
+    """ The ESN of the Voicemail Group """
     _phone_number: Optional[str] = field(init=False, default=None)
     _first_name: Optional[str] = field(init=False, default=None)
     _last_name: Optional[str] = field(init=False, default=None)
@@ -776,6 +821,7 @@ class VoicemailGroupList(UserList):
         return data
 
     def refresh(self):
+        """ Refresh the list of Voicemail Groups """
         self.data = self._get_data()
         return self
 
@@ -809,6 +855,26 @@ class VoicemailGroupList(UserList):
                fax_message: Optional[dict] = None,
                transfer_to_number: Optional[dict] = None,
                email_copy_of_message: Optional[dict] = None):
+        """ Create a new Voicemail Group
+
+        Args:
+            location (wxcadm.Location): The Location of the Voicemail Group
+            name (str): The name of the Voicemail Group
+            extension (str): The extension of the Voicemail Group
+            passcode (str): The passcode for the Voicemail Group
+            phone_number (str, optional): The phone number of the Voicemail Group
+            first_name (str, optional): The first name of the Voicemail Group
+            last_name (str, optional): The last name of the Voicemail Group
+            language_code (str, optional): The language code of the Voicemail Group
+            message_storage (dict, optional): The message storage settings as a dict
+            notifications (dict, optional): The notification settings as a dict
+            fax_message (dict, optional): The fax settings as a dict
+            transfer_to_number (dict, optional): The transfer settings as a dict
+            email_copy_of_message (dict, optional): The email settings as a dict for the default settings
+
+        Returns:
+
+        """
         log.info(f'Creating Voicemail Group {name} in Location {location.name}')
         if message_storage is None:
             message_storage = {'storageType': 'INTERNAL'}
@@ -842,4 +908,3 @@ class VoicemailGroupList(UserList):
         vg_id = response['id']
         self.refresh()
         return self.get(id=vg_id)
-

@@ -15,15 +15,22 @@ from .common import *
 class DECTHandset:
     def __init__(self, dect_network: DECTNetwork, config: Optional[dict] = None):
         self.dect_network = dect_network
+        """ :class:`DECTNetwork` instance for this handset"""
         self.id: Optional[str] = config.get('id', None)
+        """ DECT Handset ID """
         self.index: str = config.get('index', '')
+        """ DECT Handset Index"""
         self.display_name: str = config.get('displayName', '')
+        """ Display Name of the Handset """
         self.access_code: str = config.get('accessCode')
+        """ Access Code for the Handset """
         self.lines: list = config.get('lines', [])
+        """ List of lines for the Handset"""
         self._mac: str = config.get('mac', None)
 
     @property
     def mac(self) -> str:
+        """ MAC Address of the Handset """
         if self._mac is None:
             response = webex_api_call("get",
                                       f"v1/telephony/config/locations/{self.dect_network.location_id}/"
@@ -74,9 +81,13 @@ class DECTHandset:
 class DECTBaseStation:
     def __init__(self, dect_network: DECTNetwork, config: Optional[dict] = None):
         self.dect_network: DECTNetwork = dect_network
+        """ The :class:`DECTNetwork` instance associated with this Base Station """
         self.id: Optional[str] = config.get('id', None)
+        """ The ID of the Base Station """
         self.mac: str = config.get('mac', '').upper()
+        """ MAC Address of the Base Station """
         self.number_of_lines_registered: int = config.get('numberOfLinesRegistered', 0)
+        """ Number of Lines Registered """
         log.info(f"Initializing DECTBaseStation with MAC {self.mac}")
 
     def delete(self) -> bool:
@@ -125,20 +136,32 @@ class DECTNetwork:
                     f'v1/telephony/config/locations/{location.id}/dectNetworks/{id}'
                 )
         log.info(f"Initializing DECTNetwork with Name {config['name']}")
-        self.id: str = config.get('id', None)
+        self.id: str = config.get('id', '')
+        """ The ID of the DECT Network """
         self.name: str = config.get('name', '')
+        """ Name of the DECT Network """
         self.display_name: str = config.get('displayName', '')
+        """ Display Name of the DECT Network """
         self.chain_id: str = config.get('chainId', '')
+        """ Chain ID of the DECT Network """
         self.model: str = config.get('model', '')
+        """ Model of the DECT Network base stations """
         self.default_access_code_enabled: bool = config.get('defaultAccessCodeEnabled', False)
+        """ True if the Default Access Code is enabled """
         self.default_access_code: str = config.get('defaultAccessCode', '')
+        """ Default Access Code """
         self.number_of_base_stations: int = config.get('numberOfBaseStations', 0)
+        """ Number of Base Stations """
         self.number_of_handsets_assigned: int = config.get('numberOfHandsetsAssigned', 0)
+        """ Number of Handsets Assigned """
         self.number_of_lines: int = config.get('numberOfLines', 0)
+        """ Number of Lines """
         self.location_id: str = config['location'].get('id', None)
+        """ The Location ID of the DECT Network """
 
     @property
     def handsets(self) -> list:
+        """ List of :class:`DECTHandset` instances associated with this DECT Network """
         handsets = []
         response = webex_api_call(
             'get',
@@ -351,6 +374,7 @@ class DECTNetwork:
 
     @property
     def base_stations(self):
+        """ List of :class:`DECTBaseStation` instances associated with this DECT Network """
         base_stations = []
         response = webex_api_call(
             'get',
@@ -486,14 +510,12 @@ class DECTNetworkList(UserList):
         return retval
 
     def with_handsets(self, count: Optional[int] = 1) -> list:
-        """
-
-        Args:
-            count:
-
-        Returns:
-
-        """
+        """ Get a list of :class:`DECTNetwork` instances with at least one Handset"""
+        retval = []
+        for network in self.data:
+            if network.number_of_handsets_assigned >= count:
+                retval.append(network)
+        return retval
 
     def create(self,
                name: str,

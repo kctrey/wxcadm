@@ -181,6 +181,7 @@ class LocationList(UserList):
                 return locations
             elif single is True:
                 return locations[0]
+        return locations
 
     def with_pstn(self, has_pstn: bool = True):
         """ Return o list of :class:`Location` where the location has PSTN enabled
@@ -270,6 +271,7 @@ class Location:
 
     @property
     def outgoing_permission_digit_patterns(self) -> OutgoingPermissionDigitPatternList:
+        """ Returns a :class:`OutgoingPermissionDigitPatternList` instance for the location. """
         if self._outgoing_permission_digit_patterns is None:
             self._outgoing_permission_digit_patterns = OutgoingPermissionDigitPatternList(self)
         return self._outgoing_permission_digit_patterns
@@ -304,6 +306,7 @@ class Location:
 
     @property
     def people(self) -> list:
+        """ The list of People for this Location """
         return self.parent.people.get(location=self)
 
     @property
@@ -1034,6 +1037,7 @@ class LocationFloorList(UserList):
             self.data.append(LocationFloor(self.parent, floor))
 
     def refresh(self):
+        """ Reload from the list of locations """
         self._get_data()
 
     def create(self, floor_number: int, name: str):

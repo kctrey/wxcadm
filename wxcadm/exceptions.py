@@ -15,10 +15,12 @@ class LicenseError(OrgError):
         super(LicenseError, self).__init__(message)
 
 class NotSubscribedForLicenseError(LicenseError):
+    """ An exception indicating that the user is not subscribed to a license for the given feature."""
     def __init__(self, message):
         super(NotSubscribedForLicenseError, self).__init__(message)
 
 class LicenseOverageError(LicenseError):
+    """ An exception indicating that the user has exceeded the license limit for the given feature."""
     def __init__(self, message):
         super(LicenseOverageError, self).__init__(message)
 

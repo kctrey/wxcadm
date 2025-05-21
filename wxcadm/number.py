@@ -215,6 +215,7 @@ class NumberList(UserList):
         for number in self.data:
             if number.owner == owner:
                 return number
+        return None
 
     def add(self,
             location: wxcadm.Location,

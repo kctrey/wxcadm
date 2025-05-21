@@ -55,6 +55,7 @@ class HuntGroup:
 
     @property
     def agents(self) -> list:
+        """ The list of agents associated with the Hunt Group """
         return self.config['agents']
 
     @property

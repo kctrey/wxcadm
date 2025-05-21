@@ -57,7 +57,9 @@ class AuditEventList(UserList):
         super().__init__()
         self.parent = parent
         self.start = start
+        """ The start date of the audit events """
         self.end = end
+        """ The end date of the audit events """
         self.data = self._get_data()
 
     def _get_data(self):

@@ -113,47 +113,89 @@ class WebexApplications(UserList):
 class WebexApplication:
     parent: wxcadm.Org = field(repr=False)
     isNative: bool = field(repr=False)
+    """ Wheyjer the application was created natively or via the API """
     id: str
+    """ The ID of the application """
     friendlyId: str
+    """ The friendly ID of the application """
     type: str
+    """ The type of application """
     name: str
+    """ The name of the application """
     orgId: str = field(repr=False)
+    """ The ID of the Organization the application belongs to """
     isFeatured: bool = field(repr=False)
+    """ Whether the application is featured """
     submissionStatus: str = field(repr=False)
+    """ The submission status of the application """
     createdBy: str = field(repr=False)
+    """ The ID of the user who created the application """
     created: str = field(repr=False)
+    """ The date and time the application was created """
     description: str = field(default='', repr=False)
+    """ The description of the application """
     modified: str = field(default='', repr=False)
+    """ The date and time the application was last modified """
     redirectUrls: list = field(default=None, repr=False)
+    """ A list of redirect URLs for the application """
     scopes: list = field(default=None, repr=False)
+    """ A list of scopes assigned to the application """
     clientId: str = field(default='', repr=False)
+    """ The Client ID of the application """
     logo: str = field(default='', repr=False)
+    """ A URL to the logo image of the application """
     tagLine: str = field(default='', repr=False)
+    """ A long tag line for the application """
     shortTagLine: str = field(default='', repr=False)
+    """ A short tag line for the application """
     categories: list = field(default=None, repr=False)
+    """ A list of categories assigned to the application """
     videoUrl: str = field(default='', repr=False)
+    """ A URL to a video demo of the application """
     contactEmail: str = field(default='', repr=False)
+    """ The contact email address for the application """
     contactName: str = field(default='', repr=False)
+    """ The contact name for the application """
     companyName: str = field(default='', repr=False)
+    """ The company name for the application """
     companyUrl: str = field(default='', repr=False)
+    """ A URL to the company website for the application """
     supportUrl: str = field(default='', repr=False)
+    """ A URL to the application support page """
     privacyUrl: str = field(default='', repr=False)
+    """ A URL to the application privacy policy """
     productUrl: str = field(default='', repr=False)
+    """ A URL to the application product page """
     applicationUrls: list = field(default=None, repr=False)
+    """ A list of URLs for the application """
     botEmail: str = field(default='', repr=False)
+    """ The email address of the bot for the application """
     botPersonId: str = field(default='', repr=False)
+    """ The ID of the person associated with the bot for the application """
     submissionDate: str = field(default='', repr=False)
+    """ The date the application was submitted for review """
     orgSubmissionStatus: str = field(default='', repr=False)
+    """ The submission status of the application in the Org """
     appContext: str = field(default='', repr=False)
+    """ The context of the application """
     tags: list = field(default=None, repr=False)
+    """ A list of tags assigned to the application """
     screenshot1: str = field(default='', repr=False)
+    """ A URL to a screenshot of the application """
     screenshot2: str = field(default='', repr=False)
+    """ A URL to a second screenshot of the application """
     screenshot3: str = field(default='', repr=False)
+    """ A URL to a third screenshot of the application """
     validDomains: list = field(default=None, repr=False)
+    """ A list of valid domains for the application """
     groupId: str = field(default='', repr=False)
+    """ The ID of the group the application belongs to """
     version: str = field(default='', repr=False)
+    """ The version of the application """
     meetingLayoutPreference: str = field(default='', repr=False)
+    """ The meeting layout preference for the application """
     entitlements: str = field(default='', repr=False)
+    """ The entitlements assigned to the application """
 
     def authorize(self):
         """ Authorize the application for the Organization

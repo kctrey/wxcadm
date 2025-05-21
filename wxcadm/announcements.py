@@ -186,13 +186,21 @@ class AnnouncementList(UserList):
 class Announcement:
     parent: wxcadm.Org = field(repr=False)
     id: str
+    """ The ID of the Announcement """
     name: str
+    """ The name of the Announcement """
     fileName: str
+    """ The name of the file associated with the Announcement """
     fileSize: str = field(repr=False)
+    """ The size of the file associated with the Announcement in bytes """
     mediaFileType: str = field(repr=False)
+    """ The type of the file associated with the Announcement """
     lastUpdated: str = field(repr=False)
+    """ The timestamp the Announcement was last updated """
     level: str
+    """ The level of the Announcement (e.g. ORGANIZATION, LOCATION) """
     location: dict | None = field(default=None)
+    """ The Location instance associated with the Announcement """
 
     @property
     def used_by(self):
@@ -474,5 +482,3 @@ class PlaylistList(UserList):
         this_playlist = Playlist.from_dict(new_playlist_info)
         self.data.append(this_playlist)
         return this_playlist
-
-

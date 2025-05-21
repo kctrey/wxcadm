@@ -19,11 +19,17 @@ if TYPE_CHECKING:
 class DeviceLayout:
     def __init__(self, device: Device, config: Optional[dict] = None):
         self.device = device
+        """ The :class:`Device` associated with this layout """
         self.layout_mode: str = ''
+        """ The Layout Mode """
         self.user_reorder_enabled: bool = False
+        """ Whether the user can re-order the items in the list """
         self.line_keys: list = []
+        """ The list of line keys for the configured lines """
         self.kem_type: Optional[str] = None
+        """ The type of KEM used by the Device Layout """
         self.kem_keys: Optional[list] = None
+        """ The list of keys used by the KEM """
 
         if config is None:
             self._get_config()
@@ -189,6 +195,7 @@ class Device:
 
     @property
     def config(self) -> dict:
+        """ Returns the device configuration as a dictionary """
         response = webex_api_call('get', f'/v1/telephony/config/devices/{self.id}')
         return response
 
@@ -267,7 +274,9 @@ class DeviceMemberList(UserList):
         super().__init__()
         log.info("Initializing DeviceMemberList")
         self.device = device
+        """ The :class:`Device` instance associated with this Member List"""
         self.max_line_count: Optional[int] = None
+        """ The max number of lines in the device"""
         self.data = self._get_data()
 
     def _get_data(self):
@@ -435,26 +444,47 @@ class DeviceMemberList(UserList):
 class DeviceMember:
     def __init__(self, device: Device, member_info: dict):
         self.device: Device = device
+        """ The :class:`Device` instance associated with this member """
         self.member_type: str = member_info['memberType']
+        """ The type of member, either 'person' or 'workspace'"""
         self.id: str = member_info['id']
+        """ The ID of the member"""
         self.port: int = member_info['port']
+        """ The device port number of the member"""
         self.primary_owner: bool = member_info['primaryOwner']
+        """ Whether this member is the primary owner of the device"""
         self.line_type: str = member_info['lineType']
+        """ The type of line, either 'primary' or 'shared'"""
         self.line_weight: int = member_info['lineWeight']
+        """ The weight of this line"""
         self.hotline_enabled: bool = member_info['hotlineEnabled']
+        """ Whether hotline is enabled for this member"""
         self.hotline_destination: Optional[str] = member_info.get('hotlineDestination', None)
+        """ The hotline destination number, if enabled"""
         self.call_decline_all: bool = member_info['allowCallDeclineEnabled']
+        """ Whether call decline is enabled for this member"""
         self.line_label: Optional[str] = member_info.get('lineLabel', None)
+        """ The line label, if set"""
         self.first_name: Optional[str] = member_info.get('firstName', None)
+        """ The first name of the member"""
         self.last_name: Optional[str] = member_info.get('lastName', None)
+        """ The last name of the member"""
         self.phone_number: Optional[str] = member_info.get('phoneNumber', None)
+        """ The phone number of the member"""
         self.extension: Optional[str] = member_info.get('extension', None)
+        """ The extension of the member"""
         self.host_ip: Optional[str] = member_info.get('hostIP', None)
+        """ The host IP address of the member"""
         self.remote_ip: Optional[str] = member_info.get('remoteIP', None)
+        """ The remote IP address of the member """
         self.line_port: Optional[str] = member_info.get('linePort', None)
+        """ The line port of the member"""
         self.esn: Optional[str] = member_info.get('esn', None)
+        """ The ESN of the member"""
         self.routing_prefix: Optional[str] = member_info.get('routingPrefix', None)
+        """ The routing prefix of the member"""
         self.location_id = None
+        """ The location ID of the member """
         if 'location' in member_info.keys():
             self.location_id = member_info['location']['id']
 
@@ -913,24 +943,43 @@ class DeviceList(UserList):
 @dataclass
 class SupportedDevice:
     model: str
+    """ The model of the device """
     display_name: str
+    """ The display name of the device type """
     type: str
+    """ The type of the device"""
     manufacturer: str
+    """ The manufacturer of the device"""
     managed_by: str
+    """ Whether the device is managed by Cisco or a third party """
     supported_for: list
+    """ What the device type is supported for """
     onboarding_method: list
+    """ What methods are available to onboard the device """
     allow_configure_layout_enabled: bool
-    number_of_line_ports: bool
+    """ Whether the device type supports configuring the layout """
+    number_of_line_ports: int
+    """ The number of line ports on the device """
     kem_support_enabled: bool
+    """ Whether the device supports a key expansion module """
     upgrade_channel_enabled: bool
+    """ Whether the device supports multiple upgrade channels """
     customized_behaviors_enabled: bool
+    """ Whether the device supports customized behaviors """
     allow_configure_ports_enabled: bool
+    """ Whether the device supports configuring line ports """
     customizable_line_label_enabled: bool
+    """ Whether the device supports customizable line labels """
     kem_module_count: Optional[int] = None
+    """ The number of KEM modules supported by the device """
     kem_module_type: Optional[list] = None
+    """ The type of KEM modules supported by the device """
     default_upgrade_channel: Optional[str] = None
+    """ The default upgrade channel for the device """
     additional_primary_line_appearances_enabled: Optional[bool] = None
+    """ Whether the device supports configuring additional primary line appearances """
     basic_emergency_nomadic_enabled: Optional[bool] = None
+    """ Whether the device supports basic emergency nomadic (HELD) """
 
 
 class SupportedDeviceList(UserList):

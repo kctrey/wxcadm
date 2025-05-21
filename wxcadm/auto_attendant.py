@@ -196,12 +196,19 @@ class AutoAttendant:
     def __post_init__(self):
         # Attributes available in the main list
         self.name = self.data.get('name', '')
+        """ The name of the Auto Attendant """
         self.location_id = self.data.get('locationId', '')
+        """ The ID of the Location that owns this Auto Attendant """
         self.phone_number: Optional[str] = self.data.get('phoneNumber', None)
+        """ The phone number of the Auto Attendant """
         self.extension: Optional[str] = self.data.get('extension', None)
+        """ The extension of the Auto Attendant """
         self.routing_prefix: Optional[str] = self.data.get('routingPrefix', None)
+        """ The routing prefix of the Auto Attendant """
         self.esn: Optional[str] = self.data.get('esn', None)
+        """ The ESN of the Auto Attendant """
         self.toll_free_number: bool = self.data.get('tollFreeNumber', False)
+        """ Whether the Auto Attendant is a toll free number """
         # Attributes that require a Get Detail call
         self._first_name: Optional[str] = None
         self._last_name: Optional[str] = None
@@ -219,84 +226,98 @@ class AutoAttendant:
 
     @property
     def enabled(self) -> bool:
+        """ Whether the Auto Attendant is enabled """
         if self._enabled is None:
             self._get_details()
         return self._enabled
 
     @property
     def first_name(self) -> str:
+        """ The first name of the Auto Attendant in the directory """
         if self._first_name is None:
             self._get_details()
         return self._first_name
 
     @property
     def last_name(self) -> str:
+        """ The last name of the Auto Attendant in the directory """
         if self._last_name is None:
             self._get_details()
         return self._last_name
 
     @property
     def alternate_numbers(self) -> list:
+        """ A list of alternate numbers for the Auto Attendant """
         if self._alternate_numbers is None:
             self._get_details()
         return self._alternate_numbers
 
     @property
     def language(self) -> str:
+        """ The language for the Auto Attendant """
         if self._language is None:
             self._get_details()
         return self._language
 
     @property
     def language_code(self) -> str:
+        """ The language code for the Auto Attendant """
         if self._language_code is None:
             self._get_details()
         return self._language_code
 
     @property
     def business_schedule(self) -> str:
+        """ The name of the Business Hours Schedule for the Auto Attendant """
         if self._business_schedule is None:
             self._get_details()
         return self._business_schedule
 
     @property
     def holiday_schedule(self) -> str:
+        """ The name of the Holiday Schedule for the Auto Attendant """
         if self._holiday_schedule is None:
             self._get_details()
         return self._holiday_schedule
 
     @property
     def extension_dialing(self) -> str:
+        """ Whether extension dialing matches at the `'GROUP'` (i.e. Location) or `'ENTERPRISE'` """
         if self._extension_dialing is None:
             self._get_details()
         return self._extension_dialing
 
     @property
     def name_dialing(self) -> str:
+        """ Whether name dialing matches at the `'GROUP'` (i.e. Location) or `'ENTERPRISE'` """
         if self._name_dialing is None:
             self._get_details()
         return self._name_dialing
 
     @property
     def time_zone(self) -> str:
+        """ The time zone for the Auto Attendant """
         if self._time_zone is None:
             self._get_details()
         return self._time_zone
 
     @property
     def business_hours_menu(self) -> dict:
+        """ The Business Hours menu configuration for the Auto Attendant """
         if self._business_hours_menu is None:
             self._get_details()
         return self._business_hours_menu
 
     @property
     def after_hours_menu(self) -> dict:
+        """ The After Hours menu configuration for the Auto Attendant """
         if self._after_hours_menu is None:
             self._get_details()
         return self._after_hours_menu
 
     @property
     def spark_id(self) -> str:
+        """ The Spark ID of the Auto Attendant """
         return decode_spark_id(self.id)
 
     @property

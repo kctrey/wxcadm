@@ -501,8 +501,9 @@ class Person:
             for role in self.roles:
                 roles.append(self._parent.roles[role])
                 return roles
-            else:
-                return None
+        else:
+            return None
+
 
     def delete(self) -> bool:
         """ Delete the Person """
