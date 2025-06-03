@@ -44,7 +44,7 @@ class DeviceLayout:
         self.kem_keys = config.get('kemKeys', None)
 
     def _get_config(self):
-        response = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/layout',
+        response = webex_api_call('get', f'v1/telephony/config/devices/{self.device.calling_id}/layout',
                                   params={'orgId': self.device.parent.org_id})
         self._parse_config(response)
 
@@ -53,17 +53,10 @@ class Device:
     def __init__(self, parent: wxcadm.Org | Person | Workspace,
                  config: Optional[dict] = None,
                  id: Optional[str] = None):
+        log.debug(f"Initializing Device for {parent.name}")
+        log.debug(f"Config: {config}")
         self.parent = parent
         """ The :py:class:`Org`, :py:class:`Person` or :py:class:`Workspace` that created this instance """
-
-        # The logic below addresses the case where the Device owner is a Person, because of how we have to get the
-        # list of devices
-        if "connectionStatus" not in config.keys():
-            try:
-                config = webex_api_call('get', f'/v1/devices/{id}', params={'orgId': self.parent.org_id})
-            except wxcadm.APIError:
-                pass
-
         self.id: str = config['id']
         """ The Device ID """
         self.tags: list = config.get('tags', config.get('description', []))
@@ -115,15 +108,28 @@ class Device:
         """
         self.location_id: Optional[str] = config.get('locationId', None)
         """ The Location ID of the device, which indicates the Location of the primary Person or Workspace """
+        # Added in 4.5.1 in prep for the upcoming 'callingId' attribute. Setting this to a property so that I can
+        # fetch it from the /telephony endpoints until it comes in /v1/devices
+        self._calling_id: Optional[str] = config.get('callingId', None)
         self._device_members = None
         self._layout = None
 
-        if 'personId' in config.keys() and isinstance(self.parent, wxcadm.Org):
-            self.owner = self.parent.get_person_by_id(config['personId'])
-            if self.owner is None:
-                self.owner = config['personId']
-        elif 'workspaceId' in config.keys() and isinstance(self.parent, wxcadm.Org):
-            self.owner = self.parent.workspaces.get_by_id(config['workspaceId'])
+        if 'personId' in config.keys():
+            if isinstance(self.parent, wxcadm.Org):
+                log.debug(f"Finding person owner {config['personId']} for device {self.id}")
+                self.owner = self.parent.people.get(id=config['personId'])
+                if self.owner is None:
+                    self.owner = config['personId']
+            elif isinstance(self.parent, wxcadm.Person):
+                self.owner = self.parent
+        elif 'workspaceId' in config.keys():
+            if isinstance(self.parent, wxcadm.Org):
+                log.debug(f"Finding workspace owner {config['workspaceId']} for device {self.id}")
+                self.owner = self.parent.workspaces.get(id=config['workspaceId'])
+                if self.owner is None:
+                    self.owner = config['workspaceId']
+            elif isinstance(self.parent, wxcadm.Workspace):
+                self.owner = self.parent
 
     @property
     def layout(self) -> DeviceLayout:
@@ -131,6 +137,27 @@ class Device:
         if self._layout is None:
             self._layout = DeviceLayout(self)
         return self._layout
+
+    # Added in 4.5.1 in prep for the upcoming 'callingId' attribute. Setting this to a property so that I can
+    # fetch it from the /telephony endpoints until it comes in /v1/devices
+    @property
+    def calling_id(self) -> str:
+        """ The calling ID of the device """
+        if self._calling_id is None:
+            if isinstance(self.owner, wxcadm.Person):
+                url = f"v1/telephony/config/people/{self.owner.id}/devices"
+            elif isinstance(self.owner, wxcadm.Workspace):
+                url = f"v1/telephony/config/workspaces/{self.owner.id}/devices"
+            else:
+                log.error(f"self.owner is not a Person or a Workspace. self.owner is {self.owner}")
+                return None
+            response = webex_api_call('get', url, params={'orgId': self.parent.org_id})
+            for device in response['devices']:
+                if 'mac' in device.keys():
+                    if device['mac'] == self.mac:
+                        self._calling_id = device['id']
+                        break
+        return self._calling_id
 
     def set_layout(self, layout: DeviceLayout):
         """ Use the provided :class:`DeviceLayout` as the new layout for the Device.
@@ -158,7 +185,7 @@ class Device:
         if layout.kem_keys is not None:
             payload['kemKeys'] = layout.kem_keys
 
-        webex_api_call('put', f"v1/telephony/config/devices/{self.id}/layout", payload=payload,
+        webex_api_call('put', f"v1/telephony/config/devices/{self.calling_id}/layout", payload=payload,
                        params={'orgId': self.parent.org_id})
         return True
 
@@ -196,7 +223,7 @@ class Device:
     @property
     def config(self) -> dict:
         """ Returns the device configuration as a dictionary """
-        response = webex_api_call('get', f'/v1/telephony/config/devices/{self.id}')
+        response = webex_api_call('get', f'/v1/telephony/config/devices/{self.calling_id}')
         return response
 
     @property
@@ -207,7 +234,7 @@ class Device:
 
         """
         if self._settings is None:
-            response = webex_api_call('get', f'/v1/telephony/config/devices/{self.id}/settings',
+            response = webex_api_call('get', f'/v1/telephony/config/devices/{self.calling_id}/settings',
                                       params={'model': self.model, 'orgId': self.parent.org_id})
             self._settings = response
         return self._settings
@@ -215,7 +242,7 @@ class Device:
     @settings.setter
     def settings(self, config: dict):
         try:
-            webex_api_call('put', f'v1/telephony/config/devices/{self.id}/settings',
+            webex_api_call('put', f'v1/telephony/config/devices/{self.calling_id}/settings',
                                   payload=config, params={'orgId': self.parent.org_id})
         except APIError:
             logging.warning("The API call to set the device settings failed")
@@ -230,7 +257,7 @@ class Device:
 
         """
         try:
-            webex_api_call('post', f'v1/telephony/config/devices/{self.id}/actions/applyChanges/invoke',
+            webex_api_call('post', f'v1/telephony/config/devices/{self.calling_id}/actions/applyChanges/invoke',
                            params={'orgId': self.parent.org_id})
         except APIError:
             return False
@@ -281,7 +308,7 @@ class DeviceMemberList(UserList):
 
     def _get_data(self):
         try:
-            response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.id}/members",
+            response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.calling_id}/members",
                                       params={'orgId': self.device.parent.org_id})
         except:
             return []
@@ -306,7 +333,7 @@ class DeviceMemberList(UserList):
             dict: A list of available members to add to the device
 
         """
-        response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.id}/availableMembers",
+        response = webex_api_call('get', f"v1/telephony/config/devices/{self.device.calling_id}/availableMembers",
                                   params={'orgId': self.device.parent.org_id})
         return response['members']
 
@@ -382,7 +409,7 @@ class DeviceMemberList(UserList):
             members_list_json.append(member_config)
 
         wxcadm.webex_api_call('put',
-                              f"v1/telephony/config/devices/{self.device.id}/members",
+                              f"v1/telephony/config/devices/{self.device.calling_id}/members",
                               payload={'members': members_list_json},
                               params={'orgId': self.device.parent.org_id})
         return True
@@ -499,7 +526,7 @@ class DeviceMember:
 
         """
         # Rather than rebuild the member list from what we already have, it's quicker to just pull a fresh copy
-        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/members',
+        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.calling_id}/members',
                                          params={'orgId': self.device.parent.org_id})
         new_member_list = []
         for member in old_member_list['members']:
@@ -518,7 +545,7 @@ class DeviceMember:
             new_member_list.append(member)
 
         # Once we have rebuilt the list, just PUT it back
-        webex_api_call('put', f'v1/telephony/config/devices/{self.device.id}/members',
+        webex_api_call('put', f'v1/telephony/config/devices/{self.device.calling_id}/members',
                        payload={'members': new_member_list}, params={'orgId': self.device.parent.org_id})
         self.line_label = label
         return self
@@ -535,7 +562,7 @@ class DeviceMember:
 
         """
         # Rather than rebuild the member list from what we already have, it's quicker to just pull a fresh copy
-        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/members',
+        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.calling_id}/members',
                                          params={'orgId': self.device.parent.org_id})
         new_member_list = []
         for member in old_member_list['members']:
@@ -557,7 +584,7 @@ class DeviceMember:
             new_member_list.append(member)
 
         # Once we have rebuilt the list, just PUT it back
-        webex_api_call('put', f'v1/telephony/config/devices/{self.device.id}/members',
+        webex_api_call('put', f'v1/telephony/config/devices/{self.device.calling_id}/members',
                        payload={'members': new_member_list}, params={'orgId': self.device.parent.org_id})
         self.hotline_enabled = enabled
         if destination is not None:
@@ -578,7 +605,7 @@ class DeviceMember:
 
         """
         # Rather than rebuild the member list from what we already have, it's quicker to just pull a fresh copy
-        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.id}/members',
+        old_member_list = webex_api_call('get', f'v1/telephony/config/devices/{self.device.calling_id}/members',
                                          params={'orgId': self.device.parent.org_id})
         new_member_list = []
         for member in old_member_list['members']:
@@ -598,7 +625,7 @@ class DeviceMember:
             new_member_list.append(member)
 
         # Once we have rebuilt the list, just PUT it back
-        webex_api_call('put', f'v1/telephony/config/devices/{self.device.id}/members',
+        webex_api_call('put', f'v1/telephony/config/devices/{self.device.calling_id}/members',
                        payload={'members': new_member_list}, params={'orgId': self.device.parent.org_id})
         self.call_decline_all = enabled
         return self
@@ -628,9 +655,8 @@ class DeviceList(UserList):
             log.debug(f"Using Location ID {self.parent.id} as data filter")
             params['locationId'] = self.parent.id
         elif isinstance(self.parent, wxcadm.person.Person):
-            log.debug(f"Using API endpoint v1/telephony/config/people/{self.parent.id}/devices")
-            self._endpoint = f"v1/telephony/config/people/{self.parent.id}/devices"
-            self._endpoint_items_key = 'devices'
+            log.debug(f"Using Person ID {self.parent.id} as data filter")
+            params['personId'] = self.parent.id
         elif isinstance(self.parent, wxcadm.workspace.Workspace):
             log.debug(f"Using Workspace ID {self.parent.id} as data filter")
             params['workspaceId'] = self.parent.id

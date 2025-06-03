@@ -755,6 +755,22 @@ class Person:
         return self._devices
 
     @property
+    def appearance_devices(self) -> list[dict]:
+        """ Get a list of dicts for devices that have this Person as a line appearance
+
+        This list is returned as the raw dict from Webex to avoid confusion with the :class:`~.device.Device` class.
+            You are able to use the values (i.e. `mac`) returned in this dict to access the :class:`~.device.Device`
+            within :attr:`Person.devices <.person.Person.devices>`.
+
+        Returns:
+            list[dict]: A dict of devices that have this Person as a line appearance
+
+        """
+        response = webex_api_call('get', f"v1/telephony/config/people/{self.id}/devices",
+                                  params={"orgId": self._parent.id})
+        return response['devices']
+
+    @property
     def hunt_groups(self):
         """The Hunt Groups that this user is an Agent for.
 
