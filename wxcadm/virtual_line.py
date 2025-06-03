@@ -135,6 +135,11 @@ class VirtualLine:
                                              f"v1/telephony/config/virtualLines/{self.id}/callRecording")
         return response
 
+    @property
+    def name(self):
+        """ The name of the Virtual Line. This is an alias for :attr:`display_name` and will return the same value """
+        return self.display_name
+
     def enable_call_recording(self, type: str,
                               record_vm: bool = False,
                               announcement_enabled: bool = False,
