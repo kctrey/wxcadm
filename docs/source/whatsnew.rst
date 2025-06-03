@@ -5,6 +5,7 @@ What's New
 
 v4.5.1
 ------
+- Recordings can now be reassigned in bulk using :meth:`RecordingList.reassign_owner() <.recording.RecordingList.reassign_owner()>`
 - Devices has been revamped to handle PhoneOS devices as well as prepare the code for upcoming changes to /v1/devices
   - :class:`~.device.DeviceList` now always uses `/v1/devices` regardless of whether the data is being requested at the Org, Location, Person or Workspace level
   - :class:`~.device.Device` now has a :attr:`~.device.Device.calling_id` property, which is the Webex Calling ID used for all of the `/v1/telephony` API endpoints

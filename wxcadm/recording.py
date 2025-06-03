@@ -282,6 +282,7 @@ class Recording:
             self.details = self._get_details()
         else:
             self.details = details
+        self._metadata = None
 
     def _get_details(self):
         params = {'timezone': self._timezone} if self._timezone else None
@@ -291,6 +292,13 @@ class Recording:
 
     def refresh(self) -> None:
         self.details = self._get_details()
+
+    @property
+    def metadata(self) -> dict:
+        """ The metadata of the Recording """
+        if self._metadata is None:
+            self._metadata = webex_api_call('get', f'v1/convergedRecordings/{self.id}/metadata')
+        return self._metadata
 
     @property
     def status(self) -> str:
@@ -556,4 +564,32 @@ class RecordingList(UserList):
             return return_list
         else:
             raise ValueError("id or call_id must be specified")
+
+    def reassign_owner(self, current_owner: Union[wxcadm.Person, wxcadm.Workspace, wxcadm.VirtualLine],
+                       new_owner: wxcadm.Person, recording_list: Optional[list[Recording]] = None):
+        """ Reassign the owner of the given Recordings.
+
+        This is useful when the current owner is a Workspace or Virtual Line with no access to the Recordings. It can
+        also be used to transfer ownership of Recordings to a new owner.
+
+        Args:
+            current_owner (Person | Workspace | VirtualLine): The existing owner of the Recordings
+            new_owner (Person): The new owner of the Recordings. Must be a Person.
+            recording_list (list[Recording], optional): The list of Recordings to reassign. If None, all Recordings
+                will be reassigned.
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {
+            'ownerID': current_owner.id,
+            'reassignOwnerEmail': new_owner.email,
+        }
+        if recording_list is not None:
+            payload['recordingIds'] = [recording.id for recording in recording_list]
+        webex_api_call('post', f"v1/convergedRecordings/reassign", payload=payload)
+        self.refresh()
+        return True
+
 
