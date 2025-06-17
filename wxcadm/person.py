@@ -543,7 +543,7 @@ class Person:
             ucm_licenses = []
             for license in self._parent.licenses:
                 if license.name == 'Unified Communication Manager (UCM)':
-                    ucm_licenses.append(license['id'])
+                    ucm_licenses.append(license.id)
             # Then remove them from the user
             for license in self.licenses[:]:
                 if license in ucm_licenses:

@@ -5,6 +5,7 @@ What's New
 
 v4.5.1
 ------
+- BUG FIX: :meth:`Person.assign_wxc()` now doesn't error when trying to unassign UCM as part of the WxC assignment
 - BUG FIX: :meth:`DeviceMemberList.add() <.device.DeviceMemberList.add()>` now sends the T.38 indicator for ATA devices
 - Recordings can now be reassigned in bulk using :meth:`RecordingList.reassign_owner() <.recording.RecordingList.reassign_owner()>`
 - Devices has been revamped to handle PhoneOS devices as well as prepare the code for upcoming changes to /v1/devices
