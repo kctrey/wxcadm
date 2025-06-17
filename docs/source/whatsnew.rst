@@ -5,12 +5,13 @@ What's New
 
 v4.5.1
 ------
+- BUG FIX: :meth:`DeviceMemberList.add() <.device.DeviceMemberList.add()>` now sends the T.38 indicator for ATA devices
 - Recordings can now be reassigned in bulk using :meth:`RecordingList.reassign_owner() <.recording.RecordingList.reassign_owner()>`
 - Devices has been revamped to handle PhoneOS devices as well as prepare the code for upcoming changes to /v1/devices
-  - :class:`~.device.DeviceList` now always uses `/v1/devices` regardless of whether the data is being requested at the Org, Location, Person or Workspace level
-  - :class:`~.device.Device` now has a :attr:`~.device.Device.calling_id` property, which is the Webex Calling ID used for all of the `/v1/telephony` API endpoints
-  - One behavior that changes in this design is that a the :attr:`Person.devices <.person.Person.devices>` now only returns devices that are owned by the user.
-  - A new property :attr:`Person.appearance_devices <.person.Person.appearance_devices>` has been added to find all the devices the user has a line appearance on
+   - :class:`~.device.DeviceList` now always uses `/v1/devices` regardless of whether the data is being requested at the Org, Location, Person or Workspace level
+   - :class:`~.device.Device` now has a :attr:`~.device.Device.calling_id` property, which is the Webex Calling ID used for all of the `/v1/telephony` API endpoints
+   - One behavior that changes in this design is that a the :attr:`Person.devices <.person.Person.devices>` now only returns devices that are owned by the user.
+   - A new property :attr:`Person.appearance_devices <.person.Person.appearance_devices>` has been added to find all the devices the user has a line appearance on
 - :class:`~.virtual_line.VirtualLine` now has an :attr:`~.virtual_line.VirtualLine.name` attribute
 
 v4.5.0

@@ -406,6 +406,9 @@ class DeviceMemberList(UserList):
             # lineLabel cannot be passed to non-MPP devices, so don't add it unless we need to
             if line_label is not None:
                 member_config['lineLabel'] = line_label
+            # If the device is an ATA, the API also reequires a T38 indicator
+            if self.device.model in ['Cisco 191', 'Cisco 192']:
+                member_config['t38FaxCompression'] = False
             members_list_json.append(member_config)
 
         wxcadm.webex_api_call('put',
@@ -431,6 +434,8 @@ class DeviceMemberList(UserList):
             # lineLabel is weird, so we have to only add it back when it is not None
             if entry.line_label is not None:
                 new_entry['lineLabel'] = entry.line_label
+            if self.device.model in ['Cisco 191', 'Cisco 192']:
+                new_entry['t38FaxCompression'] = False
             json_list.append(new_entry)
         return json_list
 
