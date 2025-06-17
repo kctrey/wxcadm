@@ -34,8 +34,8 @@ class OutboundProxy:
 @dataclass_json
 @dataclass
 class BargeInSettings:
-    parent: object = field(repr=False)
     """ Barge-In Settings for a Person or Workspace """
+    parent: object = field(repr=False)
     enabled: bool = field(metadata=config(field_name="enabled"))
     """ Whether Barge-In is enabled """
     tone_enabled: bool = field(metadata=config(field_name="toneEnabled"))
