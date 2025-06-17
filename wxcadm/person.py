@@ -365,6 +365,7 @@ class Person:
         self._applications: Optional[ApplicationServicesSettings] = None
         self._preferred_answer_endpoint: Optional[dict] = None
         self._available_answer_endpoints: Optional[list[dict]] = None
+        self._single_number_reach: Optional[SingleNumberReach] = None
 
         # API-related attributes
         self._headers = parent._headers
@@ -1864,6 +1865,16 @@ class Person:
             self._applications = ApplicationServicesSettings.from_dict(response)
         return self._applications
 
+    @property
+    def single_number_reach(self) -> SingleNumberReach:
+        """ The Sinlge Number Reach settings for the Person """
+        if self._single_number_reach is None:
+            response = webex_api_call('get', f"v1/telephony/config/people/{self.id}/singleNumberReach",
+                                      params={'orgId': self.org_id})
+            response['person'] = self
+            self._single_number_reach = SingleNumberReach.from_dict(response)
+        return self._single_number_reach
+
 
 class Me(Person):
     """ The class representing the token owner. Some methods are only available at an owner scope. """
@@ -2501,3 +2512,185 @@ class ApplicationLine:
 
         return True
 
+@dataclass_json
+@dataclass
+class SnrNumber:
+    id: Optional[str]
+    phone_number: str = field(metadata=config(field_name="phoneNumber"))
+    """ The phone number """
+    enabled: bool
+    """ Whether SNR is enabled for this number """
+    name: str
+    """ The name associated with this number """
+    do_not_forward_calls: bool = field(metadata=config(field_name="doNotForwardCallsEnabled"))
+    """ Whether to prevent the destination from forwarding calls """
+    answer_confirmation: bool = field(metadata=config(field_name="answerConfirmationEnabled"))
+    """ Whether to require Answer Confirmation on this number """
+    person_id: Optional[str] = field(repr=False, default=None, metadata=config(exclude=lambda t: True))
+    org_id: Optional[str] = field(repr=False, default=None, metadata=config(exclude=lambda t: True))
+
+    def enable(self):
+        """ Enable the SNR number
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'enabled': True}
+        webex_api_call("put",
+                       f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
+                       payload=payload,
+                       params={'orgId': self.org_id})
+        self.enabled = True
+        return True
+
+    def disable(self):
+        """ Disable the SNR number
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'enabled': False}
+        webex_api_call("put",
+                       f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
+                       payload=payload,
+                       params={'orgId': self.org_id})
+        self.enabled = False
+        return True
+
+    def change_name(self, name: str):
+        """ Change the name of the SNR number
+
+        Args:
+            name (str): The new name
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'name': name}
+        webex_api_call("put",
+                       f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
+                       payload=payload,
+                       params={'orgId': self.org_id})
+        self.name = name
+        return True
+
+    def set_answer_confirmation(self, enabled: bool):
+        """ Enable or disable Answer Confirmation
+
+        Args:
+            enabled (bool): True for enabled, False for disabled:
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'answerConfirmationEnabled': enabled}
+        webex_api_call("put",
+                       f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
+                       payload=payload,
+                       params={'orgId': self.org_id})
+        self.answer_confirmation = enabled
+        return True
+
+    def set_do_not_forward_calls(self, enabled: bool):
+        """ Enable or disable the Do Not Forward Calls setting
+
+        Args:
+            enabled (bool): True for enabled, False for disabled
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        payload = {'doNotForwardCallsEnabled': enabled}
+        webex_api_call("put",
+                       f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
+                       payload=payload,
+                       params={'orgId': self.org_id})
+        self.answer_confirmation = enabled
+        return True
+
+    def delete(self):
+        """ Delete the SNR number
+
+        Returns:
+            bool: True on success, False otherwise
+
+        """
+        webex_api_call("delete",
+                       f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
+                       params={'orgId': self.org_id})
+        return True
+
+
+@dataclass
+class SingleNumberReach:
+    enabled: bool
+    alert_all_for_click_to_dial: bool
+    numbers: list[SnrNumber]
+    person: wxcadm.Person = field(repr=False)
+
+    @classmethod
+    def from_api(cls, person: wxcadm.Person):
+        """ Load the Single Number Reach data from the Webex API
+
+        Args:
+            person (wxcadm.Person): The :class:`~.person.Person` to get the SNR settings for
+
+        Returns:
+            SingleNumberReach
+
+        """
+        response = webex_api_call(
+            "get",
+            f"v1/telephony/config/people/{person.id}/singleNumberReach",
+            params={"orgId": person.org_id}
+        )
+        numbers = []
+        for num in response['numbers']:
+            numbers.append(SnrNumber(**num, person_id=person.id, org_id=person.org_id))
+        return cls(
+            enabled=response['enabled'],
+            alert_all_for_click_to_dial=response['alertAllNumbersForClickToDialCallsEnabled'],
+            numbers=numbers,
+            person=person
+        )
+
+    def add_number(self,
+                   phone_number: str,
+                   name: str,
+                   enabled: bool,
+                   do_not_forward_calls: bool = False,
+                   answer_confirmation: bool = False) -> SnrNumber:
+        """ Add a new SNR number
+
+        Args:
+            phone_number (str): The phone number
+            name (str): The name of the SNR number
+            enabled (bool): True for enabled, False for disabled
+            do_not_forward_calls (bool, optional): True to disable forwarding of calls at the number
+            answer_confirmation (bool, optional): True to enable Answer Confirmation, requiring a keypress to accept the call
+
+        Returns:
+            SnrNumber: The new SNR number
+
+        """
+        new_number = SnrNumber(
+            id=None,
+            phone_number=phone_number,
+            enabled=enabled,
+            name=name,
+            do_not_forward_calls=do_not_forward_calls,
+            answer_confirmation=answer_confirmation,
+            person_id=self.person.id
+        )
+        response = webex_api_call('post',
+                                  f"v1/telephony/config/people/{self.person.id}/singleNumberReach/numbers",
+                                  params={'orgId': self.person.org_id},
+                                  payload=new_number.to_dict())
+        new_number.id = response['id']
+        self.numbers.append(new_number)
+        return new_number
