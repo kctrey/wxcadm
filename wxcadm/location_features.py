@@ -67,7 +67,7 @@ class LocationSchedule:
     def refresh_config(self):
         """ Pull a fresh copy of the schedule configuration from Webex, in case it has changed. """
         api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.parent.id}/schedules/"
-                                         f"{self.type}/{self.id}")
+                                         f"{self.type}/{self.id}", params={'orgId': self.parent.org_id})
         self.config = api_resp
 
     def add_holiday(self, name: str, date: str, recur: bool = False, recurrence: Optional[dict] = None):
@@ -125,7 +125,8 @@ class LocationSchedule:
                                                                  }
                                            }
         api_resp = webex_api_call("post", f"v1/telephony/config/locations/"
-                                          f"{self.parent.id}/schedules/{self.type}/{self.id}/events", payload=new_event)
+                                          f"{self.parent.id}/schedules/{self.type}/{self.id}/events", payload=new_event,
+                                          params={'orgId': self.parent.org_id})
         if api_resp:
             self.refresh_config()
             return True
@@ -149,7 +150,7 @@ class LocationSchedule:
         for e in self.config['events']:
             if e['name'] == event or e['id'] == event:
                 api_resp = webex_api_call("delete", f"v1/telephony/config/locations/{self.parent.id}"
-                                                    f"/schedules/{self.type}/{self.id}/events/{e['id']}")
+                                                    f"/schedules/{self.type}/{self.id}/events/{e['id']}", params={'orgId': self.parent.org_id})
                 if api_resp is True:
                     # Get a new copy of the config
                     self.refresh_config()
@@ -204,7 +205,7 @@ class LocationSchedule:
 
         api_resp = webex_api_call("post", f"v1/telephony/config/locations/{self.parent.id}/"
                                           f"schedules/{self.type}/{self.id}/events",
-                                  payload=payload)
+                                  payload=payload, params={'orgId': self.parent.org_id})
         if api_resp:
             self.refresh_config()
             return True

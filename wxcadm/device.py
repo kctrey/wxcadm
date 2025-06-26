@@ -223,7 +223,7 @@ class Device:
     @property
     def config(self) -> dict:
         """ Returns the device configuration as a dictionary """
-        response = webex_api_call('get', f'/v1/telephony/config/devices/{self.calling_id}')
+        response = webex_api_call('get', f'/v1/telephony/config/devices/{self.calling_id}', params={'orgId': self.parent.org_id})
         return response
 
     @property
@@ -659,12 +659,15 @@ class DeviceList(UserList):
         elif isinstance(self.parent, wxcadm.Location):
             log.debug(f"Using Location ID {self.parent.id} as data filter")
             params['locationId'] = self.parent.id
+            params['orgId'] = self.parent.id
         elif isinstance(self.parent, wxcadm.person.Person):
             log.debug(f"Using Person ID {self.parent.id} as data filter")
             params['personId'] = self.parent.id
+            params['orgId'] = self.parent.id
         elif isinstance(self.parent, wxcadm.workspace.Workspace):
             log.debug(f"Using Workspace ID {self.parent.id} as data filter")
             params['workspaceId'] = self.parent.id
+            params['orgId'] = self.parent.id
         else:
             log.warn("Parent class is not Org or Location, so all items will be returned")
         response = webex_api_call('get', self._endpoint, params=params)

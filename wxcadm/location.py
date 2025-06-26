@@ -132,7 +132,7 @@ class LocationList(UserList):
             'announcementLanguage': None,
             'address': address
         }
-        response = webex_api_call('post', 'v1/locations', payload=payload)
+        response = webex_api_call('post', 'v1/locations', payload=payload, params={'orgId': self.parent.org_id})
         self.refresh()
         return self.get(id=response['id'])
 

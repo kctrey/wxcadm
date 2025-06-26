@@ -50,7 +50,7 @@ class HuntGroup:
     @property
     def config(self) -> dict:
         """ The config of the Hunt Group """
-        response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/huntGroups/{self.id}")
+        response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/huntGroups/{self.id}", params={'orgId': self.parent.org_id})
         return response
 
     @property
@@ -83,7 +83,7 @@ class HuntGroup:
             new_agent_payload['weight'] = weight
         config['agents'].append(new_agent_payload)
         webex_api_call('put', f"v1/telephony/config/locations/{self.location_id}/huntGroups/{self.id}",
-                       payload=config)
+                       payload=config, params={'orgId': self.parent.org_id})
         return True
 
 
@@ -109,6 +109,7 @@ class HuntGroupList(UserList):
         elif isinstance(self.parent, wxcadm.Location):
             log.debug(f"Using Location ID {self.parent.id} as Data filter")
             params['locationId'] = self.parent.id
+            params['orgId'] = self.parent.org_id
         else:
             log.warn("Parent class is not Org or Location, so all items will be returned")
         response = webex_api_call('get', self._endpoint, params=params)
@@ -292,7 +293,7 @@ class HuntGroupList(UserList):
             payload['agents'] = agent_list
 
         response = webex_api_call("post", f"v1/telephony/config/locations/{location.id}/huntGroups",
-                                  payload=payload)
+                                  payload=payload, params={'orgId': self.parent.org_id})
         new_hg_id = response['id']
         self.refresh()
         return self.get(id=new_hg_id)

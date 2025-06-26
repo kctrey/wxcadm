@@ -85,7 +85,7 @@ class Trunks(UserList):
         super().__init__()
         self.org = org
         self.data = []
-        items = webex_api_call('get', '/v1/telephony/config/premisePstn/trunks')
+        items = webex_api_call('get', '/v1/telephony/config/premisePstn/trunks', params={'orgId': self.org.org_id})
         log.debug(f'Trunks from Webex: {items}')
         for item in items['trunks']:
             item['org'] = self.org

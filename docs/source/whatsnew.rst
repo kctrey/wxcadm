@@ -3,6 +3,10 @@
 What's New
 ==========
 
+v4.5.2
+------
+- BUG FIX: :class:`~.device.DeviceList` didn't handle multiple Orgs. It now sends orgId for all GET calls. Also cleaned up a few other calls that didn't include orgId.
+
 v4.5.1
 ------
 - BUG FIX: :meth:`Person.assign_wxc()` now doesn't error when trying to unassign UCM as part of the WxC assignment
