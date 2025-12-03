@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Optional, Union, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from wxcadm import Org, Location
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from collections import UserList
 
 import wxcadm.location
@@ -12,28 +12,25 @@ from .common import *
 
 
 class AutoAttendantList(UserList):
-    def __init__(self, parent: Union[Org, Location]):
+    def __init__(self, org: wxcadm.Org, location: Optional[wxcadm.Location] = None):
         super().__init__()
-        log.debug("Initializing AutoAttendantLisa instance")
-        self.parent: Union["Org", "Location"] = parent
+        log.debug("Initializing AutoAttendantList instance")
+        self.org = org
+        self.location = location
         self.data: list = self._get_items()
 
     def _get_items(self):
-        if isinstance(self.parent, wxcadm.Org):
-            log.debug("Using Org ID as data filter")
-            params = {'orgId': self.parent.id}
-        elif isinstance(self.parent, wxcadm.Location):
-            log.debug("Using Location as data filter")
-            params = {'locationId': self.parent.id}
+        if self.location is not None:
+            log.debug(f"Getting AutoAttendantList items for {self.location}")
+            params = {'locationId': self.location.id}
         else:
-            raise ValueError("Unsupported parent class")
+            log.debug("Getting AutoAttendantList items for Org")
+            params = None
 
-        log.debug("Getting Auto Attendant list")
-        response = webex_api_call('get', f'v1/telephony/config/autoAttendants', params=params)
-        log.debug(f"Received {len(response['autoAttendants'])} entries")
+        response = self.org.api.get(f'v1/telephony/config/autoAttendants', params=params, items_key='autoAttendants')
         items = []
-        for entry in response['autoAttendants']:
-            items.append(AutoAttendant(parent=self.parent, id=entry['id'], data=entry))
+        for entry in response:
+            items.append(AutoAttendant(org=self.org, id=entry['id'], data=entry))
         return items
 
     def refresh(self):
@@ -117,9 +114,9 @@ class AutoAttendantList(UserList):
                 for details. Defaults to a menu with a zero (0) to exit the menu.
             after_hours_menu (dict, optional): The After Hours menu configuration. See the Webex Developer docs for
                 details. Defaults to a menu with 1 zero (0) to exit the menu.
-            extension_dialing_scope (str, optional): Whether extension dialing matches at the `'GROUP'` (i.e. Location)
+            extension_dialing_scope (str, optional): Whether extension dialing matches at the `'GROUP'` (i.e., Location)
                 or `'ENTERPRISE'`. Defaults to `'GROUP'`
-            name_dialing_scope (str, optional): Whether name dialing matches at the `'GROUP'` (i.e. Location) or
+            name_dialing_scope (str, optional): Whether name dialing matches at the `'GROUP'` (i.e., Location) or
                 `'ENTERPRISE'`. Defaults to `'GROUP'`
             language (str, optional): The language code for the Auto Attendant. Defaults to the Location language
             time_zone (str, optional): The time zone for the Auto Attendant. Defaults to the Location time zone
@@ -131,13 +128,13 @@ class AutoAttendantList(UserList):
             AutoAttendant: The :class:`AutoAttendant` that is created.
 
         """
-        if location is None and isinstance(self.parent, wxcadm.Org):
+        if location is None and self.location is None:
             raise ValueError("location is required for Org-level AutoAttendantList")
-        elif location is None and isinstance(self.parent, wxcadm.Location):
-            location = self.parent
+        elif location is None and self.location is not None:
+            location = self.location
         log.info(f"Creating Auto Attendant at Location {location.name} with name: {name}")
         if location.calling_enabled is False:
-            log.debug("Not a Webex Calling Location")
+            log.warning("Not a Webex Calling Location")
             return None
         # Get some values if they weren't passed
         if phone_number is None and extension is None:
@@ -178,8 +175,7 @@ class AutoAttendantList(UserList):
             "businessHoursMenu": business_hours_menu,
             "afterHoursMenu": after_hours_menu
         }
-        response = webex_api_call("post", f"v1/telephony/config/locations/{location.id}/autoAttendants",
-                                  payload=payload)
+        response = self.org.api.post(f"v1/telephony/config/locations/{location.id}/autoAttendants", payload=payload)
         new_aa_id = response['id']
         self.refresh()
         return self.get(id=new_aa_id)
@@ -187,7 +183,7 @@ class AutoAttendantList(UserList):
 
 @dataclass
 class AutoAttendant:
-    parent: Union[wxcadm.Org, wxcadm.Location]
+    org: wxcadm.Org = field(repr=False)
     """ The Org instance that ows this AutoAttendant """
     id: str
     """ The Webex ID of the AutoAttendant """
@@ -327,7 +323,7 @@ class AutoAttendant:
         return response
 
     def _get_details(self):
-        response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/autoAttendants/{self.id}")
+        response = self.org.api.get(f"v1/telephony/config/locations/{self.location_id}/autoAttendants/{self.id}")
         self._enabled = response.get('enabled', None)
         self._first_name = response.get('firstName', '')
         self._last_name = response.get('lastName', '')
@@ -346,8 +342,7 @@ class AutoAttendant:
     @property
     def call_forwarding(self) -> dict:
         """ The Call Forwarding settings for the AutoAttendant """
-        response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/autoAttendants/{self.id}"
-                                         f"/callForwarding")
+        response = self.org.api.get(f"v1/telephony/config/locations/{self.location_id}/autoAttendants/{self.id}/callForwarding")
         return response
 
     def copy_menu_from_template(self, source: AutoAttendant, menu_type: str = "both"):
@@ -379,9 +374,9 @@ class AutoAttendant:
         else:
             raise ValueError(f"{menu_type} must be 'business_hours', 'after_hours' or 'both'")
 
-        resp = webex_api_call("put", f"v1/telephony/config/locations/{self.location_id}/autoAttendants/{self.id}",
-                              payload=self.config)
-        if resp:
+        response = self.org.api.put(f"v1/telephony/config/locations/{self.location_id}/autoAttendants/{self.id}",
+                                    payload=self.config)
+        if response:
             return True
         else:
             return False

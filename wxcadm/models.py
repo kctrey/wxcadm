@@ -1,6 +1,10 @@
-from typing import NamedTuple, Optional, Union
+from typing import NamedTuple, Optional, Union, TYPE_CHECKING
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json, config
+
+if TYPE_CHECKING:
+    from .org import Org
+    from .workspace import Workspace
 
 import wxcadm
 from .common import *
@@ -50,8 +54,7 @@ class BargeInSettings:
     def set_enabled(self, enabled: bool) -> bool:
         """ Set the enabled state of the Barge-In settings """
         payload = {"enabled": enabled, "toneEnabled": self.tone_enabled}
-        response = webex_api_call('put', self._url, payload=payload,
-                                  params={'orgId': self.parent.org_id})
+        response = self.parent.org.api.put(self._url, payload=payload)
         if response:
             return True
         else:
@@ -60,8 +63,7 @@ class BargeInSettings:
     def set_tone_enabled(self, enabled: bool) -> bool:
         """ Set the tone enabled state of the Barge-In settings """
         payload = {"enabled": self.enabled, "toneEnabled": enabled}
-        response = webex_api_call('put', self._url, payload=payload,
-                                  params={'orgId': self.parent.org_id})
+        response = self.parent.org.api.put(self._url, payload=payload)
         if response:
             return True
         else:

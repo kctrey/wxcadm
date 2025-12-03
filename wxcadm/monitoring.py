@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from collections import UserList
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json, config
-from typing import Optional, Union, List
+from typing import Union
 
 import wxcadm
 import wxcadm.location
 import wxcadm.person
 from wxcadm import log
-from .common import *
 
 @dataclass_json
 @dataclass
@@ -72,8 +70,7 @@ class MonitoringList:
         for element in self.monitored_elements:
             payload["monitoredElements"].append(element.id)
         payload["monitoredElements"].append(monitor.id)
-        webex_api_call("put", url=self._url, payload=payload,
-                       params={"orgId": self.org.id})
+        self.org.api.put(self._url, payload=payload)
         self.monitored_elements.append(monitor)
         return True
 
@@ -96,8 +93,7 @@ class MonitoringList:
             if element.id != monitor.id:
                 payload["monitoredElements"].append(element.id)
                 new_monitoring_list.append(element)
-        webex_api_call("put", url=self._url, payload=payload,
-                       params={"orgId": self.org.id})
+        self.org.api.put(self._url, payload=payload)
         self.monitored_elements = new_monitoring_list
         return True
 
@@ -119,8 +115,7 @@ class MonitoringList:
             # Remove the current User/Workspace if it is in the list
             if element.id != self.parent.id:
                 payload["monitoredElements"].append(element.id)
-        webex_api_call("put", url=self._url, payload=payload,
-                       params={"orgId": self.org.id})
+        self.org.api.put(self._url, payload=payload)
         self.monitored_elements = monitoring_list.monitored_elements
         self.call_park_notification = monitoring_list.call_park_notification
         return True
@@ -163,7 +158,7 @@ class MonitoringList:
             "enableCallParkNotification": False,
             "monitoredElements": [],
         }
-        webex_api_call("put", url=self._url, payload=payload, params={"orgId": self.org.id})
+        self.org.api.put(self._url, payload=payload)
         self.monitored_elements = []
         self.call_park_notification = False
         return True

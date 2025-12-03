@@ -8,8 +8,8 @@ from .common import *
 
 
 class Calls:
-    def __init__(self, parent: wxcadm.Org):
-        self.parent = parent
+    def __init__(self, org: wxcadm.Org):
+        self.org: wxcadm.Org = org
 
     def cdr(self, start: Optional[str] = None, end: Optional[str] = None, days: Optional[int] = None,
             hours: Optional[int] = None):

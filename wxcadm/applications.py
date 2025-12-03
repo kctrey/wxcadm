@@ -6,21 +6,20 @@ from collections import UserList
 
 import wxcadm.org
 from wxcadm import log
-from .common import *
 
 
 class WebexApplications(UserList):
-    def __init__(self, parent: wxcadm.Org):
+    def __init__(self, org: wxcadm.Org):
         super().__init__()
         log.debug("Initializing WebexApps instance")
-        self.parent: wxcadm.Org = parent
+        self.org: wxcadm.Org = org
         self.data: list = self._get_applications()
 
     def _get_applications(self):
         app_list = []
-        apps = webex_api_call("get", "v1/applications", params={"orgId": self.parent.id})
+        apps = self.org.api.get("v1/applications")
         for app in apps:
-            this_app = WebexApplication(parent=self.parent, **app)
+            this_app = WebexApplication(org=self.org, **app)
             app_list.append(this_app)
         return app_list
 
@@ -29,7 +28,7 @@ class WebexApplications(UserList):
         """ List of :py:class:`WebexApplication` instances for apps owned by this Org """
         org_apps = []
         for app in self.data:
-            if app.orgId == self.parent.id:
+            if app.orgId == self.org.id:
                 org_apps.append(app)
         return org_apps
 
@@ -74,8 +73,8 @@ class WebexApplications(UserList):
             if app.id == id:
                 return app
         # If it wasn't found, call the API to get the app and build an instance for it
-        app = webex_api_call('get', f'/v1/applications/{id}')
-        this_app = WebexApplication(parent=self.parent, **app)
+        app = self.org.api.get(f'/v1/applications/{id}')
+        this_app = WebexApplication(org=self.org, **app)
         self.data.append(this_app)
         return this_app
 
@@ -105,15 +104,15 @@ class WebexApplications(UserList):
                    'contactEmail': contact_email,
                    'logo': logo,
                    'scopes': scopes}
-        response = webex_api_call("post", "v1/applications", payload=payload)
+        response = self.org.api.post("v1/applications", payload=payload)
         return response
 
 
 @dataclass
 class WebexApplication:
-    parent: wxcadm.Org = field(repr=False)
+    org: wxcadm.Org = field(repr=False)
     isNative: bool = field(repr=False)
-    """ Wheyjer the application was created natively or via the API """
+    """ Whether the application was created natively or via the API """
     id: str
     """ The ID of the application """
     friendlyId: str
@@ -204,8 +203,8 @@ class WebexApplication:
             bool: True on success, False otherwise
 
         """
-        payload = {'orgId': self.parent.id}
-        response = webex_api_call('post', f'/v1/applications/{self.id}/authorize', payload=payload)
+        payload = {'orgId': self.org.id}
+        response = self.org.api.post(f'/v1/applications/{self.id}/authorize', payload=payload)
         return response
 
     def delete(self):
@@ -214,15 +213,15 @@ class WebexApplication:
         Returns:
 
         """
-        response = webex_api_call('delete', f'/v1/applications/{self.id}')
+        response = self.org.api.delete(f'/v1/applications/{self.id}')
         return response
 
     def get_token(self, client_secret: str, target_org: wxcadm.Org | str):
-        """ Get the access and refresh tokens to utilize the application in the target Org
+        """ Get the access and refresh tokens to use the application in the target Org
 
         Args:
             client_secret (str): The Client Secret value stored when the Application was created
-            target_org (str): The Base64 Org ID to obtain a token for
+            target_org (str): The Base64 Org ID to get a token for
 
         Returns:
             dict: A dict of the token info, including access_token and refresh_token
@@ -239,11 +238,11 @@ class WebexApplication:
             'clientSecret': client_secret,
             'targetOrgId': org_id
         }
-        response = webex_api_call('post', f'/v1/applications/{self.id}/token', payload=payload)
+        response = self.org.api.post(f'/v1/applications/{self.id}/token', payload=payload)
         return response
 
     def get_token_refresh(self, client_secret: str, refresh_token: str):
-        """ Use the provided Refresh Token to obtain a new Access Token
+        """ Use the provided Refresh Token to get a new Access Token
 
         Args:
             client_secret (str): The Client Secret value stored when the Application was created
@@ -259,16 +258,16 @@ class WebexApplication:
             'client_secret': client_secret,
             'refresh_token': refresh_token
         }
-        response = webex_api_call('post', '/v1/access_token', payload=payload)
+        response = self.org.api.post("v1/access_token", payload=payload)
         return response
 
     def regenerate_client_secret(self):
-        """ Obtain a new Client Secret if the initial value was lost or compromised
+        """ Get a new Client Secret if the initial value was lost or compromised
 
         Returns:
             str: The new Client Secret value
         """
-        response = webex_api_call('delete', f'/v1/applications/{self.id}/clientSecret')
+        response = self.org.api.delete(f'/v1/applications/{self.id}/clientSecret')
         if 'clientSecret' in response:
             return response['clientSecret']
         else:

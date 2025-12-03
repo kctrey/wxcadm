@@ -3,16 +3,14 @@ from __future__ import annotations
 import base64
 from collections import UserList
 
-import requests
 import re
 import wxcadm
 from typing import Union, Optional
 from wxcadm import log
 from .common import *
-from .common import _url_base
 from .exceptions import *
 from .cpapi import CPAPI
-from .location import Location, LocationList
+from .location import LocationList
 from .location_features import PagingGroup, VoicemailGroupList
 from .auto_attendant import AutoAttendantList
 from .call_queue import CallQueueList, OrgQueueSettings
@@ -38,6 +36,7 @@ from .location_features import CallParkExtension
 
 class Org:
     def __init__(self,
+                 api_connection: Union[WebexApi, str],
                  name: str,
                  id: str,
                  parent: wxcadm.Webex = None,
@@ -47,6 +46,7 @@ class Org:
         """Initialize an Org instance
 
         Args:
+            api_connection (Union[WebexApi, str]): WebexApi instance or Webex Access Token
             name (str): The Organization name
             id (str): The Webex ID of the Organization
             parent (Webex, optional): The parent Webex instance that owns this Org.
@@ -57,6 +57,13 @@ class Org:
         """
 
         # Instance attrs
+        ### Added 4.6.0 - Use an Org-specific WebexApi instance for API calls
+        if isinstance(api_connection, WebexApi):
+            self.api = WebexApi(api_connection.access_token, org_id=id)
+        elif isinstance(api_connection, str):
+            self.api = WebexApi(api_connection, org_id=id)
+        else:
+            raise TypeError(f"api_connection={api_connection} is not a valid Webex API connection")
         self._numbers = None
         self._paging_groups = None
         self._parent = parent
@@ -99,7 +106,7 @@ class Org:
         self._headers = parent.headers
 
         # Create a CPAPI instance for CPAPI work
-        self._cpapi = CPAPI(self, self._parent._access_token)
+        #self._cpapi = CPAPI(self, self._parent._access_token)
 
         if xsi:
             self.get_xsi_endpoints()
@@ -153,8 +160,7 @@ class Org:
 
         """
         if self._compliance_announcement_settings is None:
-            response = webex_api_call('get', 'v1/telephony/config/callRecording/complianceAnnouncement',
-                                      params={'orgId': self.id})
+            response = self.api.get("v1/telephony/config/callRecording/complianceAnnouncement")
             self._compliance_announcement_settings = ComplianceAnnouncementSettings(self, **response)
         return self._compliance_announcement_settings
 
@@ -169,7 +175,7 @@ class Org:
     def workspaces(self):
         """ :class:`.workspace.WorkspacesList` instance for the Org """
         if self._workspaces is None:
-            self._workspaces = WorkspaceList(parent=self)
+            self._workspaces = WorkspaceList(org=self)
         return self._workspaces
 
     @property
@@ -198,7 +204,7 @@ class Org:
         """ A dict of user roles with the ID as the key and the Role name as the value """
         if self._roles is None:
             roles = {}
-            response = webex_api_call('get', 'v1/roles', params={'orgId': self.id})
+            response = self.api.get('v1/roles')
             for role in response:
                 roles[role['id']] = role['name']
             self._roles = roles
@@ -228,7 +234,7 @@ class Org:
     @property
     def queue_settings(self):
         """ :class:`QueueSettingsList` for this Organization """
-        response = webex_api_call("get", "v1/telephony/config/queues/settings", params={'orgId': self.id})
+        response = self.api.get('v1/telephony/config/queues/settings')
         response['org'] = self
         return OrgQueueSettings.from_dict(response)
 
@@ -242,7 +248,7 @@ class Org:
         """
         if not self._paging_groups:
             paging_groups = []
-            response = webex_api_call("get", "v1/telephony/config/paging", headers=self._headers, params=self._params)
+            response = self.api.get('v1/telephony/config/paging')
             for entry in response['locationPaging']:
                 location = self.locations.get(id=entry['locationId'])
                 this_pg = PagingGroup(location, entry['id'], entry['name'])
@@ -254,23 +260,23 @@ class Org:
     def supported_devices(self) -> SupportedDeviceList:
         """ The :class:`SupportedDeviceList` of :class:`SupportedDevice` models for this Org """
         if self._supported_devices is None:
-            self._supported_devices = SupportedDeviceList()
+            self._supported_devices = SupportedDeviceList(org=self)
         return self._supported_devices
 
     @property
     def webhooks(self):
         """ The :py:class:`Webhooks` list with the :py:class:`Webhook` instances for the Org"""
-        return Webhooks()
+        return Webhooks(org=self)
 
     @property
     def usergroups(self):
         """ The :py:class:`UserGroups` list with the :py:class:`UserGroup` instances for the Org """
-        return UserGroups(parent=self)
+        return UserGroups(org=self)
 
     @property
     def applications(self):
         """ The :py:class:`WebexApplications` list with the :py:class:`WebexApplication` instances for this Org """
-        return WebexApplications(parent=self)
+        return WebexApplications(org=self)
 
     @property
     def virtual_lines(self):
@@ -284,7 +290,7 @@ class Org:
         """ The :py:class:`~wxcadm.announcements.AnnouncementList` list with the :py:class:`Announcement` instances
         for this Org"""
         if self._announcements is None:
-            self._announcements = AnnouncementList(parent=self)
+            self._announcements = AnnouncementList(org=self)
         return self._announcements
 
     @property
@@ -297,7 +303,7 @@ class Org:
     @property
     def calls(self):
         """ The :py:class:`Calls` instance for this Org"""
-        return Calls(parent=self)
+        return Calls(org=self)
 
     def get_paging_group(self, id: str = None, name: str = None, spark_id: str = None):
         """ Get the PagingGroup instance associated with a given ID, Name, or Spark ID
@@ -450,7 +456,7 @@ class Org:
 
         """
         if self._devices is None:
-            self._devices = DeviceList(self)
+            self._devices = DeviceList(org=self)
         return self._devices
 
     def get_device_by_id(self, device_id: str):
@@ -490,7 +496,7 @@ class Org:
             Person: The Person instance. If no match is found, None is returned
 
         """
-        return self.people.get_by_id(id)
+        return self.people.get(id=id)
 
     @property
     def wxc_licenses(self):
@@ -549,89 +555,6 @@ class Org:
                 return license
         raise LicenseError("No Webex Calling Professional license found")
 
-    def create_person(self, email: str,
-                      location: Union[str, Location],
-                      licenses: list = None,
-                      calling: bool = True,
-                      messaging: bool = True,
-                      meetings: bool = True,
-                      phone_number: str = None,
-                      extension: str = None,
-                      first_name: str = None,
-                      last_name: str = None,
-                      display_name: str = None,
-                      ):
-        """Create a new user in Webex.
-
-        .. deprecated:: 4.0.0
-            Use :py:meth:`Org.people.create()` instead.
-
-        Args:
-            email (str): The email address of the user
-            location (Location): The Location instance to assign the user to. Also accepts the Location ID as a string
-            licenses (list, optional): List of license IDs to assign to the user. Use this when the license IDs
-                are known. To have the license IDs determined dynamically, use the `calling`, `messaging` and
-                'meetings` parameters.
-            calling (bool, optional): BETA - Whether to assign Calling licenses to the user. Defaults to True.
-            messaging (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
-            meetings (bool, optional): BETA - Whether to assign Messaging licenses to the user. Defaults to True.
-            phone_number (str, optional): The phone number to assign to the user.
-            extension (str, optional): The extension to assign to the user
-            first_name (str, optional): The user's first name. Defaults to empty string.
-            last_name (str, optional): The users' last name. Defaults to empty string.
-            display_name (str, optional): The full name of the user as displayed in Webex. If first name and last name
-                are passed without display_name, the display name will be the concatenation of first and last name.
-
-        Returns:
-            Person: The Person instance of the newly-created user.
-
-        """
-        log.info(f"Creating new user: {email}")
-        if (first_name or last_name) and display_name is None:
-            log.debug("No display_name provided. Setting default.")
-            display_name = f"{first_name} {last_name}"
-
-        # Find the license IDs for each requested service, unless licenses was passed
-        if not licenses:
-            log.debug("No licenses specified. Finding licenses.")
-            licenses = []
-            if calling:
-                log.debug("Calling requested. Finding Calling licenses.")
-                calling_license = self.licenses.get_assignable_license('professional')
-                log.debug(f"Using Calling License: {calling_license.name} ({calling_license.id})")
-                licenses.append(calling_license.id)
-            if messaging:
-                pass
-            if meetings:
-                pass
-
-        # Build the payload to send to the API
-        log.debug("Building payload.")
-        if isinstance(location, Location):
-            location_id = location.id
-        else:
-            location_id = location
-        payload = {"emails": [email], "locationId": location_id, "orgId": self.id, "licenses": licenses}
-        if phone_number is not None:
-            payload["phoneNumbers"] = [{"type": "work", "value": phone_number}]
-        if extension is not None:
-            payload["extension"] = extension
-        if first_name is not None:
-            payload["firstName"] = first_name
-        if last_name is not None:
-            payload["lastName"] = last_name
-        if display_name is not None:
-            payload["displayName"] = display_name
-        log.debug(f"Payload: {payload}")
-        r = requests.post(_url_base + "v1/people", headers=self._headers, params={"callingData": "true"},
-                          json=payload)
-        response = r.json()
-        if r.status_code == 200:
-            person = Person(response['id'], self, response)
-            return person
-        else:
-            raise PutError(response['message'])
-
     def delete_person(self, person: Person):
         """ Delete a person
 
@@ -644,7 +567,7 @@ class Org:
             bool: True on success, False otherwise
 
         """
-        success = webex_api_call("delete", f"v1/people/{person.id}", params={'orgId': self.id})
+        success = self.api.delete(f"v1/people/{person.id}")
         if success:
             self._people = []
             return True
@@ -664,7 +587,7 @@ class Org:
             Person: Person instance object. None in returned when no Person is found
 
         """
-        return self.people.get_by_email(email)
+        return self.people.get(email=email)
 
     def get_xsi_endpoints(self):
         """Get the XSI endpoints for the Organization.
@@ -675,8 +598,7 @@ class Org:
             dict: Org.xsi attribute dictionary with each endpoint as an entry. None is returned if no XSI isn't enabled.
 
         """
-        params = {"callingData": "true", **self._params}
-        response = webex_api_call("get", "v1/organizations/" + self.id, headers=self._headers, params=params)
+        response = self.api.get(f"v1/organizations/{self.id}", params={'callingData': 'true'})
         if "xsiActionsEndpoint" in response:
             self.xsi['xsi_domain'] = response['xsiDomain']
             self.xsi['actions_endpoint'] = response['xsiActionsEndpoint']
@@ -699,27 +621,6 @@ class Org:
             self._call_queues = CallQueueList(self)
         return self._call_queues
 
-    def get_call_queue_by_id(self, id: str):
-        """ Get the :class:`CallQueue` instance with the requested ID
-
-        .. deprecated:: 4.0.0
-            Use :meth:`Org.call_queues.get()` instead
-
-        Args:
-            id (str): The CallQueue ID
-
-        Returns:
-            HuntGroup: The :class:`CallQueue` instance
-
-        """
-        log.info(f"Getting Call Queue with ID {id}")
-        if not self._call_queues:
-            self.call_queues
-        for cq in self._call_queues:
-            if cq.id == id:
-                return cq
-        return None
-
     def get_hunt_group_by_id(self, id: str):
         """ Get the :class:`HuntGroup` instance with the requested ID
 
@@ -735,9 +636,7 @@ class Org:
             HuntGroup: The :class:`HuntGroup` instance
 
         """
-        if not self._hunt_groups:
-            self.hunt_groups
-        for hg in self._hunt_groups:
+        for hg in self.hunt_groups:
             if hg.id == id:
                 return hg
         return None
@@ -816,7 +715,7 @@ class Org:
         return event_list
 
     def get_recordings(self, **kwargs):
-        return RecordingList(parent=self, **kwargs)
+        return RecordingList(org=self, **kwargs)
 
 
 class WebexLicenseList(UserList):
@@ -825,8 +724,7 @@ class WebexLicenseList(UserList):
         super().__init__()
         self.org = org
         self.data: list[WebexLicense] = []
-        api_response = webex_api_call("get", f"v1/licenses",
-                                      params={'orgId': self.org.id})
+        api_response = self.org.api.get("v1/licenses")
         for license in api_response:
             self.data.append(WebexLicense(org, license))
         # Add the subscriptions to a list that is available to use for assignment.
@@ -838,8 +736,7 @@ class WebexLicenseList(UserList):
     def refresh(self):
         """ Refresh the list of licenses and their usage """
         self.data = []
-        api_response = webex_api_call("get", f"v1/licenses",
-                                      params={'orgId': self.org.id})
+        api_response = self.org.api.get("v1/licenses")
         new_licenses_data = {license['id']: license for license in api_response}
         existing_license: WebexLicense
         for existing_license in self.data:

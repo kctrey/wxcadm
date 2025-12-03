@@ -3,7 +3,7 @@ from typing import Optional, Union
 import wxcadm
 from wxcadm import log
 from .redsky import RedSky
-import meraki
+
 
 
 def tags_decoder(tags: list, match_string: Optional[str] = "911-") -> Optional[str]:
@@ -45,6 +45,14 @@ class Meraki:
             api_key (str): The API key provided by Meraki to manage the Dashboard via API
 
         """
+        try:
+            import meraki
+        except ModuleNotFoundError:
+            raise ImportError(
+                "The 'meraki' library is not installed. "
+                "Please install it using 'pip install \"[meraki]\"' "
+                "or 'pip install meraki'."
+            ) from None
 
         log.info("Connecting to the Meraki Dashboard")
         self.dashboard = meraki.DashboardAPI(api_key=api_key, suppress_logging=True)
@@ -87,7 +95,7 @@ class Meraki:
 
 
 class MerakiOrg:
-    def __init__(self, dashboard: meraki.DashboardAPI, org_config: dict):
+    def __init__(self, dashboard, org_config: dict):
         self.dashboard = dashboard
         """ The API connection to the Meraki dashboard """
         self.id = org_config.get('id', None)
@@ -132,7 +140,7 @@ class MerakiOrg:
 
 
 class MerakiNetwork:
-    def __init__(self, dashboard: meraki.DashboardAPI, network_config: dict):
+    def __init__(self, dashboard, network_config: dict):
         self.dashboard = dashboard
         """ The API connection to the Merak Dashboard """
         self.id = network_config.get('id', None)
@@ -328,8 +336,8 @@ class MerakiNetwork:
 
 
 class MerakiDevice:
-    def __init__(self, dashboard: meraki.DashboardAPI, device_config: dict):
-        self.dashboard: meraki.DashboardAPI = dashboard
+    def __init__(self, dashboard, device_config: dict):
+        self.dashboard = dashboard
         """ The API connection to the Meraki Dashboard """
         self.address: str = device_config.get('address', None)
         """ The street address associated with the device """
@@ -386,7 +394,7 @@ class MerakiDevice:
 
 
 class MerakiSwitch(MerakiDevice):
-    def __init__(self, dashboard: meraki.DashboardAPI, device_config: dict):
+    def __init__(self, dashboard, device_config: dict):
         super().__init__(dashboard, device_config)
         self._port_list = []
 
@@ -421,7 +429,7 @@ class MerakiSwitchPort:
 
 
 class MerakiWireless(MerakiDevice):
-    def __init__(self, dashboard: meraki.DashboardAPI, device_config: dict):
+    def __init__(self, dashboard, device_config: dict):
         super().__init__(dashboard, device_config)
         self._bss_list = []
 

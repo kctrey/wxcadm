@@ -1,55 +1,41 @@
 from __future__ import annotations
 
-import requests
 from collections import UserList
 from typing import Optional, Union, TYPE_CHECKING
 
-from .exceptions import LicenseOverageError, NotSubscribedForLicenseError
-
 if TYPE_CHECKING:
-    from wxcadm import Org
+    from wxcadm import Org, location
     from .org import WebexLicenseList, WebexLicense
     from .location import LocationFloor
 import wxcadm.location
 import wxcadm
 from wxcadm import log
 from .common import *
-from .exceptions import *
 from .device import DeviceList
 from .monitoring import MonitoringList
 from .models import BargeInSettings
 
 
 class WorkspaceList(UserList):
-    def __init__(self, parent: Union[wxcadm.Org, wxcadm.Location]):
-        """
-
-        .. deprecated:: 3.4.0
-            The Workspace Location concept is being removed from the Webex APIs. All Workspace Locations are now simply
-            :class:`Location`s now. This class will still show up in come cases until it is completely removed.
-
-        """
-
+    def __init__(self, org: wxcadm.Org, location: Optional[wxcadm.Location] = None):
         super().__init__()
         log.debug("Initializing WorkspaceList instance")
-        self.parent: Union[wxcadm.Org, wxcadm.Location] = parent
+        self.org = org
+        self.location = location
         self.data: list = self._get_workspaces()
 
     def _get_workspaces(self):
         log.debug("Getting List of Workspaces")
         workspaces = []
-        if isinstance(self.parent, wxcadm.location.Location):
-            log.debug(f"Using Location {self.parent.name} as Workspace filter")
-            params = {'locationId': self.parent.id}
-        elif isinstance(self.parent, wxcadm.org.Org):
-            log.debug(f"Using Org {self.parent.name} as Workspace filter")
-            params = {'orgId': self.parent.id}
+        if self.location is not None:
+            log.debug(f"Using Location {self.location.name} as Workspace filter")
+            params = {'locationId': self.location.id}
         else:
             params = {}
-        response = webex_api_call("get", "v1/workspaces", params=params)
+        response = self.org.api.get("v1/workspaces", params=params)
         log.debug(f"Received {len(response)} Workspaces from Webex")
         for entry in response:
-            workspaces.append(Workspace(self.parent, id=entry['id'], config=entry))
+            workspaces.append(Workspace(org=self.org, id=entry['id'], config=entry))
         return workspaces
 
     def refresh(self):
@@ -156,16 +142,12 @@ class WorkspaceList(UserList):
             raise ValueError("Must provide extension, phone_number, or both")
         if license_type.lower() == 'hotdesk' and hotdesking is False:
             raise ValueError("Must enable hotdesking to use hotdesk license")
-        # Removed 3.4.0 when Workspace Locations were deprecated
-        # if location.workspace_location is None:
-        #     raise KeyError(f"Location {location.name} does not have a Workspace Location")
         if hotdesking is True:
             hotdesking = 'on'
         else:
             hotdesking = 'off'
 
-        payload = {
-            'orgId': self.parent.org_id,
+        payload: dict = {
             'displayName': name,
             'locationId': location.id,
             'floorId': floor,
@@ -185,36 +167,36 @@ class WorkspaceList(UserList):
         }
 
         # Find an available license
-        wxc_license = self.parent.licenses.get_assignable_license(
+        wxc_license: wxcadm.WebexLicense = self.org.licenses.get_assignable_license(
             license_type, ignore_license_overage=ignore_license_overage
         )
 
         log.debug(f"License ID: {wxc_license.id} ({wxc_license.name})")
         payload['calling']['webexCalling']['licenses'] = [wxc_license.id]
-        response = webex_api_call('post', 'v1/workspaces',
-                                  payload=payload, params={'orgId': self.parent.org_id})
+        response = self.org.api.post('v1/workspaces', payload=payload)
         log.debug(f"API call response: {response}")
-        new_workspace = Workspace(self.parent, response['id'], config=response)
+        new_workspace = Workspace(org=self.org, id=response['id'], config=response)
         self.data.append(new_workspace)
         return new_workspace
 
 
 class Workspace:
-    def __init__(self, parent: wxcadm.Org, id: str, config: Optional[dict] = None):
+    def __init__(self, org: wxcadm.Org, id: str, config: Optional[dict] = None):
         """Initialize a Workspace instance
 
         If only the `id` is provided, the configuration will be fetched from
         the Webex API. To save API calls, the config dict can be passed using the `config` argument
 
         Args:
-            parent (Org): The Organization to which this workspace belongs
+            org (Org): The Organization to which this workspace belongs
             id (str): The Webex ID of the Workspace
             config (dict): The configuration of the Workspace as returned by the Webex API
 
         """
         self.id: str = id
         """The Webex ID of the Workspace"""
-        self._parent: Union[wxcadm.Org, wxcadm.Location] = parent
+        self.org: Union[wxcadm.Org, wxcadm.Location] = org
+        """ The Org to which the Workspace belongs """
         # Instance attributes
         self.location: Optional[wxcadm.Location] = None
         """ The :class:`Location` of the Workspace """
@@ -274,7 +256,7 @@ class Workspace:
     @property
     def org_id(self) -> str:
         """ The Org ID of the Workspace """
-        return self._parent.org_id
+        return self.org.org_id
 
     @property
     def number(self):
@@ -288,8 +270,7 @@ class Workspace:
         """
         if self._numbers is None:
             log.info(f"Getting numbers for Workspace: {self.name}")
-            self._numbers = webex_api_call('get', f"v1/workspaces/{self.id}/features/numbers",
-                                           params={'orgId': self.org_id})
+            self._numbers = self.org.api.get(f"v1/workspaces/{self.id}/features/numbers")
             log.debug(self._numbers)
         if len(self._numbers['phoneNumbers']) == 1:
             return self._numbers['phoneNumbers'][0].get('external', None)
@@ -306,8 +287,7 @@ class Workspace:
     def extension(self):
         """ The extension of the Workspace when the Calling type is 'webexCalling' """
         if self._numbers is None:
-            self._numbers = webex_api_call('get', f"v1/workspaces/{self.id}/features/numbers",
-                                           params={'orgId': self.org_id})
+            self._numbers = self.org.api.get(f"v1/workspaces/{self.id}/features/numbers")
         if len(self._numbers['phoneNumbers']) == 1:
             return self._numbers['phoneNumbers'][0].get('extension', None)
         elif len(self._numbers['phoneNumbers']) > 1:
@@ -324,8 +304,7 @@ class Workspace:
         """ The :class:`~.barge_in.BargeInSettings` associated with the Workspace"""
         if self._barge_in is None:
             try:
-                response = webex_api_call('get', f"v1/telephony/config/workspaces/{self.id}/bargeIn",
-                                          params={'orgId': self.org_id})
+                response = self.org.api.get(f"v1/telephony/config/workspaces/{self.id}/bargeIn")
                 response['parent'] = self
                 self._barge_in = BargeInSettings.from_dict(response)
             except wxcadm.exceptions.APIError:
@@ -336,8 +315,7 @@ class Workspace:
     def esn(self):
         """ The Enterprise Significant Number (ESN) for the Workspace when the Calling type is 'webexCalling' """
         if self._numbers is None:
-            self._numbers = webex_api_call('get', f"v1/workspaces/{self.id}/features/numbers",
-                                           params={'orgId': self.org_id})
+            self._numbers = self.org.api.get(f"v1/workspaces/{self.id}/features/numbers")
         if len(self._numbers['phoneNumbers']) == 1:
             return self._numbers['phoneNumbers'][0].get('esn', None)
         elif len(self._numbers['phoneNumbers']) > 1:
@@ -358,10 +336,9 @@ class Workspace:
     def monitoring(self) -> MonitoringList:
         """ The :class:`~.monitoring.MonitoringList` associated with the Workspace """
         if self._monitoring is None:
-            response = webex_api_call("get", f"v1/workspaces/{self.id}/features/monitoring",
-                                      params={"orgId": self.org_id})
+            response = self.org.api.get(f"v1/workspaces/{self.id}/features/monitoring")
             response['parent'] = self
-            response['org'] = self._parent
+            response['org'] = self.org
             if "monitoredElements" not in response.keys():
                 response['monitoredElements'] = []
             self._monitoring = MonitoringList.from_dict(response)
@@ -369,10 +346,7 @@ class Workspace:
 
     def get_monitored_by(self):
         """ Returns a list of Users (Person) and Workspaces that are Monitoring this Workspace """
-        if isinstance(self._parent, wxcadm.Org):
-            monitor_list = self._parent.get_all_monitoring()
-        elif isinstance(self._parent, wxcadm.Location):
-            monitor_list = self._parent.parent.get_all_monitoring()
+        monitor_list = self.org.get_all_monitoring()
         try:
             return monitor_list['workspaces'][self.id]
         except (KeyError, TypeError):
@@ -388,22 +362,21 @@ class Workspace:
             APIError: Raised when the API call fails for any reason
 
         """
-        response = webex_api_call('delete', f'v1/workspaces/{self.id}')
-        self._parent.workspaces.refresh()
+        self.org.api.delete(f'v1/workspaces/{self.id}')
         return True
 
     @property
     def devices(self):
         """ The :class:`~.device.DeviceList` associated with the Workspace"""
         if self._devices is None:
-            self._devices = DeviceList(self)
+            self._devices = DeviceList(self.org, parent=self)
         return self._devices
 
     @property
     def caller_id(self) -> dict:
         """ The Caller ID settings for the Workspace """
         log.info(f"Getting Caller ID config for Workspace: {self.name}")
-        response = webex_api_call('get', f"v1/workspaces/{self.id}/features/callerId", params={'orgId': self.org_id})
+        response = self.org.api.get(f"v1/workspaces/{self.id}/features/callerId")
         return response
 
     def set_caller_id(self, name: str, number: str, block_for_received_calls: Optional[bool] = False):
@@ -445,29 +418,20 @@ class Workspace:
             payload['customExternalCallerIdName'] = name
         payload['blockInForwardCallsEnabled'] = block_for_received_calls
 
-        webex_api_call('put', f"v1/workspaces/{self.id}/features/callerId", params={'orgId': self.org_id},
-                       payload=payload)
+        self.org.api.put(f"v1/workspaces/{self.id}/features/callerId", payload=payload)
         return True
 
     def get_config(self):
         """Get (or refresh) the confirmation of the Workspace from the Webex API"""
         log.info(f"Getting Workspace config for {self.id}")
-        r = requests.get(_url_base + f"v1/workspaces/{self.id}", headers=self._headers,
-                         params={'orgId': self._parent.org_id})
-        if r.status_code in [200]:
-            response = r.json()
-            self.__process_config(response)
-        else:
-            raise APIError(f"Unable to fetch workspace config for {self.id}")
+        response = self.org.api.get(f"v1/workspaces/{self.id}")
+        self.__process_config(response)
 
     def __process_config(self, config: dict):
         """Processes the config dict, whether passed in init or from an API call"""
         self.name = config.get("displayName", "")
         if 'locationId' in config.keys():
-            if isinstance(self._parent, wxcadm.Org):
-                self.location = self._parent.locations.get(id=config['locationId'])
-            elif isinstance(self._parent, wxcadm.Location):
-                self.location = self._parent
+            self.location_id = self.org.locations.get(id=config['locationId'])
         else:
             self.location = config.get("workspaceLocationId", None)
         self.floor = config.get("floorId", "")
@@ -488,8 +452,7 @@ class Workspace:
     @property
     def ecbn(self) -> dict:
         """ The Emergency Callback Number details of the Workspace """
-        response = webex_api_call('get', f'v1/telephony/config/workspaces/{self.id}/emergencyCallbackNumber',
-                                  params={'orgId': self.org_id})
+        response = self.org.api.get(f'v1/telephony/config/workspaces/{self.id}/emergencyCallbackNumber')
         return response
 
     def set_ecbn(self, value: Union[str, wxcadm.Person, wxcadm.Workspace, wxcadm.VirtualLine]):
@@ -519,8 +482,10 @@ class Workspace:
         else:
             raise ValueError('Unknown value')
 
-        response = webex_api_call('put', f'v1/telephony/config/workspaces/{self.id}/emergencyCallbackNumber',
-                                  params={'orgId': self.org_id}, payload=payload)
+        response = self.org.api.put(
+            f'v1/telephony/config/workspaces/{self.id}/emergencyCallbackNumber',
+            payload=payload
+        )
         return response
 
     @property
@@ -533,7 +498,7 @@ class Workspace:
         """
         log.info(f"Getting license type for Workspace: {self.name}")
         if len(self.licenses) == 1:
-            lic_name = self._parent.licenses.get(id=self.licenses[0]).name
+            lic_name = self.org.licenses.get(id=self.licenses[0]).name
             if 'Workspaces' in lic_name:
                 return 'WORKSPACE'
             elif 'Professional' in lic_name:
@@ -575,11 +540,11 @@ class Workspace:
 
         """
         # Go find the license of the given type
-        new_license = self._parent.licenses.get_assignable_license(
+        new_license = self.org.licenses.get_assignable_license(
             license_type,
             ignore_license_overage=ignore_license_overage
         )
-        payload = {
+        payload: dict = {
             "calling": {
                 "type": "webexCalling",
                 "webexCalling": {
@@ -592,9 +557,7 @@ class Workspace:
         }
         if license_type == 'hotdesk':
             payload['hotdeskingStatus'] = 'on'
-        response = webex_api_call('put', f"v1/workspaces/{self.id}",
-                                  params={'orgId': self.org_id},
-                                  payload=payload)
+        response = self.org.api.put(f"v1/workspaces/{self.id}", payload=payload)
         self.__process_config(response)
         return True
 
@@ -611,16 +574,14 @@ class Workspace:
                 "type": "freeCalling"
             }
         }
-        response = webex_api_call('put', f"v1/workspaces/{self.id}",
-                                  params={'orgId': self.org_id},
-                                  payload=payload)
+        response = self.org.api.put(f"v1/workspaces/{self.id}", payload=payload)
         self.__process_config(response)
         return True
 
     def set_professional_license(self):
         if self.license_type.upper() == 'PROFESSIONAL':
             return True
-        new_license = self._parent.licenses.get_assignable_license('professional')
+        new_license = self.org.licenses.get_assignable_license('professional')
         payload = {
             'calling': {
                 'type': 'webexCalling',
@@ -634,9 +595,7 @@ class Workspace:
                 }
             }
         }
-        response = webex_api_call('put', f"v1/workspaces/{self.id}",
-                                  params={'orgId': self.org_id},
-                                  payload=payload)
+        response = self.org.api.put(f"v1/workspaces/{self.id}", payload=payload)
         self.__process_config(response)
         return True
 
@@ -645,8 +604,6 @@ class Workspace:
         payload = {
             'hotdeskingStatus': 'on' if enabled else 'off'
         }
-        response = webex_api_call('put', f"v1/workspaces/{self.id}",
-                                  payload=payload,
-                                  params={'orgId': self.org_id})
+        response = self.org.api.put(f"v1/workspaces/{self.id}", payload=payload)
         self.__process_config(response)
         return True

@@ -56,11 +56,11 @@ class RecordingVendorsList(UserList):
 
 
 class OrgRecordingVendorSelection:
-    def __init__(self, parent: wxcadm.Org):
+    def __init__(self, org: wxcadm.Org):
         log.info("Getting Org-level Recording Vendor Selection")
-        self.parent: wxcadm.Org = parent
+        self.org: wxcadm.Org = org
         self._url = "v1/telephony/config/callRecording/vendors"
-        response = webex_api_call('get', self._url, params={'orgId': self.parent.org_id})
+        response = self.org.api.get(self._url)
         self.available_vendors: RecordingVendorsList = RecordingVendorsList(response['vendors'])
         """ :class:`RecordingVendorsList` of available :class:`RecordingVendor` """
         self.selected_vendor: RecordingVendor = self.available_vendors.get(id=response['vendorId'])
@@ -81,7 +81,7 @@ class OrgRecordingVendorSelection:
 
         """
         payload = {'vendorId': new_vendor.id}
-        webex_api_call('put', self._url, payload=payload, params={'orgId': self.parent.org_id})
+        self.org.api.put(self._url, payload=payload)
         return True
 
     def set_failure_behavior(self, failure_behavior: str) -> bool:
@@ -95,14 +95,16 @@ class OrgRecordingVendorSelection:
             bool: True on success, False otherwise
 
         """
+        #TODO: Fix this
+        return False
 
 
 class LocationRecordingVendorSelection:
-    def __init__(self, parent: wxcadm.Location):
+    def __init__(self, location: wxcadm.Location):
         log.info("Getting Location-level Recording Vendor Selection")
-        self.parent: wxcadm.Location = parent
-        self._url = f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendors"
-        response = webex_api_call('get', self._url, params={'orgId': self.parent.org_id})
+        self.location: wxcadm.Location = location
+        self._url = f"v1/telephony/config/locations/{self.location.id}/callRecording/vendors"
+        response = self.location.org.api.get(self._url)
         self.available_vendors: RecordingVendorsList = RecordingVendorsList(response['vendors'])
         """ :class:`RecordingVendorsList` of available :class:`RecordingVendor` """
         self.use_org_vendor: bool = response['orgDefaultEnabled']
@@ -138,8 +140,9 @@ class LocationRecordingVendorSelection:
 
         """
         payload = {'id': new_vendor.id, 'orgDefaultEnabled': False}
-        webex_api_call('put', f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendor",
-                       payload=payload, params={'orgId': self.parent.org_id})
+        self.location.org.api.put(
+            f"v1/telephony/config/locations/{self.location.id}/callRecording/vendor", payload=payload
+        )
         self.location_vendor = new_vendor
         return True
 
@@ -154,8 +157,10 @@ class LocationRecordingVendorSelection:
 
         """
         payload = {'storageRegion': region, 'orgStorageRegionEnabled': False}
-        webex_api_call('put', f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendor",
-                       payload=payload, params={'orgId': self.parent.org_id})
+        self.location.org.api.put(
+            f"v1/telephony/config/locations/{self.location.id}/callRecording/vendor",
+            payload=payload
+        )
         self.use_org_storage_region = False
         self.location_storage_region = region
         return True
@@ -172,8 +177,10 @@ class LocationRecordingVendorSelection:
 
         """
         payload = {'failureBehavior': failure_behavior, 'orgFailureBehaviorEnabled': False}
-        webex_api_call('put', f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendor",
-                       payload=payload, params={'orgId': self.parent.org_id})
+        self.location.org.api.put(
+            f"v1/telephony/config/locations/{self.location.id}/callRecording/vendor",
+            payload=payload
+        )
         self.use_org_failure_behavior = False
         self.location_failure_behavior = failure_behavior
         return True
@@ -181,37 +188,47 @@ class LocationRecordingVendorSelection:
     def clear_vendor_override(self) -> bool:
         """ Revert the Location-level Recording Vendor back to the Org default """
         payload = {'orgDefaultEnabled': True}
-        webex_api_call('put', f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendor",
-                       payload=payload, params={'orgId': self.parent.org_id})
+        self.location.org.api.put(
+            f"v1/telephony/config/locations/{self.location.id}/callRecording/vendor",
+            payload=payload
+        )
         self.use_org_vendor = True
         return True
 
     def clear_region_override(self) -> bool:
         """ Revert the Location-level Storage Region back to the Org default (Webex recording only) """
         payload = {'orgStorageRegionEnabled': True}
-        webex_api_call('put', f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendor",
-                       payload=payload, params={'orgId': self.parent.org_id})
+        self.location.org.api.put(
+            f"v1/telephony/config/locations/{self.location.id}/callRecording/vendor",
+            payload=payload
+        )
         self.use_org_storage_region = True
         return True
 
     def clear_failure_override(self) -> bool:
         """ Revert the Location-level Failure Behavior back to the Org default """
         payload = {'orgFailureBehaviorEnabled': True}
-        webex_api_call('put', f"v1/telephony/config/locations/{self.parent.id}/callRecording/vendor",
-                       payload=payload, params={'orgId': self.parent.org_id})
+        self.location.org.api.put(
+            f"v1/telephony/config/locations/{self.location.id}/callRecording/vendor",
+            payload=payload
+        )
         self.use_org_failure_behavior = True
         return True
 
 
 class ComplianceAnnouncementSettings:
-    def __init__(self, parent: wxcadm.Org | wxcadm.Location,
+    def __init__(self,
+                 org: wxcadm.Org,
                  inboundPSTNCallsEnabled: bool,
                  outboundPSTNCallsEnabled: bool,
                  outboundPSTNCallsDelayEnabled: bool,
                  delayInSeconds: int,
-                 useOrgSettingsEnabled: Optional[bool] = None):
-        self.parent: wxcadm.Org | wxcadm.Location = parent
-        """ The :class:`Org` or :class:`Location` that the settings apply to """
+                 useOrgSettingsEnabled: Optional[bool] = None,
+                 location: Optional[wxcadm.Location] = None):
+        self.org: wxcadm.Org = org
+        """ The :class:`Org` that the settings apply to """
+        self.location: wxcadm.Location = location
+        """ The :class:`Location` that the settings apply to, if done at the Location level """
         self.inbound_pstn_calls_enabled: bool = inboundPSTNCallsEnabled
         """ Play compliance announcement for inbound PSTN calls """
         self.outbound_pstn_calls_enabled: bool = outboundPSTNCallsEnabled
@@ -263,16 +280,19 @@ class ComplianceAnnouncementSettings:
             bool: True on success, False otherwise
 
         """
-        if isinstance(self.parent, wxcadm.Org):
-            pass
-        pass
+        if self.location is not None:
+            endpoint = f"v1//telephony/config/locations/{self.location.id}/callRecording/complianceAnnouncement"
+        else:
+            endpoint = "v1/telephony/config/callRecording/complianceAnnouncement"
+        self.org.api.put(endpoint, payload=self.to_webex())
+        return True
 
 
 class Recording:
     """ The class for Converged Recordings """
-    def __init__(self, parent: wxcadm.Org, id: str, details: Optional[dict] = None, timezone: Optional[str] = None):
+    def __init__(self, org: wxcadm.Org, id: str, details: Optional[dict] = None, timezone: Optional[str] = None):
         self._timezone = timezone
-        self.parent = parent
+        self.org: wxcadm.Org = org
         self.id = id
         """ The Recording ID """
         self.details: dict = None
@@ -287,7 +307,7 @@ class Recording:
     def _get_details(self):
         params = {'timezone': self._timezone} if self._timezone else None
         print("Running _get_details")
-        response = webex_api_call('get', f'v1/convergedRecordings/{self.id}', params=params)
+        response = self.org.api.get(f'v1/convergedRecordings/{self.id}', params=params)
         return response
 
     def refresh(self) -> None:
@@ -297,7 +317,7 @@ class Recording:
     def metadata(self) -> dict:
         """ The metadata of the Recording """
         if self._metadata is None:
-            self._metadata = webex_api_call('get', f'v1/convergedRecordings/{self.id}/metadata')
+            self._metadata = self.org.api.get(f'v1/convergedRecordings/{self.id}/metadata')
         return self._metadata
 
     @property
@@ -487,7 +507,7 @@ class RecordingList(UserList):
     _item_endpoint = 'v1/convergedRecordings/{item_id}'
     _item_class = Recording
 
-    def __init__(self, parent: wxcadm.Org,
+    def __init__(self, org: wxcadm.Org,
                  from_date_time: Optional[str] = None,
                  to_date_time: Optional[str] = None,
                  status: Optional[str] = None,
@@ -498,8 +518,8 @@ class RecordingList(UserList):
                  ):
         super().__init__()
         log.debug("Initializing RecordingList")
-        self.parent: wxcadm.Org = parent
-        self.params = {'max': 100}
+        self.org: wxcadm.Org = org
+        self.params: dict = {'max': 100}
         if from_date_time is not None:
             self.params['from'] = str(from_date_time)
         if to_date_time is not None:
@@ -518,11 +538,11 @@ class RecordingList(UserList):
 
     def _get_data(self) -> list:
         log.debug(f"_get_data() started with params {self.params}")
-        response = webex_api_call('get', self._endpoint, params=self.params)
+        response = self.org.api.get(self._endpoint, params=self.params)
 
         items = []
         for entry in response:
-            items.append(self._item_class(parent=self.parent, id=entry['id'], details=entry))
+            items.append(self._item_class(org=self.org, id=entry['id'], details=entry))
         return items
 
     def refresh(self):
@@ -582,13 +602,13 @@ class RecordingList(UserList):
             bool: True on success, False otherwise
 
         """
-        payload = {
+        payload: dict = {
             'ownerID': current_owner.id,
             'reassignOwnerEmail': new_owner.email,
         }
         if recording_list is not None:
             payload['recordingIds'] = [recording.id for recording in recording_list]
-        webex_api_call('post', f"v1/convergedRecordings/reassign", payload=payload)
+        self.org.api.post(f"v1/convergedRecordings/reassign", payload=payload)
         self.refresh()
         return True
 

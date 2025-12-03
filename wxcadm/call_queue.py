@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from keyword import kwlist
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from wxcadm.person import Person
@@ -64,20 +63,22 @@ class OrgQueueSettings:
         payload = self.to_dict()
         log.debug(payload)
         del payload['org']
-        webex_api_call('put', "v1/telephony/config/queues/settings", payload=payload,
-                       params={'orgId': self.org.org_id})
+        self.org.api.put("v1/telephony/config/queues/settings", payload=payload)
         return True
 
 
 class CallQueue:
-    def __init__(self, parent: Union[wxcadm.Org, wxcadm.Location], id: str, config: Optional[dict] = None):
+    def __init__(self,
+                 org: wxcadm.Org,
+                 id: str,
+                 config: Optional[dict] = None):
         """
         .. note::
             CallQueue instances are normally not instantiated manually and are done automatically with the
             :class:`CallQueueList` class initialization.
 
         """
-        self.parent: Union[wxcadm.Org, wxcadm.Location] = parent
+        self.org: wxcadm.Org = org
         """The parent org of this Call Queue"""
         self.id: str = id
         """The Webex ID of the Call Queue"""
@@ -107,7 +108,7 @@ class CallQueue:
     def config(self) -> dict:
         """ The configuration of this Call Queue instance """
         log.info(f"Getting Queue config for {self.name}")
-        response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/queues/{self.id}")
+        response = self.org.api.get(f"v1/telephony/config/locations/{self.location_id}/queues/{self.id}")
         config = response
         return config
 
@@ -117,8 +118,7 @@ class CallQueue:
         # TODO: The rules within Call Forwarding are weird. The rules come back in this call, but they are
         #       different than the /selectiveRules response. It makes sense to aggregate them, but that probably
         #       requires the object->JSON mapping that we need to do for all classes
-        response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/queues/{self.id}"
-                                         f"/callForwarding")
+        response = self.org.api.get(f"v1/telephony/config/locations/{self.location_id}/queues/{self.id}/callForwarding")
         forwarding = response
         return forwarding
 
@@ -143,6 +143,7 @@ class CallQueue:
             bool: True on success, False otherwise
 
         """
+        # TODO: Fix this
         pass
 
     def push(self):
@@ -153,8 +154,8 @@ class CallQueue:
 
         """
         log.info(f"Pushing Call Queue config to Webex for {self.name}")
-        response = webex_api_call('put', f'v1/telephony/config/locations/{self.location_id}/queues/{self.id}',
-                                  payload=self.config)
+        response = self.org.api.put(f'v1/telephony/config/locations/{self.location_id}/queues/{self.id}',
+                                    payload=self.config)
 
         return response
 
@@ -169,30 +170,26 @@ class CallQueueList(UserList):
     _item_endpoint = "v1/telephony/config/locations/{location_id}/queues/{item_id}"
     _item_class = CallQueue
 
-    def __init__(self, parent: Union[wxcadm.Org, wxcadm.Location]):
+    def __init__(self, org: wxcadm.Org, location: Optional[wxcadm.Location] = None):
         super().__init__()
         log.debug("Initializing CallQueueList")
-        self.parent: Union[wxcadm.Org, wxcadm.Location] = parent
+        self.org: wxcadm.Org = org
+        self.location: Optional[wxcadm.Location] = location
         self.data: list = self._get_data()
 
     def _get_data(self):
         log.debug("_get_data() started")
         params = {}
 
-        if isinstance(self.parent, wxcadm.Org):
-            log.debug(f"Using Org ID {self.parent.id} as Data filter")
-            params['orgId'] = self.parent.id
-        elif isinstance(self.parent, wxcadm.Location):
-            log.debug(f"Using Location ID {self.parent.id} as Data filter")
-            params['locationId'] = self.parent.id
+        if self.location:
+            log.debug(f"Using Location {self.location.name} as data filter")
+            params['locationId'] = self.location.id
         else:
-            log.warn("Parent class is not Org or Location, so all items will be returned")
-        response = webex_api_call('get', self._endpoint, params=params)
-        log.info(f"Found {len(response[self._endpoint_items_key])} items")
-
+            params['locationId'] = None
+        response = self.org.api.get(self._endpoint, params=params, items_key=self._endpoint_items_key)
         items = []
-        for entry in response[self._endpoint_items_key]:
-            items.append(self._item_class(parent=self.parent, id=entry['id'], config=entry))
+        for entry in response:
+            items.append(self._item_class(org=self.org, id=entry['id'], config=entry))
         return items
 
     def refresh(self):
@@ -294,10 +291,10 @@ class CallQueueList(UserList):
         # Get some values if they weren't passed
         if phone_number is None and extension is None:
             raise ValueError("phone_number and/or extension are required")
-        if location is None and isinstance(self.parent, wxcadm.Org):
+        if location is None and self.location is None:
             raise ValueError("location is required for Org-level CallQueueList")
-        elif location is None and isinstance(self.parent, wxcadm.Location):
-            location = self.parent
+        elif location is None and self.location is not None:
+            location = self.location
         log.info(f"Creating Call Queue at Location {location.name} with name: {name}")
         if location.calling_enabled is False:
             log.debug("Not a Webex Calling Location")
@@ -322,11 +319,10 @@ class CallQueueList(UserList):
             "allowAgentJoinEnabled": allow_agent_join,
             "phoneNumberForOutgoingCallsEnabled": allow_did_for_outgoing_calls
         }
-        response = webex_api_call("post", f"v1/telephony/config/locations/{location.id}/queues",
-                                  payload=payload)
+        response = self.org.api.post(f"v1/telephony/config/locations/{location.id}/queues", payload=payload)
         new_queue_id = response['id']
 
         # Get the details of the new Queue
-        webex_api_call("get", f"v1/telephony/config/locations/{location.id}/queues/{new_queue_id}")
+        self.org.api.get(f"v1/telephony/config/locations/{location.id}/queues/{new_queue_id}")
         self.refresh()
         return self.get(id=new_queue_id)

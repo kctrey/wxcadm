@@ -1,6 +1,7 @@
 from builtins import Exception
 
-__all__ = ['OrgError', 'LicenseError', 'APIError', 'TokenError', 'PutError', 'XSIError', 'NotAllowed', 'CSDMError']
+__all__ = ['OrgError', 'LicenseError', 'APIError', 'TokenError', 'PutError', 'XSIError', 'NotAllowed', 'CSDMError',
+           'LicenseOverageError', 'NotSubscribedForLicenseError']
 
 
 class OrgError(Exception):

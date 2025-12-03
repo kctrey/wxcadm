@@ -16,10 +16,6 @@ class Webex:
     """The base class for working with wxcadm"""
     def __init__(self,
                  access_token: str,
-                 get_locations: bool = True,
-                 get_xsi: bool = False,
-                 get_hunt_groups: bool = False,
-                 get_call_queues: bool = False,
                  fast_mode: bool = False,
                  client_id: Optional[str] = None,
                  client_secret: Optional[str] = None,
@@ -32,17 +28,6 @@ class Webex:
 
         Args:
             access_token (str): The Webex API Access Token to authenticate the API calls
-            get_locations (bool, optional): Whether to get all Locations and create instances for them. Defaults to
-                True when there is only one Org. When more than one Org is present, setting this value to True has
-                no effect and the Org-level method must be used.
-            get_xsi (bool, optional): Whether to get the XSI endpoints for each Org. Defaults to False, since
-                not every Org has XSI capability
-            get_hunt_groups (bool, optional): Whether to get the Hunt Groups for each Org. Defaults to False. Setting
-                this value to True only applies when one Org is present. If more than one Org is present, this arg
-                is ignored and the Org-level method must be used.
-            get_call_queues (bool, optional): Whether to get the Call Queues for each Org. Defaults to False. Setting
-                this value to True only applies when one Org is present. If more than one Org is present, this arg
-                is ignored and the Org-level method must be used.
             fast_mode (bool, optional): When possible, optimize the API calls to Webex to work more quickly,
                 sometimes at the expense of not getting as much data. Use this option only if you have a script that
                 runs very slowly, especially during the Webex initialization when collecting people. **Note that this
@@ -78,6 +63,9 @@ class Webex:
         global _webex_headers
         _webex_headers['Authorization'] = "Bearer " + access_token
 
+        ### Added in 4.6.0 - Create a WebexApi instance for API calls
+        self.api = WebexApi(self._access_token)
+
         # Fast Mode flag when needed
         self._fast_mode = fast_mode
 
@@ -108,10 +96,10 @@ class Webex:
         if self._read_only is True:
             # We can't call /v1/organizations on a read-only token, so we have to get it from somewhere else
             log.info("Using token Org as Org ID")
-            response = webex_api_call('get', 'v1/people/me')
+            response = self.api.get('v1/people/me')
             log.debug(response)
             org_id = response['orgId']
-            this_org = Org(name="My Organization", id=org_id, parent=self, xsi=False)
+            this_org = Org(name="My Organization", id=org_id, parent=self, xsi=False, api_connection=self.api)
             self.orgs.append(this_org)
         else:
             # Get the orgs that this token can manage
@@ -131,12 +119,17 @@ class Webex:
             orgs = response['items']
             for org in orgs:
                 log.debug(f"Processing org: {org['displayName']}")
-                this_org = Org(name=org['displayName'], id=org['id'], parent=self, xsi=False)
+                this_org = Org(api_connection=self.api, name=org['displayName'], id=org['id'], parent=self, xsi=False)
                 self.orgs.append(this_org)
 
         if org_id is not None:
             log.info(f"Setting Org ID {org_id} as default Org")
-            self.org = self.get_org_by_id(org_id)
+            #self.org = self.get_org_by_id(org_id)
+            if len(org_id) == 36:
+                # We were given a UUID and need to go find the right value
+                response = self.api.get(f"v1/organizations/{org_id}")
+                org_id = response['id']
+            self.org = Org(api_connection=self.api, name=org_id, id=org_id, parent=self, xsi=False)
             if self.org is None:
                 log.warning("Org not found")
                 raise OrgError
@@ -193,7 +186,7 @@ class Webex:
             'refresh_token': self.refresh_token
         }
 
-        response = webex_api_call('post', '/v1/access_token', payload=payload)
+        response = self.api.post('/v1/access_token', payload=payload)
         if 'access_token' in response:
             log.info(f"Changing Access Token to {response['access_token']}")
             self._access_token = response['access_token']
@@ -261,7 +254,7 @@ class Webex:
 
         """
         log.info(f"Getting Person record for email: {email}")
-        response = webex_api_call("get", "v1/people", params={"email": email, "callingData": True})
+        response = self.api.get("v1/people", params={"email": email, "callingData": True})
         if len(response) > 1:
             log.warn(f"Webex returned more than one record for email: {email}")
             raise APIError("Webex returned more than one Person with the specified email")
@@ -269,7 +262,7 @@ class Webex:
             log.debug(f"User data: {response[0]}")
             org = self.get_org_by_id(response[0]['orgId'])
             log.debug(f"User in Org: {org.name}")
-            person = Person(response[0]['id'], parent=org, config=response[0])
+            person = Person(response[0]['id'], org=org, config=response[0])
             return person
         else:
             return None
@@ -288,7 +281,7 @@ class Webex:
 
         """
         log.info(f"Getting Person record for ID: {id}")
-        response = webex_api_call("get", "v1/people", params={"id": id, "callingData": True})
+        response = self.api.get("v1/people", params={"id": id, "callingData": True})
         if len(response) > 1:
             log.warn(f"Webex returned more than one record for id: {id}")
             raise APIError("Webex returned more than one Person with the specified ID")
@@ -296,7 +289,7 @@ class Webex:
             log.debug(f"User data: {response[0]}")
             org = self.get_org_by_id(response[0]['orgId'])
             log.debug(f"User in Org: {org.name}")
-            person = Person(response[0]['id'], parent=org, config=response[0])
+            person = Person(response[0]['id'], org=org, config=response[0])
             return person
         else:
             return None
@@ -305,7 +298,7 @@ class Webex:
     def me(self):
         """ An instance of the :py:class:`Me` class representing the token owner """
         if self._me is None:
-            my_info = webex_api_call("get", "v1/people/me", headers=self.headers)
+            my_info = self.api.get("v1/people/me")
             me = Me(my_info['id'], parent=self.get_org_by_id(my_info['orgId']), config=my_info)
             self._me = me
         return self._me

@@ -151,7 +151,7 @@ class XSIEventsChannelSet:
                 active_channels.append(channel)
         return active_channels
 
-    def subscribe(self, event_package, person: Person = None):
+    def subscribe(self, event_package, person: wxcadm.Person = None):
         """ Subscribe to an Event Package over the channel opened with :meth:`XSIEvents.open_channel()`
 
         Args:
@@ -495,7 +495,7 @@ class XSIEventsChannel:
 
 
 class XSIEventsSubscription:
-    def __init__(self, parent: XSIEventsChannelSet, event_package: str, person: Person = None):
+    def __init__(self, parent: XSIEventsChannelSet, event_package: str, person: wxcadm.Person = None):
         """ Initialize an XSIEventsSubscription
 
         Initializing the subscription also sends the subscription to the XSI API over the events_endpoint.
@@ -632,30 +632,31 @@ class XSICallQueue:
 
 
 class XSI:
-    def __init__(self, parent, get_profile: bool = False, cache: bool = False):
+    def __init__(self, org: wxcadm.Org, person: wxcadm.Person, get_profile: bool = False, cache: bool = False):
         """The XSI class holds all of the relevant XSI data for a Person
 
         Args:
-            parent (Person): The Person who this XSI instance belongs to
-            get_profile (bool): Whether or not to automatically get the XSI Profile
-            cache (bool): Whether to cache the XSI data (True) or pull it "live" every time (**False**)
+            org: The instance of the wxcadm.Org class (i.e. "webex.org")
+            person: The Person who this XSI instance belongs to
+            get_profile: Whether to automatically get the XSI Profile
+            cache: Whether to cache the XSI data (True) or pull it "live" every time (**False**)
 
         """
-        log.info(f"Initializing XSI instance for {parent.email}")
+        log.info(f"Initializing XSI instance for {person.email}")
         # First we need to get the XSI User ID for the Webex person we are working with
         log.info("Getting XSI identifiers")
-        user_spark_id = decode_spark_id(parent.id)
+        user_spark_id = decode_spark_id(person.id)
         self.id = user_spark_id.split("/")[-1]
 
         # Inherited attributes
-        self.xsi_endpoints = parent._parent.xsi
+        self.xsi_endpoints = org.xsi
         self._cache = cache
 
         # API attributes
         self._headers = {"Content-Type": "application/json",
                          "Accept": "application/json",
                          "X-BroadWorks-Protocol-Version": "25.0",
-                         **parent._headers}
+                         **org.api.headers}
         self._params = {"format": "json"}
 
         # Attribute definitions
@@ -1071,7 +1072,7 @@ class Call:
 
     """
 
-    def __init__(self, parent: Union[Person, XSI, XSICallQueue],
+    def __init__(self, parent: Union[wxcadm.Person, XSI, XSICallQueue],
                  id: str = "", address: str = "", user_id: str = ""):
         """Inititalize a Call instance for a Person
 

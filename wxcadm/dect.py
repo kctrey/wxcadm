@@ -9,7 +9,6 @@ if TYPE_CHECKING:
 
 import wxcadm
 from wxcadm import log
-from .common import *
 
 
 class DECTHandset:
@@ -26,15 +25,15 @@ class DECTHandset:
         """ Access Code for the Handset """
         self.lines: list = config.get('lines', [])
         """ List of lines for the Handset"""
-        self._mac: str = config.get('mac', None)
+        self._mac: Optional[str] = config.get('mac', None)
 
     @property
     def mac(self) -> str:
         """ MAC Address of the Handset """
         if self._mac is None:
-            response = webex_api_call("get",
-                                      f"v1/telephony/config/locations/{self.dect_network.location_id}/"
-                                      f"dectNetworks/{self.dect_network.id}/handsets/{self.id}")
+            response = self.dect_network.org.api.get(
+                  f"v1/telephony/config/locations/{self.dect_network.location_id}/"
+                  f"dectNetworks/{self.dect_network.id}/handsets/{self.id}")
             self._mac = response['mac'].upper()
         return self._mac
 
@@ -45,9 +44,9 @@ class DECTHandset:
             bool: True on success
 
         """
-        webex_api_call('delete',
-                       f'v1/telephony/config/locations/{self.dect_network.location_id}/dectNetworks/'
-                       f'{self.dect_network.id}/handsets/{self.id}')
+        self.dect_network.org.api.delete(
+               f'v1/telephony/config/locations/{self.dect_network.location_id}/dectNetworks/'
+               f'{self.dect_network.id}/handsets/{self.id}')
         return True
 
     def set_handset_display_name(self, display_name: str) -> bool:
@@ -67,11 +66,11 @@ class DECTHandset:
         if self.lines[1]:
             payload['line2MemberId'] = self.lines[1]['memberId']
         try:
-            webex_api_call(
-                'put',
+            self.dect_network.org.api.put(
                 f'v1/telephony/config/locations/{self.dect_network.location_id}/dectNetworks'
                 f'/{self.dect_network.id}/handsets/{self.id}',
-                payload=payload)
+                payload=payload
+            )
         except wxcadm.APIError:
             return False
         self.display_name = display_name
@@ -99,8 +98,7 @@ class DECTBaseStation:
         Raises:
             wxcadm.APIError: Raised when the delete is rejected by Webex
         """
-        webex_api_call(
-            'delete',
+        self.dect_network.org.api.delete(
             f'v1/telephony/config/locations/{self.dect_network.location_id}/dectNetworks/'
             f'{self.dect_network.id}/baseStations/{self.id}'
         )
@@ -109,8 +107,7 @@ class DECTBaseStation:
     def get_handsets(self):
         """ List of :class:`DECTHandset` instances associated with this base station """
         handsets = []
-        response = webex_api_call(
-            'get',
+        response = self.dect_network.org.api.get(
             f'v1/telephony/config/locations/{self.dect_network.location_id}/dectNetworks/'
             f'{self.dect_network.id}/baseStations/{self.id}'
         )
@@ -122,17 +119,18 @@ class DECTBaseStation:
 
 class DECTNetwork:
     def __init__(self,
+                 org: wxcadm.Org,
                  location: Optional[wxcadm.Location] = None,
                  id: Optional[str] = None,
                  config: Optional[dict] = None):
+        self.org: wxcadm.Org = org
         # If we were given an ID, even if there was a config present, go fetch the details, but we need the location
         if id is not None:
             if location is None:
                 raise ValueError('location must be provided with id')
             else:
                 log.debug(f'Getting DECT Network {id} at Location {location.id}')
-                config = webex_api_call(
-                    'get',
+                config = self.org.api.get(
                     f'v1/telephony/config/locations/{location.id}/dectNetworks/{id}'
                 )
         log.info(f"Initializing DECTNetwork with Name {config['name']}")
@@ -163,8 +161,7 @@ class DECTNetwork:
     def handsets(self) -> list:
         """ List of :class:`DECTHandset` instances associated with this DECT Network """
         handsets = []
-        response = webex_api_call(
-            'get',
+        response = self.org.api.get(
             f'v1/telephony/config/locations/{self.location_id}/dectNetworks/{self.id}/handsets'
         )
         for handset in response['handsets']:
@@ -209,8 +206,7 @@ class DECTNetwork:
         """
         log.info(f'Deleting DECT Network {self.id}')
         try:
-            webex_api_call(
-                'delete',
+            self.org.api.delete(
                 f'v1/telephony/config/locations/{self.location_id}/dectNetworks/{self.id}'
             )
         except wxcadm.APIError:
@@ -242,8 +238,7 @@ class DECTNetwork:
             'defaultAccessCode': self.default_access_code
         }
         try:
-            webex_api_call(
-                'put',
+            self.org.api.put(
                 f'v1/telephony/config/locations/{self.location_id}/dectNetworks/{self.id}',
                 payload=payload
             )
@@ -269,8 +264,7 @@ class DECTNetwork:
             'defaultAccessCode': self.default_access_code
         }
         try:
-            webex_api_call(
-                'put',
+            self.org.api.put(
                 f'v1/telephony/config/locations/{self.location_id}/dectNetworks/{self.id}',
                 payload=payload
             )
@@ -309,8 +303,7 @@ class DECTNetwork:
             'defaultAccessCode': access_code
         }
         try:
-            webex_api_call(
-                'put',
+            self.org.api.put(
                 f'v1/telephony/config/locations/{self.location_id}/dectNetworks/{self.id}',
                 payload=payload
             )
@@ -334,8 +327,7 @@ class DECTNetwork:
             'defaultAccessCode': self.default_access_code
         }
         try:
-            webex_api_call(
-                'put',
+            self.org.api.put(
                 f'v1/telephony/config/locations/{self.location_id}/dectNetworks/{self.id}',
                 payload=payload
             )
@@ -364,10 +356,10 @@ class DECTNetwork:
         for entry in mac_list:
             payload.append(entry)
         try:
-            webex_api_call(
-                'post',
+            self.org.api.post(
                 f"v1/telephony/config/locations/{self.location_id}/dectNetworks/{self.id}/baseStations",
-                payload={'baseStations': payload})
+                payload={'baseStations': payload}
+            )
         except wxcadm.APIError:
             raise wxcadm.APIError
         return self.base_stations
@@ -376,8 +368,7 @@ class DECTNetwork:
     def base_stations(self):
         """ List of :class:`DECTBaseStation` instances associated with this DECT Network """
         base_stations = []
-        response = webex_api_call(
-            'get',
+        response = self.org.api.get(
             f'v1/telephony/config/locations/{self.location_id}/dectNetworks/{self.id}/baseStations'
         )
         for item in response['baseStations']:
@@ -411,10 +402,10 @@ class DECTNetwork:
         }
         if line2:
             payload['line2MemberId'] = line2.id
-        response = webex_api_call(
-            'post',
+        response = self.org.api.post(
             f"v1/telephony/config/locations/{self.location_id}/dectNetworks/{self.id}/handsets",
-            payload=payload)
+            payload=payload
+        )
         return response
 
     def delete_handset(self, handset: DECTHandset) -> list:
@@ -458,27 +449,27 @@ class DECTNetwork:
 
 
 class DECTNetworkList(UserList):
-    def __init__(self, parent: Union[wxcadm.Org, wxcadm.Location]):
+    def __init__(self, org: wxcadm.Org, location: Optional[wxcadm.Location] = None):
         log.info("Initializing empty DECTNetworkList")
         super().__init__()
-        self.parent = parent
+        self.org: wxcadm.Org = org
+        self.location: wxcadm.Location = location
         self.data = self._get_data()
 
     def _get_data(self):
         log.info("Getting list of DECT Networks")
         networks = []
-        if isinstance(self.parent, wxcadm.Location):
-            log.debug(f"Using Location {self.parent.name} as Location filter")
-            params = {'locationId': self.parent.id}
-        elif isinstance(self.parent, wxcadm.Org):
-            log.debug(f"Using Org {self.parent.name} as Org filter")
-            params = {'orgId': self.parent.id}
+        if self.location is not None:
+            params = {'locationId': self.location.id}
         else:
-            raise ValueError("Invalid parent class")
-
-        response = webex_api_call('get', 'v1/telephony/config/dectNetworks', params=params)
-        for network in response['dectNetworks']:
-            this_network = DECTNetwork(config=network)
+            params = None
+        response = self.org.api.get(
+            'v1/telephony/config/dectNetworks',
+            items_key='dectNetworks',
+            params=params
+        )
+        for network in response:
+            this_network = DECTNetwork(org=self.org, config=network)
             networks.append(this_network)
         return networks
 
@@ -544,14 +535,14 @@ class DECTNetworkList(UserList):
             wxcadm.APIError: Raised when an error is returned by the Webex API
 
         """
-        if location is None and not isinstance(self.parent, wxcadm.Location):
+        if location is None and not isinstance(self.location, wxcadm.Location):
             log.warning('DECTNetworkList.create() called without a location for Org-level list')
             raise ValueError('location must be provided for Org-level create')
         if location is not None and not isinstance(location, wxcadm.Location):
             log.warning('DECTNetworkList.create() received bad value for location')
             raise ValueError('location must be of type wxcadm.Location')
-        if location is None and isinstance(self.parent, wxcadm.Location):
-            location = self.parent
+        if location is None and isinstance(self.location, wxcadm.Location):
+            location = self.location
 
         log.info(f"Creating DECTNetwork {name} in Location: {location.name}")
         # Standardize the model name
@@ -573,9 +564,8 @@ class DECTNetworkList(UserList):
             log.debug(f"Enabling Default Access Code {default_access_code}")
             payload.update({'defaultAccessCodeEnabled': True, 'defaultAccessCode': default_access_code})
 
-        response = webex_api_call('post', f"v1/telephony/config/locations/{location.id}/dectNetworks",
-                                  payload=payload)
-        new_network = DECTNetwork(location=location, id=response['dectNetworkId'])
+        response = self.org.api.post(f"v1/telephony/config/locations/{location.id}/dectNetworks", payload=payload)
+        new_network = DECTNetwork(org=self.org, location=location, id=response['dectNetworkId'])
         self.data.append(new_network)
         return new_network
 

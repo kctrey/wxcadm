@@ -8,8 +8,7 @@ from typing import Optional, Union, List
 import wxcadm
 import wxcadm.location
 import wxcadm.person
-from wxcadm import log
-from .common import *
+from wxcadm import log, location
 from .models import OutboundProxy
 
 
@@ -73,8 +72,7 @@ class CallRouting:
         if orig_type == 'TRUNK' and orig_number is not None:
             payload['originatorNumber'] = orig_number
 
-        response = webex_api_call('post', '/v1/telephony/config/actions/testCallRouting/invoke',
-                                  params={'orgId': self.org.id}, payload=payload)
+        response = self.org.api.post('/v1/telephony/config/actions/testCallRouting/invoke', payload=payload)
         return response
 
 
@@ -85,9 +83,11 @@ class Trunks(UserList):
         super().__init__()
         self.org = org
         self.data = []
-        items = webex_api_call('get', '/v1/telephony/config/premisePstn/trunks', params={'orgId': self.org.org_id})
-        log.debug(f'Trunks from Webex: {items}')
-        for item in items['trunks']:
+        items = self.org.api.get(
+            '/v1/telephony/config/premisePstn/trunks',
+            items_key='trunks'
+        )
+        for item in items:
             item['org'] = self.org
             this_trunk = Trunk.from_dict(item)
             self.data.append(this_trunk)
@@ -156,11 +156,13 @@ class Trunks(UserList):
             log.warning(f'Cannot determine Location ID with given location: {location}')
             return False
 
-        payload = {'name': name,
-                   'locationId': location_id,
-                   'password': password,
-                   'dualIdentitySupportEnabled': dual_identity_support,
-                   'trunkType': type}
+        payload: dict = {
+            'name': name,
+            'locationId': location_id,
+            'password': password,
+            'dualIdentitySupportEnabled': dual_identity_support,
+            'trunkType': type
+        }
         if type.upper() == 'CERTIFICATE_BASED':
             payload['deviceType'] = device_type
             payload['address'] = address
@@ -168,9 +170,7 @@ class Trunks(UserList):
             payload['port'] = port
             payload['maxConcurrentCalls'] = max_concurrent_calls
 
-        success = webex_api_call('post', '/v1/telephony/config/premisePstn/trunks',
-                                 params={'orgId': self.org.id},
-                                 payload=payload)
+        success = self.org.api.post('/v1/telephony/config/premisePstn/trunks', payload=payload)
         if success:
             return True
         else:
@@ -233,8 +233,7 @@ class Trunk:
         if item == 'shape':
             return None
         log.debug(f"Collecting details for Trunk: {self.id}")
-        response = webex_api_call('get', f"v1/telephony/config/premisePstn/trunks/{self.id}",
-                                  params={'orgId': self.org.id})
+        response = self.org.api.get(f"v1/telephony/config/premisePstn/trunks/{self.id}")
         self.otg_dtg = response.get('otgDtgId', '')
         self.lineport = response.get('linePort', '')
         self.used_by_locations = response.get('locationsUsingTrunk', [])
@@ -275,8 +274,7 @@ class Trunk:
         payload = {
             "dualIdentitySupportEnabled": enabled,
         }
-        webex_api_call("put", f"v1/telephony/config/premisePstn/trunks/{self.id}",
-                       payload=payload, params={'orgId': self.org.id})
+        self.org.api.put(f"v1/telephony/config/premisePstn/trunks/{self.id}", payload=payload)
         self.dual_identity_support = enabled
         return True
 
@@ -304,8 +302,7 @@ class Trunk:
         payload = {
             "maxConcurrentCalls": calls
         }
-        webex_api_call("put", f"v1/telephony/config/premisePstn/trunks/{self.id}",
-                       payload=payload, params={'orgId': self.org.id})
+        self.org.api.put(f"v1/telephony/config/premisePstn/trunks/{self.id}", payload=payload)
         self.max_calls = calls
         return True
 
@@ -317,9 +314,11 @@ class RouteGroups(UserList):
         super().__init__()
         self.org = org
         self.data = []
-        items = webex_api_call('get', '/v1/telephony/config/premisePstn/routeGroups', params={'orgId': self.org.id})
-        log.debug(f'Route Groups from Webex: {items}')
-        for item in items['routeGroups']:
+        items = self.org.api.get(
+            '/v1/telephony/config/premisePstn/routeGroups',
+            items_key='routeGroups'
+        )
+        for item in items:
             this_rg = RouteGroup(self.org, **item)
             self.data.append(this_rg)
 
@@ -354,9 +353,11 @@ class RouteGroup:
     @property
     def trunks(self) -> List[dict]:
         """ A dict of the Trunks within the Route Group along with their Priorities """
-        response = webex_api_call('get', f"v1/telephony/config/premisePstn/routeGroups/{self.id}",
-                                  params={'orgId': self.org.org_id})
-        return response['localGateways']
+        response = self.org.api.get(
+            f"v1/telephony/config/premisePstn/routeGroups/{self.id}",
+            items_key='localGateways'
+        )
+        return response
 
     def add_trunk(self, trunk: Trunk, priority: Union[str, int]):
         """ Add a new Trunk to the Route Group with the given priority
@@ -373,7 +374,7 @@ class RouteGroup:
         Returns:
 
         """
-        trunks = self.trunks
+        trunks: List[dict] = self.trunks
         if priority == 'next' or priority =='with_last':
             highest_val = self.__get_last_priority(trunks)
             if priority == 'next':
@@ -394,11 +395,10 @@ class RouteGroup:
             'localGateways': trunks
         }
 
-        webex_api_call('put', f"v1/telephony/config/premisePstn/routeGroups/{self.id}",
-                       params={'orgId': self.org.org_id}, payload=payload)
+        self.org.api.put(f"v1/telephony/config/premisePstn/routeGroups/{self.id}", payload=payload)
         return True
 
-    def __get_last_priority(self, trunks: Optional[dict] = None):
+    def __get_last_priority(self, trunks: Optional[List[dict]] = None):
         if trunks is None:
             trunks = self.trunks
         highest = 1
@@ -415,9 +415,11 @@ class RouteLists(UserList):
         super().__init__()
         self.org = org
         self.data = []
-        items = webex_api_call('get', '/v1/telephony/config/premisePstn/routeLists')
-        log.debug(f'Route Lists from Webex: {items}')
-        for item in items['routeLists']:
+        items = self.org.api.get(
+            '/v1/telephony/config/premisePstn/routeLists',
+            items_key='routeLists'
+        )
+        for item in items:
             this_rl = RouteList(self.org, **item)
             self.data.append(this_rl)
 
@@ -438,8 +440,7 @@ class RouteLists(UserList):
             'locationId': location.id,
             'routeGroupId': route_group.id
         }
-        response = webex_api_call('post', '/v1/telephony/config/premisePstn/routeLists', payload=payload,
-                                  params={'orgId': self.org.id})
+        response = self.org.api.post('/v1/telephony/config/premisePstn/routeLists', payload=payload)
         return RouteList(self.org, **response)
 
     def get(self, name: Optional[str] = None, id: Optional[str] = None) -> Optional[RouteLists]:
@@ -491,7 +492,7 @@ class RouteList:
     @property
     def numbers(self):
         """ The numbers assigned to this RouteList """
-        response = webex_api_call('get', f'/v1/telephony/config/premisePstn/routeLists/{self.id}/numbers')
+        response = self.org.api.get(f'/v1/telephony/config/premisePstn/routeLists/{self.id}/numbers')
         return response.json()
 
 
@@ -502,9 +503,8 @@ class DialPlans(UserList):
         super().__init__()
         self.org = org
         self.data = []
-        items = webex_api_call('get', '/v1/telephony/config/premisePstn/dialPlans')
-        log.debug(f'Dial Plans from Webex: {items}')
-        for item in items['dialPlans']:
+        items = self.org.api.get('/v1/telephony/config/premisePstn/dialPlans', items_key='dialPlans')
+        for item in items:
             this_dp = DialPlan(self.org, **item)
             self.data.append(this_dp)
 
@@ -528,8 +528,10 @@ class DialPlan:
     @property
     def patterns(self):
         """ The Dial Patters within the DialPlan"""
-        response = webex_api_call('get', f'/v1/telephony/config/premisePstn/dialPlans/{self.id}/dialPatterns')
-        self._patterns = response['dialPatterns']
+        response = self.org.api.get(
+            f'/v1/telephony/config/premisePstn/dialPlans/{self.id}/dialPatterns',
+            items_key='dialPatterns')
+        self._patterns = response
         return self._patterns
 
     def add_pattern(self, pattern: str) -> bool:
@@ -543,8 +545,10 @@ class DialPlan:
 
         """
         payload = {'dialPatterns': [{'dialPattern': pattern, 'action': 'ADD'}]}
-        success = webex_api_call('put', f'/v1/telephony/config/premisePstn/dialPlans/{self.id}/dialPatterns',
-                                 payload=payload)
+        success = self.org.api.put(
+            f'/v1/telephony/config/premisePstn/dialPlans/{self.id}/dialPatterns',
+            payload=payload
+        )
         if success:
             return True
         else:
@@ -561,8 +565,10 @@ class DialPlan:
 
         """
         payload = {'dialPatterns': [{'dialPattern': pattern, 'action': 'DELETE'}]}
-        success = webex_api_call('put', f'/v1/telephony/config/premisePstn/dialPlans/{self.id}/dialPatterns',
-                                 payload=payload)
+        success = self.org.api.put(
+            f'/v1/telephony/config/premisePstn/dialPlans/{self.id}/dialPatterns',
+            payload=payload
+        )
         if success:
             return True
         else:
@@ -571,10 +577,11 @@ class DialPlan:
 
 class TranslationPattern:
     def __init__(self,
-                 parent: Union[wxcadm.Org, wxcadm.Location],
+                 org: wxcadm.Org,
+                 location: Optional[wxcadm.Location] = None,
                  config: Optional[dict] = None):
         log.info("Creating TranslationsPattern instance")
-        self.parent = parent
+        self.org: wxcadm.Org = org
         self.id: Optional[str] = None
         """ The unique identifier for the Translation Pattern """
         self.name: Optional[str] = None
@@ -583,7 +590,7 @@ class TranslationPattern:
         """ The match pattern for the Translation Pattern """
         self.replacement_pattern: Optional[str] = None
         """ The replacement pattern for the Translation Pattern """
-        self.location: Optional[wxcadm.Location] = None
+        self.location: Optional[wxcadm.Location] = location
         """ The Location for the Translation Pattern """
         self.__process_config(config)
 
@@ -594,8 +601,11 @@ class TranslationPattern:
         self.match_pattern = config.get('matchingPattern')
         self.replacement_pattern = config.get('replacementPattern')
         self.level = config.get('level', None)
-        if config.get('location', None) is not None:
-            self.location = location_finder(config['location']['id'], self.parent)
+        # I am adding this code in 4.6.0 to account for a test that was failing, but the test worked previously.
+        # I found that when doing an Org-wide refresh, Translations Plans at the Location level ended up with a None
+        # I can't figure out why the test would have ever worked
+        if self.level == 'Location':
+            self.location = self.org.locations.get(id=config['location']['id'])
 
     def update(self,
                name: Optional[str] = None,
@@ -619,8 +629,7 @@ class TranslationPattern:
                        else self.replacement_pattern}
         url = f'v1/telephony/config/callRouting/translationPatterns/{self.id}' if self.location is None \
             else f'v1/telephony/config/locations/{self.location.id}/callRouting/translationPatterns/{self.id}'
-        response = webex_api_call('put', url, params={'orgId': self.parent.org_id}, payload=payload)
-        log.debug(f"Response: {response}")
+        self.org.api.put(url, payload=payload)
         return True
 
     def delete(self):
@@ -633,26 +642,30 @@ class TranslationPattern:
         log.info(f"Deleting Translation Pattern {self.id}")
         url = f'v1/telephony/config/callRouting/translationPatterns/{self.id}' if self.location is None \
             else f'v1/telephony/config/locations/{self.location.id}/callRouting/translationPatterns/{self.id}'
-        webex_api_call('delete', url, params={'orgId': self.parent.org_id})
+        self.org.api.delete(url)
         return True
 
 
 class TranslationPatternList(UserList):
-    def __init__(self, parent: Union[wxcadm.Org, wxcadm.Location]):
+    def __init__(self, org: wxcadm.Org, location: Optional[wxcadm.Location] = None):
         super().__init__()
-        self.parent: Union[wxcadm.Org, wxcadm.Location] = parent
+        self.org = org
+        self.location = location
         self.data: list[wxcadm.TranslationPattern] = self._get_data()
 
     def _get_data(self):
         data = []
-        params = {
-            'orgId': self.parent.org_id
-        }
-        if isinstance(self.parent, wxcadm.Location):
-            params['limitToLocationId'] = self.parent.id
-        response = webex_api_call('get', "v1/telephony/config/callRouting/translationPatterns", params=params)
-        for entry in response['translationPatterns']:
-            data.append(TranslationPattern(self.parent, entry))
+        if self.location is not None:
+            params = {'limitToLocationId': self.location.id}
+        else:
+            params = None
+        response = self.org.api.get(
+            "v1/telephony/config/callRouting/translationPatterns",
+            params=params,
+            items_key='translationPatterns'
+        )
+        for entry in response:
+            data.append(TranslationPattern(org=self.org, location=self.location, config=entry))
         return data
 
     def refresh(self):
@@ -712,29 +725,26 @@ class TranslationPatternList(UserList):
             scope = 'location'
             location_id = location.id
         else:
-            if isinstance(self.parent, wxcadm.Location):
-                log.info(f"No Location received. Using Location scope from parent: {self.parent.name}")
-                url = f"v1/telephony/config/locations/{self.parent.id}/callRouting/translationPatterns"
+            if self.location is not None:
+                log.info(f"No Location received. Using Location scope from list: {self.location.name}")
+                url = f"v1/telephony/config/locations/{self.location.id}/callRouting/translationPatterns"
                 scope = 'location'
-                location_id = self.parent.id
+                location_id = self.location.id
             else:
                 log.info("No Location defined. Using Org scope.")
                 url = f"v1/telephony/config/callRouting/translationPatterns"
                 scope = 'org'
 
-        response = webex_api_call('post', url, params={'orgId': self.parent.org_id}, payload=payload)
+        response = self.org.api.post(url, payload=payload)
         pattern_id = response['id']
         log.debug(f"New Pattern ID: {pattern_id}")
         log.debug("Getting new pattern details")
         if scope == 'org':
-            config = webex_api_call('get', f"v1/telephony/config/callRouting/translationPatterns/{pattern_id}",
-                                    params={'orgId': self.parent.org_id})
-            new_pattern = TranslationPattern(self.parent, config)
+            config = self.org.api.get(f"v1/telephony/config/callRouting/translationPatterns/{pattern_id}")
+            new_pattern = TranslationPattern(org=self.org, location=self.location, config=config)
         else:
-            config = webex_api_call(
-                'get',
-                f"v1/telephony/config/locations/{location_id}/callRouting/translationPatterns/{pattern_id}",
-                params={'orgId': self.parent.org_id}
+            config = self.org.api.get(
+                f"v1/telephony/config/locations/{location_id}/callRouting/translationPatterns/{pattern_id}"
             )
-            new_pattern = TranslationPattern(self.parent, config)
+            new_pattern = TranslationPattern(org=self.org, location=self.location, config=config)
         return new_pattern

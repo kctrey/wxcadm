@@ -8,23 +8,25 @@ from .common import *
 
 
 class PickupGroupList(UserList):
-    def __init__(self, parent: wxcadm.Location):
+    def __init__(self, location: wxcadm.Location):
         super().__init__()
-        self.parent: wxcadm.Location = parent
+        self.location: wxcadm.Location = location
         self.data: list = self._get_items()
 
     def _get_items(self):
-        if isinstance(self.parent, wxcadm.Location):
+        if isinstance(self.location, wxcadm.Location):
             log.debug("Using Location as data filter")
         else:
             raise ValueError("Unsupported parent class")
 
         log.debug("Getting Call Pickup list")
-        response = webex_api_call('get', f'v1/telephony/config/locations/{self.parent.id}/callPickups')
-        log.debug(f"Received {len(response['callPickups'])} entries")
+        response = self.location.org.api.get(
+            f'v1/telephony/config/locations/{self.location.id}/callPickups',
+            items_key='callPickups'
+        )
         items = []
-        for entry in response['callPickups']:
-            items.append(PickupGroup(self.parent, id=entry['id'], config=entry))
+        for entry in response:
+            items.append(PickupGroup(self.location, id=entry['id'], config=entry))
         return items
 
     def get(self, id: str = None, name: str = None, spark_id: str = None):
@@ -62,8 +64,9 @@ class PickupGroupList(UserList):
 
 
 class PickupGroup:
-    def __init__(self, parent: wxcadm.Location, id: str, config: dict):
-        self.parent: wxcadm.Location = parent
+    def __init__(self, location: wxcadm.Location, id: str, config: dict):
+        self.location: wxcadm.Location = location
+        """ The Location of the Pickup Group """
         self.id: str = id
         """The Webex ID of the Pickup Group"""
         self.name: str = config['name']
@@ -76,9 +79,15 @@ class PickupGroup:
         """ All Users assigned to this Pickup Group"""
         log.info(f"Getting users for PickupGroups {self.name}")
         users = []
-        response = webex_api_call('get', f'v1/telephony/config/locations/{self.parent.id}/callPickups/{self.id}')
+        response = self.location.org.api.get(f'v1/telephony/config/locations/{self.location.id}/callPickups/{self.id}')
         for item in response['agents']:
-            #TODO - Once the Workspaces API supports Calling WOrkspaces, this should probably tie each Person/Workspace
-            # to its corresponding instance
-            users.append(item)
+            if item['type'] == 'VIRTUAL_LINE':
+                agent = self.location.org.virtual_lines.get(id=item['id'])
+            elif item['type'] == 'PEOPLE':
+                agent = self.location.org.people.get(id=item['id'])
+            elif item['type'] == 'PLACE':
+                agent = self.location.org.workspaces.get(id=item['id'])
+            else:
+                agent = item
+            users.append(agent)
         return users

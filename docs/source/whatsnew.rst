@@ -2,6 +2,21 @@
 
 What's New
 ==========
+v4.6.0
+------
+- BUG FIX: The response from the Webex API that specifies a new region for Analytics has changed verbiage.
+- Test cases updated to take advantage of the new API format
+- **MAJOR CHANGE** - The entire API call flow that was previously done with `webex_api_call` internally has been removed. Each :class:`~.org.Org` now has an `api` property that handles API calls for that Org
+- Removed old Terminus classes that have been replaced by Hydra API calls
+- Fixed meraki module import so that it is truly optional now
+- **BREAKING CHANGE** - :meth:`Location.set_default_moh()` has been removed while removing unused CP-API calls
+- **BREAKING CHANGE** - :meth:`Location.upload_moh_file()` has been removed while removing unused CP-API calls
+- Change to internal naming. Classes that only support an :class:`.org.Org` as a parent now use the `org` parameter and attribute rather than `parent`
+- **BREAKING CHANGE** - :meth:`Org.create_person()`, which was deprecated in 4.4.0, has been removed
+
+v4.5.3
+------
+- EMERGENCY FIX: 4.5.2 used the wrong orgId for a DeviceList call and has been fixed.
 
 v4.5.2
 ------

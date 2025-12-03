@@ -7,7 +7,6 @@ from collections import UserList
 
 import wxcadm.org
 from wxcadm import log
-from .common import *
 from .location import Location
 
 
@@ -18,8 +17,8 @@ class NumberManagementJob:
 
     """
 
-    def __init__(self, parent: wxcadm.Org, id: str, details: Optional[dict] = None):
-        self.parent = parent
+    def __init__(self, org: wxcadm.Org, id: str, details: Optional[dict] = None):
+        self.org = org
         self.id = id
         """ The Number Move Job ID """
         self.details: dict
@@ -30,8 +29,7 @@ class NumberManagementJob:
             self.details = details
 
     def _get_details(self):
-        response = webex_api_call('get', f'v1/telephony/config/jobs/numbers/manageNumbers/{self.id}',
-                                  params={'orgId': self.parent.id})
+        response = self.org.api.get(f'v1/telephony/config/jobs/numbers/manageNumbers/{self.id}')
         return response
 
     @property
@@ -75,28 +73,19 @@ class NumberManagementJobList(UserList):
     _item_endpoint = "v1/telephony/config/jobs/numbers/manageNumbers/{item_id}"
     _item_class = NumberManagementJob
 
-    def __init__(self, parent: wxcadm.Org):
+    def __init__(self, org: wxcadm.Org):
         super().__init__()
         log.debug("Initializing NumberMoveJobList")
-        self.parent: wxcadm.Org = parent
+        self.org: wxcadm.Org = org
         self.data: list = self._get_data()
 
     def _get_data(self) -> list:
         log.debug("_get_data() started")
-        params = {}
 
-        if isinstance(self.parent, wxcadm.Org):
-            log.debug(f"Using Org ID {self.parent.id} as Data filter")
-            params['orgId'] = self.parent.id
-            params['max'] = 1000
-        else:
-            log.warn("Parent class is not Org so all items will be returned")
-        response = webex_api_call('get', self._endpoint, params=params)
-        log.info(f"Found {len(response)} items")
-
+        response = self.org.api.get(self._endpoint)
         items = []
         for entry in response:
-            items.append(self._item_class(parent=self.parent, id=entry['id'], details=entry))
+            items.append(self._item_class(org=self.org, id=entry['id'], details=entry))
         return items
 
     def refresh(self):
@@ -151,7 +140,7 @@ class NumberManagementJobList(UserList):
         # Determine if the numbers are valid
         numbers_to_move = []
         # Get a copy of the Org numbers for processing
-        org_numbers = self.parent.numbers
+        org_numbers = self.org.numbers
         for number in numbers:
             number_found = False
             for org_number in org_numbers:
@@ -172,11 +161,9 @@ class NumberManagementJobList(UserList):
         for number in numbers_to_move:
             payload['numberList'].append({'locationId': number.location.id, 'numbers': [number.phone_number]})
 
-        response = wxcadm.webex_api_call('post', 'v1/telephony/config/jobs/numbers/manageNumbers',
-                                         params={'orgId': self.parent.id},
-                                         payload=payload)
+        response = self.org.api.post('v1/telephony/config/jobs/numbers/manageNumbers', payload=payload)
         job_id = response['id']
-        return NumberManagementJob(parent=self.parent, id=job_id)
+        return NumberManagementJob(org=self.org, id=job_id)
 
 
 class UserMoveJob:
@@ -186,8 +173,8 @@ class UserMoveJob:
 
     """
 
-    def __init__(self, parent: wxcadm.Org, id: str, details: Optional[dict] = None):
-        self.parent = parent
+    def __init__(self, org: wxcadm.Org, id: str, details: Optional[dict] = None):
+        self.org = org
         self.id = id
         """ The User Move Job ID """
         self.details: dict
@@ -198,8 +185,7 @@ class UserMoveJob:
             self.details = details
 
     def _get_details(self):
-        response = webex_api_call('get', f'v1/telephony/config/jobs/person/moveLocation/{self.id}',
-                                  params={'orgId': self.parent.id})
+        response = self.org.api.get(f'v1/telephony/config/jobs/person/moveLocation/{self.id}')
         return response
 
     @property
@@ -243,28 +229,20 @@ class UserMoveJobList(UserList):
     _item_endpoint = "v1/telephony/config/jobs/person/moveLocation/{item_id}"
     _item_class = UserMoveJob
 
-    def __init__(self, parent: wxcadm.Org):
+    def __init__(self, org: wxcadm.Org):
         super().__init__()
         log.debug("Initializing UserMoveJobList")
-        self.parent: wxcadm.Org = parent
+        self.org: wxcadm.Org = org
         self.data: list = self._get_data()
 
     def _get_data(self) -> list:
         log.debug("_get_data() started")
-        params = {}
 
-        if isinstance(self.parent, wxcadm.Org):
-            log.debug(f"Using Org ID {self.parent.id} as Data filter")
-            params['orgId'] = self.parent.id
-            params['max'] = 1000
-        else:
-            log.warn("Parent class is not Org so all items will be returned")
-        response = webex_api_call('get', self._endpoint, params=params)
-        log.info(f"Found {len(response)} items")
+        response = self.org.api.get(self._endpoint)
 
         items = []
         for entry in response:
-            items.append(self._item_class(parent=self.parent, id=entry['id'], details=entry))
+            items.append(self._item_class(org=self.org, id=entry['id'], details=entry))
         return items
 
     def refresh(self):
@@ -356,9 +334,7 @@ class UserMoveJobList(UserList):
 
         validation_results = UserMoveValidationResults()
         try:
-            response = wxcadm.webex_api_call('post', 'v1/telephony/config/jobs/person/moveLocation',
-                                             params={'orgId': self.parent.id},
-                                             payload=validation_payload)
+            response = self.org.api.post('v1/telephony/config/jobs/person/moveLocation', payload=validation_payload)
         except wxcadm.exceptions.APIError as e:
             log.debug(f"Webex returned an error to Number Move Validation: {e}")
 
@@ -377,9 +353,7 @@ class UserMoveJobList(UserList):
         if validation_results.passed is True and validate_only is not True:
             log.debug(f"Validation passed and Move requested. Creating UserMoveJob call.")
             try:
-                response = wxcadm.webex_api_call('post', 'v1/telephony/config/jobs/person/moveLocation',
-                                                 params={'orgId': self.parent.id},
-                                                 payload=move_payload)
+                response = self.org.api.post('v1/telephony/config/jobs/person/moveLocation', payload=move_payload)
             except wxcadm.exceptions.APIError as e:
                 log.debug(f"Webex returned an error to Number Move Validation: {str(e)}")
             else:
@@ -387,7 +361,7 @@ class UserMoveJobList(UserList):
                 job_id = response['response']['jobDetails']['id']
                 log.debug(f"Received Job ID {job_id}")
                 self.refresh()
-                user_move_job = UserMoveJob(parent=self.parent, id=job_id)
+                user_move_job = UserMoveJob(org=self.org, id=job_id)
 
         return validation_results, user_move_job
 
@@ -428,8 +402,8 @@ class RebuildPhonesJob:
 
     """
 
-    def __init__(self, parent: wxcadm.Org, id: str, details: Optional[dict] = None):
-        self.parent = parent
+    def __init__(self, org: wxcadm.Org, id: str, details: Optional[dict] = None):
+        self.org = org
         self.id = id
         """ The Rebuild Phones Job ID """
         self.details: dict
@@ -440,8 +414,7 @@ class RebuildPhonesJob:
             self.details = details
 
     def _get_details(self):
-        response = webex_api_call('get', f'v1/telephony/config/jobs/devices/rebuildPhones/{self.id}',
-                                  params={'orgId': self.parent.id})
+        response = self.org.api.get(f'v1/telephony/config/jobs/devices/rebuildPhones/{self.id}')
         return response
 
     @property
@@ -475,28 +448,21 @@ class RebuildPhonesJobList(UserList):
     _item_endpoint = "v1/telephony/config/jobs/devices/rebuildPhones/{item_id}"
     _item_class = RebuildPhonesJob
 
-    def __init__(self, parent: wxcadm.Org):
+    def __init__(self, org: wxcadm.Org):
         super().__init__()
         log.debug("Initializing RebuildPhonesJobList")
-        self.parent: wxcadm.Org = parent
+        self.org: wxcadm.Org = org
         self.data: list = self._get_data()
 
     def _get_data(self) -> list:
         log.debug("_get_data() started")
-        params = {}
 
-        if isinstance(self.parent, wxcadm.Org):
-            log.debug(f"Using Org ID {self.parent.id} as Data filter")
-            params['orgId'] = self.parent.id
-            params['max'] = 1000
-        else:
-            log.warn("Parent class is not Org so all items will be returned")
-        response = webex_api_call('get', self._endpoint, params=params)
+        response = self.org.api.get(self._endpoint)
         log.info(f"Found {len(response)} items")
 
         items = []
         for entry in response:
-            items.append(self._item_class(parent=self.parent, id=entry['id'], details=entry))
+            items.append(self._item_class(org=self.org, id=entry['id'], details=entry))
         return items
 
     def refresh(self):
@@ -535,7 +501,7 @@ class RebuildPhonesJobList(UserList):
 
         Args:
             location (Location | str): A :class:`Location` instance or a string representing the Location ID for the
-            rebuild
+                rebuild
 
         Returns:
             RebuildPhonesJob: The created :class:`RebuildPhonesJob`
@@ -547,19 +513,13 @@ class RebuildPhonesJobList(UserList):
         else:
             target_location_id = location
 
-        # If we create a job, we'll store it. Otherwise, we'll return None
-        job = None
-
         # Build the payload for the move job validation
         payload = {'locationId': target_location_id}
-        response = wxcadm.webex_api_call('post', 'v1/telephony/config/jobs/devices/rebuildPhones',
-                                         params={'orgId': self.parent.id},
-                                         payload=payload)
-        log.debug(f"API response: {response}")
+        response = self.org.api.post('v1/telephony/config/jobs/devices/rebuildPhones', payload=payload)
         job_id = response['id']
         log.debug(f"Received Job ID {job_id}")
         self.refresh()
-        job = RebuildPhonesJob(parent=self.parent, id=job_id, details=response)
+        job = RebuildPhonesJob(org=self.org, id=job_id, details=response)
 
         return job
 

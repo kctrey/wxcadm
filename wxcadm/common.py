@@ -9,8 +9,6 @@ import requests
 import sys
 from typing import Optional, TYPE_CHECKING
 
-import wxcadm
-
 if TYPE_CHECKING:
     from requests_toolbelt import MultipartEncoder
 
@@ -19,13 +17,502 @@ import wxcadm
 from wxcadm import log
 
 __all__ = ['decode_spark_id', 'console_logging', 'tracking_id', 'webex_api_call', '_url_base', '_webex_headers',
-           'location_finder']
+           'WebexApi']
 
 # Some functions available to all classes and instances (optionally)
 _url_base = "https://webexapis.com/"
 _webex_headers = {"Authorization": "",
                   "Content-Type": "application/json",
                   "Accept": "application/json"}
+
+class WebexApi:
+    def __init__(self,
+                 access_token: str,
+                 org_id: Optional[str] = None,
+                 url_base: str = "https://webexapis.com/",
+                 retry_count: int = 10):
+        self.access_token = access_token
+        self.org_id = org_id
+        self.url_base = url_base
+        self.headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        # Always include the orgId param if given an org_id
+        self.parameters = None
+        if org_id is not None:
+            self.parameters = {'orgId': org_id}
+        self.retry_count = retry_count
+        self.session = requests.Session()
+        self.session.headers.update(self.headers)
+
+    def _clean_endpoint(self, url: str) -> str:
+        # This just cleans up the URL to make sure there aren't any // other than after the https:
+        if url.startswith("/"):
+            url = url[1:]
+        if self.url_base.endswith("/"):
+            url = self.url_base + url
+        else:
+            url = self.url_base + "/" + url
+        return url
+
+    def _clean_params(self, params: Optional[dict] = None) -> dict:
+        new_params = {}
+        if self.parameters is not None:
+            new_params = self.parameters.copy()
+        if params is not None:
+            new_params.update(params)
+        return new_params
+
+    def get(self,
+            endpoint: str,
+            params: Optional[dict] = None,
+            items_key: str = 'items',
+            kwargs: Optional[dict] = None,):
+        """ Perform a GET request to the webex API.
+
+        Args:
+            endpoint (str): The API endpoint (e.g. `/v1/people`)
+            params (dict, optional): The request parameters, in dict format
+            items_key (str, optional): The key to use for the list of entries. Defaults to 'items'.
+
+        Returns:
+
+        """
+        # Clean the endpoint to get a good URL
+        url = self._clean_endpoint(endpoint)
+        # Clean the parameters to include any at the instance level
+        params = self._clean_params(params)
+        page_number = 1
+        start_time = time.time()
+        try_num = 1
+        log.debug("Webex API Call:")
+        log.debug("\tMethod: GET")
+        log.debug("\tURL: %s", url)
+        log.debug("\tParameters: %s", params)
+        keep_trying = True
+        while try_num <= self.retry_count and keep_trying is True:
+            r = self.session.get(url, params=params)
+            log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+            if r.ok:
+                response = r.json()
+                if items_key in response:
+                    log.debug(f"Webex returned {len(response[items_key])} items")
+                else:
+                    return response
+            else:
+                log.warning("Webex API returned an error")
+                log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+                log.warning(f"\t[{r.status_code}] {r.text}")
+                if r.status_code == 429:
+                    retry_after = int(r.headers.get('Retry-After', 30))
+                    log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                    time.sleep(retry_after)
+                    try_num += 1
+                    continue
+                elif r.status_code == 400 and kwargs.get('ignore_400', False) is True:
+                    log.info("Ignoring 400 Error due to ignore_400=True")
+                    return None
+                # The following was added to handle cross-region analytics and CDR
+                elif r.status_code == 451:
+                    log.info("Retrying GET in different API region")
+                    message = r.json()
+                    log.debug(message['message'])
+                    m = re.search('Please use (.*)', message['message'])
+                    if not m:
+                        m = re.search('URL: (.*)', message['message'])
+                    if m:
+                        new_domain = m.group(1)
+                        log.info(f'Using {new_domain} as new domain')
+                        url_base = f'https://{new_domain}'
+                        continue
+                else:
+                    try:
+                        raise APIError(r.json())
+                    except requests.exceptions.JSONDecodeError:
+                        raise APIError(r.text)
+            if "next" in r.links:
+                keep_going = True
+                next_url = r.links['next']['url']
+                log.debug(f"Next URL: {next_url}")
+                while keep_going:
+                    log.debug(f"Getting more items from {next_url}")
+                    page_number += 1
+                    log.debug(f"Page number: {page_number}")
+                    r = self.session.get(next_url)
+                    log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+                    log.debug(f"\tResponse Headers: {r.headers}")
+                    if r.ok:
+                        new_items = r.json()
+                        if items_key not in new_items:
+                            continue  # This is here just to handle a weird case where the API responded with no data
+                        log.debug(f"Webex returned {len(new_items[items_key])} more items")
+                        response[items_key].extend(new_items[items_key])
+                        if "next" not in r.links:
+                            keep_going = False
+                            log.debug("End of paginated response")
+                            keep_trying = False
+                        else:
+                            next_url = r.links['next']['url']
+                            log.debug(f"Next URL: {next_url}")
+                    else:
+                        if r.status_code == 429:
+                            retry_after = int(r.headers.get('Retry-After', 30))
+                            log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                            time.sleep(retry_after)
+                            continue
+                        else:
+                            keep_going = False
+            else:
+                try_num = self.retry_count + 1
+        end_time = time.time()
+        log.debug(f"GET {url} completed in {end_time - start_time} seconds")
+        return response[items_key]
+
+    def put(self, endpoint: str,
+            payload: Optional[dict] = None,
+            params: Optional[dict] = None):
+        """ Perform a PUT request to the webex API.
+
+        Args:
+            endpoint (str): The API endpoint (e.g. `/v1/people`)
+            payload (dict): The payload of the request
+            params (dict, optional): The request parameters, in dict format
+
+        Returns:
+            Union[dict, bool]: The response if any was present, otherwise True for success.
+
+        """
+        # Clean the endpoint to get a good URL
+        url = self._clean_endpoint(endpoint)
+        # Clean the parameters to include any at the instance level
+        params = self._clean_params(params)
+        start_time = time.time()
+        try_num = 1
+        log.debug("Webex API Call:")
+        log.debug("\tMethod: PUT")
+        log.debug("\tURL: %s", url)
+        log.debug("\tParameters: %s", params)
+        log.debug("\tPayload: %s", payload)
+        while try_num <= self.retry_count:
+            r = self.session.put(url, json=payload, params=params)
+            log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+            if r.ok:
+                try:
+                    response = r.json()
+                except requests.exceptions.JSONDecodeError:
+                    response = r.text
+                if response:
+                    end_time = time.time()
+                    log.debug(f"GET {url} completed in {end_time - start_time} seconds")
+                    return response
+                else:
+                    end_time = time.time()
+                    log.debug(f"GET {url} completed in {end_time - start_time} seconds")
+                    return True
+            else:
+                log.warning("Webex API returned an error")
+                log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+                if r.status_code == 429:
+                    retry_after = int(r.headers.get('Retry-After', 30))
+                    log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                    time.sleep(retry_after)
+                    try_num += 1
+                    continue
+                else:
+                    try:
+                        raise APIError(r.json())
+                    except requests.exceptions.JSONDecodeError:
+                        raise APIError(r.text)
+        return False
+
+    def put_upload(self,
+                   endpoint: str,
+                   payload: MultipartEncoder = None,
+                   params: Optional[dict] = None):
+        """ Perform a PUT request to the webex API that uploads a file.
+
+        This is a special PUT that handles a file. The payload must be in a specific format
+
+        Args:
+            endpoint (str): The API endpoint (e.g. `/v1/people`)
+            payload (MultipartEncoder): The payload of the request
+            params (dict, optional): The request parameters, in dict format
+
+        Returns:
+            Union[dict, bool]: The response if any was present, otherwise True for success.
+
+        """
+        # Clean the endpoint to get a good URL
+        url = self._clean_endpoint(endpoint)
+        # Clean the parameters to include any at the instance level
+        params = self._clean_params(params)
+        start_time = time.time()
+        log.debug("Webex API Call:")
+        log.debug("\tMethod: PUT")
+        log.debug("\tURL: %s", url)
+        log.debug("\tParameters: %s", params)
+        log.debug("\tPayload: %s", payload)
+        # Since we are changing HTTP Headers for this type of call, just use a new session
+        session = requests.Session()
+        session.headers.update({
+            "Authorization": f"Bearer {self.access_token}",
+            "Content-Type": payload.content_type,
+            "Accept": "application/json",
+        })
+        r = session.put(url, json=payload, params=params)
+        log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+        log.debug(f"Response Headers: {r.headers}")
+        if r.ok:
+            try:
+                response = r.json()
+            except requests.exceptions.JSONDecodeError:
+                end_time = time.time()
+                log.debug(f"PUT {url} completed in {end_time - start_time} seconds")
+                session.close()
+                return True
+            else:
+                end_time = time.time()
+                log.debug(f"PUT {url} completed in {end_time - start_time} seconds")
+                session.close()
+                return response
+        else:
+            log.warning("Webex API returned an error")
+            log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+            session.close()
+            try:
+                raise APIError(r.json())
+            except requests.exceptions.JSONDecodeError:
+                raise APIError(r.text)
+
+    def post(self,
+             endpoint: str,
+             payload: Optional[dict] = None,
+             params: Optional[dict] = None):
+        """ Perform a POST request to the Webex API.
+
+                Args:
+                    endpoint (str): The API endpoint (e.g. `/v1/people`)
+                    payload (dict, optional): The payload of the request
+                    params (dict, optional): The request parameters, in dict format
+
+                Returns:
+                    Union[dict, bool]: The response if any was present, otherwise True for success.
+
+                """
+        # Clean the endpoint to get a good URL
+        url = self._clean_endpoint(endpoint)
+        # Clean the parameters to include any at the instance level
+        params = self._clean_params(params)
+        start_time = time.time()
+        log.debug("Webex API Call:")
+        log.debug("\tMethod: POST")
+        log.debug("\tURL: %s", url)
+        log.debug("\tParameters: %s", params)
+        log.debug("\tPayload: %s", payload)
+        try_num = 1
+        while try_num <= self.retry_count:
+            r = self.session.post(url, json=payload, params=params)
+            log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+            if r.ok:
+                try:
+                    response = r.json()
+                    log.debug(f"Response: {response}")
+                except requests.exceptions.JSONDecodeError:
+                    end_time = time.time()
+                    log.debug(f"POST {url} completed in {end_time - start_time} seconds")
+                    return True
+                else:
+                    end_time = time.time()
+                    log.debug(f"POST {url} completed in {end_time - start_time} seconds")
+                    return response
+            else:
+                log.warning(f"Webex API returned an error: {r.text}")
+                log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+                if r.status_code == 429:
+                    retry_after = int(r.headers.get('Retry-After', 30))
+                    log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                    time.sleep(retry_after)
+                    try_num += 1
+                    continue
+                else:
+                    try:
+                        raise APIError(r.json())
+                    except requests.exceptions.JSONDecodeError:
+                        raise APIError(r.text)
+        return False
+
+    def post_upload(self,
+                   endpoint: str,
+                   payload: MultipartEncoder = None,
+                   params: Optional[dict] = None):
+        """ Perform a POST request to the webex API that uploads a file.
+
+        This is a special POST that handles a file. The payload must be in a specific format
+
+        Args:
+            endpoint (str): The API endpoint (e.g. `/v1/people`)
+            payload (MultipartEncoder): The payload of the request
+            params (dict, optional): The request parameters, in dict format
+
+        Returns:
+            Union[dict, bool]: The response if any was present, otherwise True for success.
+
+        """
+        # Clean the endpoint to get a good URL
+        url = self._clean_endpoint(endpoint)
+        # Clean the parameters to include any at the instance level
+        params = self._clean_params(params)
+        start_time = time.time()
+        log.debug("Webex API Call:")
+        log.debug("\tMethod: POST")
+        log.debug("\tURL: %s", url)
+        log.debug("\tParameters: %s", params)
+        log.debug("\tPayload: %s", payload)
+        # Since we are changing HTTP Headers for this type of call, just use a new session
+        session = requests.Session()
+        session.headers.update({
+            "Authorization": f"Bearer {self.access_token}",
+            "Content-Type": payload.content_type,
+            "Accept": "application/json",
+        })
+        r = session.post(url, json=payload, params=params)
+        log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+        log.debug(f"Response Headers: {r.headers}")
+        if r.ok:
+            try:
+                response = r.json()
+            except requests.exceptions.JSONDecodeError:
+                end_time = time.time()
+                log.debug(f"POST {url} completed in {end_time - start_time} seconds")
+                session.close()
+                return True
+            else:
+                end_time = time.time()
+                log.debug(f"POST {url} completed in {end_time - start_time} seconds")
+                session.close()
+                return response
+        else:
+            log.warning("Webex API returned an error")
+            log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+            session.close()
+            try:
+                raise APIError(r.json())
+            except requests.exceptions.JSONDecodeError:
+                raise APIError(r.text)
+
+    def delete(self,
+               endpoint: str,
+               params: Optional[dict] = None):
+        """ Perform a DELETE request to the Webex API.
+
+        Args:
+            endpoint (str): The API endpoint (e.g. `/v1/people`)
+            params (dict, optional): The request parameters, in dict format
+
+        Returns:
+            Union[dict, bool]: The response if any was present, otherwise True for success.
+
+        """
+        # Clean the endpoint to get a good URL
+        url = self._clean_endpoint(endpoint)
+        # Clean the parameters to include any at the instance level
+        params = self._clean_params(params)
+        start_time = time.time()
+        log.debug("Webex API Call:")
+        log.debug("\tMethod: DELETE")
+        log.debug("\tURL: %s", url)
+        log.debug("\tParameters: %s", params)
+        try_num = 1
+        while try_num <= self.retry_count:
+            r = self.session.delete(url, params=params)
+            log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+            if r.ok:
+                try:
+                    response = r.json()
+                    log.debug(f'Response: {response}')
+                except requests.exceptions.JSONDecodeError:
+                    end_time = time.time()
+                    log.debug(f"DELETE {url} completed in {end_time - start_time} seconds")
+                    return True
+                else:
+                    end_time = time.time()
+                    log.debug(f"DELETE {url} completed in {end_time - start_time} seconds")
+                    return response
+            else:
+                log.warning("Webex API returned an error")
+                log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+                if r.status_code == 429:
+                    retry_after = int(r.headers.get('Retry-After', 30))
+                    log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                    time.sleep(retry_after)
+                    try_num += 1
+                    continue
+                else:
+                    try:
+                        raise APIError(r.json())
+                    except requests.exceptions.JSONDecodeError:
+                        raise APIError(r.text)
+        return False
+
+    def patch(self,
+              endpoint: str,
+              payload: Optional[dict] = None,
+              params: Optional[dict] = None):
+        """ Perform a PATCH request to the Webex API.
+
+        Args:
+            endpoint (str): The API endpoint (e.g. `/v1/people`)
+            payload (dict, optional): The payload of the request
+            params (dict, optional): The request parameters, in dict format
+
+        Returns:
+            Union[dict, bool]: The response if any was present, otherwise True for success.
+
+        """
+        # Clean the endpoint to get a good URL
+        url = self._clean_endpoint(endpoint)
+        # Clean the parameters to include any at the instance level
+        params = self._clean_params(params)
+        start_time = time.time()
+        log.debug("Webex API Call:")
+        log.debug("\tMethod: DELETE")
+        log.debug("\tURL: %s", url)
+        log.debug("\tParameters: %s", params)
+        log.debug("\tPayload: %s", payload)
+        try_num = 1
+        while try_num <= self.retry_count:
+            r = self.session.patch(url, json=payload, params=params)
+            log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+            if r.ok:
+                try:
+                    response = r.json()
+                except requests.exceptions.JSONDecodeError:
+                    end_time = time.time()
+                    log.debug(f"PATCH {url} completed in {end_time - start_time} seconds")
+                    return True
+                else:
+                    end_time = time.time()
+                    log.debug(f"PATCH {url} completed in {end_time - start_time} seconds")
+                    return response
+            else:
+                log.info(f"Webex API returned an error")
+                log.debug(f"TrackingID: {r.headers.get('Trackingid', 'None')}")
+                if r.status_code == 429:
+                    retry_after = int(r.headers.get('Retry-After', 30))
+                    log.info(f"Received 429 Too Many Requests. Waiting {retry_after} seconds to retry.")
+                    time.sleep(retry_after)
+                    try_num += 1
+                    continue
+                else:
+                    try:
+                        raise APIError(r.json())
+                    except requests.exceptions.JSONDecodeError:
+                        raise APIError(r.text)
+        return False
+
+
 
 
 def webex_api_call(method: str,
@@ -114,6 +601,8 @@ def webex_api_call(method: str,
                     message = r.json()
                     log.debug(message['message'])
                     m = re.search('Please use (.*)', message['message'])
+                    if not m:
+                        m = re.search('URL: (.*)', message['message'])
                     if m:
                         new_domain = m.group(1)
                         log.info(f'Using {new_domain} as new domain')
@@ -435,3 +924,4 @@ def location_finder(location_id: str, parent):
         else:
             log.debug(f"Location found ({location.name})")
         return location
+    return None

@@ -27,10 +27,9 @@ class PSTNProvider:
 class PSTNProviderList(UserList):
     def __init__(self, location: wxcadm.Location):
         super().__init__()
-        self.parent = location
+        self.location = location
         self.data = []
-        response = webex_api_call('get', f'v1/telephony/pstn/locations/{self.parent.id}/connectionOptions',
-                                  params={'orgId': self.parent.org_id})
+        response = self.location.org.api.get(f'v1/telephony/pstn/locations/{self.location.id}/connectionOptions')
         for entry in response:
             self.data.append(PSTNProvider.from_dict(entry))
 
@@ -60,13 +59,12 @@ class PSTNProviderList(UserList):
 
 class LocationPSTN:
     def __init__(self, location: wxcadm.Location):
-        self.parent = location
+        self.location = location
         self.available_providers = PSTNProviderList(location)
         """ The :class:`PSTNProviderList` of available providers for the Location """
-        log.info(f"Getting PSTN information for Location: {self.parent.name}")
+        log.info(f"Getting PSTN information for Location: {self.location.name}")
         try:
-            response = webex_api_call('get', f'v1/telephony/pstn/locations/{self.parent.id}/connection',
-                                      params={'orgId': self.parent.org_id})
+            response = self.location.org.api.get(f'v1/telephony/pstn/locations/{self.location.id}/connection')
             log.debug(f"Response: {response}")
             self.provider = PSTNProvider.from_dict(response)
             self.type = response['pstnConnectionType']
@@ -91,7 +89,7 @@ class LocationPSTN:
             bool: True on success, False otherwise
 
         """
-        log.info(f"Setting new PSTN Provider for Location {self.parent.name}")
+        log.info(f"Setting new PSTN Provider for Location {self.location.name}")
         if isinstance(provider, str):
             provider = self.available_providers.get(id=provider)
             if provider is None:
@@ -110,10 +108,9 @@ class LocationPSTN:
             payload = {
                 'id': provider.id,
             }
-        webex_api_call('put', f"v1/telephony/pstn/locations/{self.parent.id}/connection",
-                       payload=payload,
-                       params={'orgId': self.parent.org_id})
+        self.location.org.api.put(
+            f"v1/telephony/pstn/locations/{self.location.id}/connection",
+            payload=payload
+        )
         self.provider = provider
         return True
-
-

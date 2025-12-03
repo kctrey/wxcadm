@@ -4,7 +4,6 @@ from typing import Optional
 from datetime import datetime, timedelta
 
 import wxcadm.exceptions
-from .common import *
 from wxcadm import log
 
 
@@ -197,6 +196,7 @@ class CallLeg:
                 return term_part.user_number
             else:
                 return term_part.user
+        return 'Unknown'
 
     @property
     def calling_number(self) -> str:
@@ -338,6 +338,7 @@ class CallLeg:
             else:
                 return self.orig_part.user
             return None
+        return None
 
     @property
     def parts_id(self) -> list:
@@ -782,3 +783,7 @@ class CallDetailRecords:
             if call.has_vm_deposit_leg:
                 response.append(call)
         return response
+    #
+    # def generate_sql(self, filename: str):
+    #     with open(filename, 'w') as f:
+

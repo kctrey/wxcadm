@@ -5,7 +5,6 @@ from typing import Optional, TYPE_CHECKING
 if TYPE_CHECKING:
     from .number import NumberList
 from collections import UserList
-from types import SimpleNamespace
 from typing import Union
 
 import wxcadm
@@ -29,10 +28,10 @@ from .number import Number
 
 
 class LocationList(UserList):
-    def __init__(self, parent: wxcadm.Org):
+    def __init__(self, org: wxcadm.Org):
         super().__init__()
         log.debug("Initializing LocationList instance")
-        self.parent: wxcadm.Org = parent
+        self.org: wxcadm.Org = org
         self.data: list = self._get_items()
 
     def refresh(self):
@@ -40,18 +39,11 @@ class LocationList(UserList):
         self.data = self._get_items()
 
     def _get_items(self):
-        if isinstance(self.parent, wxcadm.Org):
-            log.debug("Using Org ID as data filter")
-            params = {'orgId': self.parent.id}
-        else:
-            raise ValueError("Unsupported parent class")
-
         log.debug("Getting Location list")
-        response = webex_api_call('get', f'v1/locations', params=params)
-        log.debug(f"Received {len(response)} entries")
+        response = self.org.api.get(f'v1/locations')
         items = []
         for entry in response:
-            items.append(Location(parent=self.parent,
+            items.append(Location(org=self.org,
                                   location_id=entry['id'],
                                   name=entry['name'],
                                   address=entry['address'],
@@ -100,7 +92,7 @@ class LocationList(UserList):
                preferred_language: str,
                address: dict,
                latitude: Optional[str] = None,
-               logitude: Optional[str] = None):
+               longitude: Optional[str] = None):
         """ Create a new Location
 
         Args:
@@ -132,7 +124,7 @@ class LocationList(UserList):
             'announcementLanguage': None,
             'address': address
         }
-        response = webex_api_call('post', 'v1/locations', payload=payload, params={'orgId': self.parent.org_id})
+        response = self.org.api.post('v1/locations', payload=payload)
         self.refresh()
         return self.get(id=response['id'])
 
@@ -156,10 +148,10 @@ class LocationList(UserList):
         # The following API call was added in 4.3.9 because the previous method required an API call for every Location
         # which was very slow. The new API call gets the Webex Calling config for all Locations, so it is assumed
         # that any Location returned has Webex Calling
-        response = wxcadm.webex_api_call('get', 'v1/telephony/config/locations', params={'orgId': self.parent.org_id})
+        response = self.org.api.get('v1/telephony/config/locations', items_key='locations')
         locations = []
         entry: dict
-        for entry in response['locations']:
+        for entry in response:
             location = self.get(id=entry['id'])
             if location is not None:
                 location.calling_enabled = True
@@ -208,7 +200,9 @@ class LocationList(UserList):
         return self.with_pstn(has_pstn=False)
 
 class Location:
-    def __init__(self, parent: wxcadm.Org, location_id: str,
+    def __init__(self,
+                 org: wxcadm.Org,
+                 location_id: str,
                  name: str,
                  time_zone: str,
                  preferred_language: str,
@@ -232,9 +226,7 @@ class Location:
              Location (object): The Location instance
 
         """
-        self._parent = parent
-        self.parent = parent
-        self._headers = parent._headers
+        self.org = org
         self.id: str = location_id
         """The Webex ID of the Location"""
         self.name: str = name
@@ -277,16 +269,6 @@ class Location:
         return self._outgoing_permission_digit_patterns
 
     @property
-    def workspace_location(self):
-        """ Get the :class:`WorkspaceLocation` associated with this Location
-
-        Returns:
-            WorkspaceLocation: The WorkspaceLocation associated with this Location
-
-        """
-        return self.parent.workspace_locations.get(name=self.name)
-
-    @property
     def virtual_lines(self) -> VirtualLineList:
         """ The :class:`VirtualLineList` of Virtual Lines for this Location
 
@@ -294,7 +276,7 @@ class Location:
             VirtualLineList: The list of Virtual Lines
         """
         if self._virtual_lines is None:
-            self._virtual_lines = VirtualLineList(self)
+            self._virtual_lines = VirtualLineList(org=self.org, location=self)
         return self._virtual_lines
 
     @property
@@ -307,15 +289,14 @@ class Location:
     @property
     def people(self) -> list:
         """ The list of People for this Location """
-        return self.parent.people.get(location=self)
+        return self.org.people.get(location=self)
 
     @property
     def calling_enabled(self) -> bool:
         """ Whether the Location is enabled for Webex Calling """
         if self._calling_enabled is None:
             try:
-                response = webex_api_call("get", f"v1/telephony/config/locations/{self.id}",
-                                          params={'orgId': self.org_id})
+                response = self.org.api.get(f"v1/telephony/config/locations/{self.id}")
                 if 'id' in response.keys():
                     self._calling_enabled = True
                     self._calling_config = response
@@ -332,8 +313,7 @@ class Location:
     @property
     def ecbn(self):
         """ The Emergency Callback Number details for the Location """
-        response = webex_api_call('get', f"v1/telephony/config/locations/{self.id}/features/emergencyCallbackNumber",
-                                  params={'orgId': self.org_id})
+        response = self.org.api.get(f"v1/telephony/config/locations/{self.id}/features/emergencyCallbackNumber")
         return response
 
     def set_ecbn(self, value: Union[str, wxcadm.Person, wxcadm.Workspace, wxcadm.VirtualLine, wxcadm.HuntGroup]) -> bool:
@@ -362,8 +342,7 @@ class Location:
         else:
             raise ValueError('Unknown value')
 
-        response = webex_api_call('put', f'v1/telephony/config/locations/{self.id}/features/emergencyCallbackNumber',
-                                  params={'orgId': self.org_id}, payload=payload)
+        self.org.api.put(f'v1/telephony/config/locations/{self.id}/features/emergencyCallbackNumber', payload=payload)
         return True
 
     @property
@@ -375,17 +354,16 @@ class Location:
 
         """
         policy = {}
-        response = webex_api_call('get', f"v1/telephony/config/locations/{self.id}/internalDialing",
-                                  params={'orgId': self.org_id})
+        response = self.org.api.get(f"v1/telephony/config/locations/{self.id}/internalDialing")
         policy['enabled'] = response.get('enableUnknownExtensionRoutePolicy', False)
         policy['route'] = None
         if 'unknownExtensionRouteIdentity' in response.keys():
             identity = response['unknownExtensionRouteIdentity']
             entity_type = identity.get('type', '')
             if entity_type == 'ROUTE_GROUP':
-                entity = self.parent.call_routing.route_groups.get(id=identity['id'])
+                entity = self.org.call_routing.route_groups.get(id=identity['id'])
             elif entity_type == 'TRUNK':
-                entity = self.parent.call_routing.trunks.get(id=identity['id'])
+                entity = self.org.call_routing.trunks.get(id=identity['id'])
             else:
                 entity = 'UNKNOWN'
             policy['route'] = entity
@@ -424,8 +402,7 @@ class Location:
                     'type': route_type
                 }
             }
-        webex_api_call('put', f"v1/telephony/config/locations/{self.id}/internalDialing",
-                       params={'orgId': self.org_id}, payload=payload)
+        self.org.api.put(f"v1/telephony/config/locations/{self.id}/internalDialing", payload=payload)
         return True
 
     @property
@@ -433,8 +410,7 @@ class Location:
         """ The Webex Calling configuration dict """
         if self._calling_config is None:
             try:
-                response = webex_api_call("get", f"v1/telephony/config/locations/{self.id}",
-                                          params={'orgId': self.org_id})
+                response = self.org.api.get(f"v1/telephony/config/locations/{self.id}")
                 if 'id' in response.keys():
                     self._calling_enabled = True
                     self._calling_config = response
@@ -444,7 +420,7 @@ class Location:
         return self._calling_config
 
     @property
-    def external_caller_id_name(self) -> str:
+    def external_caller_id_name(self) -> Optional[str]:
         """ The name sent as Caller ID for External calls that do not have a value set """
         return self.calling_config.get('externalCallerIdName', None)
 
@@ -459,8 +435,7 @@ class Location:
 
         """
         payload = {'externalCallerIdName': name}
-        webex_api_call('put', f"v1/telephony/config/locations/{self.id}",
-                       payload=payload, params={'orgId': self.org_id})
+        self.org.api.put(f"v1/telephony/config/locations/{self.id}", payload=payload)
         self._calling_config = None
         return True
 
@@ -482,15 +457,14 @@ class Location:
 
         """
         payload = {'routingPrefix': prefix}
-        webex_api_call('put', f"v1/telephony/config/locations/{self.id}",
-                       payload=payload, params={'orgId': self.org_id})
+        self.org.api.put(f"v1/telephony/config/locations/{self.id}", payload=payload)
         self._routing_prefix = prefix
         return True
 
     @property
     def org_id(self):
         """ The Org ID to which the Location belongs. :attr:`parent.id` can also be used. """
-        return self.parent.id
+        return self.org.id
 
     def enable_webex_calling(self) -> bool:
         """ Enable the Location for Webex Calling
@@ -514,7 +488,7 @@ class Location:
                 "announcementLanguage": self.preferred_language.lower(),
                 "address": self.address
             }
-            webex_api_call("post", "v1/telephony/config/locations", payload=payload, params={'orgId': self.org_id})
+            self.org.api.put("v1/telephony/config/locations", payload=payload)
             self._calling_enabled = True
         return True
 
@@ -532,12 +506,12 @@ class Location:
             for monitor in monitoring.get('monitoredElements', []):
                 if 'member' in monitor.keys():
                     if monitor['member']['type'] == 'PEOPLE':
-                        target_person = self.parent.people.get(id=monitor['member']['id'])
+                        target_person = self.org.people.get(id=monitor['member']['id'])
                         if target_person not in all_monitoring['people'].keys():
                             all_monitoring['people'][target_person] = []
                         all_monitoring['people'][target_person].append(person)
                     elif monitor['member']['type'] == 'PLACE':
-                        target_workspace = self.parent.workspaces.get(id=monitor['member']['id'])
+                        target_workspace = self.org.workspaces.get(id=monitor['member']['id'])
                         if target_workspace not in all_monitoring['workspaces'].keys():
                             all_monitoring['workspaces'][target_workspace] = []
                         all_monitoring['workspaces'][target_workspace].append(person)
@@ -546,12 +520,12 @@ class Location:
             for monitor in monitoring.get('monitoredElements', []):
                 if 'member' in monitor.keys():
                     if monitor['member']['type'] == 'PEOPLE':
-                        target_person = self.parent.people.get(id=monitor['member']['id'])
+                        target_person = self.org.people.get(id=monitor['member']['id'])
                         if target_person not in all_monitoring['people'].keys():
                             all_monitoring['people'][target_person] = []
                         all_monitoring['people'][target_person].append(workspace)
                     elif monitor['member']['type'] == 'PLACE':
-                        target_workspace = self.parent.workspaces.get(id=monitor['member']['id'])
+                        target_workspace = self.org.workspaces.get(id=monitor['member']['id'])
                         if target_workspace not in all_monitoring['workspaces'].keys():
                             all_monitoring['workspaces'][target_workspace] = []
                         all_monitoring['workspaces'][target_workspace].append(workspace)
@@ -584,7 +558,7 @@ class Location:
         if self.calling_enabled is False:
             log.debug("Not a Webex Calling Location")
             return None
-        self._hunt_groups = HuntGroupList(self)
+        self._hunt_groups = HuntGroupList(org=self.org, location=self)
         return self._hunt_groups
 
     @property
@@ -595,21 +569,21 @@ class Location:
             This does not include announcements built at the Organization level
 
         """
-        annc_list = self._parent.announcements.get_by_location_id(self.id)
+        annc_list = self.org.announcements.get_by_location_id(self.id)
         return annc_list
 
     @property
     def translation_patterns(self):
         """ The :class:`TranslationPatternList` with all Translation Patterns for the Location """
         if self._translation_patterns is None:
-            self._translation_patterns = TranslationPatternList(self)
+            self._translation_patterns = TranslationPatternList(org=self.org, location=self)
         return self._translation_patterns
 
     @property
     def auto_attendants(self):
         """ List of AutoAttendant instances for this Location """
         log.info(f"Getting Auto Attendants for Location: {self.name}")
-        return AutoAttendantList(self)
+        return AutoAttendantList(org=self.org, location=self)
 
     @property
     def call_queues(self) -> Optional[CallQueueList]:
@@ -619,7 +593,7 @@ class Location:
             if self.calling_enabled is False:
                 log.warn("Not a Webex Calling Location")
                 return None
-            self._call_queues = CallQueueList(self)
+            self._call_queues = CallQueueList(org=self.org, location=self)
         return self._call_queues
 
     @property
@@ -635,7 +609,7 @@ class Location:
             log.debug("Not a Webex Calling Location")
             return None
         if self._numbers is None:
-            self._numbers = NumberList(self)
+            self._numbers = NumberList(org=self.org, location=self)
         return self._numbers
 
     @property
@@ -652,8 +626,8 @@ class Location:
         if self.calling_enabled is False:
             log.debug("Not a Webex Calling Location")
             return None
-        params = {'locationId': self.id, 'available': True}
-        response = webex_api_call("get", "v1/telephony/config/numbers", params=params)
+        response = self.org.api.get("v1/telephony/config/numbers",
+                                    params={'locationId': self.id, 'available': True})
         if len(response.get('phoneNumbers', 0)) == 0:
             return None
         else:
@@ -689,8 +663,7 @@ class Location:
         if isinstance(number, Number):
             number = number.phone_number
         payload = {'callingLineId': {'phoneNumber': number}}
-        webex_api_call('put', f"v1/telephony/config/locations/{self.id}", payload=payload,
-                       params={'orgId': self.org_id})
+        self.org.api.put(f"v1/telephony/config/locations/{self.id}", payload=payload)
         self._main_number = None
         return True
 
@@ -702,8 +675,8 @@ class Location:
             log.debug("Not a Webex Calling Location")
             return None
         response = []
-        api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.id}/schedules", headers=self._headers)
-        for schedule in api_resp['schedules']:
+        api_resp = self.org.api.get(f"v1/telephony/config/locations/{self.id}/schedules", items_key='schedules')
+        for schedule in api_resp:
             log.debug(f'\tSchedule: {schedule}')
             this_schedule = LocationSchedule(self, schedule['id'], schedule['name'], schedule['type'])
             response.append(this_schedule)
@@ -713,7 +686,7 @@ class Location:
     def workspaces(self) -> WorkspaceList:
         """ :class:`WorkspaceList` of all Workspaces for this Location """
         if self._workspaces is None:
-            self._workspaces = WorkspaceList(self)
+            self._workspaces = WorkspaceList(org=self.org, location=self)
         return self._workspaces
 
     def set_announcement_language(self, language: str,
@@ -742,9 +715,9 @@ class Location:
             'agentEnabled': update_users,
             'serviceEnabled': update_features
         }
-        success = webex_api_call('post',
-                                 f'/v1/telephony/config/locations/{self.id}/actions/modifyAnnouncementLanguage/invoke',
-                                 payload=payload)
+        success = self.org.api.post(
+            f'/v1/telephony/config/locations/{self.id}/actions/modifyAnnouncementLanguage/invoke', payload=payload
+        )
         log.debug(f"Response: {success}")
         if success:
             log.info("Language change succeeded")
@@ -753,70 +726,13 @@ class Location:
             log.info("Language change failed")
             return False
 
-    def upload_moh_file(self, filename: str):
-        """ Upload and activate a custom Music On Hold audio file.
-
-        The audio file must be a WAV file that conforms with the Webex Calling requirements. It is recommended to test
-        any WAV file by manually uploading it to a Location in Control Hub. The method will return False if the WAV file
-        is rejected by Webex.
-
-        Args:
-            filename (str): The filename, including path, to the WAV file to upload.
-
-        Returns:
-            bool: True on success, False otherwise
-
-        .. warning::
-
-            This method requires the CP-API access scope.
-
-        """
-        log.debug(f'Uploading MOH file: {filename}')
-        if self.calling_enabled is False:
-            log.debug("Not a Webex Calling Location")
-            return None
-        upload = self._parent._cpapi.upload_moh_file(self.id, filename)
-        if upload is True:
-            log.debug('\tActivating MOH')
-            activate = self._parent._cpapi.set_custom_moh(self.id, filename)
-            if activate is True:
-                log.debug('\t\tSuccessful activation')
-                return True
-            else:
-                log.debug('\t\tActivation failed')
-                return False
-        else:
-            return False
-
-    def set_default_moh(self):
-        """ Set the MOH to be the Webex Calling system default music.
-
-        Returns:
-            bool: True on success, False otherwise
-
-        .. warning::
-
-            This method requires the CP-API access scope.
-        """
-        log.debug('Setting Default MOH')
-        if self.calling_enabled is False:
-            log.debug("Not a Webex Calling Location")
-            return None
-        activate = self._parent._cpapi.set_default_moh(self.id)
-        if activate is True:
-            log.debug('\tSuccessful activation')
-            return True
-        else:
-            log.debug('\tActivation failed')
-            return False
-
     @property
     def outgoing_call_permissions(self):
         """ The Outgoing Call Permissions dicts (as a list) for the Location"""
         if self.calling_enabled is False:
             log.debug("Not a Webex Calling Location")
             return None
-        ocp = webex_api_call('get', f'/v1/telephony/config/locations/{self.id}/outgoingPermission')
+        ocp = self.org.api.get(f'/v1/telephony/config/locations/{self.id}/outgoingPermission')
         return ocp['callingPermissions']
 
     def set_outgoing_call_permissions(self, outgoing_call_permissions: list) -> Optional[bool]:
@@ -844,8 +760,7 @@ class Location:
 
         payload = {'callingPermissions': outgoing_call_permissions}
 
-        success = webex_api_call('put', f'/v1/telephony/config/locations/{self.id}/outgoingPermission',
-                                 payload=payload)
+        success = self.org.api.put(f'/v1/telephony/config/locations/{self.id}/outgoingPermission', payload=payload)
         if success:
             return True
         else:
@@ -859,9 +774,8 @@ class Location:
             log.debug("Not a Webex Calling Location")
             return None
         park_extensions = []
-        response = webex_api_call("get", "v1/telephony/config/callParkExtensions", params={'locationId': self.id})
-        log.debug(f"Response:\n\t{response}")
-        for entry in response['callParkExtensions']:
+        response = self.org.api.get("v1/telephony/config/callParkExtensions", items_key='callParkExtensions')
+        for entry in response:
             this_instance = CallParkExtension(self, entry['id'], entry['name'], entry['extension'])
             park_extensions.append(this_instance)
 
@@ -883,9 +797,7 @@ class Location:
             log.debug("Not a Webex Calling Location")
             return None
         payload = {"name": name, "extension": extension}
-        response = webex_api_call("post", f"v1/telephony/config/locations/{self.id}/callParkExtensions",
-                                  params={'orgId': self._parent.id}, payload=payload)
-        log.debug(f"Response:\n\t{response}")
+        response = self.org.api.post(f"v1/telephony/config/locations/{self.id}/callParkExtensions", payload=payload)
         return response['id']
 
     @property
@@ -912,7 +824,7 @@ class Location:
     def dect_networks(self):
         """ :class:`DECTNetworkList` for this Location """
         if self._dect_networks is None:
-            self._dect_networks = DECTNetworkList(self)
+            self._dect_networks = DECTNetworkList(org=self.org, location=self)
         return self._dect_networks
 
     @property
@@ -929,8 +841,7 @@ class Location:
             LocationEmergencySettings: An object with the boolean attributes ``'integration'`` and ``'routing'``
 
         """
-        response = webex_api_call('get', f"v1/telephony/config/locations/{self.id}/redSky",
-                                  params={'orgId': self.org_id})
+        response = self.org.api.get(f"v1/telephony/config/locations/{self.id}/redSky")
         return LocationEmergencySettings(integration=response['integrationEnabled'], routing=response['routingEnabled'])
 
     def set_enhanced_emergency_calling(self, mode: str) -> dict:
@@ -953,6 +864,7 @@ class Location:
             dict: The `'locationStatus'` dict as returned by Webex
 
         """
+        response = None
         steps = ['LOCATION_SETUP', 'ALERTS']
         if mode.lower() == 'integration':
             steps.append('NETWORK_ELEMENTS')
@@ -966,24 +878,25 @@ class Location:
             payload = {
                 'complianceStatus': step
             }
-            response = webex_api_call('put', f"v1/telephony/config/locations/{self.id}/redSky/status",
-                                      params={'orgId': self.org_id}, payload=payload)
+            response = self.org.api.put(f"v1/telephony/config/locations/{self.id}/redSky/status", payload=payload)
         return response
 
 
 class LocationFloor:
     """ A Floor within a Location """
 
-    def __init__(self, parent: Location, config: Optional[dict] = None, id: Optional[str] = None):
-        self.parent = parent
+    def __init__(self, location: Location, config: Optional[dict] = None, id: Optional[str] = None):
+        self.location = location
         if config is None and id is not None:
             config = self._get_data(id)
         self.id: str = config['id']
         self.floor_number: int = config['floorNumber']
         self.name: str = config['displayName']
+        # Rather than using self.location.org.api, just set self.api to that path
+        self.api: WebexApi = self.location.org.api
 
     def _get_data(self, id: str):
-        response = webex_api_call('get', f'v1/locations/{self.parent.id}/floors/{id}')
+        response = self.api.get(f'v1/locations/{self.location.id}/floors/{id}')
         return response
 
     def update(self, floor_number: Optional[int] = None, name: Optional[str] = None) -> bool:
@@ -1002,8 +915,7 @@ class LocationFloor:
             payload['floorNumber'] = floor_number
         if name is not None:
             payload['displayName'] = name
-        response = webex_api_call('put', f'v1/locations/{self.parent.id}/floors/{self.id}', payload=payload,
-                                  params={'orgId': self.parent.org_id})
+        response = self.api.put(f'v1/locations/{self.location.id}/floors/{self.id}', payload=payload)
         self.floor_number = response['floorNumber']
         self.name = response['displayName']
         return True
@@ -1015,26 +927,25 @@ class LocationFloor:
             bool: True on success
 
         """
-        webex_api_call('delete', f'v1/locations/{self.parent.id}/floors/{self.id}',
-                       params={'orgId': self.parent.org_id})
+        self.api.delete(f'v1/locations/{self.location.id}/floors/{self.id}')
         return True
 
 
 class LocationFloorList(UserList):
-    def __init__(self, parent: Location):
+    def __init__(self, location: Location):
         super().__init__()
         """ List of :class:`LocationFloor` instances for the :class:`Location` """
-        self.parent = parent
+        self.location = location
         self.data: list = []
-
+        # Rather than using self.location.org.api, just set self.api to that path
+        self.api: WebexApi = self.location.org.api
         self._get_data()
 
     def _get_data(self):
         self.data = []
-        response = webex_api_call('get', f'v1/locations/{self.parent.id}/floors',
-                                  params={'orgId': self.parent.org_id})
+        response = self.api.get(f'v1/locations/{self.location.id}/floors')
         for floor in response:
-            self.data.append(LocationFloor(self.parent, floor))
+            self.data.append(LocationFloor(location=self.location, config=floor))
 
     def refresh(self):
         """ Reload from the list of locations """
@@ -1062,6 +973,5 @@ class LocationFloorList(UserList):
             'floorNumber': floor_number,
             'displayName': name
         }
-        response = webex_api_call('post', f'v1/locations/{self.parent.id}/floors', payload=payload,
-                                  params={'orgId': self.parent.org_id})
-        self.data.append(LocationFloor(self.parent, config=response))
+        response = self.api.post(f'v1/locations/{self.location.id}/floors', payload=payload)
+        self.data.append(LocationFloor(location=self.location, config=response))

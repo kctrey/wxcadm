@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import requests
 from requests_toolbelt import MultipartEncoder
 import base64
 import os
@@ -10,7 +9,6 @@ from dataclasses_json import dataclass_json, config
 from collections import UserList
 
 import wxcadm.exceptions
-from .common import *
 from .xsi import XSI
 from .device import DeviceList, Device
 from .location import Location
@@ -21,32 +19,35 @@ from wxcadm import log
 
 
 class PersonList(UserList):
-    def __init__(self, parent: Union[wxcadm.Org, wxcadm.Location]):
+    def __init__(self, org: wxcadm.Org, location: Optional[wxcadm.Location] = None):
         super().__init__()
         log.debug("Initializing PersonList")
-        self.parent: Union[wxcadm.Org, wxcadm.Location] = parent
-        self.data: list = self._get_people()
+        self.org: wxcadm.Org = org
+        self.location: Optional[wxcadm.Location] = location
+        self.data: list = []
+        self.__data_filtered: bool = False  # Internal flag to tell if self.data is a filtered list
+        self.__data_loaded: bool = False  # Internal flag to track if data is loaded
+        self.__filters: Optional[dict] = None  # Remember what filters were used on GET
 
-    def _get_people(self) -> list[Person]:
+    def _get_data(self, filters: Optional[dict] = None) -> list[Person]:
         log.debug("_get_people() started")
+        self.__filters = filters
         params = {"callingData": "true"}
-
-        if isinstance(self.parent, wxcadm.Org):
-            log.debug(f"Using Org ID {self.parent.id} as Person filter")
-            params['orgId'] = self.parent.id
-        elif isinstance(self.parent, wxcadm.Location):
-            log.debug(f"Using Location ID {self.parent.id} as Person filter")
-            params['locationId'] = self.parent.id
-            params['orgId'] = self.parent.org_id
+        if self.location is not None:
+            log.debug("_get_people() location=%s" % self.location)
+            params["locationId"] = self.location.id
+        if filters is not None:
+            log.debug("_get_people() filters=%s" % filters)
+            params.update(filters)
+        # The Webex API doesn't allow any other params when `id` is present
+        if "id" in params.keys():
+            params = {'id': params['id']}
+            response = self.org._parent.api.get("v1/people", params=params)
         else:
-            log.warn("Parent class is not Org or Location, so all People will be returned")
-        response = webex_api_call("get", "v1/people", params=params)
-        log.info(f"Found {len(response)} People")
-
+            response = self.org.api.get("v1/people", params=params)
         people = []
-
         for entry in response:
-            people.append(Person(entry['id'], parent=self.parent, config=entry))
+            people.append(Person(entry['id'], org=self.org, config=entry))
         return people
 
     def refresh(self):
@@ -56,7 +57,7 @@ class PersonList(UserList):
             bool: True on success, False otherwise.
 
         """
-        self.data = self._get_people()
+        self.data = self._get_data(filters=self.__filters)
 
     def get_by_id(self, id: str) -> Optional[Person]:
         """ Get the :py:class:`Person` with the given Person ID
@@ -75,7 +76,7 @@ class PersonList(UserList):
         return None
 
     def get(self, id: Optional[str] = None, email: Optional[str] = None, name: Optional[str] = None,
-            location: Optional[wxcadm.Location] = None, uuid: Optional[str] = None) -> Optional[Person]:
+            location: Optional[wxcadm.Location] = None, uuid: Optional[str] = None) -> Union[Person, PersonList]:
         """ Get the :py:class:`Person` (or list) that matches the provided arguments
 
         This method was added after the :meth:`get_by_email()` and :meth:`get_by_id()` to match other List Classes.
@@ -91,60 +92,48 @@ class PersonList(UserList):
             uuid (str, optional): The Webex UUID of the Person. Used primarily for CDR correlation.
 
         Returns:
-            Person: The :class:`Person` instance. None is returned if no match is found. If multiple matches are found
-                for a ``name`` or ``location``, a list of :class:`Person` instances is returned.
+            Person: The :class:`Person` instance for single-entry searches like `id`, `email`, or `name` if only one
+                name matches. For `location` and anything else that may match one or more
 
         """
+        # Only fetch data if we don't already have it
+        if self.__data_loaded is True and self.__data_filtered is False:
+            if id is not None:
+                for entry in self.data:
+                    if entry.id == id:
+                        return entry
+            if email is not None:
+                for entry in self.data:
+                    if entry.email == email:
+                        return entry
+        filters = {}
+        self.__data_filtered = False
         if id is not None:
-            return self.get_by_id(id)
+            filters['id'] = id
+            self.__data_filtered = True
         if uuid is not None:
-            entry: Person
-            for entry in self.data:
-                if entry.spark_id.split('/')[-1] == uuid:
-                    return entry
-            return None
+            filters['id'] = uuid
+            self.__data_filtered = True
         if email is not None:
-            return self.get_by_email(email)
+            filters['email'] = email
+            self.__data_filtered = True
         if name is not None:
-            entry: Person
-            matches = []
-            for entry in self.data:
-                if entry.display_name.lower() == name.lower():
-                    matches.append(entry)
-            if len(matches) == 0:
-                return None
-            elif len(matches) == 1:
-                return matches[0]
-            else:
-                return matches
+            filters['displayName'] = name
+            self.__data_filtered = True
         if location is not None:
-            if not isinstance(location, wxcadm.Location):
-                location = self.parent.locations.get(id=location)
-                if location is None:
-                    raise ValueError("Invalid Location ID")
-            entry: Person
-            matches = []
-            for entry in self.data:
-                if entry.location == location.id:
-                    matches.append(entry)
-            return matches
-        raise KeyError("No valid search arguments provided")
+            filters['locationId'] = location.id
+            self.__data_filtered = True
+        self.data = self._get_data(filters=filters)
+        self.__data_loaded = True
+        if len(self.data) == 1 and (self.location is None and location is None):
+            return self.data[0]
+        else:
+            return self
 
-    def get_by_email(self, email: str) -> Optional[Person]:
-        """ Get the :py:class:`Person` with the given email address
-
-        Args:
-            email (str): The email address to find
-
-        Returns:
-            Person: The :py:class:`Person` instance. None is returned if no match is found.
-
-        """
-        entry: Person
-        for entry in self.data:
-            if entry.email.lower() == email.lower():
-                return entry
-        return None
+    def all(self):
+        """ Get all People in the Webex Org """
+        self.__data_loaded = False
+        return self.get()
 
     def webex_calling(self, enabled: bool = True) -> list[Person]:
         """ Return a list of :py:class:`Person` where Webex Calling is enabled/disabled
@@ -158,6 +147,9 @@ class PersonList(UserList):
                 given criteria
 
         """
+        if self.__data_loaded is False:
+            self.data = self._get_data()
+            self.__data_loaded = True
         people = []
         entry: Person
         for entry in self.data:
@@ -176,6 +168,9 @@ class PersonList(UserList):
                 given criteria.
 
         """
+        if self.__data_loaded is False:
+            self.data = self._get_data()
+            self.__data_loaded = True
         people = []
         for entry in self.webex_calling(True):
             rec_config = entry.get_call_recording()
@@ -228,30 +223,22 @@ class PersonList(UserList):
             licenses = []
             if calling:
                 log.debug("Calling requested. Finding Calling licenses.")
-                if isinstance(self.parent, wxcadm.Org):
-                    calling_license = self.parent.licenses.get_assignable_license('professional')
-                elif isinstance(self.parent, wxcadm.Location):
-                    calling_license = self.parent.parent.licenses.get_assignable_license('professional')
-                else:
+                calling_license = self.org.licenses.get_assignable_license('professional')
+                if not calling_license:
                     raise wxcadm.exceptions.LicenseError("No Calling Licenses found")
                 log.debug(f"Using Calling License: {calling_license.name} ({calling_license.id})")
                 licenses.append(calling_license.id)
 
         # Build the payload to send to the API
         log.debug("Building payload.")
-        if isinstance(self.parent, wxcadm.Org):
-            if isinstance(location, Location):
-                location_id = location.id
-            else:
-                location_id = location
-            org_id = self.parent.id
-        elif isinstance(self.parent, wxcadm.Location):
-            location_id = self.parent.id
-            org_id = self.parent.parent.id
+        if location is not None:
+            location_id = location.id
+        elif self.location is not None:
+            location_id = self.location.id
         else:
-            raise ValueError("Unknown parent instance type")
+            raise ValueError("location is required")
 
-        payload = {"emails": [email], "locationId": location_id, "orgId": org_id, "licenses": licenses}
+        payload = {"emails": [email], "locationId": location_id, "orgId": self.org.id, "licenses": licenses}
         if phone_number is not None:
             payload["phoneNumbers"] = [{"type": "work", "value": phone_number}]
         if extension is not None:
@@ -263,16 +250,16 @@ class PersonList(UserList):
         if display_name is not None:
             payload["displayName"] = display_name
         log.debug(f"Payload: {payload}")
-        response = webex_api_call("post", "v1/people", params={'callingData': "true"}, payload=payload)
+        response = self.org.api.post("v1/people", params={'callingData': "true"}, payload=payload)
         if response:
-            new_person = Person(response['id'], self.parent, response)
+            new_person = Person(response['id'], org=self.org, config=response)
             return new_person
         else:
             raise wxcadm.exceptions.PutError("Something went wrong while creating the user")
 
 
 class Person:
-    def __init__(self, user_id, parent: Union[wxcadm.Org, wxcadm.Location] = None, config: dict = None):
+    def __init__(self, user_id, org: wxcadm.Org, config: Optional[dict] = None):
         """ Initialize a new Person instance.
 
         If only the `user_id` is provided, the API calls will be made to get
@@ -281,15 +268,14 @@ class Person:
 
         Args:
             user_id (str): The Webex ID of the person
-            parent (object, optional): The parent object that created the Person instance. Used when the Person
-                is created within the Org instance
+            org (wxcadm.Org): The parent Org that owns the Person instance.
             config (dict, optional): A dictionary of raw values from the `GET v1/people` items. Not normally used
                 except for automated people population from the Org init.
 
         """
         self.id = user_id
         """The Webex ID of the Person"""
-        self._parent = parent
+        self.org = org
         """The parent instance that created this Person"""
         # Attributes
         self.email: str = ""
@@ -366,16 +352,13 @@ class Person:
         self._preferred_answer_endpoint: Optional[dict] = None
         self._available_answer_endpoints: Optional[list[dict]] = None
         self._single_number_reach: Optional[SingleNumberReach] = None
-
-        # API-related attributes
-        self._headers = parent._headers
-        self._params = {"orgId": parent.id, "callingData": "true"}
+        self._outgoing_permission: Optional[dict] = None
 
         # If the config was passed, process it. If not, make the API call for the Person ID and then process
         if config:
             self.__process_api_data(config)
         else:
-            response = self.__get_webex_data(f"v1/people/{self.id}")
+            response = self.org.api.get(f"v1/people/{self.id}", params={'callingData': True})
             self.__process_api_data(response)
 
     def __process_api_data(self, data: dict):
@@ -404,7 +387,7 @@ class Person:
         self.licenses = data.get("licenses", [])
 
         # Calculate whether this is a Webex Calling user
-        wxc_licenses = list(license.id for license in self._parent.licenses if 'Webex Calling' in license.name)
+        wxc_licenses = list(license.id for license in self.org.licenses if 'Webex Calling' in license.name)
         for license in self.licenses:
             if license in wxc_licenses:
                 # v4.4.4 Ensure Person has both license and assigned Location in order to be .wxc=True
@@ -417,66 +400,62 @@ class Person:
     def __repr__(self):
         return self.id
 
-    # The following is to simplify the API call. Eventually I may open this as a public method to
+    # TODO: Delete when tests passed on v.4.6.0
+    # The following is to simplify the API call. Eventually, I may open this as a public method to
     # allow arbitrary API calls
-    def __get_webex_data(self, endpoint: str, params: dict = None):
-        """ Issue a GET to the Webex API
-
-        Args:
-            endpoint (str): The endpoint of the call (i.e. "v1/people" or "/v1/people/{Person.id}")
-            params (dict): Any additional params to be passed in the query (i.e. {"callingData":"true"}
-
-        Returns:
-            dict: The response from the Webex API
-
-        """
-        if params is None:
-            params = {}
-        log.debug(f"__get_webex_data started using {endpoint}")
-        my_params = {**params, **self._params}
-        r = requests.get(_url_base + endpoint, headers=self._headers, params=my_params)
-        if r.status_code in [200]:
-            response = r.json()
-            return response
-        else:
-            return False
-
-    def __put_webex_data(self, endpoint: str, payload: dict, params: Optional[dict] = None):
-        """Issue a PUT to the Webex API
-
-        Args:
-            endpoint: The endpoint of the call (i.e. "v1/people" or "/v1/people/{Person.id}")
-            payload: A dict to send as the JSON payload of the PUT
-            params: Any additional params to be passed in the query (i.e. {"callingData":"true"}
-
-        Returns:
-            bool: True if successful, False if not
-
-        """
-        if params is None:
-            params = {}
-        log.debug(f"__put_webex_data started using {endpoint}")
-        my_params = {**params, **self._params}
-        log.debug(f"Params: {params}")
-        log.debug(f"Payload: {payload}")
-        r = requests.put(_url_base + endpoint, headers=self._headers, params=my_params, json=payload)
-        if r.ok:
-            log.info("Push successful")
-            return True
-        else:
-            log.warning("__put_webex_data() failed")
-            log.debug(f"[{r.status_code}] {r.text}")
-            return False
+    # def __get_webex_data(self, endpoint: str, params: dict = None):
+    #     """ Issue a GET to the Webex API
+    #
+    #     Args:
+    #         endpoint (str): The endpoint of the call (i.e. "v1/people" or "/v1/people/{Person.id}")
+    #         params (dict): Any additional params to be passed in the query (i.e. {"callingData":"true"}
+    #
+    #     Returns:
+    #         dict: The response from the Webex API
+    #
+    #     """
+    #     if params is None:
+    #         params = {}
+    #     log.debug(f"__get_webex_data started using {endpoint}")
+    #     my_params = {**params, **self._params}
+    #     r = requests.get(_url_base + endpoint, headers=self._headers, params=my_params)
+    #     if r.status_code in [200]:
+    #         response = r.json()
+    #         return response
+    #     else:
+    #         return False
+    #
+    # def __put_webex_data(self, endpoint: str, payload: dict, params: Optional[dict] = None):
+    #     """Issue a PUT to the Webex API
+    #
+    #     Args:
+    #         endpoint: The endpoint of the call (i.e. "v1/people" or "/v1/people/{Person.id}")
+    #         payload: A dict to send as the JSON payload of the PUT
+    #         params: Any additional params to be passed in the query (i.e. {"callingData":"true"}
+    #
+    #     Returns:
+    #         bool: True if successful, False if not
+    #
+    #     """
+    #     if params is None:
+    #         params = {}
+    #     log.debug(f"__put_webex_data started using {endpoint}")
+    #     my_params = {**params, **self._params}
+    #     log.debug(f"Params: {params}")
+    #     log.debug(f"Payload: {payload}")
+    #     r = requests.put(_url_base + endpoint, headers=self._headers, params=my_params, json=payload)
+    #     if r.ok:
+    #         log.info("Push successful")
+    #         return True
+    #     else:
+    #         log.warning("__put_webex_data() failed")
+    #         log.debug(f"[{r.status_code}] {r.text}")
+    #         return False
 
     @property
     def org_id(self) -> Optional[str]:
         """ The Org ID for the Person """
-        if isinstance(self._parent, wxcadm.Org):
-            return self._parent.org_id
-        elif isinstance(self._parent, wxcadm.Location):
-            return self._parent.org_id
-        else:
-            return None
+        return self.org.id
 
     @property
     def spark_id(self):
@@ -500,7 +479,7 @@ class Person:
         if len(self.roles) > 0:
             roles = []
             for role in self.roles:
-                roles.append(self._parent.roles[role])
+                roles.append(self.org.roles[role])
                 return roles
         else:
             return None
@@ -508,7 +487,7 @@ class Person:
 
     def delete(self) -> bool:
         """ Delete the Person """
-        webex_api_call('delete', f"v1/people/{self.id}", params={'orgId': self.org_id})
+        self.org.api.delete(f"v1/people/{self.id}")
         return True
 
     def assign_wxc(self,
@@ -533,7 +512,7 @@ class Person:
 
         """
         log.info(f"Assigning Webex Calling to {self.display_name}...")
-        wxc_license = self._parent.licenses.get_assignable_license(license_type, ignore_license_overage)
+        wxc_license = self.org.licenses.get_assignable_license(license_type, ignore_license_overage)
         log.debug(f"[Assign] License: {wxc_license.name} ({wxc_license.id})")
         self.licenses.append(wxc_license.id)
 
@@ -541,7 +520,7 @@ class Person:
             log.debug(f"[Assign] Unassigning UCM from {self.display_name}...")
             # Figure out what the licenses are for UCM
             ucm_licenses = []
-            for license in self._parent.licenses:
+            for license in self.org.licenses:
                 if license.name == 'Unified Communication Manager (UCM)':
                     ucm_licenses.append(license.id)
             # Then remove them from the user
@@ -554,7 +533,7 @@ class Person:
         # 4.4.2 - Changed from using update_person() to calling the PUT /v1/people/{personId} directly
         # The minimum payload was determined by adding one field at a time, so there may be a need to add more
         # to this payload at some point.
-        payload = {
+        payload: dict = {
             'displayName': self.display_name,
             'locationId': location.id,
             'extension': extension,
@@ -566,8 +545,11 @@ class Person:
                 'value': phone_number
             }
 
-        success = webex_api_call('put', f"v1/people/{self.id}", payload=payload,
-                                 params={'orgId': self.org_id, 'callingData': True})
+        success = self.org.api.put(
+            f"v1/people/{self.id}",
+            payload=payload,
+            params={'callingData': True}
+        )
         if success:
             self.wxc = True
             return True
@@ -578,7 +560,7 @@ class Person:
         """ Unassign Webex Calling from the user. """
         log.info(f"Unassigning Webex Calling from {self.display_name}...")
         for license in self.licenses:
-            license_details = self._parent.licenses.get(id=license)
+            license_details = self.org.licenses.get(id=license)
             if 'Webex Calling' in license_details.name:
                 log.debug(f"[Unassign] Removing {license} from {self.display_name}")
                 self.licenses.remove(license)
@@ -589,8 +571,11 @@ class Person:
             'extension': None,
             'licenses': self.licenses,
         }
-        response = webex_api_call('put', f"v1/people/{self.id}",
-                                  payload=payload, params={'orgId': self.org_id, 'callingData': True})
+        response = self.org.api.put(
+            f"v1/people/{self.id}",
+            payload=payload,
+            params={'callingData': True}
+        )
         log.debug(f"[Unassign] Response: {response}")
         return True
 
@@ -612,8 +597,10 @@ class Person:
         payload = {
             'preferredAnswerEndpointId': endpoint
         }
-        response = webex_api_call('put', f"v1/telephony/config/people/{self.id}/preferredAnswerEndpoint",
-                                  payload=payload, params={'orgId': self.org_id})
+        response = self.org.api.put(
+            f"v1/telephony/config/people/{self.id}/preferredAnswerEndpoint",
+            payload=payload
+        )
 
         return response
 
@@ -629,8 +616,7 @@ class Person:
             dict: The Preferred Answer Endpoint config for this Person
 
         """
-        response = webex_api_call('get', f"v1/telephony/config/people/{self.id}/preferredAnswerEndpoint",
-                                  params={'orgId': self.org_id})
+        response = self.org.api.get(f"v1/telephony/config/people/{self.id}/preferredAnswerEndpoint")
         if response.get('preferredAnswerEndpointId', None) is not None:
             if 'endpoints' in response.keys():
                 self._available_answer_endpoints = response['endpoints']
@@ -653,8 +639,7 @@ class Person:
         """
         if self._available_answer_endpoints is None:
             log.debug(f'Getting Available Answer Endpoints for Person {self.id}')
-            response = webex_api_call('get', f"v1/telephony/config/people/{self.id}/preferredAnswerEndpoint",
-                                      params={'orgId': self.org_id})
+            response = self.org.api.get(f"v1/telephony/config/people/{self.id}/preferredAnswerEndpoint")
             log.debug(response)
             self._available_answer_endpoints = response.get('endpoints', None)
         parsing_needed = all(isinstance(item, dict) for item in self._available_answer_endpoints)
@@ -683,7 +668,7 @@ class Person:
         Returns:
             XSI: The XSI instance for this Person
         """
-        self.xsi = XSI(self, get_profile=get_profile, cache=cache)
+        self.xsi = XSI(org=self.org, person=self, get_profile=get_profile, cache=cache)
         return self.xsi
 
     def reset_vm_pin(self, pin: str = None):
@@ -700,11 +685,9 @@ class Person:
         """
         log.info(f"Resetting VM PIN for {self.email}")
         if pin is not None:
-            webex_api_call('put', f'v1/telephony/config/people/{self.id}/voicemail/passcode',
-                           payload={'passcode': pin})
+            self.org.api.put(f'v1/telephony/config/people/{self.id}/voicemail/passcode', payload={'passcode': pin})
         else:
-            webex_api_call("post", f"v1/people/{self.id}/features/voicemail/actions/resetPin/invoke",
-                           params={"orgId": self._parent.id})
+            self.org.api.put("post", f"v1/people/{self.id}/features/voicemail/actions/resetPin/invoke")
         return True
 
     def get_full_config(self):
@@ -725,13 +708,13 @@ class Person:
             self.get_calling_behavior()
             self.get_caller_id()
             self.get_hoteling()
-            self.get_barge_in()
             self.get_intercept()
             self.get_outgoing_permission()
             self.get_ptt()
             return self
         else:
             log.info(f"{self.email} is not a Webex Calling user.")
+            return False
 
     @property
     def user_groups(self):
@@ -741,7 +724,7 @@ class Person:
             list[UserGroup]: A list of :py:class:`UserGroup`s.
 
         """
-        return self._parent.usergroups.find_person_assignments(self)
+        return self.org.usergroups.find_person_assignments(self)
 
     @property
     def devices(self):
@@ -752,7 +735,7 @@ class Person:
 
         """
         if self._devices is None:
-            self._devices = DeviceList(self)
+            self._devices = DeviceList(org=self.org, parent=self)
         return self._devices
 
     @property
@@ -767,9 +750,8 @@ class Person:
             list[dict]: A dict of devices that have this Person as a line appearance
 
         """
-        response = webex_api_call('get', f"v1/telephony/config/people/{self.id}/devices",
-                                  params={"orgId": self._parent.id})
-        return response['devices']
+        response = self.org.api.get(f"v1/telephony/config/people/{self.id}/devices", items_key='devices')
+        return response
 
     @property
     def hunt_groups(self):
@@ -781,7 +763,7 @@ class Person:
         """
         log.info(f"Getting Hunt Groups for {self.email}")
         hunt_groups = []
-        for hg in self._parent.hunt_groups:
+        for hg in self.org.hunt_groups:
             # Step through the agents for the Hunt Group to see if this person is there
             for agent in hg.agents:
                 if agent['id'] == self.id:
@@ -799,7 +781,7 @@ class Person:
         """
         log.info(f"Getting Hunt Groups for {self.email}")
         call_queues = []
-        for cq in self._parent.call_queues:
+        for cq in self.org.call_queues:
             # Step through the agents for the Hunt Group to see if this person is there
             for agent in cq.config['agents']:
                 if agent['id'] == self.id:
@@ -814,7 +796,7 @@ class Person:
             dict: The Call Forwarding config for the Person instance
         """
         log.info(f"Getting Call Forwarding config for {self.email}")
-        self.call_forwarding = self.__get_webex_data(f"v1/people/{self.id}/features/callForwarding")
+        self.call_forwarding = self.org.api.get(f"v1/people/{self.id}/features/callForwarding")
         return self.call_forwarding
 
     @property
@@ -827,8 +809,7 @@ class Person:
         """
         log.info(f"Getting Barge-In config for {self.email}")
         if self._barge_in is None:
-            response = webex_api_call('get', f"v1/people/{self.id}/features/bargeIn",
-                                      params={'orgId': self.org_id})
+            response = self.org.api.get(f"v1/people/{self.id}/features/bargeIn")
             if isinstance(response, dict):
                 response['parent'] = self
                 self._barge_in = BargeInSettings.from_dict(response)
@@ -837,41 +818,10 @@ class Person:
                 self._barge_in = None
         return self._barge_in
 
-    def get_barge_in(self):
-        """Get the Barge-In config for the Person
-
-        .. deprecated:: 4.4.2
-            Use :attr:`Person.barge_in` instead.
-
-        Returns:
-            dict: The Barge-In config for the Person instance
-        """
-        log.info(f"Getting Barge-In config for {self.email}")
-        response = self.__get_webex_data(f"v1/people/{self.id}/features/bargeIn")
-        return response
-
-    def push_barge_in(self, config: dict):
-        """ Push the Barge-In config to Webex
-
-        .. deprecated:: 4.4.2
-            Use :meth:`Person.barge_in.set_enabled()` instead
-
-        Returns:
-            bool: True on success, False otherwise
-
-        """
-        log.info(f"Pushing Barge-In config for {self.email}")
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/bargeIn", payload=config)
-        if success:
-            return True
-        else:
-            log.warning(f"The Barge-In config push failed")
-            return False
-
     def get_vm_config(self):
         """Fetch the Voicemail config for the Person from the Webex API"""
         log.info(f"Getting VM config for {self.email}")
-        self.vm_config = self.__get_webex_data(f"v1/people/{self.id}/features/voicemail")
+        self.vm_config = self.org.api.get(f"v1/people/{self.id}/features/voicemail")
         return self.vm_config
 
     def push_vm_config(self, vm_config: dict = None):
@@ -892,7 +842,7 @@ class Person:
             payload = vm_config
         else:
             payload = self.vm_config
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/voicemail", payload)
+        success = self.org.api.put(f"v1/people/{self.id}/features/voicemail", payload)
         if success:
             self.get_vm_config()
             return self.vm_config
@@ -919,9 +869,10 @@ class Person:
         content = open(filename, "rb")
         encoder = MultipartEncoder(fields={"file": (upload_as, content, 'audio/wav')})
         log.debug(f"File Encoder: {encoder}")
-        r = requests.post(_url_base + f"v1/people/{self.id}/features/voicemail/actions/uploadBusyGreeting/invoke",
-                          headers={"Content-Type": encoder.content_type, **self._headers},
-                          data=encoder)
+        r = self.org.api.post_upload(
+            f"v1/people/{self.id}/features/voicemail/actions/uploadBusyGreeting/invoke",
+            data=encoder
+        )
         content.close()
         if r.ok:
             if activate is True:
@@ -953,9 +904,10 @@ class Person:
         content = open(filename, "rb")
         encoder = MultipartEncoder(fields={"file": (upload_as, content, 'audio/wav')})
         log.debug(f"File Encoder: {encoder}")
-        r = requests.post(_url_base + f"v1/people/{self.id}/features/voicemail/actions/uploadNoAnswerGreeting/invoke",
-                          headers={"Content-Type": encoder.content_type, **self._headers},
-                          data=encoder)
+        r = self.org.api.post_upload(
+            f"v1/people/{self.id}/features/voicemail/actions/uploadNoAnswerGreeting/invoke",
+            data=encoder
+        )
         content.close()
         if r.ok:
             if activate is True:
@@ -985,7 +937,7 @@ class Person:
             payload = cf_config
         else:
             payload = self.call_forwarding
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/callForwarding", payload)
+        success = self.org.api.put(f"v1/people/{self.id}/features/callForwarding", payload)
         if success:
             self.get_call_forwarding()
             return self.call_forwarding
@@ -1107,7 +1059,7 @@ class Person:
 
         """
         log.info("get_intercept() started")
-        self.intercept = self.__get_webex_data(f"v1/people/{self.id}/features/intercept")
+        self.intercept = self.org.api.get(f"v1/people/{self.id}/features/intercept")
         return self.intercept
 
     def push_intercept(self, config: dict):
@@ -1118,7 +1070,7 @@ class Person:
 
         """
         log.info(f"Pushing Intercept config for {self.email}")
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/intercept", payload=config)
+        success = self.org.api.put(f"v1/people/{self.id}/features/intercept", payload=config)
         if success:
             return True
         else:
@@ -1133,7 +1085,7 @@ class Person:
 
         """
         log.info("get_ptt() started")
-        self.ptt = self.__get_webex_data(f"v1/people/{self.id}/features/pushToTalk")
+        self.ptt = self.org.api.get(f"v1/people/{self.id}/features/pushToTalk")
         return self.ptt
 
     def push_ptt(self, config: dict):
@@ -1147,7 +1099,7 @@ class Person:
 
         """
         log.info(f"Pushing PTT config for {self.email}")
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/pushToTalk", payload=config)
+        success = self.org.api.put(f"v1/people/{self.id}/features/pushToTalk", payload=config)
         if success:
             return True
         else:
@@ -1162,7 +1114,7 @@ class Person:
 
         """
         log.info(f"Getting Call Recording config for {self.email}")
-        self.call_recording = self.__get_webex_data(f"v1/people/{self.id}/features/callRecording")
+        self.call_recording = self.org.api.get(f"v1/people/{self.id}/features/callRecording")
         return self.call_recording
 
     def push_call_recording(self, config: dict):
@@ -1182,7 +1134,7 @@ class Person:
         clean_config.pop("serviceProvider", None)
         clean_config.pop("externalGroup", None)
         clean_config.pop("externalIdentifier", None)
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/callRecording", payload=clean_config)
+        success = self.org.api.put(f"v1/people/{self.id}/features/callRecording", payload=clean_config)
         if success:
             return True
         else:
@@ -1193,10 +1145,8 @@ class Person:
     def monitoring(self):
         """ :class:`~.monitoring.MonitoringList` to view and control monitoring """
         if self._monitoring is None:
-            response = webex_api_call("get", f"v1/people/{self.id}/features/monitoring",
-                                      params={"orgId": self.org_id})
-            response['parent'] = self
-            response['org'] = self._parent
+            response = self.org.api.get(f"v1/people/{self.id}/features/monitoring")
+            response['org'] = self.org
             if "monitoredElements" not in response.keys():
                 response['monitoredElements'] = []
             self._monitoring = MonitoringList.from_dict(response)
@@ -1204,10 +1154,7 @@ class Person:
 
     def get_monitored_by(self):
         """ Returns a list of Users (Person) and Workspaces that are Monitoring this Person """
-        if isinstance(self._parent, wxcadm.Org):
-            monitor_list = self._parent.get_all_monitoring()
-        elif isinstance(self._parent, wxcadm.Location):
-            monitor_list = self._parent.parent.get_all_monitoring()
+        monitor_list = self.org.get_all_monitoring()
         try:
             return monitor_list['people'][self.id]
         except KeyError:
@@ -1221,7 +1168,7 @@ class Person:
 
         """
         log.info(f"Getting Hoteling config for {self.email}")
-        self.hoteling = self.__get_webex_data(f"v1/people/{self.id}/features/hoteling")
+        self.hoteling = self.org.api.get(f"v1/people/{self.id}/features/hoteling")
         return self.hoteling
 
     def push_hoteling(self, config: dict) -> bool:
@@ -1235,7 +1182,7 @@ class Person:
 
         """
         log.info(f"Pushing Hoteling config for {self.email}")
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/hoteling", payload=config)
+        success = self.org.api.put(f"v1/people/{self.id}/features/hoteling", payload=config)
         if success:
             self.get_hoteling()
             return True
@@ -1246,7 +1193,7 @@ class Person:
     def get_outgoing_permission(self):
         """ Get the Outgoing Calling Permission for the Person """
         log.info(f"Getting Outbound Calling Permission config for {self.email}")
-        self._outgoing_permission = self.__get_webex_data(f"v1/people/{self.id}/features/outgoingPermission")
+        self._outgoing_permission = self.org.api.get(f"v1/people/{self.id}/features/outgoingPermission")
         return self._outgoing_permission
 
     def push_outgoing_permission(self, config: dict) -> bool:
@@ -1260,7 +1207,7 @@ class Person:
 
         """
         log.info(f"Pushing Outgoing Calling Permission config for {self.email}")
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/outgoingPermission", payload=config)
+        success = self.org.api.put(f"v1/people/{self.id}/features/outgoingPermission", payload=config)
         if success:
             self.get_outgoing_permission()
             return True
@@ -1276,7 +1223,7 @@ class Person:
 
         """
         log.info(f"Getting Caller ID config for {self.email}")
-        self.caller_id = self.__get_webex_data(f"v1/people/{self.id}/features/callerId")
+        self.caller_id = self.org.api.get(f"v1/people/{self.id}/features/callerId")
         return self.caller_id
 
     def push_caller_id(self, config: dict) -> bool:
@@ -1294,7 +1241,7 @@ class Person:
 
         """
         log.info(f"Pushing Caller Id config for {self.email}")
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/callerId", payload=config)
+        success = self.org.api.put(f"v1/people/{self.id}/features/callerId", payload=config)
         if success:
             self.get_caller_id()
             return True
@@ -1352,7 +1299,7 @@ class Person:
 
         """
         log.info(f"Getting DND config for {self.email}")
-        self.dnd = self.__get_webex_data(f"v1/people/{self.id}/features/doNotDisturb")
+        self.dnd = self.org.api.get(f"v1/people/{self.id}/features/doNotDisturb")
         return self.dnd
 
     def push_dnd(self, config: dict) -> bool:
@@ -1367,7 +1314,7 @@ class Person:
         """
         log.info(f"Pushing DND config for {self.email}")
         log.debug(f"\tConfig: {config}")
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/doNotDisturb", payload=config)
+        success = self.org.api.put(f"v1/people/{self.id}/features/doNotDisturb", payload=config)
         if success:
             return True
         else:
@@ -1382,7 +1329,7 @@ class Person:
 
         """
         log.info(f"Getting Calling Behavior for {self.email}")
-        self.calling_behavior = self.__get_webex_data(f"v1/people/{self.id}/features/callingBehavior")
+        self.calling_behavior = self.org.api.get(f"v1/people/{self.id}/features/callingBehavior")
         return self.calling_behavior
 
     def push_calling_behavior(self, config: dict) -> bool:
@@ -1397,7 +1344,7 @@ class Person:
         """
         log.info(f"Pushing Calling Behavior for {self.email}")
         log.debug(f"\tConfig: {config}")
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/callingBehavior", payload=config)
+        success = self.org.api.put(f"v1/people/{self.id}/features/callingBehavior", payload=config)
         if success:
             return True
         else:
@@ -1412,7 +1359,7 @@ class Person:
 
         """
         log.info(f"Getting Applications Settings for {self.email}")
-        self.applications_settings = self.__get_webex_data(f"v1/people/{self.id}/features/applications")
+        self.applications_settings = self.org.api.get(f"v1/people/{self.id}/features/applications")
         return self.applications_settings
 
     def push_applications_settings(self, config: dict) -> bool:
@@ -1427,7 +1374,7 @@ class Person:
         """
         log.info(f"Pushing Applications Settings for {self.email}")
         log.debug(f"\tConfig: {config}")
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/applications", payload=config)
+        success = self.org.api.put(f"v1/people/{self.id}/features/applications", payload=config)
         if success:
             return True
         else:
@@ -1444,7 +1391,7 @@ class Person:
         log.info(f"Getting license details for {self.email}")
         license_list = []
         for license in self.licenses:
-            for org_lic in self._parent.licenses:
+            for org_lic in self.org.licenses:
                 if license == org_lic.id:
                     license_list.append(org_lic)
         return license_list
@@ -1462,7 +1409,7 @@ class Person:
             bool: True if successful, False if not
 
         """
-        response = self.__get_webex_data(f"v1/people/{self.id}")
+        response = self.org.api.get(f"v1/people/{self.id}")
         if response:
             self.__process_api_data(response)
             if raw:
@@ -1557,7 +1504,7 @@ class Person:
         payload['addresses'] = addresses
 
         params = {"callingData": "true"}
-        response = webex_api_call('put', f'v1/people/{self.id}', payload=payload, params=params)
+        response = self.org.api.put(f'v1/people/{self.id}', payload=payload)
         if response:
             self.refresh_person()
             return True
@@ -1581,7 +1528,7 @@ class Person:
         new_licenses = []
         for license in self.licenses:
             log.debug(f"Checking license: {license}")
-            lic_name = self._parent.licenses.get(id=license).name
+            lic_name = self.org.licenses.get(id=license).name
             log.debug(f"License Name: {lic_name}")
             if any(match in lic_name.lower() for match in remove_matches):
                 if "screen share" in lic_name.lower():
@@ -1724,7 +1671,7 @@ class Person:
 
         """
         log.info(f"Getting Executive Assistant config for {self.email}")
-        self.executive_assistant = self.__get_webex_data(f"v1/people/{self.id}/features/executiveAssistant")
+        self.executive_assistant = self.org.api.get(f"v1/people/{self.id}/features/executiveAssistant")
         return self.executive_assistant
 
     def push_executive_assistant(self, config: dict) -> bool:
@@ -1739,7 +1686,7 @@ class Person:
         """
         log.info(f"Pushing Executive Assistant config for {self.email}")
         log.debug(f"\tConfig: {config}")
-        success = self.__put_webex_data(f"v1/people/{self.id}/features/executiveAssistant", payload=config)
+        success = self.org.api.put(f"v1/people/{self.id}/features/executiveAssistant", payload=config)
         if success:
             return True
         else:
@@ -1759,7 +1706,7 @@ class Person:
                 developer.webex.com/docs/api/v1/webex-calling-person-settings/get-a-list-of-phone-numbers-for-a-person
 
         """
-        return webex_api_call('get', f'v1/people/{self.id}/features/numbers')
+        return self.org.api.get(f'v1/people/{self.id}/features/numbers')
 
     def remove_did(self) -> str:
         """ Remove the DID (phone number) from the Person
@@ -1801,8 +1748,7 @@ class Person:
     @property
     def ecbn(self) -> dict:
         """ The Emergency Callback Number details of the Person """
-        response = webex_api_call('get', f'v1/telephony/config/people/{self.id}/emergencyCallbackNumber',
-                                  params={'orgId': self.org_id})
+        response = self.org.api.get(f'v1/telephony/config/people/{self.id}/emergencyCallbackNumber')
         return response
 
     def ecbn_null_change(self) -> bool:
@@ -1820,8 +1766,7 @@ class Person:
         }
         if current_ecbn['selected'] == 'LOCATION_MEMBER_NUMBER':
             payload['locationMemberId'] = current_ecbn['locationMemberInfo']['memberId']
-        response = webex_api_call('put', f"v1/telephony/config/people/{self.id}/emergencyCallbackNumber",
-                                  params={'orgId': self.org_id}, payload=payload)
+        response = self.org.api.put(f"v1/telephony/config/people/{self.id}/emergencyCallbackNumber", payload=payload)
         log.debug(response)
         return True
 
@@ -1852,16 +1797,15 @@ class Person:
         else:
             raise ValueError('Unknown value')
 
-        response = webex_api_call('put', f'v1/telephony/config/people/{self.id}/emergencyCallbackNumber',
-                                  params={'orgId': self.org_id}, payload=payload)
+        response = self.org.api.put(f'v1/telephony/config/people/{self.id}/emergencyCallbackNumber', payload=payload)
         return response
 
     @property
     def applications(self) -> ApplicationServicesSettings:
         """ The Application Services Settings for the Person """
         if self._applications is None:
-            response = webex_api_call('get', f"v1/people/{self.id}/features/applications")
-            response['parent'] = self
+            response = self.org.api.get(f"v1/people/{self.id}/features/applications")
+            response['person'] = self
             self._applications = ApplicationServicesSettings.from_dict(response)
         return self._applications
 
@@ -1869,8 +1813,7 @@ class Person:
     def single_number_reach(self) -> SingleNumberReach:
         """ The Sinlge Number Reach settings for the Person """
         if self._single_number_reach is None:
-            response = webex_api_call('get', f"v1/telephony/config/people/{self.id}/singleNumberReach",
-                                      params={'orgId': self.org_id})
+            response = self.org.api.get(f"v1/telephony/config/people/{self.id}/singleNumberReach")
             response['person'] = self
             self._single_number_reach = SingleNumberReach.from_dict(response)
         return self._single_number_reach
@@ -1894,11 +1837,12 @@ class Me(Person):
         """
         messages = []
         # Something funky about this API call needing more headers
-        data = webex_api_call("get", "v1/telephony/voiceMessages")
+        data = self.org.api.get("v1/telephony/voiceMessages")
         for item in data:
             if item['read'] is True and unread is True:
                 continue
             else:
+                item['org'] = self.org
                 m = VoiceMessage(**item)
             messages.append(m)
         return messages
@@ -1918,7 +1862,7 @@ class Me(Person):
                 }
 
         """
-        data: dict = webex_api_call('get', 'v1/telephony/voiceMessages/summary')
+        data: dict = self.org.api.get('v1/telephony/voiceMessages/summary')
         if data:
             return data
         else:
@@ -1927,6 +1871,8 @@ class Me(Person):
 
 @dataclass
 class VoiceMessage:
+    org: wxcadm.Org
+    """ The :class:`Org` associated with the Voice Message """
     id: str
     """ The unique identifier for the Voice Message """
     duration: int
@@ -1953,7 +1899,7 @@ class VoiceMessage:
         """
         log.info(f"Marking Voice Message as read: {self.id}")
         payload = {"messageId": self.id}
-        success = webex_api_call("post", "v1/telephony/voiceMessages/markAsRead", payload=payload)
+        success = self.org.api.post("v1/telephony/voiceMessages/markAsRead", payload=payload)
         if success:
             return True
         else:
@@ -1969,7 +1915,7 @@ class VoiceMessage:
         """
         log.info(f"Marking Voice Message as unread: {self.id}")
         payload = {"messageId": self.id}
-        success = webex_api_call("post", "v1/telephony/voiceMessages/markAsUnread", payload=payload)
+        success = self.org.api.post("v1/telephony/voiceMessages/markAsUnread", payload=payload)
         if success:
             return True
         else:
@@ -1984,7 +1930,7 @@ class VoiceMessage:
 
         """
         log.info(f"Deleting Voice Message with ID {self.id}")
-        success = webex_api_call("delete", f"v1/telephony/voiceMessages/{self.id}")
+        success = self.org.api.delete(f"v1/telephony/voiceMessages/{self.id}")
         if success:
             return True
         else:
@@ -1995,16 +1941,16 @@ class VoiceMessage:
 class UserGroups(UserList):
     """ UserGroups is the parent class for :py:class:`UserGroup`, providing methods for the list of Groups """
 
-    def __init__(self, parent: wxcadm.Org):
+    def __init__(self, org: wxcadm.Org):
         log.info("Initializing UserGroups instance")
         super().__init__()
-        self.parent = parent
+        self.org: wxcadm.Org = org
         self.data: list[UserGroup] = []
-        response = webex_api_call("get", "v1/groups", params={'orgId': self.parent.org_id})
+        response = self.org.api.get("v1/groups")
         groups = response['groups']
         log.debug(f"Webex returned {len(groups)} Groups")
         for group in groups:
-            usergroup = UserGroup(parent=self.parent, **group)
+            usergroup = UserGroup(org=self.org, **group)
             self.data.append(usergroup)
 
     def create_group(self, name: str,
@@ -2021,15 +1967,15 @@ class UserGroups(UserList):
             bool: True on success, False otherwise
 
         """
-        payload = {'displayName': name, 'orgId': self.parent.id, 'description': description}
+        payload: dict = {'displayName': name, 'orgId': self.org.id, 'description': description}
         if members is not None:
             payload['members'] = []
             for member in members:
                 payload['members'].append({'id': member.id})
-        response = webex_api_call('post', 'v1/groups', payload=payload)
+        response = self.org.api.post('v1/groups', payload=payload)
         if response:
             log.info(f"New UserGroup {name} created")
-            new_group = UserGroup(parent=self.parent, **response)
+            new_group = UserGroup(org=self.org, **response)
             self.data.append(new_group)
             return True
         else:
@@ -2049,7 +1995,7 @@ class UserGroups(UserList):
 @dataclass()
 class UserGroup:
     """ The UserGroup class holds all the User Groups available within the Org"""
-    parent: wxcadm.Org = field(repr=False)
+    org: wxcadm.Org = field(repr=False)
     """ The Org instance that owns the Group """
     id: str
     """ The unique ID of the Group """
@@ -2080,7 +2026,7 @@ class UserGroup:
         return self.displayName
 
     def _get_members(self):
-        response = webex_api_call("get", f"v1/groups/{self.id}/members")
+        response = self.org.api.get(f"v1/groups/{self.id}/members")
         items = response['members']
         # If there are more than 500 members, we need to go get the rest, and the Groups API handles this
         # differently than all the other APIs. This is probably going to break things if they ever fix the Groups
@@ -2088,7 +2034,7 @@ class UserGroup:
 
         people = []
         for item in items:
-            person = self.parent.people.get(id=item['id'])
+            person = self.org.people.get(id=item['id'])
             if person is not None:
                 people.append(person)
             else:
@@ -2107,7 +2053,7 @@ class UserGroup:
             bool: True on success, False otherwise
 
         """
-        response = webex_api_call('delete', f'v1/groups/{self.id}')
+        response = self.org.api.delete(f'v1/groups/{self.id}')
         if response:
             log.info(f'Successfully deleted UserGroup {self.displayName}')
             return True
@@ -2129,7 +2075,7 @@ class UserGroup:
 
         """
         payload = {"members": [{"id": person.id, "operation": "add"}]}
-        response = webex_api_call("patch", f"v1/groups/{self.id}", payload=payload)
+        response = self.org.api.patch(f"v1/groups/{self.id}", payload=payload)
         if response:
             return True
         else:
@@ -2146,7 +2092,7 @@ class UserGroup:
 
         """
         payload = {"members": [{'id': person.id, 'operation': 'delete'}]}
-        response = webex_api_call('patch', f'v1/groups/{self.id}', payload=payload)
+        response = self.org.api.patch(f'v1/groups/{self.id}', payload=payload)
         if response:
             return True
         else:
@@ -2155,7 +2101,7 @@ class UserGroup:
 @dataclass_json
 @dataclass
 class ApplicationServicesSettings:
-    parent: wxcadm.Person = field(repr=False)
+    person: wxcadm.Person = field(repr=False)
     ring_devices_for_click_to_dial: bool = field(metadata=config(field_name='ringDevicesForClickToDialCallsEnabled'))
     """ When True, indicates to ring devices for outbound Click to Dial calls. """
     ring_devices_for_group_page: bool = field(metadata=config(field_name='ringDevicesForGroupPageEnabled'))
@@ -2183,7 +2129,7 @@ class ApplicationServicesSettings:
         if self.desktop_client_id is None:
             return None
         else:
-            return ApplicationLineAssignments(self.parent, self.desktop_client_id)
+            return ApplicationLineAssignments(self.person, self.desktop_client_id)
 
     def set_ring_devices_for_click_to_dial(self, enabled: bool):
         """ Set the `ring_devices_for_click_to_dial` value
@@ -2196,8 +2142,7 @@ class ApplicationServicesSettings:
 
         """
         payload = {"ringDevicesForClickToDialCallsEnabled": enabled}
-        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
-                       payload=payload, params={'orgId': self.parent.org_id})
+        self.person.org.api.put('put', f"v1/people/{self.person.id}/features/applications", payload=payload)
         self.ring_devices_for_click_to_dial = enabled
         return True
 
@@ -2212,8 +2157,7 @@ class ApplicationServicesSettings:
 
         """
         payload = {"ringDevicesForGroupPageEnabled": enabled}
-        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
-                       payload=payload, params={'orgId': self.parent.org_id})
+        self.person.org.api.put(f"v1/people/{self.person.id}/features/applications", payload=payload)
         self.ring_devices_for_group_page = enabled
         return True
 
@@ -2228,8 +2172,7 @@ class ApplicationServicesSettings:
 
         """
         payload = {"ringDevicesForCallParkEnabled": enabled}
-        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
-                       payload=payload, params={'orgId': self.parent.org_id})
+        self.person.org.api.put(f"v1/people/{self.person.id}/features/applications", payload=payload)
         self.ring_devices_for_call_park = enabled
         return True
 
@@ -2244,8 +2187,7 @@ class ApplicationServicesSettings:
 
         """
         payload = {"browserClientEnabled": enabled}
-        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
-                       payload=payload, params={'orgId': self.parent.org_id})
+        self.person.org.api.put(f"v1/people/{self.person.id}/features/applications", payload=payload)
         self.browser_client_enabled = enabled
         return True
 
@@ -2260,8 +2202,7 @@ class ApplicationServicesSettings:
 
         """
         payload = {"desktopClientEnabled": enabled}
-        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
-                       payload=payload, params={'orgId': self.parent.org_id})
+        self.person.org.api.put(f"v1/people/{self.person.id}/features/applications", payload=payload)
         self.desktop_client_enabled = enabled
         return True
 
@@ -2276,8 +2217,7 @@ class ApplicationServicesSettings:
 
         """
         payload = {"tabletClientEnabled": enabled}
-        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
-                       payload=payload, params={'orgId': self.parent.org_id})
+        self.person.org.api.put(f"v1/people/{self.person.id}/features/applications", payload=payload)
         self.tablet_client_enabled = enabled
         return True
 
@@ -2292,22 +2232,19 @@ class ApplicationServicesSettings:
 
         """
         payload = {"mobileClientEnabled": enabled}
-        webex_api_call('put', f"v1/people/{self.parent.id}/features/applications",
-                       payload=payload, params={'orgId': self.parent.org_id})
+        self.person.org.api.put(f"v1/people/{self.person.id}/features/applications", payload=payload)
         self.mobile_client_enabled = enabled
         return True
 
 class ApplicationLineAssignments:
     def __init__(self, person: wxcadm.Person, client_id: str):
         log.info("Initializing ApplicationLineAssignments")
-        self.parent: wxcadm.Person = person
+        self.person: wxcadm.Person = person
         self.client_id: str = client_id
         self.lines = []
 
-        response = webex_api_call(
-            'get',
-            f'v1/telephony/config/people/{self.parent.id}/applications/{self.client_id}/members',
-            params={'orgId': self.parent.org_id}
+        response = self.person.org.api.get(
+            f'v1/telephony/config/people/{self.person.id}/applications/{self.client_id}/members'
         )
         log.debug(response)
         self.model = response.get('model', 'Unknown')
@@ -2317,7 +2254,7 @@ class ApplicationLineAssignments:
         for member in response.get('members', []):
             # Add the parent Person so the Member has access to it
             member['parent'] = self
-            member['person'] = self.parent
+            member['person'] = self.person
             self.lines.append(ApplicationLine.from_dict(member))
 
     def get(self, line_owner: Union[wxcadm.Person, wxcadm.VirtualLine, wxcadm.Workspace]) -> Optional[ApplicationLine]:
@@ -2360,7 +2297,7 @@ class ApplicationLineAssignments:
         """
         new_line = ApplicationLine(
             parent=self,
-            person=self.parent,
+            person=self.person,
             port=int(self._last_port()) + 1,
             line_type='SHARED_CALL_APPEARANCE',
             id=line_owner.id,
@@ -2411,11 +2348,11 @@ class ApplicationLine:
 
     def __post_init__(self):
         if self.member_type.upper() == 'PEOPLE' or isinstance(self.line_owner, wxcadm.Person):
-            self.line_owner = self.person._parent.people.get(id=self.id)
+            self.line_owner = self.person.org.people.get(id=self.id)
         elif self.member_type.upper() == 'VIRTUAL_LINE' or isinstance(self.line_owner, wxcadm.VirtualLine):
-            self.line_owner = self.person._parent.virtual_lines.get(id=self.id)
+            self.line_owner = self.person.org.virtual_lines.get(id=self.id)
         elif self.member_type.upper() == 'PLACE' or isinstance(self.line_owner, wxcadm.Workspace):
-            self.line_owner = self.person._parent.workspaces.get(id=self.id)
+            self.line_owner = self.person.org.workspaces.get(id=self.id)
 
     def _put_members(self) -> bool:
         payload = {
@@ -2424,11 +2361,9 @@ class ApplicationLine:
         for line in self.parent.lines:
             payload['members'].append(line.to_dict())
 
-        webex_api_call(
-            'put',
+        self.person.org.api.put(
             f'v1/telephony/config/people/{self.person.id}/applications/{self.parent.client_id}/members',
             payload=payload,
-            params={'orgId': self.person.org_id}
         )
 
         return True
@@ -2503,11 +2438,9 @@ class ApplicationLine:
             if line.id != self.id:
                 payload['members'].append(line.to_dict())
 
-        webex_api_call(
-            'put',
+        self.person.org.api.put(
             f'v1/telephony/config/people/{self.person.id}/applications/{self.parent.client_id}/members',
-            payload=payload,
-            params={'orgId': self.person.org_id}
+            payload=payload
         )
 
         return True
@@ -2515,6 +2448,7 @@ class ApplicationLine:
 @dataclass_json
 @dataclass
 class SnrNumber:
+    person: wxcadm.Person = field(repr=False, metadata=config(exclude=lambda t: True))
     id: Optional[str]
     phone_number: str = field(metadata=config(field_name="phoneNumber"))
     """ The phone number """
@@ -2537,10 +2471,10 @@ class SnrNumber:
 
         """
         payload = {'enabled': True}
-        webex_api_call("put",
-                       f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
-                       payload=payload,
-                       params={'orgId': self.org_id})
+        self.person.org.api.put(
+            f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
+            payload=payload
+        )
         self.enabled = True
         return True
 
@@ -2552,10 +2486,10 @@ class SnrNumber:
 
         """
         payload = {'enabled': False}
-        webex_api_call("put",
-                       f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
-                       payload=payload,
-                       params={'orgId': self.org_id})
+        self.person.org.api.put(
+            f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
+            payload=payload
+        )
         self.enabled = False
         return True
 
@@ -2570,10 +2504,10 @@ class SnrNumber:
 
         """
         payload = {'name': name}
-        webex_api_call("put",
-                       f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
-                       payload=payload,
-                       params={'orgId': self.org_id})
+        self.person.org.api.put(
+            f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
+            payload=payload
+        )
         self.name = name
         return True
 
@@ -2588,10 +2522,10 @@ class SnrNumber:
 
         """
         payload = {'answerConfirmationEnabled': enabled}
-        webex_api_call("put",
-                       f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
-                       payload=payload,
-                       params={'orgId': self.org_id})
+        self.person.org.api.put(
+            f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
+            payload=payload
+        )
         self.answer_confirmation = enabled
         return True
 
@@ -2606,10 +2540,10 @@ class SnrNumber:
 
         """
         payload = {'doNotForwardCallsEnabled': enabled}
-        webex_api_call("put",
-                       f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
-                       payload=payload,
-                       params={'orgId': self.org_id})
+        self.person.org.api.put(
+            f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
+            payload=payload
+        )
         self.answer_confirmation = enabled
         return True
 
@@ -2620,9 +2554,7 @@ class SnrNumber:
             bool: True on success, False otherwise
 
         """
-        webex_api_call("delete",
-                       f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}",
-                       params={'orgId': self.org_id})
+        self.person.org.api.delete(f"v1/telephony/config/people/{self.person_id}/singleNumberReach/numbers/{self.id}")
         return True
 
 
@@ -2644,13 +2576,9 @@ class SingleNumberReach:
             SingleNumberReach
 
         """
-        response = webex_api_call(
-            "get",
-            f"v1/telephony/config/people/{person.id}/singleNumberReach",
-            params={"orgId": person.org_id}
-        )
+        response = person.org.api.get(f"v1/telephony/config/people/{person.id}/singleNumberReach", items_key='numbers')
         numbers = []
-        for num in response['numbers']:
+        for num in response:
             numbers.append(SnrNumber(**num, person_id=person.id, org_id=person.org_id))
         return cls(
             enabled=response['enabled'],
@@ -2687,10 +2615,10 @@ class SingleNumberReach:
             answer_confirmation=answer_confirmation,
             person_id=self.person.id
         )
-        response = webex_api_call('post',
-                                  f"v1/telephony/config/people/{self.person.id}/singleNumberReach/numbers",
-                                  params={'orgId': self.person.org_id},
-                                  payload=new_number.to_dict())
+        response = self.person.org.api.post(
+            f"v1/telephony/config/people/{self.person.id}/singleNumberReach/numbers",
+            payload=new_number.to_dict()
+        )
         new_number.id = response['id']
         self.numbers.append(new_number)
         return new_number

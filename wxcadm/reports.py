@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, Union
 import requests
 from .common import *
 import wxcadm
@@ -17,9 +17,9 @@ class Report:
             raise ValueError('id or config is required for Report init')
         if id is not None:
             log.debug(f'Getting Report details: {id}')
-            config = webex_api_call('get', f'v1/reports/{id}')[0]
+            config = self.org.api.get(f'v1/reports/{id}')[0]
             log.debug(config)
-        self.id: str = config.get('Id', None)
+        self.id: Union[str, None] = config.get('Id', None)
         """ The Report ID """
         self.title: str = config.get('title', '')
         """ The title of the Report """
@@ -38,7 +38,7 @@ class Report:
         self.scheduled_from: str = config.get('scheduledFrom', '')
         """ Whether the Report was scheduled from Control Hub or API """
         self._status: str = config.get('status', 'unknown')
-        self.download_url: str = config.get('downloadURL', None)
+        self.download_url: Optional[str] = config.get('downloadURL', None)
 
     def refresh(self):
         """ Refresh the Report
@@ -52,7 +52,7 @@ class Report:
 
         """
         log.debug(f'Refreshing Report {self.id}')
-        config = webex_api_call('get', f'v1/reports/{self.id}')[0]
+        config = self.org.api.get(f'v1/reports/{self.id}')[0]
         log.debug(config)
         self.id = config.get('Id', None)
         self.title = config.get('title', '')
@@ -88,7 +88,7 @@ class Report:
         log.info(f'Getting Report lines: {self.id}')
         self.refresh()
         log.debug(f'Download URL: {self.download_url}')
-        r = requests.get(self.download_url, headers=self.org._headers)
+        r = requests.get(self.download_url, headers=self.org.api.headers)
         log.debug(f'Response Headers: {r.headers}')
         if r.ok:
             if r.headers.get('content-type', '') in ['application/zip', 'application/octet-stream']:
@@ -107,7 +107,7 @@ class Report:
 
 class ReportTemplate:
     def __init__(self, config: dict):
-        self.id: str = config.get('Id', None)
+        self.id: Optional[str] = config.get('Id', None)
         """ The Template ID """
         self.title: str = config.get('title', '')
         """ The title of the Report """
@@ -132,7 +132,7 @@ class ReportList(UserList):
 
     def _get_data(self) -> list:
         data = []
-        response = webex_api_call('get', 'v1/reports')
+        response = self.org.api.get('v1/reports')
         for item in response:
             data.append(Report(self.org, config=item))
         return data
@@ -148,7 +148,7 @@ class ReportList(UserList):
         log.info('Getting reports templates')
         if self._templates is None:
             self._templates = []
-            for item in webex_api_call('get', '/v1/report/templates'):
+            for item in self.org.api.get('/v1/report/templates'):
                 self._templates.append(ReportTemplate(item))
         return self._templates
 
@@ -203,7 +203,7 @@ class ReportList(UserList):
         log.info(f'Creating report with Template ID: {template.id}')
         log.debug(f'\tStart: {start_date}, End: {end_date}')
         log.debug(f'\tSite List: {site_list}')
-        payload = {'templateId': template.id}
+        payload: dict = {'templateId': template.id}
         if start_date is not None:
             payload['startDate'] = start_date
         if end_date is not None:
@@ -211,7 +211,7 @@ class ReportList(UserList):
         if site_list is not None:
             payload['siteList'] = site_list
 
-        response = webex_api_call('post', '/v1/reports', payload=payload)
+        response = self.org.api.post('/v1/reports', payload=payload)
         log.debug(f'API response: {response}')
         report_id = response['items']['Id']
         log.info(f'Report ID: {report_id}')
@@ -230,13 +230,8 @@ class ReportList(UserList):
         """
         log.info(f'Deleting report with ID {report_id}')
         try:
-            response = webex_api_call('delete', f'/v1/reports/{report_id}')
-            if response.status_code == 204:
-                log.info(f'Successfully deleted report with ID: {report_id}')
-                return True
-            else:
-                log.error(f'Failed to delete report with ID: {report_id}, Status Code: {response.status_code}')
-                return False
+            self.org.api.delete(f'/v1/reports/{report_id}')
+            return True
         except Exception as e:
             log.error(f'Exception occurred while deleting report: {e}')
             return False
@@ -305,7 +300,10 @@ class ReportList(UserList):
                 cdr_template = template
                 break
 
-        new_report = self.create_report(template=cdr_template,
-                                       start_date=start,
-                                       end_date=end)
-        return new_report
+        if cdr_template:
+            new_report = self.create_report(template=cdr_template,
+                                           start_date=start,
+                                           end_date=end)
+            return new_report
+        else:
+            return False

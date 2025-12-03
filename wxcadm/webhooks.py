@@ -3,20 +3,32 @@ from __future__ import annotations
 from typing import Optional
 from collections import UserList
 from dataclasses import dataclass, field
+
+import wxcadm
 from wxcadm import log
 from .common import *
 
 
 class Webhooks(UserList):
-    def __init__(self):
+    def __init__(self, org: wxcadm.Org):
+        """ The list of Webhooks
+
+        Args:
+            org (wxcadm.Org): The :class:`wxcadm.Org` instance:
+
+        """
         log.info("Initializing Webhooks instance")
         super().__init__()
+        self.org = org
+        self.api = self.org._parent.api
         self.data = []
-        items = webex_api_call("get", "v1/webhooks")
+        items = self.api.get("v1/webhooks")
         log.debug(f"Webex returned {len(items)} webhooks")
         for item in items:
-            webhook = Webhook(**item)
-            self.data.append(webhook)
+            if item['orgId'] == self.org.id:
+                item['api'] = self.api
+                webhook = Webhook(**item)
+                self.data.append(webhook)
 
     @property
     def active(self):
@@ -68,7 +80,7 @@ class Webhooks(UserList):
                    "filter": filter,
                    "secret": secret,
                    "ownedBy": owner}
-        new_webhook = webex_api_call("post", "v1/webhooks", payload=payload)
+        new_webhook = self.api.post("v1/webhooks", payload=payload)
         if new_webhook:
             log.debug(f"New Webhook ID: {new_webhook['id']}")
             self.data.append(Webhook(**new_webhook))
@@ -81,6 +93,7 @@ class Webhooks(UserList):
 @dataclass
 class Webhook:
     """ The Webhook class contains information about each Webhook """
+    api: wxcadm.WebexApi = field(repr=False)
     orgId: str = field(repr=False)
     appId: str
     """ The ID of the application """
@@ -115,7 +128,7 @@ class Webhook:
 
         """
         log.info(f"Deleting Webhook: {self.name}")
-        success = webex_api_call("delete", f"v1/webhooks/{self.id}")
+        success = self.api.delete(f"v1/webhooks/{self.id}")
         if success:
             return True
         else:
@@ -138,7 +151,7 @@ class Webhook:
                    "secret": self.secret,
                    "ownedBy": self.ownedBy,
                    "status": self.status}
-        success = webex_api_call("put", f"v1/webhooks/{self.id}", payload=payload)
+        success = self.api.put(f"v1/webhooks/{self.id}", payload=payload)
         if success:
             self.targetUrl = url
             return True
@@ -162,7 +175,7 @@ class Webhook:
                    "secret": self.secret,
                    "ownedBy": self.ownedBy,
                    "status": self.status}
-        success = webex_api_call("put", f"v1/webhooks/{self.id}", payload=payload)
+        success = self.api.put(f"v1/webhooks/{self.id}", payload=payload)
         if success:
             self.name = name
             return True
@@ -186,7 +199,7 @@ class Webhook:
                    "secret": secret,
                    "ownedBy": self.ownedBy,
                    "status": self.status}
-        success = webex_api_call("put", f"v1/webhooks/{self.id}", payload=payload)
+        success = self.api.put(f"v1/webhooks/{self.id}", payload=payload)
         if success:
             self.secret = secret
             return True
@@ -210,7 +223,7 @@ class Webhook:
                    "secret": self.secret,
                    "ownedBy": owner,
                    "status": self.status}
-        success = webex_api_call("put", f"v1/webhooks/{self.id}", payload=payload)
+        success = self.api.put(f"v1/webhooks/{self.id}", payload=payload)
         if success:
             self.ownedBy = owner
             return True
@@ -231,7 +244,7 @@ class Webhook:
                    "secret": self.secret,
                    "ownedBy": self.ownedBy,
                    "status": "inactive"}
-        success = webex_api_call("put", f"v1/webhooks/{self.id}", payload=payload)
+        success = self.api.put(f"v1/webhooks/{self.id}", payload=payload)
         if success:
             self.status = "inactive"
             return True
@@ -252,7 +265,7 @@ class Webhook:
                    "secret": self.secret,
                    "ownedBy": self.ownedBy,
                    "status": "active"}
-        success = webex_api_call("put", f"v1/webhooks/{self.id}", payload=payload)
+        success = self.api.put(f"v1/webhooks/{self.id}", payload=payload)
         if success:
             self.status = "active"
             return True

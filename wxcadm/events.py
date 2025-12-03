@@ -1,10 +1,6 @@
 from __future__ import annotations
-from typing import Optional
-from datetime import datetime, timedelta
 from collections import UserList
-import requests
 
-from .common import *
 import wxcadm
 from wxcadm import log
 
@@ -52,10 +48,10 @@ class AuditEvent:
 
 
 class AuditEventList(UserList):
-    def __init__(self, parent: wxcadm.Org, start: str, end: str):
+    def __init__(self, org: wxcadm.Org, start: str, end: str):
         log.info("AuditEventList instance created")
         super().__init__()
-        self.parent = parent
+        self.org: wxcadm.Org = org
         self.start = start
         """ The start date of the audit events """
         self.end = end
@@ -64,10 +60,9 @@ class AuditEventList(UserList):
 
     def _get_data(self):
         data = []
-        response = webex_api_call(
-            "get",
-            f"v1/adminAudit/events",
-            params={'orgId': self.parent.org_id, 'from': self.start, 'to': self.end}
+        response = self.org.api.get(
+            "v1/adminAudit/events",
+            params={'from': self.start, 'to': self.end}
         )
         for entry in response:
             data.append(AuditEvent(entry))

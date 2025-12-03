@@ -3,22 +3,21 @@ from typing import TYPE_CHECKING, Optional, Union
 from collections import UserList
 import wxcadm
 from .common import *
-from .exceptions import *
 from wxcadm import log
 if TYPE_CHECKING:
     from wxcadm import Org, Location
 
 
 class VirtualLine:
-    def __init__(self, parent: Union[Org, Location], config: Optional[dict] = None):
-        self.parent = parent
-        """ The :class:`Org` or :class:`Location` to which the Virtual Line belongs """
+    def __init__(self, org: wxcadm.Org, config: Optional[dict] = None):
+        self.org = org
+        """ The :class:`Org` to which the Virtual Line belongs """
         self.id: str = ''
         """ The ID of the Virtual Line """
         self.first_name: str = ''
         """ The first name of the Virtual Line """
         self.last_name: str = ''
-        """ The last name of the Vierual Line """
+        """ The last name of the Virtual Line """
         self.caller_id_first_name: str = ''
         """ The Caller ID first name of the Virtual Line """
         self.caller_id_last_name: str = ''
@@ -72,7 +71,7 @@ class VirtualLine:
         return True
 
     def _get_details(self) -> bool:
-        config = webex_api_call('get', f'v1/telephony/config/virtualLines/{self.id}')
+        config = self.org.api.get(f'v1/telephony/config/virtualLines/{self.id}')
         self._display_name = config.get('displayName', '')
         self._directory_search_enabled = config.get('directorySearchEnabled', False)
         self._announcement_language = config.get('announcementLanguage', '')
@@ -82,7 +81,7 @@ class VirtualLine:
     @property
     def org_id(self) -> str:
         """ The Org ID of the Virtual Line """
-        return self.parent.org_id
+        return self.org.org_id
 
     @property
     def display_name(self) -> str:
@@ -114,10 +113,7 @@ class VirtualLine:
 
     def get_monitored_by(self):
         """ Returns a list of Users (Person) and Workspaces that are Monitoring this VirtualLine """
-        if isinstance(self.parent, wxcadm.Org):
-            monitor_list = self.parent.get_all_monitoring()
-        elif isinstance(self.parent, wxcadm.Location):
-            monitor_list = self.parent.parent.get_all_monitoring()
+        monitor_list = self.org.get_all_monitoring()
         try:
             return monitor_list['virtual_lines'][self.id]
         except (KeyError, TypeError):
@@ -131,8 +127,10 @@ class VirtualLine:
 
         """
         log.info(f"Getting Call Recording config for {self.display_name}")
-        response = webex_api_call('get',
-                                             f"v1/telephony/config/virtualLines/{self.id}/callRecording")
+        response = self.org.api.get(
+            'get',
+            f"v1/telephony/config/virtualLines/{self.id}/callRecording"
+        )
         return response
 
     @property
@@ -205,9 +203,7 @@ class VirtualLine:
                        "summaryAndActionItemsEnabled": ai_summary
                    }
                    }
-        response = webex_api_call('put', f"v1/telephony/config/virtualLines/{self.id}/callRecording",
-                                  payload=payload, params={'orgId': self.org_id})
-        log.debug(f"Response: {response}")
+        response = self.org.api.put(f"v1/telephony/config/virtualLines/{self.id}/callRecording", payload=payload)
         return True
 
     def disable_call_recording(self):
@@ -222,8 +218,10 @@ class VirtualLine:
         """
         log.info(f"Disabling Call Recording for {self.display_name}")
         recording_config = {'enabled': False}
-        response = webex_api_call('put', f"v1/telephony/config/virtualLines/{self.id}/callRecording",
-                                  payload=recording_config, params={'orgId': self.org_id})
+        response = self.org.api.put(
+            f"v1/telephony/config/virtualLines/{self.id}/callRecording",
+            payload=recording_config
+        )
         log.debug(f"Response: {response}")
         return True
 
@@ -231,14 +229,18 @@ class VirtualLine:
         """ Refresh the Virtual Line configuration from Webex This is especially useful when a new Virtual Line is
         created and the configuration is not known. """
         log.info(f"Refreshing Virtual Line config: {self.id}")
-        response = webex_api_call('get', f'v1/telephony/config/virtualLines', params={'id': self.id})
-        self._process_config(response['virtualLines'][0])
+        response = self.org.api.get(
+            f'v1/telephony/config/virtualLines',
+            params={'id': self.id},
+            items_key='virtualLines'
+        )
+        self._process_config(response[0])
         return True
 
     def delete(self) -> bool:
         """ Delete the Virtual Line """
         log.info(f"Deleting Virtual Line: {self.first_name} {self.last_name} ({self.id})")
-        webex_api_call('delete', f'v1/telephony/config/virtualLines/{self.id}')
+        self.org.api.delete(f'v1/telephony/config/virtualLines/{self.id}')
         return False
 
     def _build_put_payload(self) -> dict:
@@ -278,15 +280,13 @@ class VirtualLine:
         for attr, val in kwargs.items():
             getattr(self, attr)
             setattr(self, attr, val)
-        response = webex_api_call('put', f'v1/telephony/config/virtualLines/{self.id}',
-                                  payload=self._build_put_payload())
+        self.org.api.put(f'v1/telephony/config/virtualLines/{self.id}', payload=self._build_put_payload())
         return True
 
     @property
     def ecbn(self) -> dict:
         """ The Emergency Callback Number details of the Virtual Line """
-        response = webex_api_call('get', f'v1/telephony/config/virtualLines/{self.id}/emergencyCallbackNumber',
-                                  params={'orgId': self.parent.org_id})
+        response = self.org.api.get(f'v1/telephony/config/virtualLines/{self.id}/emergencyCallbackNumber')
         return response
 
     def set_ecbn(self, value: Union[str, wxcadm.Person, wxcadm.Workspace, wxcadm.VirtualLine]):
@@ -316,8 +316,10 @@ class VirtualLine:
         else:
             raise ValueError('Unknown value')
 
-        response = webex_api_call('put', f'v1/telephony/config/virtualLines/{self.id}/emergencyCallbackNumber',
-                                  params={'orgId': self.org_id}, payload=payload)
+        response = self.org.api.put(
+            f'v1/telephony/config/virtualLines/{self.id}/emergencyCallbackNumber',
+            payload=payload
+        )
         return response
 
 
@@ -327,34 +329,26 @@ class VirtualLineList(UserList):
     _item_endpoint = "v1/telephony/config/virtualLines/{item_id}"
     _item_class = VirtualLine
 
-    def __init__(self, parent: Union[Org, Location]):
+    def __init__(self, org: wxcadm.Org, location: Optional[wxcadm.Location] = None):
         super().__init__()
         log.debug("Initializing VirtualLineList")
-        self.parent: Org | Location = parent
+        self.org = org
+        self.location = location
         self.data: list = self._get_data()
 
     def _get_data(self) -> list:
         log.debug("_get_data() started")
-        params = {}
 
-        if isinstance(self.parent, wxcadm.Org):
-            log.debug(f"Using Org ID {self.parent.id} as data filter")
-            params['orgId'] = self.parent.id
-        elif isinstance(self.parent, wxcadm.Location):
-            log.debug(f"Using Location ID {self.parent.id} as data filter")
-            params['locationId'] = self.parent.id
+        if self.location is not None:
+            log.debug(f"_get_data() location: {self.location.id}")
+            params = {'locationId': self.location.id}
         else:
-            log.warn("Parent class is not Org or Location, so all items will be returned")
-        response = webex_api_call('get', self._endpoint, params=params)
+            params = None
+
+        response = self.org.api.get(self._endpoint, params=params, items_key=self._endpoint_items_key)
         items = []
-        if self._endpoint_items_key is not None:
-            log.info(f"Found {len(response[self._endpoint_items_key])} items")
-            for entry in response[self._endpoint_items_key]:
-                items.append(self._item_class(parent=self.parent, config=entry))
-        else:
-            log.info(f"Found {len(response)} items")
-            for entry in response:
-                items.append(self._item_class(parent=self.parent, config=entry))
+        for entry in response:
+            items.append(self._item_class(org=self.org, config=entry))
         return items
 
     def refresh(self):
@@ -442,16 +436,16 @@ class VirtualLineList(UserList):
             APIError: Raised when the Virtual Line creation is rejected by the Webex API
 
         """
-        log.info(f"Adding a Virtual Line to {self.parent.name}")
+        log.info(f"Adding a Virtual Line")
         # Make sure they passed a phone number or extension
         if phone_number is None and extension is None:
             raise ValueError("A phone_number, extension or both is required.")
 
         # Determine the location to add the VL to
         # If the List is at the Location level, use that Location
-        if isinstance(self.parent, wxcadm.Location):
-            log.debug(f"Using {self.parent.name} as target Location")
-            location = self.parent
+        if self.location is not None and location is None:
+            log.debug(f"Using {self.location.name} as target Location")
+            location = self.location
         # Get the Location ID to use for the payload
         if isinstance(location, wxcadm.Location):
             log.debug(f"Using {location.name} as Target Location")
@@ -474,7 +468,7 @@ class VirtualLineList(UserList):
             'callerIdNumber': caller_id_number
         }
 
-        response = webex_api_call('post', self._endpoint, payload=payload)
+        response = self.org.api.post(self._endpoint, payload=payload)
         new_entry_id = response['id']
-        new_entry = self._item_class(self.parent, config={'id': new_entry_id})
+        new_entry = self._item_class(self.org, config={'id': new_entry_id})
         return new_entry

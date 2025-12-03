@@ -11,24 +11,22 @@ from requests_toolbelt import MultipartEncoder
 
 import wxcadm.org
 from wxcadm import log
-from .common import *
 
 
 class AnnouncementList(UserList):
-    def __init__(self, parent: wxcadm.Org):
+    def __init__(self, org: wxcadm.Org):
         super().__init__()
         log.debug("Initializing AnnouncementList instance")
-        self.parent: wxcadm.Org = parent
+        self.org: wxcadm.Org = org
         self.data: list = self._get_announcements()
 
     def _get_announcements(self):
         log.debug("Getting announcements")
         annc_list = []
-        announcements = webex_api_call("get",
-                                       "v1/telephony/config/announcements",
-                                       params={'locationId': 'all', 'orgId': self.parent.org_id})
-        for annc in announcements.get('announcements', []):
-            this_annc = Announcement(parent=self.parent, **annc)
+        response = self.org.api.get("v1/telephony/config/announcements",
+                                       params={'locationId': 'all'}, items_key='announcements')
+        for annc in response:
+            this_annc = Announcement(org=self.org, **annc)
             annc_list.append(this_annc)
         return annc_list
 
@@ -125,9 +123,7 @@ class AnnouncementList(UserList):
     def stats(self):
         """ The repository usage for announcements within the Org """
         log.debug("Getting stats")
-        response = webex_api_call("get",
-                                  "v1/telephony/config/announcements/usage",
-                                  params={"orgId": self.parent.org_id})
+        response = self.org.api.get("v1/telephony/config/announcements/usage")
         return response
 
     def upload(self, name: str, filename: str, location: str | wxcadm.Location = None):
@@ -168,10 +164,7 @@ class AnnouncementList(UserList):
             log.info("Uploading to Organization")
             url = "v1/telephony/config/announcements"
 
-        response = webex_api_call("post_upload",
-                                  url,
-                                  params={'orgId': self.parent.org_id},
-                                  payload=encoder)
+        response = self.org.api.post_upload(url, payload=encoder)
 
         if must_close is True:
             content.close()
@@ -184,7 +177,7 @@ class AnnouncementList(UserList):
 
 @dataclass
 class Announcement:
-    parent: wxcadm.Org = field(repr=False)
+    org: wxcadm.Org = field(repr=False)
     id: str
     """ The ID of the Announcement """
     name: str
@@ -214,17 +207,17 @@ class Announcement:
         else:
             raise ValueError("Cannot determine Announcement level")
 
-        response = webex_api_call("get", url, payload={"orgId": self.parent.org_id})
+        response = self.org.api.get(url)
         if response.get('featureReferences', None) is not None:
             for usage in response.get('featureReferences'):
                 item = {
                     "id": usage['id'],
                     "name": usage['name'],
                     "type": usage['type'],
-                    "location": self.parent.locations.get(id=usage['locationId']),
+                    "location": self.org.locations.get(id=usage['locationId']),
                 }
                 if usage['type'] == 'Call Queue':
-                    cq = self.parent.get_call_queue_by_id(usage['id'])
+                    cq = self.org.get_call_queue_by_id(usage['id'])
                     item['instance'] = cq
                 used_by.append(item)
         return used_by
@@ -266,7 +259,7 @@ class Announcement:
         else:
             raise ValueError("Cannot determine Announcement level")
 
-        response = webex_api_call("put_upload", url, payload=encoder, params={"orgId": self.parent.org_id})
+        response = self.org.api.put_upload(url, payload=encoder)
 
         if must_close is True:
             content.close()
@@ -293,7 +286,7 @@ class Announcement:
         else:
             raise ValueError("Cannot determine Announcement level")
 
-        response = webex_api_call("delete", url, params={"orgId": self.parent.org_id})
+        response = self.org.api.delete(url)
         log.debug(f"Response: {response}")
         return True
 
@@ -328,12 +321,11 @@ class Playlist:
         if item == 'shape':
             return None
         log.debug(f"Collecting details for Playlist: {self.id}")
-        response = webex_api_call('get', f"v1/telephony/config/announcements/playlists/{self.id}",
-                                  params={'orgId': self.org.id})
+        response = self.org.api.get("fv1/telephony/config/announcements/playlists/{self.id}")
         self.file_size = response.get('fileSize', 0)
         self.announcements = []
         for announcement in response.get('announcements', []):
-            self.announcements.append(Announcement(parent=self.org, **announcement))
+            self.announcements.append(Announcement(org=self.org, **announcement))
         return self.__getattribute__(item)
 
     def refresh(self) -> bool:
@@ -343,8 +335,7 @@ class Playlist:
             bool: True on success, False otherwise
 
         """
-        response = webex_api_call('get', f"v1/telephony/config/announcements/playlists/{self.id}",
-                                  params={'orgId': self.org.id})
+        response = self.org.api.get(f"v1/telephony/config/announcements/playlists/{self.id}")
         self.file_size = response.get('fileSize', 0)
         self.file_count = response.get('fileCount', 0)
         self.last_updated = response.get('lastUpdated', '')
@@ -352,7 +343,7 @@ class Playlist:
         self.location_count = response.get('locationCount', 0)
         self.announcements = []
         for announcement in response.get('announcements', []):
-            self.announcements.append(Announcement(parent=self.org, **announcement))
+            self.announcements.append(Announcement(org=self.org, **announcement))
         return True
 
     def delete(self) -> bool:
@@ -362,8 +353,7 @@ class Playlist:
             bool: True on success, False otherwise
 
         """
-        webex_api_call('delete', f"v1/telephony/config/announcements/playlists/{self.id}",
-                       params={'orgId': self.org.id})
+        self.org.api.delete(f"v1/telephony/config/announcements/playlists/{self.id}")
         return True
 
     def replace_announcements(self, announcements: list[Announcement]) -> bool:
@@ -380,9 +370,7 @@ class Playlist:
         payload = {'announcementIds': []}
         for announcement in announcements:
             payload['announcementIds'].append(announcement.id)
-        webex_api_call('put', f"v1/telephony/config/announcements/playlists/{self.id}",
-                       params={'orgId': self.org.id},
-                       payload=payload)
+        self.org.api.put(f"v1/telephony/config/announcements/playlists/{self.id}", payload=payload)
         self.refresh()
         return True
 
@@ -390,12 +378,11 @@ class Playlist:
     def locations(self) -> list[wxcadm.Location]:
         """ The list of Locations the Playlist is associated with """
         log.debug(f"Getting locations for Playlist: {self.id}")
-        response = webex_api_call('get', f"v1/telephony/config/announcements/playlists/{self.id}/locations",
-                                  params={'orgId': self.org.id})
+        response = self.org.api.get(f"v1/telephony/config/announcements/playlists/{self.id}/locations")
         locations = []
         for location in response['locations']:
             if location['playlistId'] == self.id:
-                locations.append(wxcadm.Location(parent=self.org, **location))
+                locations.append(wxcadm.Location(org=self.org, **location))
         return locations
 
     def assign_to_location(self, location: wxcadm.Location) -> bool:
@@ -414,9 +401,7 @@ class Playlist:
             payload['locationIds'].append(current_loc.id)
         payload['locationIds'].append(location.id)
 
-        webex_api_call('put', f"v1/telephony/config/announcements/playlists/{self.id}",
-                       params={'orgId': self.org.id},
-                       payload=payload)
+        self.org.api.put(f"v1/telephony/config/announcements/playlists/{self.id}", payload=payload)
         self.refresh()
         return True
 
@@ -424,16 +409,15 @@ class Playlist:
 class PlaylistList(UserList):
     def __init__(self, parent: wxcadm.Org):
         super().__init__()
-        self.parent: wxcadm.Org = parent
+        self.org: wxcadm.Org = parent
         self.data: list = self._get_data()
 
     def _get_data(self) -> list:
-        response = webex_api_call('get', f"v1/telephony/config/announcements/playlists",
-                                  params={'orgId': self.parent.id})
+        response = self.org.api.get("v1/telephony/config/announcements/playlists", items_key='playlists')
         log.debug(f"Response: {response}")
         data = []
-        for item in response['playlists']:
-            item['org'] = self.parent
+        for item in response:
+            item['org'] = self.org
             data.append(Playlist.from_dict(item))
         return data
 
@@ -472,12 +456,9 @@ class PlaylistList(UserList):
                    'announcementIds': []}
         for announcement in announcements:
             payload['announcementIds'].append(announcement.id)
-        response = webex_api_call('post', f"v1/telephony/config/announcements/playlists",
-                              payload=payload,
-                              params={'orgId': self.parent.id})
-        new_playlist_info = webex_api_call('get', f"v1/telephony/config/announcements/playlists/{response['id']}",
-                                           params={'orgId': self.parent.id})
-        new_playlist_info['org'] = self.parent
+        response = self.org.api.post(f"v1/telephony/config/announcements/playlists", payload=payload)
+        new_playlist_info = self.org.api.get(f"v1/telephony/config/announcements/playlists/{response['id']}")
+        new_playlist_info['org'] = self.org
         log.debug(f"Response: {new_playlist_info}")
         this_playlist = Playlist.from_dict(new_playlist_info)
         self.data.append(this_playlist)

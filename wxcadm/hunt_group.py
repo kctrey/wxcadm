@@ -9,14 +9,14 @@ from wxcadm import log
 
 
 class HuntGroup:
-    def __init__(self, parent: wxcadm.Org | wxcadm.Location, id: str, config: Optional[dict] = None):
+    def __init__(self, org: wxcadm.Org, id: str, config: Optional[dict] = None):
         """Initialize a HuntGroup instance
 
         .. note::
             The HuntGroup class is normally not instantiated manually. It is created by the :class:`HuntGroupList`.
 
         Args:
-            parent (Location|Org): The Location or Org instance to which the Hunt Group belongs
+            org (Org): The Org instance to which the Hunt Group belongs
             id (str): The Webex ID for the Hunt Group
             config (dict, optional): The full config dict from Webex
 
@@ -27,7 +27,7 @@ class HuntGroup:
         log.debug(f"Initializing HuntGroup instance")
 
         # Instance attrs
-        self.parent: wxcadm.Org | wxcadm.Location = parent
+        self.org: wxcadm.Org = org
         self.id: str = id
         """The Webex ID of the Hunt Group"""
         self.name: str = config.get('name', '')
@@ -50,7 +50,7 @@ class HuntGroup:
     @property
     def config(self) -> dict:
         """ The config of the Hunt Group """
-        response = webex_api_call("get", f"v1/telephony/config/locations/{self.location_id}/huntGroups/{self.id}", params={'orgId': self.parent.org_id})
+        response = self.org.api.get(f"v1/telephony/config/locations/{self.location_id}/huntGroups/{self.id}")
         return response
 
     @property
@@ -82,8 +82,10 @@ class HuntGroup:
         if weight is not None:
             new_agent_payload['weight'] = weight
         config['agents'].append(new_agent_payload)
-        webex_api_call('put', f"v1/telephony/config/locations/{self.location_id}/huntGroups/{self.id}",
-                       payload=config, params={'orgId': self.parent.org_id})
+        self.org.api.put(
+            f"v1/telephony/config/locations/{self.location_id}/huntGroups/{self.id}",
+            payload=config
+        )
         return True
 
 
@@ -93,31 +95,27 @@ class HuntGroupList(UserList):
     _item_endpoint = "v1/telephony/config/locations/{location_id}/huntGroups/{item_id}"
     _item_class = HuntGroup
 
-    def __init__(self, parent: Union[wxcadm.Org, wxcadm.Location]):
+    def __init__(self, org: wxcadm.Org, location: Optional[wxcadm.Location] = None):
         super().__init__()
         log.debug("Initializing HuntGroupList")
-        self.parent: wxcadm.Org | wxcadm.Location = parent
+        self.org: wxcadm.Org = org
+        self.location: wxcadm.Location = location
         self.data: list = self._get_data()
 
     def _get_data(self) -> list:
         log.debug("_get_data() started")
-        params = {}
 
-        if isinstance(self.parent, wxcadm.Org):
-            log.debug(f"Using Org ID {self.parent.id} as Data filter")
-            params['orgId'] = self.parent.id
-        elif isinstance(self.parent, wxcadm.Location):
-            log.debug(f"Using Location ID {self.parent.id} as Data filter")
-            params['locationId'] = self.parent.id
-            params['orgId'] = self.parent.org_id
+        if self.location is not None:
+            log.debug(f"Filtering Hunt Groups based on Location: {self.location.name}")
+            params = {'locationId': self.location.id}
         else:
-            log.warn("Parent class is not Org or Location, so all items will be returned")
-        response = webex_api_call('get', self._endpoint, params=params)
-        log.info(f"Found {len(response[self._endpoint_items_key])} items")
+            log.debug(f"Getting all Hunt Groups for Organization: {self.org.name}")
+            params = None
 
+        response = self.org.api.get(self._endpoint, params=params, items_key=self._endpoint_items_key)
         items = []
-        for entry in response[self._endpoint_items_key]:
-            items.append(self._item_class(parent=self.parent, id=entry['id'], config=entry))
+        for entry in response:
+            items.append(self._item_class(org=self.org, id=entry['id'], config=entry))
         return items
 
     def refresh(self):
@@ -229,10 +227,10 @@ class HuntGroupList(UserList):
             HuntGroup: The :class:`HuntGroup` instance of the created Hunt Group
 
         """
-        if location is None and isinstance(self.parent, wxcadm.Org):
+        if location is None and self.location is None:
             raise ValueError("location is required for Org-level HuntGroupList")
-        elif location is None and isinstance(self.parent, wxcadm.Location):
-            location = self.parent
+        elif location is None and self.location is not None:
+            location = self.location
         log.info(f"Creating Hunt Group at Location {location.name} with name: {name}")
         if location.calling_enabled is False:
             log.debug("Not a Webex Calling Location")
@@ -271,7 +269,7 @@ class HuntGroupList(UserList):
                 }
             }
 
-        payload = {
+        payload: dict = {
             "name": name,
             "firstName": first_name,
             "lastName": last_name,
@@ -280,20 +278,23 @@ class HuntGroupList(UserList):
             "timeZone": time_zone,
             "languageCode": language,
             "callPolicies": call_policies,
+            "enabled": enabled,
             'huntGroupCallerIdForOutgoingCallsEnabled': allow_as_agent_caller_id
         }
+        agent_list: list = []
         if agents is not None:
-            agent_list = []
             log.info("Finding agent IDs to assign to Hunt Group")
             for agent in agents:
                 if not isinstance(agent, wxcadm.Person) and not isinstance(agent, wxcadm.VirtualLine) and \
                         not isinstance(agent, wxcadm.Workspace):
                     raise ValueError("Agents must be of type Workspace, Person or VirtualLine")
                 agent_list.append({'id': agent.id})
-            payload['agents'] = agent_list
+        payload['agents'] = agent_list
 
-        response = webex_api_call("post", f"v1/telephony/config/locations/{location.id}/huntGroups",
-                                  payload=payload, params={'orgId': self.parent.org_id})
+        response = self.org.api.post(
+            f"v1/telephony/config/locations/{location.id}/huntGroups",
+            payload=payload
+        )
         new_hg_id = response['id']
         self.refresh()
         return self.get(id=new_hg_id)

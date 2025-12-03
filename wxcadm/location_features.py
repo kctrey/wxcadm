@@ -14,7 +14,8 @@ from .common import *
 
 @dataclass
 class PagingGroup:
-    parent: wxcadm.Location
+    location: wxcadm.Location
+    """ The Location to which the Paging Group belongs """
     id: str
     """ The ID of the Paging Group """
     name: str
@@ -29,7 +30,7 @@ class PagingGroup:
 
     def refresh_config(self):
         """ Pull a fresh copy of the Paging Group config from Webex, in case it has changed. """
-        api_resp: dict = webex_api_call("get", f"v1/telephony/config/locations/{self.parent.id}/paging/{self.id}")
+        api_resp: dict = self.location.org.api.get(f"v1/telephony/config/locations/{self.location.id}/paging/{self.id}")
         self.config = api_resp
 
 
@@ -44,13 +45,13 @@ class LocationSchedule:
             :attr:`Location.schedules` property.
 
     Args:
-        parent (Location): The `Location` instance to which the LocationSchedule is assigned.
+        location (Location): The `Location` instance to which the LocationSchedule is assigned.
         id (str): The Webex ID of the LocationSchedule
         name (str): The name of the LocationSchedule
         type (str): The type of LocationSchedule, either 'businessHours' or 'Holidays'
 
     """
-    parent: wxcadm.Location
+    location: wxcadm.Location
     """ The `Location` instance to which the LocationSchedule is assigned """
     id: str
     """ The Webex ID of the LocationSchedule """
@@ -66,8 +67,8 @@ class LocationSchedule:
 
     def refresh_config(self):
         """ Pull a fresh copy of the schedule configuration from Webex, in case it has changed. """
-        api_resp = webex_api_call("get", f"v1/telephony/config/locations/{self.parent.id}/schedules/"
-                                         f"{self.type}/{self.id}", params={'orgId': self.parent.org_id})
+        api_resp = self.location.org.api.get(
+            f"v1/telephony/config/locations/{self.location.id}/schedules/{self.type}/{self.id}")
         self.config = api_resp
 
     def add_holiday(self, name: str, date: str, recur: bool = False, recurrence: Optional[dict] = None):
@@ -108,8 +109,7 @@ class LocationSchedule:
 
         """
         log.debug(f"add_holiday() started")
-        new_event = {"name": name,
-                     "startDate": date, "endDate": date, "allDayEnabled": True}
+        new_event: dict = {"name": name, "startDate": date, "endDate": date, "allDayEnabled": True}
         date_object = datetime.strptime(date, "%Y-%m-%d")
         # If this isn't a Holidays schedule, we shouldn't accept a new holiday
         if self.type.lower() != "holidays":
@@ -124,9 +124,10 @@ class LocationSchedule:
                                                                  "month": date_object.strftime("%B").upper()
                                                                  }
                                            }
-        api_resp = webex_api_call("post", f"v1/telephony/config/locations/"
-                                          f"{self.parent.id}/schedules/{self.type}/{self.id}/events", payload=new_event,
-                                          params={'orgId': self.parent.org_id})
+        api_resp = self.location.org.api.post(
+            f"v1/telephony/config/locations/{self.location.id}/schedules/{self.type}/{self.id}/events",
+            payload=new_event
+        )
         if api_resp:
             self.refresh_config()
             return True
@@ -149,8 +150,9 @@ class LocationSchedule:
         # Since we accept both the event name or ID, we need to loop through the events to find the one we need.
         for e in self.config['events']:
             if e['name'] == event or e['id'] == event:
-                api_resp = webex_api_call("delete", f"v1/telephony/config/locations/{self.parent.id}"
-                                                    f"/schedules/{self.type}/{self.id}/events/{e['id']}", params={'orgId': self.parent.org_id})
+                api_resp = self.location.org.api.delete(
+                    f"v1/telephony/config/locations/{self.location.id}/schedules/{self.type}/{self.id}/events/{e['id']}"
+                )
                 if api_resp is True:
                     # Get a new copy of the config
                     self.refresh_config()
@@ -196,16 +198,17 @@ class LocationSchedule:
             raise ValueError("If all_day == False, both start_time and end_time are required.")
 
         # Build the payload
-        payload = {'name': name, 'startDate': start_date, 'endDate': end_date, 'allDay': all_day}
+        payload: dict = {'name': name, 'startDate': start_date, 'endDate': end_date, 'allDay': all_day}
         if all_day is False:
             payload['startTime'] = start_time
             payload['endTime'] = end_time
         if recurrence is not None:
             payload['recurrence'] = recurrence
 
-        api_resp = webex_api_call("post", f"v1/telephony/config/locations/{self.parent.id}/"
-                                          f"schedules/{self.type}/{self.id}/events",
-                                  payload=payload, params={'orgId': self.parent.org_id})
+        api_resp = self.location.org.api.post(
+            f"v1/telephony/config/locations/{self.location.id}/schedules/{self.type}/{self.id}/events",
+            payload=payload
+        )
         if api_resp:
             self.refresh_config()
             return True
@@ -255,7 +258,7 @@ class LocationSchedule:
         if recurrence is not None:
             payload['recurrence'] = recurrence
 
-        api_resp = webex_api_call("put", f"v1/telephony/config/")
+        api_resp = self.location.org.api.put(f"v1/telephony/config/", payload=payload)
         if api_resp:
             return True
         else:
@@ -304,8 +307,11 @@ class LocationSchedule:
         if target_location is not None:
             target_locid = target_location.id
         else:
-            target_locid = self.parent.id
-        response = webex_api_call('post', f'v1/telephony/config/locations/{target_locid}/schedules', payload=payload)
+            target_locid = self.location.id
+        response = self.location.org.api.post(
+            f'v1/telephony/config/locations/{target_locid}/schedules',
+            payload=payload
+        )
         return response['id']
 
 
@@ -315,7 +321,7 @@ class CallParkGroup:
 
 @dataclass
 class CallParkExtension:
-    parent: wxcadm.location.Location
+    location: wxcadm.Location
     """ The Location to which the Call Park Extension is assigned """
     id: str
     """ The ID of the Call Park Extension """
@@ -326,10 +332,7 @@ class CallParkExtension:
 
     def get_monitored_by(self):
         """ Returns a list of Users (Person) and Workspaces that are Monitoring this Park Extension """
-        if isinstance(self.parent, wxcadm.Org):
-            monitor_list = self.parent.get_all_monitoring()
-        elif isinstance(self.parent, wxcadm.Location):
-            monitor_list = self.parent.parent.get_all_monitoring()
+        monitor_list = self.location.org.get_all_monitoring()
         try:
             return monitor_list['park_extensions'][self.id]
         except KeyError:
@@ -368,7 +371,7 @@ class VoicePortal(RealtimeClass):
 
     def __post_init__(self):
         self.data_url: str = f'v1/telephony/config/locations/{self.location.id}/voicePortal'
-        super().__init__()
+        super().__init__(api=self.location.org.api, data_url=self.data_url, api_fields=self._api_fields)
 
     def copy_config(self, target_location: wxcadm.Location, phone_number: str = None, passcode: str = None) -> bool:
         """ Copies the Voice Portal settings to another Location.
@@ -385,7 +388,7 @@ class VoicePortal(RealtimeClass):
             bool: True on success
 
         """
-        payload = {
+        payload: dict = {
             'name': 'Voice Portal',
             'languageCode': self.language_code,
             'extension': self.extension,
@@ -402,8 +405,10 @@ class VoicePortal(RealtimeClass):
         if isinstance(target_location, wxcadm.Location):
             if target_location.calling_enabled is False:
                 raise ValueError("Target Location is not Webex Calling enabled")
-            webex_api_call('put', f"v1/telephony/config/locations/{target_location.id}/voicePortal",
-                           payload=payload, params={'orgId': target_location.org_id})
+            self.location.org.api.put(
+                f"v1/telephony/config/locations/{target_location.id}/voicePortal",
+                payload=payload
+            )
         else:
             raise ValueError("target_location much be a Location instance")
 
@@ -419,9 +424,11 @@ class OutgoingPermissionDigitPatternList:
     def _get_data(self) -> list:
         pattern_list = []
         log.debug('Getting data from Webex')
-        response = webex_api_call('get',
-                                  f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns')
-        for pattern in response['digitPatterns']:
+        response = self.location.org.api.get(
+            f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns',
+            items_key='digitPatterns'
+        )
+        for pattern in response:
             pattern_list.append(OutgoingPermissionDigitPattern(self.location, config=pattern))
         return pattern_list
 
@@ -456,16 +463,14 @@ class OutgoingPermissionDigitPatternList:
             'action': action,
             'transferEnabled': transfer_enabled
         }
-        response = webex_api_call('post',
-                                  f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns',
-                                  params={'orgId': self.location.org_id},
-                                  payload=payload)
+        response = self.location.org.api.post(
+            f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns',
+            payload=payload
+        )
         # Use the ID that was returned to get the object we want to return
         pattern_id = response['id']
-        response = webex_api_call(
-            'get',
-            f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns/{pattern_id}',
-            params={'orgId': self.location.org_id}
+        response = self.location.org.api.get(
+            f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns/{pattern_id}'
         )
         new_pattern = OutgoingPermissionDigitPattern(self.location, response)
         self.patterns.append(new_pattern)
@@ -478,10 +483,8 @@ class OutgoingPermissionDigitPatternList:
             bool: True on success
 
         """
-        webex_api_call(
-            'delete',
-            f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns',
-            params={'orgId': self.location.org_id}
+        self.location.org.api.delete(
+            f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns'
         )
         self.refresh()
         return True
@@ -509,8 +512,7 @@ class OutgoingPermissionDigitPattern:
             bool: True on success
 
         """
-        webex_api_call(
-            'delete',
+        self.location.org.api.delete(
             f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns/{self.id}'
         )
         return True
@@ -542,10 +544,8 @@ class OutgoingPermissionDigitPattern:
             'action': action,
             'transferEnabled': transfer_enabled
         }
-        webex_api_call(
-            'put',
+        self.location.org.api.put(
             f'v1/telephony/config/locations/{self.location.id}/outgoingPermission/digitPatterns/{self.id}',
-            params={'orgId': self.location.org_id},
             payload=payload
         )
         self.name = name
@@ -588,9 +588,7 @@ class VoicemailGroup:
     _message_forwarding_enabled: Optional[bool] = field(init=False, default=None)
 
     def _get_details(self):
-        response = webex_api_call('get',
-                                  f'v1/telephony/config/locations/{self.location_id}/voicemailGroups/{self.id}',
-                                  params={'orgId': self.org.id})
+        response = self.org.api.get(f'v1/telephony/config/locations/{self.location_id}/voicemailGroups/{self.id}')
         self.name = response.get('name')
         self.extension = response.get('extension')
         self.enabled = response.get('enabled')
@@ -648,7 +646,7 @@ class VoicemailGroup:
         """ True if CUSTOM greeting has been previously uploaded """
         if self._greeting_uploaded is None:
             self._get_details()
-        return self._
+        return self._greeting_uploaded
 
     @property
     def greeting_description(self):
@@ -773,16 +771,13 @@ class VoicemailGroup:
             'transferToNumber': transfer_to_number,
             'emailCopyOfMessage': email_copy_of_message
         }
-        webex_api_call('put',
-                       f'v1/telephony/config/locations/{self.location_id}/voicemailGroups/{self.id}',
-                       payload=payload)
+        self.org.api.put(f'v1/telephony/config/locations/{self.location_id}/voicemailGroups/{self.id}', payload=payload)
         self._get_details()
         return self
 
     def delete(self):
         """ Delete the Group Voicemail """
-        webex_api_call('delete',
-                       f'v1/telephony/config/locations/{self.location_id}/voicemailGroups/{self.id}')
+        self.org.api.delete(f'v1/telephony/config/locations/{self.location_id}/voicemailGroups/{self.id}')
         return True
 
     def enable_email_copy(self, email: str):
@@ -815,7 +810,7 @@ class VoicemailGroupList(UserList):
     def _get_data(self) -> list:
         log.debug('Getting data')
         data = []
-        response = webex_api_call('get', 'v1/telephony/config/voicemailGroups', params={'orgId': self.org.id})
+        response = self.org.api.get('v1/telephony/config/voicemailGroups')
         for group in response['voicemailGroups']:
             group['org'] = self.org
             data.append(VoicemailGroup.from_dict(group))
@@ -902,10 +897,10 @@ class VoicemailGroupList(UserList):
             'transferToNumber': transfer_to_number,
             'emailCopyOfMessage': email_copy_of_message
         }
-        response = webex_api_call('post',
-                                  f'v1/telephony/config/locations/{location.id}/voicemailGroups',
-                                  params={'orgId': self.org.id},
-                                  payload=payload)
+        response = self.org.api.post(
+            f'v1/telephony/config/locations/{location.id}/voicemailGroups',
+            payload=payload
+        )
         vg_id = response['id']
         self.refresh()
         return self.get(id=vg_id)

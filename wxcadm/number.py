@@ -45,7 +45,6 @@ class Number:
                 return self._location
         else:
             return None
-        return None
 
     @property
     def owner(self):
@@ -105,6 +104,8 @@ class Number:
             else:
                 if self._owner['type'] == 'VOICE_MESSAGING':
                     return self.location.voice_portal
+                else:
+                    return "Unknown"
         else:
             return None
 
@@ -115,32 +116,28 @@ class Number:
             Number: The updated :class:`Number` with the new state
 
         """
-        webex_api_call('put', f'v1/telephony/config/locations/{self.location.id}/numbers',
-                       params={'orgId': self.org.id},
-                       payload={'phoneNumbers': [self.phone_number]})
+        self.org.api.put(
+            f'v1/telephony/config/locations/{self.location.id}/numbers',
+            payload={'phoneNumbers': [self.phone_number]}
+        )
         return True
 
 
 class NumberList(UserList):
-    def __init__(self, parent: Union[wxcadm.Org, wxcadm.Location]):
+    def __init__(self, org: wxcadm.Org, location: Optional[wxcadm.Location] = None):
         super().__init__()
-        self.parent = parent
-        if isinstance(parent, wxcadm.Org):
-            self.org: wxcadm.Org = parent
-            self.data: list = self._get_data()
-        elif isinstance(parent, wxcadm.Location):
-            self.org: wxcadm.Org = parent.parent
-            self.data: list = self._get_data(parent)
-        else:
-            raise ValueError('parent much be an Org or Location')
+        self.org = org
+        self.location = location
+        self.data: list = self._get_data(location=location)
 
     def _get_data(self, location: Optional[wxcadm.Location] = None) -> list:
         data = []
-        params = {'orgId': self.org.id}
         if location is not None:
-            params['locationId'] = location.id
-        response = webex_api_call('get', 'v1/telephony/config/numbers', params=params)
-        for number in response['phoneNumbers']:
+            params = {'locationId': location.id}
+        else:
+            params = None
+        response = self.org.api.get('v1/telephony/config/numbers', params=params, items_key='phoneNumbers')
+        for number in response:
             this_number: Number = Number.from_dict(number)
             this_number.org = self.org
             data.append(this_number)
@@ -148,10 +145,7 @@ class NumberList(UserList):
 
     def refresh(self):
         """ Refresh the list from Webex """
-        if isinstance(self.parent, wxcadm.Location):
-            self.data = self._get_data(self.parent)
-        else:
-            self.data = self._get_data()
+        self.data = self._get_data(location=self.location)
         return self
 
     def get(self,
@@ -248,10 +242,7 @@ class NumberList(UserList):
             'numberType': number_type,
             'state': state
         }
-        webex_api_call('post',
-                       f'v1/telephony/config/locations/{location.id}/numbers',
-                       params={'orgId': self.org.id},
-                       payload=payload)
+        self.org.api.post(f'v1/telephony/config/locations/{location.id}/numbers', payload=payload)
         self.refresh()
         return self
 
@@ -265,6 +256,8 @@ class NumberList(UserList):
             dict: The validation response from Webex
 
         """
-        response = webex_api_call('post', f'v1/telephony/config/actions/validateNumbers/invoke',
-                                  params={'orgId': self.org.id}, payload={'phoneNumbers': numbers})
+        response = self.org.api.post(
+            f'v1/telephony/config/actions/validateNumbers/invoke',
+            payload={'phoneNumbers': numbers}
+        )
         return response
