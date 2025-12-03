@@ -2,6 +2,10 @@
 
 What's New
 ==========
+v4.6.1
+------
+- BUG FIX: Corrected issue with GET 451 response sending new domain in multiple formats.
+
 v4.6.0
 ------
 - BUG FIX: The response from the Webex API that specifies a new region for Analytics has changed verbiage.

@@ -124,6 +124,8 @@ class WebexApi:
                         m = re.search('URL: (.*)', message['message'])
                     if m:
                         new_domain = m.group(1)
+                        # Added 4.6.1 to remove https if present, because there are multiple verbiages
+                        new_domain = new_domain.replace("https://", "")
                         log.info(f'Using {new_domain} as new domain')
                         url_base = f'https://{new_domain}'
                         continue
@@ -605,6 +607,8 @@ def webex_api_call(method: str,
                         m = re.search('URL: (.*)', message['message'])
                     if m:
                         new_domain = m.group(1)
+                        # Added 4.6.1 to remove https if present, because there are multiple verbiages
+                        new_domain = new_domain.replace("https://", "")
                         log.info(f'Using {new_domain} as new domain')
                         url_base = f'https://{new_domain}'
                         continue
