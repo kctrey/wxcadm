@@ -1,54 +1,22 @@
-# wxcadm
-Python Library for Webex Calling Administration
+# wxcadm (DEPRECATED)
 
-# Purpose
-wxcadm is a Python 3 library to simplify the API calls to Webex in order to manage and report on users of Webex Calling.
-Although the primary focus is Webex Calling, many of the other Webex admin functions are included. This library is not
-meant to be an interface to the Meetings and Messaging capabilities of Webex....there are plenty of other modules that
-provide that.
+> **NOTICE: This project is officially deprecated as of May 2026.**
 
-# Installation
-**wxcadm** is available as a [PIP Package](https://pypi.org/project/wxcadm/)
+## The Future of Webex Administration
+`wxcadm` was created as an early, easy-to-use wrapper for Webex Calling administrators to automate tasks via Python. Since its inception, the ecosystem has evolved, and far more robust, professionally maintained tools are now available. 
 
-```
-$ python -m pip install wxcadm
-```
-# Quickstart
-By creating a Webex instance with a valid API Access Token, the module will pull the Webex Organization information as
-well as all the People within the Organization. The Org instance will contain all People, whether they have the 
-Webex Calling service or not. An Org method ```get_webex_people()``` makes it easy to get only the People that have
-Webex Calling.
+To ensure the best possible experience and security for your automation workflows, **all users are strongly encouraged to migrate to [wxc-sdk](https://github.com/jeokrohn/wxc_sdk).**
 
-You can obtain a 12-hour access token by logging into https://developer.webex.com and visiting the **Getting Started**
-page.
+## Why Migrate?
+*   **Ongoing Support:** `wxc-sdk` is the modern standard for Python-based Webex administration.
+*   **Feature Completeness:** It covers the full breadth of the Webex APIs, whereas `wxcadm` only handled a limited subset.
+*   **AI-Ready:** Modern LLMs have extensive training on the current `wxc-sdk` structure, making it significantly easier to generate and maintain your scripts using AI.
 
-Once you have the access token, the following will initialize the API connection and pull data
+## Migration Guide: Use AI to Rewrite Your Scripts
+You do not need to rewrite your automation manually. You can leverage AI to perform the conversion for you. Use the following prompt format to transition your existing `wxcadm` logic to `wxc-sdk`:
 
-```python
-import wxcadm
+> *"I have a legacy Python script that currently uses the `wxcadm` module to perform the following task: [PASTE YOUR CODE HERE]. Please rewrite this script to use the modern `wxc-sdk` library instead. Ensure the authentication and API calls follow the current `wxc-sdk` best practices."*
 
-access_token = "Your API Access Token"
-webex = wxcadm.Webex(access_token)
-```
-Since most administrators only have access to a single Webex Organization, you can access that Organization with the
-**org** attribute. If the administrator has access to more than one Organization, they can be accessed using the
-**orgs** attribute, which is a list of the organizations that can be managed. See the "Regarding Multiple 
-Organizations" section below for further information.
-
-You can see all the attributes with
-```python
-vars(webex.org)
-```
-Note that, by default, all the People are pulled when the Org is initialized. For large organizations, this may take
-a while, but then all the People are stored as Person objects.
-
-To iterate over the list of people, simply loop through the **people** attribute of the Org. For example:
-```python
-for person in webex.org.people:
-    # Print all of the attributes of the Person
-    print(vars(person))
-    # Or access the attributes directly
-    email = person.email
-```
-# Documentation
-**wxcadm** documentation is housed at [Read The Docs](https://wxcadm.readthedocs.io/en/latest/). 
+## Status
+*   **Maintenance:** This repository is now **Read-Only**. No new features, bug fixes, or security patches will be provided.
+*   **Support:** Please redirect all future questions and issues to the [official wxc-sdk repository](https://github.com/jeokrohn/wxc_sdk).
